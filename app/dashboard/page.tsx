@@ -139,7 +139,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="flex flex-col md:flex-row items-center gap-2">
-                  <span className="text-xs font-bold w-32 text-gray-600">2. Công cụ VIP:</span>
+                  <span className="text-xs font-bold w-32 text-gray-600">2. Công cụ tạo thiệp định danh:</span>
                   <input type="text" readOnly value={`${baseUrl}/${selectedId}/vip`} className="flex-1 border p-2 rounded bg-white text-sm text-gray-500 w-full" />
                   <button onClick={() => handleCopy(`${baseUrl}/${selectedId}/vip`)} className="bg-purple-100 text-purple-700 px-3 py-2 rounded text-xs font-bold hover:bg-purple-200 w-full md:w-auto shrink-0">Copy</button>
                 </div>
