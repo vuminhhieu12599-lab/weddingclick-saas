@@ -14,7 +14,19 @@ export default function Dashboard() {
 
   useEffect(() => {
     setBaseUrl(window.location.origin);
-    const fetchInvitations = async () => {
+    
+    // --- Ổ KHÓA BẢO MẬT & TẢI DỮ LIỆU ---
+    const checkAuthAndFetchData = async () => {
+      // 1. Kiểm tra trạng thái đăng nhập
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // 2. Nếu chưa đăng nhập, tự động đá về trang login
+      if (!session) {
+        window.location.href = "/login";
+        return;
+      }
+
+      // 3. Nếu đã đăng nhập, cho phép tải dữ liệu
       const { data } = await supabase.from('invitations').select('id, couple_id, groom_name, bride_name, wedding_date').order('created_at', { ascending: false });
       if (data) {
         setInvitations(data);
@@ -22,7 +34,8 @@ export default function Dashboard() {
       }
       setLoading(false);
     };
-    fetchInvitations();
+
+    checkAuthAndFetchData();
   }, []);
 
   useEffect(() => {
@@ -34,21 +47,24 @@ export default function Dashboard() {
     fetchWishes();
   }, [selectedId]);
 
-  // ĐÃ THÊM: Tính năng XÓA THIỆP
+  // HÀM XÓA THIỆP
   const handleDelete = async (id: string) => {
     if (!window.confirm("⚠️ Bạn có chắc chắn muốn xóa vĩnh viễn thiệp này và toàn bộ lời chúc? Dữ liệu không thể khôi phục!")) return;
     
     setLoading(true);
-    // Xóa lời chúc trước để tránh lỗi khóa
     await supabase.from('wishes').delete().eq('wedding_id', id);
-    // Xóa thiệp
     await supabase.from('invitations').delete().eq('id', id);
     
-    // Cập nhật lại giao diện
     setInvitations(invitations.filter(inv => inv.id !== id));
     setSelectedId(null);
     setLoading(false);
     alert("🗑️ Đã xóa thiệp thành công!");
+  };
+
+  // HÀM ĐĂNG XUẤT
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
   };
 
   const attendingCount = wishes.filter(w => w.attendance === 'Có tham dự').length;
@@ -100,10 +116,12 @@ export default function Dashboard() {
             ))
           )}
         </div>
-        <div className="p-4 border-t border-gray-100 mt-auto sticky bottom-0 bg-white z-20">
+        
+        <div className="p-4 border-t border-gray-100 mt-auto sticky bottom-0 bg-white z-20 space-y-3">
           <Link href="/admin">
             <button className="w-full bg-[#9B1B1B] text-white py-2.5 rounded-lg text-sm font-bold shadow-md hover:bg-red-800 transition">+ Tạo thiệp mới</button>
           </Link>
+          <button onClick={handleLogout} className="w-full bg-gray-100 text-gray-600 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-gray-200 transition">Đăng Xuất</button>
         </div>
       </div>
 
@@ -121,7 +139,6 @@ export default function Dashboard() {
                   <p className="text-sm text-gray-500">Mã thiệp: <span className="font-mono text-[#9B1B1B] font-bold">{selectedId}</span></p>
                 </div>
                 
-                {/* ĐÃ THÊM: NÚT XÓA THIỆP */}
                 <div className="flex gap-2 flex-wrap md:flex-nowrap">
                   <Link href={`/${selectedId}`} target="_blank" className="flex-1 md:flex-none"><button className="w-full bg-white border-2 border-[#E5C158] text-[#9B1B1B] px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#FDFBF7] transition">👁️ Xem</button></Link>
                   <Link href={`/admin?id=${selectedId}`} className="flex-1 md:flex-none"><button className="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 transition shadow-sm">✏️ Sửa</button></Link>
@@ -139,7 +156,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="flex flex-col md:flex-row items-center gap-2">
-                  <span className="text-xs font-bold w-32 text-gray-600">2. Công cụ tạo thiệp định danh:</span>
+                  <span className="text-xs font-bold w-32 text-gray-600">2. Công cụ VIP:</span>
                   <input type="text" readOnly value={`${baseUrl}/${selectedId}/vip`} className="flex-1 border p-2 rounded bg-white text-sm text-gray-500 w-full" />
                   <button onClick={() => handleCopy(`${baseUrl}/${selectedId}/vip`)} className="bg-purple-100 text-purple-700 px-3 py-2 rounded text-xs font-bold hover:bg-purple-200 w-full md:w-auto shrink-0">Copy</button>
                 </div>

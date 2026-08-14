@@ -16,7 +16,6 @@ export default function WeddingAdmin() {
     audio_url: "", bank_name: "", bank_owner: "", bank_account: "", bank_qr: ""
   });
 
-  // ĐÃ THÊM: show_effect
   const [settings, setSettings] = useState({
     show_music: true, show_countdown: true, show_album: true, show_rsvp: true, show_gift: true, show_effect: true
   });
@@ -26,12 +25,22 @@ export default function WeddingAdmin() {
   const [albumPhotos, setAlbumPhotos] = useState<string[]>([]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const editId = params.get("id");
+    // --- Ổ KHÓA BẢO MẬT & KIỂM TRA DỮ LIỆU CŨ ---
+    const checkAuthAndFetchOldData = async () => {
+      // 1. Kiểm tra trạng thái đăng nhập
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        window.location.href = "/login";
+        return;
+      }
 
-    if (editId) {
-      setIsEditMode(true);
-      const fetchOldData = async () => {
+      // 2. Nếu đã đăng nhập, kiểm tra xem có đang sửa thiệp cũ không
+      const params = new URLSearchParams(window.location.search);
+      const editId = params.get("id");
+
+      if (editId) {
+        setIsEditMode(true);
         setLoading(true);
         const { data, error } = await supabase.from('invitations').select('*').eq('id', editId).single();
         
@@ -45,15 +54,16 @@ export default function WeddingAdmin() {
             wedding_address: data.wedding_address || "", map_link: data.map_link || "", audio_url: data.audio_url || "", 
             bank_name: data.bank_name || "", bank_owner: data.bank_owner || "", bank_account: data.bank_account || "", bank_qr: data.bank_qr || ""
           });
-          if (data.settings) setSettings({ ...settings, ...data.settings }); // Giữ lại cấu hình cũ
+          if (data.settings) setSettings({ ...settings, ...data.settings });
           if (data.cover_photo) setCoverPhoto(data.cover_photo);
           if (data.trio_photos) setTrioPhotos(data.trio_photos.split(',').filter((p: string) => p.trim() !== ""));
           if (data.wedding_photos) setAlbumPhotos(data.wedding_photos.split(',').filter((p: string) => p.trim() !== ""));
         }
         setLoading(false);
-      };
-      fetchOldData();
-    }
+      }
+    };
+    
+    checkAuthAndFetchOldData();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -139,7 +149,6 @@ export default function WeddingAdmin() {
       alert("Lỗi khi lưu: " + error.message);
     } else {
       alert("🎉 Đã lưu cấu hình thiệp thành công!");
-      // ĐÃ SỬA: Luôn luôn quay về Dashboard sau khi tắt thông báo
       window.location.href = "/dashboard";
     }
   };
@@ -163,7 +172,6 @@ export default function WeddingAdmin() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
             
-            {/* 1. ĐỊNH DANH */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <h2 className="font-bold text-gray-800 border-b pb-3 mb-4">1. Định danh Thiệp (Quan trọng)</h2>
               <div className="grid grid-cols-2 gap-4">
@@ -174,7 +182,6 @@ export default function WeddingAdmin() {
               </div>
             </div>
 
-            {/* 2. VĂN BẢN */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <h2 className="font-bold text-gray-800 border-b pb-3 mb-4">2. Nội dung Văn bản</h2>
               <div className="grid grid-cols-2 gap-4">
@@ -189,7 +196,6 @@ export default function WeddingAdmin() {
               </div>
             </div>
 
-            {/* 3. ẢNH */}
             <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
               <h2 className="font-bold text-blue-800 border-b border-blue-200 pb-3 mb-4">3. Quản lý Hình Ảnh (Tự động nén)</h2>
               <div className="space-y-6">
@@ -211,7 +217,6 @@ export default function WeddingAdmin() {
             </div>
           </div>
 
-          {/* CỘT PHẢI: TÙY CHỈNH */}
           <div className="space-y-6">
             <div className="bg-[#FDFBF7] p-6 rounded-2xl border-2 border-[#E5C158]/50 shadow-sm sticky top-6">
               <h2 className="font-bold text-[#9B1B1B] border-b border-[#E5C158]/30 pb-3 mb-5">Tùy chỉnh Tính Năng</h2>
@@ -222,7 +227,7 @@ export default function WeddingAdmin() {
                   { key: "show_album", label: "🖼️ Hiện Album Ảnh" },
                   { key: "show_rsvp", label: "✉️ Form Lời Chúc" },
                   { key: "show_gift", label: "🎁 Hộp thoại Mừng Quà" },
-                  { key: "show_effect", label: "💖 Hiệu ứng Trái tim rơi" }, // ĐÃ THÊM CÔNG TẮC
+                  { key: "show_effect", label: "💖 Hiệu ứng Trái tim rơi" },
                 ].map((item) => (
                   <div key={item.key} className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-gray-700">{item.label}</span>
