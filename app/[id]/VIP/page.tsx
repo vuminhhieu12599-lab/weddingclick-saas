@@ -32,7 +32,7 @@ export default function VIPPortal() {
     <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center p-4 font-sans">
       <div className="bg-white max-w-md w-full p-8 rounded-3xl shadow-xl border-2 border-[#E5C158]">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-[#9B1B1B] mb-2">💎 Trợ Lý Tạo Thiệp VIP</h1>
+          <h1 className="text-2xl font-bold text-[#9B1B1B] mb-2">💎 Trợ Lý Tạo Thiệp</h1>
           <p className="text-sm text-gray-500">Công cụ dành riêng cho Cô Dâu & Chú Rể để cá nhân hóa lời mời.</p>
         </div>
 
@@ -58,7 +58,7 @@ export default function VIPPortal() {
 
         {generatedUrl && (
           <div className="mt-8 p-5 bg-green-50 border border-green-200 rounded-xl animate-fade-in">
-            <p className="text-xs font-bold text-green-800 mb-2 uppercase">Link đã sẵn sàng gửi Zalo:</p>
+            <p className="text-xs font-bold text-green-800 mb-2 uppercase">Link đã sẵn sàng:</p>
             <div className="bg-white p-3 rounded-lg border border-green-100 text-sm text-gray-600 break-all mb-3 font-mono">
               {generatedUrl}
             </div>

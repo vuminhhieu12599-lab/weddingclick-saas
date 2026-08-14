@@ -5,18 +5,19 @@ import { supabase } from "../../lib/supabase";
 import { useParams, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
-// --- COMPONENT HIỆU ỨNG HOA ĐÀO RƠI ---
-const FallingPetals = () => {
+// --- COMPONENT HIỆU ỨNG TRÁI TIM RƠI ---
+const FallingHearts = () => {
   return (
     <div className="fixed inset-0 pointer-events-none z-40 overflow-hidden" aria-hidden="true">
       {[...Array(15)].map((_, i) => (
-        <div key={i} className="absolute w-3 h-3 bg-pink-200 rounded-full opacity-60 shadow-sm animate-fall"
+        <div key={i} className="absolute text-red-400 opacity-60 shadow-sm animate-fall text-xl"
              style={{
                left: `${Math.random() * 100}vw`,
                animationDuration: `${Math.random() * 3 + 5}s`,
                animationDelay: `${Math.random() * 5}s`
-             }}
-        />
+             }}>
+          ❤️
+        </div>
       ))}
       <style>{`
         @keyframes fall {
@@ -36,7 +37,6 @@ function InvitationContent() {
   const searchParams = useSearchParams();
   const id = params.id;
   
-  // Lấy tên khách mời từ tham số URL (?n=...)
   const vipName = searchParams.get("n"); 
   
   const [data, setData] = useState<any>(null);
@@ -71,7 +71,6 @@ function InvitationContent() {
 
   useEffect(() => {
     if (!data || !data.settings?.show_countdown) return;
-    // Xử lý chuỗi ngày tháng để tính countdown (VD: 10.10.2026)
     let targetTime = new Date("2026-11-09T08:00:00").getTime();
     if (data.wedding_date && data.wedding_date.includes('.')) {
       const parts = data.wedding_date.split('.');
@@ -133,7 +132,6 @@ function InvitationContent() {
   if (!data) return <div className="h-screen flex flex-col items-center justify-center bg-[#FDFBF7]">Không tìm thấy thiệp cưới.</div>;
 
   const settings = data.settings || {};
-  // Mặc định luôn bật hiệu ứng cánh hoa (nếu chưa có trong thiết lập)
   const showEffect = settings.show_effect !== false; 
   
   const isBrideFirst = data.invitation_type === "NHA_GAI";
@@ -147,13 +145,12 @@ function InvitationContent() {
   return (
     <div className="relative min-h-screen bg-[#FDFBF7] text-gray-800 flex justify-center overflow-x-hidden" style={{ fontFamily: "'Playfair Display', serif" }}>
       
-      {/* 🎵 MODULE NHẠC NỀN */}
       {settings.show_music && <audio ref={audioRef} loop src={data.audio_url || "https://res.cloudinary.com/djp3zks6d/video/upload/v1723555234/Beautiful-In-White_nvqwk5.mp3"} />}
 
       <div className="max-w-md w-full bg-white min-h-screen relative shadow-2xl overflow-hidden">
         
-        {/* HIỆU ỨNG CÁNH HOA ĐÀO */}
-        {isOpened && showEffect && <FallingPetals />}
+        {/* HIỆU ỨNG TRÁI TIM */}
+        {isOpened && showEffect && <FallingHearts />}
 
         <AnimatePresence>
           {isOpened && settings.show_music && (
@@ -163,7 +160,6 @@ function InvitationContent() {
           )}
         </AnimatePresence>
 
-        {/* BÌA THƯ BÊN NGOÀI */}
         <AnimatePresence>
           {!isOpened && (
             <motion.div exit={{ opacity: 0 }} transition={{ duration: 0.8 }} className="fixed inset-0 z-50 flex justify-center items-center w-full h-full pointer-events-none">
@@ -183,14 +179,11 @@ function InvitationContent() {
           )}
         </AnimatePresence>
 
-        {/* VIỀN TRANG TRÍ */}
         <div className="absolute left-0 top-0 bottom-0 w-3 bg-[repeating-linear-gradient(0deg,#E5C158,#E5C158_10px,#FFF_10px,#FFF_20px)] border-r border-yellow-200 z-20 opacity-90 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-3 bg-[repeating-linear-gradient(0deg,#E5C158,#E5C158_10px,#FFF_10px,#FFF_20px)] border-l border-yellow-200 z-20 opacity-90 pointer-events-none" />
 
-        {/* NỘI DUNG CHÍNH CỦA THIỆP */}
         <div className="pt-20 px-6 pb-20 relative z-10">
           
-          {/* HEADER & ẢNH BÌA */}
           <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.2, delay: 0.3 }} className="text-center mb-16 relative">
             <h2 className="text-xs tracking-[0.3em] text-gray-600 uppercase mb-3 font-semibold">THIỆP MỜI</h2>
             <h1 className="text-5xl text-gray-900 mb-4" style={{ fontFamily: "'Dancing Script', cursive" }}>{name1} <span className="text-3xl text-gray-400">&</span> {name2}</h1>
@@ -202,11 +195,9 @@ function InvitationContent() {
             </div>
           </motion.div>
 
-          {/* LỜI CHÀO VIP & BỘ 3 ẢNH */}
           <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} className="text-center mb-16">
             <div className="flex items-center justify-center gap-3 mb-6 text-[#E5C158]"><span className="w-12 h-[1px] bg-[#E5C158]"></span><span className="text-lg">❀</span><span className="w-12 h-[1px] bg-[#E5C158]"></span></div>
             
-            {/* LOGIC ĐỊNH DANH VIP (FONT DANCING SCRIPT) */}
             {vipName ? (
               <div className="mb-10 p-5 bg-[#FDFBF7] border-y border-[#E5C158]/40 shadow-sm mx-2">
                  <p className="text-xs tracking-widest text-gray-500 uppercase font-semibold mb-2">Trân trọng kính mời</p>
@@ -223,7 +214,6 @@ function InvitationContent() {
             </div>
           </motion.div>
 
-          {/* CHI TIẾT SỰ KIỆN (THỜI GIAN & ĐỊA ĐIỂM) */}
           <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-16 px-4">
             <h3 className="text-2xl text-[#9B1B1B] mb-6 uppercase tracking-wider font-bold text-sm">
               {data.invitation_type === "NHA_GAI" ? "Lễ Vu Quy" : data.invitation_type === "NHA_TRAI" ? "Lễ Thành Hôn" : "Tiệc Báo Hỷ"}
@@ -242,7 +232,6 @@ function InvitationContent() {
             )}
           </motion.div>
 
-          {/* ĐẾM NGƯỢC THỜI GIAN */}
           {settings.show_countdown && (
             <motion.div initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} className="mb-16">
               <h3 className="text-center text-sm uppercase tracking-widest text-gray-500 mb-6 font-bold">Cùng đếm ngược</h3>
@@ -257,17 +246,13 @@ function InvitationContent() {
             </motion.div>
           )}
 
-          {/* 🔴 FORM RSVP - 3 TÙY CHỌN TÂM LÝ */}
           {settings.show_rsvp && (
             <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-[#9B1B1B] p-6 rounded-2xl shadow-xl text-white mb-10">
               <h3 className="text-4xl text-center mb-2 mt-2" style={{ fontFamily: "'Dancing Script', cursive" }}>Xác Nhận Tham Dự</h3>
               <p className="text-center text-xs text-white/70 mb-6 italic">Sự hiện diện của bạn là niềm vinh hạnh cho gia đình.</p>
               
               <form onSubmit={handleWishSubmit} className="space-y-4">
-                {/* Khách tự nhập tên */}
                 <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Nhập họ tên của bạn..." className="w-full bg-white/10 border border-white/20 p-3 rounded-lg text-white placeholder-gray-300 focus:outline-none text-sm" required />
-                
-                {/* 3 Tùy chọn */}
                 <select value={attendance} onChange={(e) => setAttendance(e.target.value)} className="w-full bg-red-900 border border-white/20 p-3 rounded-lg text-white focus:outline-none text-sm">
                   <option value="Có tham dự">Chắc chắn tôi sẽ tham dự 🥰</option>
                   <option value="Cố gắng thu xếp">Sẽ cố gắng thu xếp 🤞</option>
@@ -283,7 +268,6 @@ function InvitationContent() {
             </motion.div>
           )}
 
-          {/* GỬI MỪNG CƯỚI (MỞ MODAL) */}
           {settings.show_gift && (
             <motion.div initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} className="text-center mb-16 mt-6">
               <button onClick={() => setShowGiftModal(true)} className="bg-white border-2 border-[#9B1B1B] text-[#9B1B1B] px-8 py-3 rounded-full font-bold inline-flex items-center gap-2 hover:bg-[#9B1B1B] hover:text-white transition shadow-md tracking-wider text-sm">
@@ -292,7 +276,6 @@ function InvitationContent() {
             </motion.div>
           )}
 
-          {/* 🔴 ALBUM ẢNH (CÓ NÚT THẢ TIM) */}
           {settings.show_album && albumPhotos.length > 0 && (
             <div className="text-center mb-16">
               <h3 className="text-4xl text-[#9B1B1B] mb-6" style={{ fontFamily: "'Dancing Script', cursive" }}>Album Cưới</h3>
@@ -301,7 +284,6 @@ function InvitationContent() {
                   <motion.div key={index} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="relative rounded-xl overflow-hidden shadow-md aspect-[3/4] group">
                     <img src={photo} className="w-full h-full object-cover" loading="lazy" />
                     
-                    {/* Nút thả tim bay lơ lửng */}
                     <button 
                       onClick={() => toggleLike(index)}
                       className="absolute bottom-2 right-2 bg-white/80 backdrop-blur-sm w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition transform active:scale-75"
@@ -323,7 +305,6 @@ function InvitationContent() {
         </div>
       </div>
       
-      {/* MODAL MỪNG CƯỚI */}
       {showGiftModal && (
          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
            <div className="bg-white p-6 rounded-xl relative max-w-sm w-full text-center">
@@ -340,7 +321,6 @@ function InvitationContent() {
   );
 }
 
-// Bọc Component trong Suspense theo chuẩn Next.js để đọc an toàn thanh địa chỉ URL (?n=...)
 export default function InvitationPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center font-bold text-[#9B1B1B]">Đang tải...</div>}>

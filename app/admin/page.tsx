@@ -16,8 +16,9 @@ export default function WeddingAdmin() {
     audio_url: "", bank_name: "", bank_owner: "", bank_account: "", bank_qr: ""
   });
 
+  // ĐÃ THÊM: show_effect
   const [settings, setSettings] = useState({
-    show_music: true, show_countdown: true, show_album: true, show_rsvp: true, show_gift: true
+    show_music: true, show_countdown: true, show_album: true, show_rsvp: true, show_gift: true, show_effect: true
   });
 
   const [coverPhoto, setCoverPhoto] = useState<string>("");
@@ -44,7 +45,7 @@ export default function WeddingAdmin() {
             wedding_address: data.wedding_address || "", map_link: data.map_link || "", audio_url: data.audio_url || "", 
             bank_name: data.bank_name || "", bank_owner: data.bank_owner || "", bank_account: data.bank_account || "", bank_qr: data.bank_qr || ""
           });
-          if (data.settings) setSettings(data.settings);
+          if (data.settings) setSettings({ ...settings, ...data.settings }); // Giữ lại cấu hình cũ
           if (data.cover_photo) setCoverPhoto(data.cover_photo);
           if (data.trio_photos) setTrioPhotos(data.trio_photos.split(',').filter((p: string) => p.trim() !== ""));
           if (data.wedding_photos) setAlbumPhotos(data.wedding_photos.split(',').filter((p: string) => p.trim() !== ""));
@@ -70,7 +71,6 @@ export default function WeddingAdmin() {
     if (type === 'album' && index !== undefined) setAlbumPhotos(albumPhotos.filter((_, i) => i !== index));
   };
 
-  // UPLOAD ẢNH
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'cover' | 'trio' | 'album' | 'qr') => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -103,7 +103,6 @@ export default function WeddingAdmin() {
     }
   };
 
-  // UPLOAD NHẠC
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -135,11 +134,13 @@ export default function WeddingAdmin() {
     const payload = { ...formData, settings, cover_photo: coverPhoto, trio_photos: trioPhotos.join(','), wedding_photos: albumPhotos.join(',') };
     const { error } = await supabase.from('invitations').upsert(payload);
     setLoading(false);
+    
     if (error) {
       alert("Lỗi khi lưu: " + error.message);
     } else {
       alert("🎉 Đã lưu cấu hình thiệp thành công!");
-      if (isEditMode) window.location.href = "/dashboard";
+      // ĐÃ SỬA: Luôn luôn quay về Dashboard sau khi tắt thông báo
+      window.location.href = "/dashboard";
     }
   };
 
@@ -173,7 +174,7 @@ export default function WeddingAdmin() {
               </div>
             </div>
 
-            {/* 2. VĂN BẢN (ĐÃ BỔ SUNG NGÀY ÂM LỊCH TẠI ĐÂY) */}
+            {/* 2. VĂN BẢN */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <h2 className="font-bold text-gray-800 border-b pb-3 mb-4">2. Nội dung Văn bản</h2>
               <div className="grid grid-cols-2 gap-4">
@@ -183,10 +184,7 @@ export default function WeddingAdmin() {
                 <div><label className="block text-xs font-semibold text-gray-500 mb-1">Bố / Mẹ Cô Dâu</label><input name="bride_father" value={formData.bride_father} onChange={handleChange} className="w-full border p-2.5 rounded-lg mb-2" /><input name="bride_mother" value={formData.bride_mother} onChange={handleChange} className="w-full border p-2.5 rounded-lg" /></div>
                 <div><label className="block text-xs font-semibold text-gray-500 mb-1">Giờ đãi tiệc</label><input name="wedding_time" value={formData.wedding_time} onChange={handleChange} placeholder="VD: 10h30" className="w-full border p-2.5 rounded-lg" /></div>
                 <div><label className="block text-xs font-semibold text-gray-500 mb-1">Ngày Dương Lịch</label><input name="wedding_date" value={formData.wedding_date} onChange={handleChange} placeholder="VD: 10.10.2026" className="w-full border p-2.5 rounded-lg" /></div>
-                
-                {/* Ô NHẬP LỊCH ÂM */}
                 <div className="col-span-2"><label className="block text-xs font-semibold text-gray-500 mb-1">Ngày Âm Lịch</label><input name="lunar_date" value={formData.lunar_date} onChange={handleChange} placeholder="VD: Tức ngày 10 tháng 9 năm Bính Ngọ" className="w-full border p-2.5 rounded-lg" /></div>
-                
                 <div className="col-span-2"><label className="block text-xs font-semibold text-gray-500 mb-1">Địa điểm & Link Google Maps</label><input name="location_name" value={formData.location_name} onChange={handleChange} placeholder="Tên nhà hàng / Tư gia..." className="w-full border p-2.5 rounded-lg mb-2" /><input name="map_link" value={formData.map_link} onChange={handleChange} placeholder="Link Google Maps..." className="w-full border p-2.5 rounded-lg" /></div>
               </div>
             </div>
@@ -224,6 +222,7 @@ export default function WeddingAdmin() {
                   { key: "show_album", label: "🖼️ Hiện Album Ảnh" },
                   { key: "show_rsvp", label: "✉️ Form Lời Chúc" },
                   { key: "show_gift", label: "🎁 Hộp thoại Mừng Quà" },
+                  { key: "show_effect", label: "💖 Hiệu ứng Trái tim rơi" }, // ĐÃ THÊM CÔNG TẮC
                 ].map((item) => (
                   <div key={item.key} className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-gray-700">{item.label}</span>

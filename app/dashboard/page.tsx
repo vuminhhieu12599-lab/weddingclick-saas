@@ -34,11 +34,27 @@ export default function Dashboard() {
     fetchWishes();
   }, [selectedId]);
 
+  // ĐÃ THÊM: Tính năng XÓA THIỆP
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("⚠️ Bạn có chắc chắn muốn xóa vĩnh viễn thiệp này và toàn bộ lời chúc? Dữ liệu không thể khôi phục!")) return;
+    
+    setLoading(true);
+    // Xóa lời chúc trước để tránh lỗi khóa
+    await supabase.from('wishes').delete().eq('wedding_id', id);
+    // Xóa thiệp
+    await supabase.from('invitations').delete().eq('id', id);
+    
+    // Cập nhật lại giao diện
+    setInvitations(invitations.filter(inv => inv.id !== id));
+    setSelectedId(null);
+    setLoading(false);
+    alert("🗑️ Đã xóa thiệp thành công!");
+  };
+
   const attendingCount = wishes.filter(w => w.attendance === 'Có tham dự').length;
   const declineCount = wishes.filter(w => w.attendance === 'Không tham dự').length;
   const currentWedding = invitations.find(i => i.id === selectedId);
 
-  // Lọc danh sách thiệp theo từ khóa tìm kiếm
   const filteredInvitations = invitations.filter(inv => {
     const term = searchTerm.toLowerCase();
     const groom = (inv.groom_name || "").toLowerCase();
@@ -64,7 +80,6 @@ export default function Dashboard() {
           <p className="text-xs text-gray-500 mt-1">Tổng số: {invitations.length} thiệp cưới</p>
         </div>
         
-        {/* NÚT TÌM KIẾM MỚI BỔ SUNG */}
         <div className="p-4 border-b border-gray-100 bg-white sticky top-[88px] z-20">
           <input 
             type="text" 
@@ -105,13 +120,15 @@ export default function Dashboard() {
                   <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-1">{currentWedding?.groom_name} & {currentWedding?.bride_name}</h2>
                   <p className="text-sm text-gray-500">Mã thiệp: <span className="font-mono text-[#9B1B1B] font-bold">{selectedId}</span></p>
                 </div>
-                <div className="flex gap-2">
-                  <Link href={`/${selectedId}`} target="_blank" className="flex-1 md:flex-none"><button className="w-full bg-white border-2 border-[#E5C158] text-[#9B1B1B] px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#FDFBF7] transition">👁️ Xem Thiệp</button></Link>
-                  <Link href={`/admin?id=${selectedId}`} className="flex-1 md:flex-none"><button className="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 transition shadow-sm">✏️ Sửa Thiệp</button></Link>
+                
+                {/* ĐÃ THÊM: NÚT XÓA THIỆP */}
+                <div className="flex gap-2 flex-wrap md:flex-nowrap">
+                  <Link href={`/${selectedId}`} target="_blank" className="flex-1 md:flex-none"><button className="w-full bg-white border-2 border-[#E5C158] text-[#9B1B1B] px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#FDFBF7] transition">👁️ Xem</button></Link>
+                  <Link href={`/admin?id=${selectedId}`} className="flex-1 md:flex-none"><button className="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 transition shadow-sm">✏️ Sửa</button></Link>
+                  <button onClick={() => handleDelete(selectedId)} className="flex-1 md:flex-none bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-100 transition border border-red-200">🗑️ Xóa</button>
                 </div>
               </div>
 
-              {/* BỘ CÔNG CỤ BÀN GIAO CHO KHÁCH HÀNG (CÔ DÂU CHÚ RỂ) */}
               <div className="mt-6 p-5 bg-[#FDFBF7] border border-[#E5C158]/50 rounded-xl space-y-4">
                 <h3 className="text-sm font-bold text-[#9B1B1B] uppercase tracking-wider mb-2">🔗 Bộ Link Bàn Giao Khách Hàng</h3>
                 
