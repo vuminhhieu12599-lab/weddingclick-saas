@@ -1,209 +1,273 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
 import Link from "next/link";
+import { supabase } from "../../lib/supabase";
 
 export default function Dashboard() {
   const [invitations, setInvitations] = useState<any[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [wishes, setWishes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [baseUrl, setBaseUrl] = useState("");
+  const [searchTerm, setSearch] = useState("");
 
+  // 1. Tải danh sách thiệp (Sắp xếp mới nhất lên đầu)
   useEffect(() => {
-    setBaseUrl(window.location.origin);
-    
-    // --- Ổ KHÓA BẢO MẬT & TẢI DỮ LIỆU ---
-    const checkAuthAndFetchData = async () => {
-      // 1. Kiểm tra trạng thái đăng nhập
+    const fetchInvitations = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
-      // 2. Nếu chưa đăng nhập, tự động đá về trang login
       if (!session) {
         window.location.href = "/login";
         return;
       }
 
-      // 3. Nếu đã đăng nhập, cho phép tải dữ liệu
-      const { data } = await supabase.from('invitations').select('id, couple_id, groom_name, bride_name, wedding_date').order('created_at', { ascending: false });
-      if (data) {
+      const { data, error } = await supabase
+        .from('invitations')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (data && !error) {
         setInvitations(data);
         if (data.length > 0) setSelectedId(data[0].id);
       }
       setLoading(false);
     };
 
-    checkAuthAndFetchData();
+    fetchInvitations();
   }, []);
 
+  // 2. Tải danh sách lời chúc khi chọn một thiệp
   useEffect(() => {
     if (!selectedId) return;
     const fetchWishes = async () => {
-      const { data } = await supabase.from('wishes').select('*').eq('wedding_id', selectedId).order('created_at', { ascending: false });
+      const { data } = await supabase
+        .from('wishes')
+        .select('*')
+        .eq('wedding_id', selectedId)
+        .order('created_at', { ascending: false });
       if (data) setWishes(data);
     };
     fetchWishes();
   }, [selectedId]);
 
-  // HÀM XÓA THIỆP
   const handleDelete = async (id: string) => {
-    if (!window.confirm("⚠️ Bạn có chắc chắn muốn xóa vĩnh viễn thiệp này và toàn bộ lời chúc? Dữ liệu không thể khôi phục!")) return;
-    
-    setLoading(true);
-    await supabase.from('wishes').delete().eq('wedding_id', id);
-    await supabase.from('invitations').delete().eq('id', id);
-    
-    setInvitations(invitations.filter(inv => inv.id !== id));
-    setSelectedId(null);
-    setLoading(false);
-    alert("🗑️ Đã xóa thiệp thành công!");
+    if (confirm("Bạn có chắc chắn muốn xóa vĩnh viễn thiệp này không?")) {
+      await supabase.from('invitations').delete().eq('id', id);
+      setInvitations(invitations.filter(inv => inv.id !== id));
+      if (selectedId === id) setSelectedId(invitations[0]?.id || null);
+    }
   };
 
-  // HÀM ĐĂNG XUẤT
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    alert("Đã copy link!");
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = "/login";
   };
 
-  const attendingCount = wishes.filter(w => w.attendance === 'Có tham dự').length;
-  const declineCount = wishes.filter(w => w.attendance === 'Không tham dự').length;
-  const currentWedding = invitations.find(i => i.id === selectedId);
-
-  const filteredInvitations = invitations.filter(inv => {
-    const term = searchTerm.toLowerCase();
-    const groom = (inv.groom_name || "").toLowerCase();
-    const bride = (inv.bride_name || "").toLowerCase();
-    const id = (inv.id || "").toLowerCase();
-    return groom.includes(term) || bride.includes(term) || id.includes(term);
-  });
-
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert("Đã copy link: " + text);
+  // Hàm chuyển đổi mã Template sang tên Tiếng Việt
+  const getThemeName = (templateId: string) => {
+    if (templateId === 'theme_traditional_red') return "Truyền Thống - Đỏ";
+    if (templateId === 'theme_modern_minimal') return "Hiện Đại - Tối Giản";
+    return "Mặc định";
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-[#9B1B1B] font-bold">Đang tải dữ liệu...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-gray-500">Đang tải dữ liệu...</div>;
+
+  const filteredInvitations = invitations.filter(inv => 
+    inv.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    inv.bride_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    inv.groom_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const selectedInv = invitations.find(inv => inv.id === selectedId);
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  const totalWishes = wishes.length;
+  const attendingCount = wishes.filter(w => w.attendance === 'Có tham dự').length;
+  const notAttendingCount = wishes.filter(w => w.attendance === 'Không tham dự').length;
 
   return (
-    <div className="min-h-screen bg-[#F3F4F6] font-sans flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[#F3F4F6] flex font-sans">
       
-      {/* CỘT TRÁI */}
-      <div className="w-full md:w-1/4 bg-white border-r border-gray-200 h-auto max-h-[40vh] md:max-h-none md:h-screen overflow-y-auto relative md:sticky top-0 shadow-sm z-10 flex flex-col">
-        <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50 sticky top-0 z-20">
-          <h1 className="text-xl font-bold text-gray-800">Quản Lý Dự Án</h1>
-          <p className="text-xs text-gray-500 mt-1">Tổng số: {invitations.length} thiệp cưới</p>
+      {/* CỘT TRÁI: QUẢN LÝ DỰ ÁN */}
+      <div className="w-80 bg-white border-r border-gray-200 h-screen flex flex-col flex-shrink-0 sticky top-0">
+        <div className="p-6 border-b border-gray-100">
+          <h1 className="text-xl font-bold text-[#1a2b4c]">Quản Lý Dự Án</h1>
+          <p className="text-sm text-gray-500 mt-1">Tổng số: {invitations.length} thiệp cưới</p>
         </div>
         
-        <div className="p-4 border-b border-gray-100 bg-white sticky top-[88px] z-20">
-          <input 
-            type="text" 
-            placeholder="🔍 Tìm tên hoặc ID thiệp..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:outline-none focus:border-[#E5C158]"
-          />
+        <div className="p-4 border-b border-gray-100">
+          <div className="relative">
+            <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">🔍</span>
+            <input 
+              type="text" 
+              placeholder="Tìm tên hoặc ID thiệp..." 
+              value={searchTerm}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#9B1B1B]"
+            />
+          </div>
         </div>
 
-        <div className="p-4 space-y-2 flex-grow">
-          {filteredInvitations.length === 0 ? <p className="text-sm text-gray-500 text-center py-4">Không tìm thấy kết quả.</p> : (
-            filteredInvitations.map((inv) => (
-              <div key={inv.id} onClick={() => setSelectedId(inv.id)} className={`p-4 rounded-xl cursor-pointer transition border-2 ${selectedId === inv.id ? 'border-[#E5C158] bg-[#FDFBF7]' : 'border-transparent bg-gray-50 hover:bg-gray-100'}`}>
-                <div className="font-bold text-[#9B1B1B] text-sm">{inv.groom_name || "Chú Rể"} & {inv.bride_name || "Cô Dâu"}</div>
-                <div className="text-xs text-gray-500 mt-1 flex justify-between"><span>ID: {inv.id}</span><span>{inv.wedding_date}</span></div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {filteredInvitations.map((inv) => (
+            <div 
+              key={inv.id} 
+              onClick={() => setSelectedId(inv.id)}
+              className={`p-4 rounded-xl cursor-pointer transition-all border-2 ${selectedId === inv.id ? 'border-[#9B1B1B] bg-red-50/30 shadow-sm' : 'border-transparent bg-gray-50 hover:bg-gray-100 border-gray-100'}`}
+            >
+              <div className="flex justify-between items-start mb-1">
+                <h3 className={`font-bold ${selectedId === inv.id ? 'text-[#9B1B1B]' : 'text-gray-800'}`}>
+                  {inv.groom_name} & {inv.bride_name}
+                </h3>
+                <span className="text-xs text-gray-400">{inv.wedding_date}</span>
               </div>
-            ))
+              <p className="text-xs text-gray-500 mb-2">ID: {inv.id}</p>
+              <span className="inline-block bg-white border border-gray-200 text-gray-600 text-[10px] px-2 py-1 rounded shadow-sm font-medium">
+                🎨 {getThemeName(inv.template_id)}
+              </span>
+            </div>
+          ))}
+          {filteredInvitations.length === 0 && (
+            <p className="text-center text-gray-400 text-sm mt-10">Không tìm thấy thiệp nào.</p>
           )}
         </div>
-        
-        <div className="p-4 border-t border-gray-100 mt-auto sticky bottom-0 bg-white z-20 space-y-3">
-          <Link href="/admin">
-            <button className="w-full bg-[#9B1B1B] text-white py-2.5 rounded-lg text-sm font-bold shadow-md hover:bg-red-800 transition">+ Tạo thiệp mới</button>
+
+        <div className="p-4 border-t border-gray-100 bg-white space-y-3">
+          <Link href="/admin" className="block w-full text-center bg-[#9B1B1B] text-white py-3 rounded-lg font-bold hover:bg-red-800 transition shadow-md">
+            + Tạo thiệp mới
           </Link>
-          <button onClick={handleLogout} className="w-full bg-gray-100 text-gray-600 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-gray-200 transition">Đăng Xuất</button>
+          <button onClick={handleLogout} className="w-full flex items-center justify-between px-4 py-2.5 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition text-sm">
+            <span className="flex items-center gap-2"><span className="bg-red-200 text-red-700 w-6 h-6 flex items-center justify-center rounded-full text-xs">N</span> Đăng Xuất</span>
+          </button>
         </div>
       </div>
 
-      {/* CỘT PHẢI */}
-      <div className="w-full md:w-3/4 p-4 md:p-8 overflow-y-auto h-auto md:h-screen">
-        {!selectedId ? (
-          <div className="h-full flex items-center justify-center text-gray-400 py-10">Vui lòng chọn một thiệp bên trên để xem chi tiết.</div>
-        ) : (
-          <div className="max-w-4xl mx-auto">
+      {/* CỘT PHẢI: CHI TIẾT THIỆP */}
+      <div className="flex-1 overflow-y-auto p-8">
+        {selectedInv ? (
+          <div className="max-w-4xl mx-auto space-y-6">
             
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6 mb-6">
-              <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{selectedInv.groom_name} & {selectedInv.bride_name}</h2>
+                <p className="text-gray-500 mt-1 font-medium">Mã thiệp: <span className="text-[#9B1B1B]">{selectedInv.id}</span></p>
+              </div>
+              <div className="flex gap-3">
+                <a href={`/${selectedInv.id}`} target="_blank" className="px-5 py-2.5 bg-amber-50 text-amber-700 font-bold rounded-lg hover:bg-amber-100 transition border border-amber-200 text-sm flex items-center gap-2">
+                  👁 Xem
+                </a>
+                <Link href={`/admin?id=${selectedInv.id}`} className="px-5 py-2.5 bg-blue-50 text-blue-700 font-bold rounded-lg hover:bg-blue-100 transition border border-blue-200 text-sm flex items-center gap-2">
+                  ✏️ Sửa
+                </Link>
+                <button onClick={() => handleDelete(selectedInv.id)} className="px-5 py-2.5 bg-red-50 text-red-600 font-bold rounded-lg hover:bg-red-100 transition border border-red-200 text-sm flex items-center gap-2">
+                  🗑 Xóa
+                </button>
+              </div>
+            </div>
+
+            {/* BỘ LINK BÀN GIAO KHÁCH HÀNG (Khôi phục logic VIP nguyên bản) */}
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-[#E5C158]/40 border-t-4 border-t-[#E5C158]">
+              <h3 className="font-bold text-[#9B1B1B] mb-6 flex items-center gap-2">🔗 BỘ LINK BÀN GIAO KHÁCH HÀNG</h3>
+              
+              <div className="space-y-5">
+                {/* 1. Link Thiệp Gốc */}
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-bold text-gray-700 w-36 shrink-0">1. Link Thiệp Gốc:</span>
+                  <input readOnly value={`${baseUrl}/${selectedInv.id}`} className="flex-1 border border-gray-200 bg-gray-50 p-3 rounded-lg text-sm text-gray-600 outline-none" />
+                  <button onClick={() => handleCopy(`${baseUrl}/${selectedInv.id}`)} className="bg-blue-100 text-blue-700 px-6 py-3 rounded-lg font-bold text-sm hover:bg-blue-200 transition-colors">Copy</button>
+                </div>
+
+                {/* 2. Công cụ VIP */}
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-bold text-gray-700 w-36 shrink-0">2. Công cụ VIP:</span>
+                  <input readOnly value={`${baseUrl}/${selectedInv.id}/vip`} className="flex-1 border border-purple-200 bg-purple-50/50 p-3 rounded-lg text-sm text-purple-700 outline-none font-medium" />
+                  <button onClick={() => handleCopy(`${baseUrl}/${selectedInv.id}/vip`)} className="bg-purple-100 text-purple-700 px-6 py-3 rounded-lg font-bold text-sm hover:bg-purple-200 transition-colors">Copy</button>
+                </div>
+
+                {/* 3. Xem Lời Chúc */}
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-bold text-gray-700 w-36 shrink-0">3. Xem Lời Chúc:</span>
+                  <input readOnly value={`${baseUrl}/${selectedInv.id}/rsvp`} className="flex-1 border border-gray-200 bg-gray-50 p-3 rounded-lg text-sm text-gray-600 outline-none" />
+                  <button onClick={() => handleCopy(`${baseUrl}/${selectedInv.id}/rsvp`)} className="bg-green-100 text-green-700 px-6 py-3 rounded-lg font-bold text-sm hover:bg-green-200 transition-colors">Copy</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Thống kê RSVP */}
+            <div className="grid grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 text-2xl">✉️</div>
                 <div>
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-1">{currentWedding?.groom_name} & {currentWedding?.bride_name}</h2>
-                  <p className="text-sm text-gray-500">Mã thiệp: <span className="font-mono text-[#9B1B1B] font-bold">{selectedId}</span></p>
-                </div>
-                
-                <div className="flex gap-2 flex-wrap md:flex-nowrap">
-                  <Link href={`/${selectedId}`} target="_blank" className="flex-1 md:flex-none"><button className="w-full bg-white border-2 border-[#E5C158] text-[#9B1B1B] px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#FDFBF7] transition">👁️ Xem</button></Link>
-                  <Link href={`/admin?id=${selectedId}`} className="flex-1 md:flex-none"><button className="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 transition shadow-sm">✏️ Sửa</button></Link>
-                  <button onClick={() => handleDelete(selectedId)} className="flex-1 md:flex-none bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-100 transition border border-red-200">🗑️ Xóa</button>
+                  <p className="text-sm font-bold text-gray-500">Tổng lời chúc</p>
+                  <p className="text-2xl font-black text-gray-900">{totalWishes}</p>
                 </div>
               </div>
-
-              <div className="mt-6 p-5 bg-[#FDFBF7] border border-[#E5C158]/50 rounded-xl space-y-4">
-                <h3 className="text-sm font-bold text-[#9B1B1B] uppercase tracking-wider mb-2">🔗 Bộ Link Bàn Giao Khách Hàng</h3>
-                
-                <div className="flex flex-col md:flex-row items-center gap-2">
-                  <span className="text-xs font-bold w-32 text-gray-600">1. Link Thiệp Gốc:</span>
-                  <input type="text" readOnly value={`${baseUrl}/${selectedId}`} className="flex-1 border p-2 rounded bg-white text-sm text-gray-500 w-full" />
-                  <button onClick={() => handleCopy(`${baseUrl}/${selectedId}`)} className="bg-blue-100 text-blue-700 px-3 py-2 rounded text-xs font-bold hover:bg-blue-200 w-full md:w-auto shrink-0">Copy</button>
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-green-100 flex items-center gap-4 shadow-green-50">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-xl font-bold">✓</div>
+                <div>
+                  <p className="text-sm font-bold text-gray-500">Sẽ tham dự</p>
+                  <p className="text-2xl font-black text-green-600">{attendingCount} <span className="text-sm font-semibold">khách</span></p>
                 </div>
-
-                <div className="flex flex-col md:flex-row items-center gap-2">
-                  <span className="text-xs font-bold w-32 text-gray-600">2. Công cụ VIP:</span>
-                  <input type="text" readOnly value={`${baseUrl}/${selectedId}/vip`} className="flex-1 border p-2 rounded bg-white text-sm text-gray-500 w-full" />
-                  <button onClick={() => handleCopy(`${baseUrl}/${selectedId}/vip`)} className="bg-purple-100 text-purple-700 px-3 py-2 rounded text-xs font-bold hover:bg-purple-200 w-full md:w-auto shrink-0">Copy</button>
-                </div>
-
-                <div className="flex flex-col md:flex-row items-center gap-2">
-                  <span className="text-xs font-bold w-32 text-gray-600">3. Xem Lời Chúc:</span>
-                  <input type="text" readOnly value={`${baseUrl}/${selectedId}/rsvp`} className="flex-1 border p-2 rounded bg-white text-sm text-gray-500 w-full" />
-                  <button onClick={() => handleCopy(`${baseUrl}/${selectedId}/rsvp`)} className="bg-green-100 text-green-700 px-3 py-2 rounded text-xs font-bold hover:bg-green-200 w-full md:w-auto shrink-0">Copy</button>
+              </div>
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-red-100 flex items-center gap-4 shadow-red-50">
+                <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500 text-xl font-bold">✕</div>
+                <div>
+                  <p className="text-sm font-bold text-gray-500">Không tham dự</p>
+                  <p className="text-2xl font-black text-red-500">{notAttendingCount} <span className="text-sm font-semibold">khách</span></p>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-4"><div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xl flex-shrink-0">✉️</div><div><p className="text-sm text-gray-500 font-semibold">Tổng lời chúc</p><p className="text-2xl font-bold text-gray-800">{wishes.length}</p></div></div>
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-green-200 flex items-center gap-4"><div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-xl flex-shrink-0">✅</div><div><p className="text-sm text-gray-500 font-semibold">Sẽ tham dự</p><p className="text-2xl font-bold text-green-600">{attendingCount} khách</p></div></div>
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-red-200 flex items-center gap-4"><div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-xl flex-shrink-0">❌</div><div><p className="text-sm text-gray-500 font-semibold">Không tham dự</p><p className="text-2xl font-bold text-red-500">{declineCount} khách</p></div></div>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-gray-50 px-4 md:px-6 py-4 border-b border-gray-200">
+            {/* Bảng Danh sách Xác nhận */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-6 border-b border-gray-100 bg-gray-50/50">
                 <h3 className="font-bold text-gray-800">Danh sách Xác nhận (RSVP)</h3>
               </div>
               
-              <div className="divide-y divide-gray-100">
-                {wishes.length === 0 ? (
-                  <div className="px-6 py-8 text-center text-gray-500 text-sm">Chưa có khách mời nào xác nhận.</div>
-                ) : (
-                  wishes.map((wish) => (
-                    <div key={wish.id} className="p-4 md:p-6 hover:bg-gray-50 transition flex flex-col md:flex-row gap-2 md:gap-4 md:items-start">
-                      <div className="md:w-1/4 flex flex-col">
-                        <span className="font-bold text-gray-800 text-base">{wish.guest_name}</span>
-                        <span className="text-xs text-gray-400 mt-1">{new Date(wish.created_at).toLocaleString('vi-VN')}</span>
-                      </div>
-                      <div className="md:w-1/5 mt-1 md:mt-0">
-                        <span className={`px-3 py-1 text-xs font-bold rounded-full inline-block ${wish.attendance === 'Có tham dự' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {wish.attendance}
-                        </span>
-                      </div>
-                      <div className="md:w-7/12 text-sm text-gray-600 italic mt-2 md:mt-0 whitespace-normal leading-relaxed">
-                        "{wish.message || 'Không có lời chúc'}"
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+              {wishes.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-gray-50 text-gray-500">
+                      <tr>
+                        <th className="p-4 font-semibold">Khách mời</th>
+                        <th className="p-4 font-semibold">Xác nhận</th>
+                        <th className="p-4 font-semibold w-1/2">Lời chúc</th>
+                        <th className="p-4 font-semibold text-right">Thời gian</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {wishes.map((w) => (
+                        <tr key={w.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="p-4 font-bold text-gray-800">{w.guest_name}</td>
+                          <td className="p-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${w.attendance === 'Có tham dự' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                              {w.attendance}
+                            </span>
+                          </td>
+                          <td className="p-4 text-gray-600 italic">"{w.message}"</td>
+                          <td className="p-4 text-right text-xs text-gray-400">
+                            {new Date(w.created_at).toLocaleString('vi-VN')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-10 text-center text-gray-400 font-medium">
+                  Chưa có khách mời nào xác nhận.
+                </div>
+              )}
             </div>
-            
+
+          </div>
+        ) : (
+          <div className="h-full flex items-center justify-center text-gray-400 font-medium">
+            👈 Hãy chọn một thiệp cưới bên trái để xem chi tiết
           </div>
         )}
       </div>

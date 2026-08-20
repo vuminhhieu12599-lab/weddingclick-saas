@@ -178,7 +178,7 @@ export default function WeddingAdmin() {
                 <div><label className="block text-xs font-semibold text-gray-500 mb-1">Đường Link Thiệp (ID) *</label><input name="id" value={formData.id} onChange={handleChange} readOnly={isEditMode} className={`w-full border p-2.5 rounded-lg ${isEditMode ? 'bg-gray-100 text-gray-500' : ''}`} required /></div>
                 <div><label className="block text-xs font-semibold text-gray-500 mb-1">Mã Nhóm Vợ/Chồng *</label><input name="couple_id" value={formData.couple_id} onChange={handleChange} className="w-full border p-2.5 rounded-lg" required /></div>
                 <div><label className="block text-xs font-semibold text-gray-500 mb-1">Loại Thiệp</label><select name="invitation_type" value={formData.invitation_type} onChange={handleChange} className="w-full border p-2.5 rounded-lg"><option value="CHUNG">Thiệp Chung / Báo Hỷ</option><option value="NHA_TRAI">Thiệp Nhà Trai (Lễ Thành Hôn)</option><option value="NHA_GAI">Thiệp Nhà Gái (Lễ Vu Quy)</option></select></div>
-                <div><label className="block text-xs font-semibold text-gray-500 mb-1">Mẫu Giao Diện (Theme)</label><select name="template_id" value={formData.template_id} onChange={handleChange} className="w-full border p-2.5 rounded-lg"><option value="theme_traditional_red">Truyền Thống - Đỏ</option></select></div>
+                <div><label className="block text-xs font-semibold text-gray-500 mb-1">Mẫu Giao Diện (Theme)</label><select name="template_id" value={formData.template_id} onChange={handleChange} className="w-full border p-2.5 rounded-lg"><option value="theme_traditional_red">Truyền Thống - Đỏ</option><option value="theme_modern_minimal">Hiện Đại - Tối Giản</option></select></div>
               </div>
             </div>
 
