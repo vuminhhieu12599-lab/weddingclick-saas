@@ -242,18 +242,33 @@ export default function ThemeTraditional({ invitation, guestName, id }: { invita
             <p className="text-sm text-gray-800 italic font-medium">(Tức {invitation.lunar_date})</p>
           </div>
 
-          <div className="mb-12 reveal">
-            <p className="text-center text-sm text-gray-800 uppercase tracking-widest mb-4">Buổi tiệc được tổ chức tại</p>
-            <div className="border-2 border-[#9B1B1B] rounded-3xl p-6 text-center bg-white shadow-md relative">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">{invitation.location_name}</h3>
-              <p className="text-sm text-gray-700 mb-6 leading-relaxed font-medium">{invitation.wedding_address}</p>
-              {invitation.map_link && (
-                <a href={invitation.map_link} target="_blank" className="inline-block bg-[#b01010] text-white px-8 py-2.5 rounded-full text-sm font-bold shadow-md hover:bg-red-800 transition-colors">
-                  Xem Chỉ Đường
-                </a>
-              )}
-            </div>
+          {/* ================= KHỐI ĐỊA CHỈ & BẢN ĐỒ ================= */}
+        <div className="px-6 mb-12">
+          <div className="text-center mb-4">
+            <p className="text-sm text-gray-600 uppercase tracking-widest font-medium">Buổi tiệc được tổ chức tại</p>
           </div>
+          <div className="border border-[#9B1B1B] rounded-[1.5rem] p-8 bg-white shadow-sm text-center">
+            
+            {/* Tên Địa Điểm (Dòng trên) */}
+            <h3 className="text-xl font-bold text-[#9B1B1B] uppercase mb-2 leading-snug">
+              {invitation.location_name}
+            </h3>
+            
+            {/* Địa chỉ chi tiết (Dòng dưới) */}
+            {invitation.wedding_address && (
+              <p className="text-sm text-gray-700 font-medium mb-8 leading-relaxed px-4">
+                {invitation.wedding_address}
+              </p>
+            )}
+
+            {/* Nút Xem chỉ đường */}
+            {invitation.map_link && (
+              <a href={invitation.map_link} target="_blank" className="inline-block bg-[#9B1B1B] text-white font-bold py-3 px-8 rounded-full text-sm shadow-md hover:bg-red-800 transition-colors">
+                Xem Chỉ Đường
+              </a>
+            )}
+          </div>
+        </div>
 
           {invitation.settings?.show_rsvp && (
             <div className="mb-6 reveal">

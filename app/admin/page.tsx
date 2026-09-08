@@ -141,7 +141,14 @@ export default function WeddingAdmin() {
       alert("Vui lòng nhập Link thiệp (ID) và Mã cặp đôi!"); return;
     }
     setLoading(true);
-    const payload = { ...formData, settings, cover_photo: coverPhoto, trio_photos: trioPhotos.join(','), wedding_photos: albumPhotos.join(',') };
+    const payload = { 
+      ...formData, 
+      settings, 
+      cover_photo: coverPhoto, 
+      trio_photos: trioPhotos.join(','), 
+      wedding_photos: albumPhotos.join(','),
+      updated_at: new Date().toISOString() // Thêm dòng này để ghi nhận thời gian sửa
+    };
     const { error } = await supabase.from('invitations').upsert(payload);
     setLoading(false);
     
@@ -178,7 +185,14 @@ export default function WeddingAdmin() {
                 <div><label className="block text-xs font-semibold text-gray-500 mb-1">Đường Link Thiệp (ID) *</label><input name="id" value={formData.id} onChange={handleChange} readOnly={isEditMode} className={`w-full border p-2.5 rounded-lg ${isEditMode ? 'bg-gray-100 text-gray-500' : ''}`} required /></div>
                 <div><label className="block text-xs font-semibold text-gray-500 mb-1">Mã Nhóm Vợ/Chồng *</label><input name="couple_id" value={formData.couple_id} onChange={handleChange} className="w-full border p-2.5 rounded-lg" required /></div>
                 <div><label className="block text-xs font-semibold text-gray-500 mb-1">Loại Thiệp</label><select name="invitation_type" value={formData.invitation_type} onChange={handleChange} className="w-full border p-2.5 rounded-lg"><option value="CHUNG">Thiệp Chung / Báo Hỷ</option><option value="NHA_TRAI">Thiệp Nhà Trai (Lễ Thành Hôn)</option><option value="NHA_GAI">Thiệp Nhà Gái (Lễ Vu Quy)</option></select></div>
-                <div><label className="block text-xs font-semibold text-gray-500 mb-1">Mẫu Giao Diện (Theme)</label><select name="template_id" value={formData.template_id} onChange={handleChange} className="w-full border p-2.5 rounded-lg"><option value="theme_traditional_red">Truyền Thống - Đỏ</option><option value="theme_modern_minimal">Hiện Đại - Tối Giản</option></select></div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Mẫu Giao Diện (Theme)</label>
+                  <select name="template_id" value={formData.template_id} onChange={handleChange} className="w-full border p-2.5 rounded-lg">
+                    <option value="theme_traditional_red">Truyền Thống - Đỏ</option>
+                    <option value="theme_modern_minimal">Hiện Đại - Tối Giản</option>
+                    <option value="theme_luxury">Nghệ Thuật Cao Cấp (Luxury)</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -192,8 +206,12 @@ export default function WeddingAdmin() {
                 <div><label className="block text-xs font-semibold text-gray-500 mb-1">Giờ đãi tiệc</label><input name="wedding_time" value={formData.wedding_time} onChange={handleChange} placeholder="VD: 10h30" className="w-full border p-2.5 rounded-lg" /></div>
                 <div><label className="block text-xs font-semibold text-gray-500 mb-1">Ngày Dương Lịch</label><input name="wedding_date" value={formData.wedding_date} onChange={handleChange} placeholder="VD: 10.10.2026" className="w-full border p-2.5 rounded-lg" /></div>
                 <div className="col-span-2"><label className="block text-xs font-semibold text-gray-500 mb-1">Ngày Âm Lịch</label><input name="lunar_date" value={formData.lunar_date} onChange={handleChange} placeholder="VD: Tức ngày 10 tháng 9 năm Bính Ngọ" className="w-full border p-2.5 rounded-lg" /></div>
-                <div className="col-span-2"><label className="block text-xs font-semibold text-gray-500 mb-1">Địa điểm & Link Google Maps</label><input name="location_name" value={formData.location_name} onChange={handleChange} placeholder="Tên nhà hàng / Tư gia..." className="w-full border p-2.5 rounded-lg mb-2" /><input name="map_link" value={formData.map_link} onChange={handleChange} placeholder="Link Google Maps..." className="w-full border p-2.5 rounded-lg" /></div>
-              </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Thông tin Địa điểm & Google Maps</label>
+                  <input name="location_name" value={formData.location_name} onChange={handleChange} placeholder="Tên địa điểm (VD: TRUNG TÂM TIỆC CƯỚI... TƯ GIA NHÀ TRAI..)" className="w-full border p-2.5 rounded-lg mb-2 font-bold" />
+                  <input name="wedding_address" value={formData.wedding_address} onChange={handleChange} placeholder="Địa chỉ chi tiết (VD: Thôn 8 Trung Nghĩa, xã Tu Vũ, tỉnh Phú Thọ)" className="w-full border p-2.5 rounded-lg mb-2" />
+                  <input name="map_link" value={formData.map_link} onChange={handleChange} placeholder="Link Google Maps..." className="w-full border p-2.5 rounded-lg" />
+                </div>              </div>
             </div>
 
             <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
@@ -209,7 +227,7 @@ export default function WeddingAdmin() {
                   <div className="flex gap-4 mt-3">{trioPhotos.map((url, i) => <div key={i} className="relative inline-block"><img src={url} className="h-24 w-24 rounded border shadow-sm object-cover" /><button onClick={() => removePhoto('trio', i)} className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full text-xs font-bold shadow-md hover:bg-red-700">&times;</button></div>)}</div>
                 </div>
                 <div className="pt-4 border-t border-blue-200">
-                  <div className="flex justify-between mb-2"><label className="block text-sm font-semibold text-gray-700">📸 Album Ảnh Thả Ga ({albumPhotos.length} ảnh)</label>{uploadingType === 'album' && <span className="text-xs text-blue-600 animate-pulse">Đang nén...</span>}</div>
+                  <div className="flex justify-between mb-2"><label className="block text-sm font-semibold text-gray-700">📸 Album Ảnh ({albumPhotos.length} ảnh)</label>{uploadingType === 'album' && <span className="text-xs text-blue-600 animate-pulse">Đang nén...</span>}</div>
                   <input type="file" accept="image/*" multiple onChange={(e) => handleImageUpload(e, 'album')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer" />
                   <div className="flex gap-3 mt-3 flex-wrap">{albumPhotos.map((url, i) => <div key={i} className="relative inline-block"><img src={url} className="h-16 w-16 rounded border shadow-sm object-cover" /><button onClick={() => removePhoto('album', i)} className="absolute -top-1 -right-1 bg-red-500 text-white w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-bold shadow-md hover:bg-red-700">&times;</button></div>)}</div>
                 </div>

@@ -11,7 +11,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearch] = useState("");
 
-  // 1. Tải danh sách thiệp (Sắp xếp mới nhất lên đầu)
+  // 1. Tải danh sách thiệp (Sắp xếp theo thời gian cập nhật mới nhất)
   useEffect(() => {
     const fetchInvitations = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -20,10 +20,11 @@ export default function Dashboard() {
         return;
       }
 
+      // Đã đổi từ 'created_at' sang 'updated_at' để thiệp vừa sửa sẽ lên đầu
       const { data, error } = await supabase
         .from('invitations')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('updated_at', { ascending: false });
 
       if (data && !error) {
         setInvitations(data);
@@ -67,8 +68,9 @@ export default function Dashboard() {
     window.location.href = "/login";
   };
 
-  // Hàm chuyển đổi mã Template sang tên Tiếng Việt
+  // Hàm chuyển đổi mã Template sang tên Tiếng Việt (Đã cập nhật mẫu Luxury)
   const getThemeName = (templateId: string) => {
+    if (templateId === 'theme_luxury') return "Nghệ Thuật Cao Cấp";
     if (templateId === 'theme_traditional_red') return "Truyền Thống - Đỏ";
     if (templateId === 'theme_modern_minimal') return "Hiện Đại - Tối Giản";
     return "Mặc định";
@@ -94,9 +96,15 @@ export default function Dashboard() {
       
       {/* CỘT TRÁI: QUẢN LÝ DỰ ÁN */}
       <div className="w-80 bg-white border-r border-gray-200 h-screen flex flex-col flex-shrink-0 sticky top-0">
-        <div className="p-6 border-b border-gray-100">
-          <h1 className="text-xl font-bold text-[#1a2b4c]">Quản Lý Dự Án</h1>
-          <p className="text-sm text-gray-500 mt-1">Tổng số: {invitations.length} thiệp cưới</p>
+        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+          <div>
+            <h1 className="text-xl font-bold text-[#1a2b4c]">Quản Lý Dự Án</h1>
+            <p className="text-sm text-gray-500 mt-1">Tổng số: {invitations.length} thiệp cưới</p>
+          </div>
+          {/* Nút truy cập nhanh trang Thống Kê */}
+          <Link href="/thong-ke" title="Xem thống kê tổng quan" className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full transition text-gray-600">
+            📊
+          </Link>
         </div>
         
         <div className="p-4 border-b border-gray-100">
@@ -169,7 +177,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* BỘ LINK BÀN GIAO KHÁCH HÀNG (Khôi phục logic VIP nguyên bản) */}
+            {/* BỘ LINK BÀN GIAO KHÁCH HÀNG */}
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-[#E5C158]/40 border-t-4 border-t-[#E5C158]">
               <h3 className="font-bold text-[#9B1B1B] mb-6 flex items-center gap-2">🔗 BỘ LINK BÀN GIAO KHÁCH HÀNG</h3>
               
@@ -244,7 +252,11 @@ export default function Dashboard() {
                         <tr key={w.id} className="hover:bg-gray-50 transition-colors">
                           <td className="p-4 font-bold text-gray-800">{w.guest_name}</td>
                           <td className="p-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${w.attendance === 'Có tham dự' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                              w.attendance === 'Có tham dự' ? 'bg-green-100 text-green-700' : 
+                              w.attendance === 'Cố gắng thu xếp' ? 'bg-amber-100 text-amber-700' : 
+                              'bg-red-100 text-red-700'
+                            }`}>
                               {w.attendance}
                             </span>
                           </td>
