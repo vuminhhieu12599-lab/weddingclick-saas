@@ -1,11 +1,11 @@
 # WeddingClick V2 — Physical Database Plan
 
 **Task:** 001 (Revision 4 — final micro patch, two closing integrity corrections after Revision 3's review)
-**Status:** Draft for external review — NOT executed. No migration has been created or run.
+**Status:** APPROVED / FROZEN — passed external review. Foundation migrations 0001–0006 (Task 002) have been executed and smoke-tested on DEV/STAGING. Migrations 0007–0020 remain planned and have not been executed yet.
 **Depends on:** `CLAUDE.md`, `docs/DECISIONS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/TEMPLATE_SYSTEM.md`, `docs/SECURITY.md`, `docs/DEVELOPMENT_RULES.md`, `docs/LEGACY_AUDIT.md`
 **Last updated:** 2026-09-11
 
-Revision 2's overall architecture was accepted. Revision 3 was a focused correction pass fixing 18 SQL/integrity blockers, cross-referenced by **[F#]** tags. This Revision 4 is a final micro patch fixing exactly two further items found in Revision 3's review, tagged **[G1]**/**[G2]** (see the closing "Revision 4 — Final Micro Patch" note near the end of this document). No SQL migration exists yet; this plan must pass review before Task 002 authors any `.sql` file.
+Revision 2's overall architecture was accepted. Revision 3 was a focused correction pass fixing 18 SQL/integrity blockers, cross-referenced by **[F#]** tags. This Revision 4 is a final micro patch fixing exactly two further items found in Revision 3's review, tagged **[G1]**/**[G2]** (see the closing "Revision 4 — Final Micro Patch" note near the end of this document). This plan passed external review; Task 002 has authored and executed the Foundation migrations (0001–0006) based on it.
 
 ---
 
@@ -1202,4 +1202,4 @@ Two further items surfaced by a third external review, tagged **[G1]**/**[G2]** 
 
 ## R. Implementation Readiness
 
-**READY** for Task 002 (Week 1/Foundation migration batch `0001`–`0006`), pending this revision's own external review. Revision 2's structural gaps, Revision 3's 18 targeted SQL/integrity corrections, and Revision 4's two final guards (**[G1]**, **[G2]**) are now resolved with one exact, unambiguous, dependency-ordered mechanism each, per §Q, the Final Dependency Walk, and this Revision 4 note.
+**APPROVED and EXECUTED** for Task 002's Foundation migration batch (`0001`–`0006`), which has passed its own external review and been executed and smoke-tested on DEV/STAGING. Revision 2's structural gaps, Revision 3's 18 targeted SQL/integrity corrections, and Revision 4's two final guards (**[G1]**, **[G2]**) are now resolved with one exact, unambiguous, dependency-ordered mechanism each, per §Q, the Final Dependency Walk, and this Revision 4 note. Migrations `0007`–`0020` remain planned and have not yet been executed.
