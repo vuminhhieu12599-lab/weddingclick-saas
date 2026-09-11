@@ -53,6 +53,9 @@ function createFakeGateway(project: ProjectSummary | null): ProjectGateway<FakeC
     async getActiveStaffProfileById() {
       return null;
     },
+    async createProject() {
+      throw new Error("createProject should not be called in this test");
+    },
   };
 }
 
@@ -95,6 +98,9 @@ describe("getProjectById", () => {
       },
       async getActiveStaffProfileById() {
         return null;
+      },
+      async createProject() {
+        throw new Error("createProject should not be called in this test");
       },
     };
 

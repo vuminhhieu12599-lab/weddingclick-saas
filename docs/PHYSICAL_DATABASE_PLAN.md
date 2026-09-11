@@ -1,7 +1,7 @@
 # WeddingClick V2 — Physical Database Plan
 
 **Task:** 001 (Revision 4 — final micro patch, two closing integrity corrections after Revision 3's review)
-**Status:** APPROVED / FROZEN — passed external review. Foundation migrations 0001–0006 (Task 002) have been executed and smoke-tested on DEV/STAGING. Migrations 0007–0020 remain planned and have not been executed yet.
+**Status:** APPROVED / FROZEN — passed external review. Foundation migrations 0001–0006 (Task 002) have been executed and smoke-tested on DEV/STAGING. Migrations 0007–0020 remain planned and have not been executed yet. An additive bridge migration, `0006b_atomic_project_creation_rpc.sql` (Task 005B), has been authored — not applied — between 0006 and 0007; see §16 for its placement and the migration file itself for full detail. It does not renumber or redesign any part of this frozen plan.
 **Depends on:** `CLAUDE.md`, `docs/DECISIONS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/TEMPLATE_SYSTEM.md`, `docs/SECURITY.md`, `docs/DEVELOPMENT_RULES.md`, `docs/LEGACY_AUDIT.md`
 **Last updated:** 2026-09-11
 
@@ -1052,6 +1052,38 @@ Circular dependency between `project_invitations` (pointer columns) and `invitat
       trigger.
 
 ──────────────────────── WEEK 1 / FOUNDATION BOUNDARY ────────────────────────
+
+0006b_atomic_project_creation_rpc.sql — additive bridge migration, Task 005B,
+    not part of the original frozen 0001–0020 sequence and not a
+    renumbering of anything below it.
+    - create_project_with_addons(customer_id, package_code, addon_codes,
+      assigned_staff_id, deadline_at) RETURNS uuid. SECURITY INVOKER (not
+      DEFINER) — runs as the calling staff member so RLS/is_staff() remain
+      the real, live enforcement (§1.4); EXECUTE granted to authenticated
+      only, no anon, no service_role.
+    - Atomically creates one projects row plus zero/many project_addons
+      rows, independently re-validating customer/package/addon/assigned-
+      staff state inside the same transaction rather than trusting
+      request-time pre-flight (see
+      lib/server/projects/build-project-creation-plan.ts). Reuses migration
+      0006's existing sync_project_commercial_totals()/
+      guard_project_addon_commercial_freeze() triggers unmodified.
+    - Full rationale, error-code contract (WC001–WC008), and locking
+      strategy documented in the migration file's header comment. Revision
+      1: uses whole-table `LOCK TABLE ... IN SHARE MODE` on
+      service_packages/service_addons/profiles (not per-row
+      `SELECT ... FOR UPDATE`) — a row-locking SELECT is subject to a
+      table's UPDATE policy as well as its SELECT policy, which would
+      incorrectly hide valid rows from an ordinary STAFF caller under the
+      existing RLS design (those three tables restrict UPDATE more
+      narrowly than SELECT). Table-level locking checks only the
+      table-level GRANT, which `authenticated` already holds on all three
+      tables, so this requires no privilege or policy change. Revision 2:
+      is_staff() is checked twice — an early fail-fast guard before any
+      locking, and again immediately after the profiles SHARE lock is
+      acquired, which is the authoritative check (closes a TOCTOU window
+      where the caller's own profile could be deactivated between the
+      first check and the profiles lock).
 
 0007_project_media.sql — reordered per [F7]
     - project_media table + RLS + UNIQUE(storage_bucket, storage_path) +

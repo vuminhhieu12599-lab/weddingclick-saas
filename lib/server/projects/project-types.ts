@@ -83,3 +83,23 @@ export interface StaffProfileRow {
   displayName: string;
   isActive: boolean;
 }
+
+/**
+ * Business-intent input to the `create_project_with_addons` atomic RPC
+ * (Task 005B). Deliberately identical in shape to `CreateProjectRequest`
+ * (validate-create-project-request.ts) — this is the only input the RPC
+ * accepts; every commercial/id snapshot is re-resolved from the database
+ * inside the RPC's own transaction, never supplied here.
+ */
+export interface CreateProjectRpcParams {
+  customerId: string;
+  packageCode: string;
+  addonCodes: string[];
+  assignedStaffId: string | null;
+  deadlineAt: string | null;
+}
+
+/** Minimal, stable result of a successful Project creation (Task 005B). */
+export interface CreatedProjectRef {
+  id: string;
+}

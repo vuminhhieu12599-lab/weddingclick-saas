@@ -31,6 +31,9 @@ function createFakeGateway(
     async getActiveStaffProfileById() {
       return null;
     },
+    async createProject() {
+      throw new Error("createProject should not be called in this test");
+    },
   };
   return gateway;
 }

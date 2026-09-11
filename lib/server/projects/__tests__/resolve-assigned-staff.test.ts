@@ -27,6 +27,9 @@ function createFakeGateway(
     async getActiveStaffProfileById(_client, id) {
       return profile && profile.id === id ? profile : null;
     },
+    async createProject() {
+      throw new Error("createProject should not be called in this test");
+    },
   };
   return gateway;
 }
@@ -69,6 +72,9 @@ describe("resolveAssignedStaffForCreation", () => {
       async getActiveStaffProfileById() {
         called = true;
         return null;
+      },
+      async createProject() {
+        throw new Error("createProject should not be called in this test");
       },
     };
 

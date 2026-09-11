@@ -1,4 +1,6 @@
 import type {
+  CreateProjectRpcParams,
+  CreatedProjectRef,
   ListProjectsParams,
   ProjectSummary,
   ServiceAddonCatalogRow,
@@ -11,12 +13,11 @@ import type {
  * decouples Project use cases/validation from the real @supabase/supabase-js
  * client shape.
  *
- * Deliberately has no `createProject`/`createProjectWithAddons` method — see
- * the Task 005 final report's TRANSACTION ATOMICITY REVIEW. Project creation
- * (write path) is not implemented in this task; this gateway only covers the
- * reads and catalog/staff lookups needed for GET/list and for the
- * creation-validation logic that is implemented and unit-tested now so a
- * future atomic creation RPC can be wired against it directly.
+ * `createProject` (Task 005B) calls the atomic `create_project_with_addons`
+ * database RPC (supabase/migrations/20260911041125_0006b_atomic_project_creation_rpc.sql)
+ * with business-intent fields only — never a client/server-computed price,
+ * snapshot, id, or `createdBy` (the RPC derives `created_by` from
+ * `auth.uid()` itself). See lib/server/projects/create-project.ts.
  */
 export interface ProjectGateway<TClient> {
   getProjectById(client: TClient, id: string): Promise<ProjectSummary | null>;
@@ -27,4 +28,5 @@ export interface ProjectGateway<TClient> {
   ): Promise<ServicePackageCatalogRow | null>;
   getAddonsByCodes(client: TClient, codes: string[]): Promise<ServiceAddonCatalogRow[]>;
   getActiveStaffProfileById(client: TClient, id: string): Promise<StaffProfileRow | null>;
+  createProject(client: TClient, params: CreateProjectRpcParams): Promise<CreatedProjectRef>;
 }

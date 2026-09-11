@@ -53,6 +53,9 @@ function createFakeGateway(): ProjectGateway<FakeClient> {
     async getActiveStaffProfileById(_client, id) {
       return id === validStaffId ? { id: validStaffId, displayName: "Staff Two", isActive: true } : null;
     },
+    async createProject() {
+      throw new Error("createProject should not be called in this test");
+    },
   };
   return gateway;
 }

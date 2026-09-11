@@ -7,7 +7,12 @@
  * an HTTP caller — never raw Supabase/Postgres error text (docs/SECURITY.md
  * "never return raw Supabase/Postgres error details").
  */
-export type ApiErrorKind = "BAD_REQUEST" | "NOT_FOUND" | "CONFLICT" | "INTERNAL";
+export type ApiErrorKind =
+  | "BAD_REQUEST"
+  | "FORBIDDEN"
+  | "NOT_FOUND"
+  | "CONFLICT"
+  | "INTERNAL";
 
 export class ApiError extends Error {
   readonly kind: ApiErrorKind;
@@ -20,10 +25,12 @@ export class ApiError extends Error {
 }
 
 /** CLAUDE.md §34 / task-suggested HTTP semantics. */
-export function apiErrorStatus(kind: ApiErrorKind): 400 | 404 | 409 | 500 {
+export function apiErrorStatus(kind: ApiErrorKind): 400 | 403 | 404 | 409 | 500 {
   switch (kind) {
     case "BAD_REQUEST":
       return 400;
+    case "FORBIDDEN":
+      return 403;
     case "NOT_FOUND":
       return 404;
     case "CONFLICT":

@@ -1,8 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { EventType, PaymentStatus, ProjectStatus } from "../../domain";
+import { ApiError } from "../errors/api-error";
+import { CREATE_PROJECT_RPC_ERROR_CODES } from "../projects/create-project-error-codes";
 import type { ProjectGateway } from "../projects/project-gateway";
 import type {
+  CreatedProjectRef,
+  CreateProjectRpcParams,
   ListProjectsParams,
   ProjectAddonSummary,
   ProjectSummary,
@@ -349,5 +353,42 @@ export const supabaseProjectGateway: ProjectGateway<SupabaseClient> = {
 
     const row = data as ActiveProfileRow;
     return { id: row.id, displayName: row.display_name, isActive: row.is_active };
+  },
+
+  /**
+   * Calls the atomic `create_project_with_addons` RPC (Task 005B) with
+   * business-intent parameters only. This is the only method in this
+   * gateway that mutates projects/project_addons, and the only place that
+   * translates the RPC's stable WCxxx error-code contract
+   * (create-project-error-codes.ts) into an ApiError. Any RPC error whose
+   * code is not in that map is an unexpected database failure — it is
+   * deliberately rethrown as a generic Error (never forwarding the raw
+   * Postgres message) so the route layer maps it to a generic HTTP 500.
+   */
+  async createProject(
+    client,
+    params: CreateProjectRpcParams,
+  ): Promise<CreatedProjectRef> {
+    const { data, error } = await client.rpc("create_project_with_addons", {
+      p_customer_id: params.customerId,
+      p_package_code: params.packageCode,
+      p_addon_codes: params.addonCodes,
+      p_assigned_staff_id: params.assignedStaffId,
+      p_deadline_at: params.deadlineAt,
+    });
+
+    if (error) {
+      const known = CREATE_PROJECT_RPC_ERROR_CODES[error.code];
+      if (known) {
+        throw new ApiError(known.kind, known.message);
+      }
+      throw new Error("Failed to create project");
+    }
+
+    if (typeof data !== "string") {
+      throw new Error("Failed to create project");
+    }
+
+    return { id: data };
   },
 };
