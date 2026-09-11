@@ -298,7 +298,8 @@ Before launch verify:
 - Guest token cannot access Customer Portal;
 - non-entitled Project cannot create personalized guests;
 - Staff cannot perform Admin-only action if role restrictions apply;
-- service-role credential absent from browser bundle.
+- service-role credential absent from browser bundle;
+- **basic abuse/rate-limiting controls exist on public RSVP submission and customer-token verification endpoints — this is a mandatory pre-production gate (`docs/SECURITY.md` §11), not an optional check. Production readiness fails without it, even if implementation was reasonably deferred earlier in the six-week plan.**
 
 ---
 

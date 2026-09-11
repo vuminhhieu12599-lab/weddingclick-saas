@@ -263,7 +263,8 @@ Must have:
 - mobile usability;
 - documented recovery/known limitations;
 - successful build/tests;
-- approved production Supabase security.
+- approved production Supabase security;
+- basic abuse/rate-limiting controls on public RSVP submission and customer-token verification endpoints (`docs/SECURITY.md` §11) — implementation may be deferred during Weeks 1–4, but this is a mandatory gate, not optional, and Production Ready is not met without it.
 
 ---
 

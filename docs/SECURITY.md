@@ -111,6 +111,28 @@ V1 audit found patterns equivalent to overly broad public access. V2 must not re
 
 Where mutations go through trusted server logic, prefer minimal table grants/policies rather than opening browser writes broadly.
 
+### 5.1 Centralized authorization helper functions (Task 001)
+
+Role checks inside RLS policies must not repeat ad-hoc `EXISTS (SELECT ... FROM profiles ...)` subqueries per policy. Three centralized `SECURITY DEFINER` functions are the single source of truth, each with `SET search_path = ''` (empty — every reference inside the function body is fully schema-qualified, e.g. `public.profiles`, `auth.uid()`) and owned by a role with `BYPASSRLS`, which is also what makes it safe for every table's RLS policies — including `profiles`' own — to call these functions directly without risking recursion. See `docs/PHYSICAL_DATABASE_PLAN.md` §1.3 for the full hardening detail:
+
+- `current_user_role()` — resolves the calling `auth.uid()`'s role from `profiles`, or `NULL` if no active profile exists.
+- `is_staff()` — true for any active `ADMIN` or `STAFF` profile.
+- `is_admin()` — true only for an active `ADMIN` profile.
+
+Every RLS policy that needs a role check calls one of these, never a client-supplied claim. See `docs/PHYSICAL_DATABASE_PLAN.md` §1.5 for the full planned signatures.
+
+### 5.2 Customer/guest tokens are not RLS-scoped
+
+Supabase RLS is keyed to `auth.uid()` / the Auth JWT and has no native relationship to the application-level bearer tokens used for customer access links and guest links. Consequently, `anon` and any `authenticated` session without an active `profiles` row receive **no RLS grants at all** on V2 tables — every INTAKE/REVIEW/PORTAL/guest-token flow is served exclusively by trusted Next.js server code that validates the token server-side and then queries using `service_role` (which bypasses RLS). RLS on V2 tables is real defense-in-depth for the STAFF/ADMIN (`authenticated`) path; it is not the mechanism that scopes customer or guest access. See `docs/PHYSICAL_DATABASE_PLAN.md` §1.6 and §M for the full matrix.
+
+### 5.3 Staff mutations still go through RLS, not `service_role` — normal case
+
+Normal internal staff/admin mutations (Projects, Customers, wedding data, media metadata, guests, tasks, catalog admin) are performed by trusted server code using **the staff member's own authenticated Supabase session** — never the anon key called directly from a client component (V1's flaw), and never `service_role` as a blanket substitute for RLS. `service_role` is reserved for customer/guest token flows (§5.2), narrowly-scoped exceptional admin procedures (e.g. hard-delete, initial admin bootstrap), and the specific internal `SECURITY DEFINER` functions that require `BYPASSRLS` to avoid `profiles` RLS recursion. This keeps RLS as real, live enforcement for staff operations rather than decorative defense-in-depth. See `docs/PHYSICAL_DATABASE_PLAN.md` §1.4.
+
+### 5.4 Activity log write trust
+
+`activity_logs` has no table-level `INSERT` policy for any role, including authenticated staff — an ordinary staff session must not be able to manufacture an arbitrary audit row by issuing a raw `INSERT`. Nor is it enough to hide that behind a generic logging RPC: a directly-callable `log_activity(...)` would still let any authenticated session log an event that never actually happened, even though the actor field itself is set correctly. The internal `log_activity(...)` helper is therefore **not granted `EXECUTE` to any externally-reachable role at all** — it is callable only from within other trusted `SECURITY DEFINER` business-action functions (publish, mark-paid, approve, etc.), which call it as a verified side effect of the real mutation they perform, using `auth.uid()` for the actor. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.22/§L.
+
 ---
 
 ## 6. Service Role
@@ -233,7 +255,7 @@ For personalized guests, only update the RSVP linked to that resolved guest.
 
 For non-personalized invitations, do not grant table-wide read/write simply to allow form submission.
 
-Consider basic abuse controls/rate limiting when production traffic begins.
+**Basic abuse controls/rate limiting on public RSVP submission and customer-token verification endpoints are a mandatory pre-production requirement, not an optional consideration.** Implementation may be deferred during Week 1–4 development, but production readiness (`docs/ROADMAP.md` "Production Ready Definition") fails if this has not been addressed before commercial launch. No schema table is required for it in the Task 001/002 physical plan — this is an application/middleware-level control, tracked here as a release gate.
 
 Never return sensitive internal database errors directly to guests.
 

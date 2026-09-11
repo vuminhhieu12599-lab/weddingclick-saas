@@ -1,7 +1,7 @@
 # WeddingClick V2 — Database Design Specification
 
-**Status:** Approved logical schema; physical migration names may be refined during implementation  
-**Last updated:** 2026-09-10
+**Status:** Approved logical schema. Physical column types, constraints, indexes, and RLS policy intent are specified in `docs/PHYSICAL_DATABASE_PLAN.md`, which governs where the two documents differ.  
+**Last updated:** 2026-09-10 (updated by Task 001 — table renamed to `project_invitations`, see `docs/DECISIONS.md`)
 
 ## 1. Database Principles
 
@@ -33,7 +33,7 @@ customers
           ├── project_media
           ├── project_design
           ├── project_addons ── service_addons
-          ├── invitations ───── template_versions ── templates
+          ├── project_invitations ─ template_versions ── templates
           │      └── invitation_versions
           ├── intake_submissions
           ├── project_access_links
@@ -57,7 +57,7 @@ Purpose: internal WeddingClick identity/profile linked to Supabase Auth.
 
 Suggested fields:
 
-- `id` — references `auth.users.id`, primary key.
+- `id` — `UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE`. **Exception to the global "every table gets `DEFAULT gen_random_uuid()`" rule** — a profile's id is always exactly the `auth.users` id it extends, never freshly generated. See `docs/PHYSICAL_DATABASE_PLAN.md` §1.1/§2.1.
 - `role` — `ADMIN` or `STAFF` for V1.
 - `display_name`.
 - `is_active`.
@@ -184,16 +184,20 @@ Purpose: add-ons purchased for a Project.
 Suggested fields:
 
 - `id`.
-- `project_id` FK cascade/restrict strategy to be chosen intentionally.
-- `service_addon_id` FK.
+- `project_id` FK, `ON DELETE CASCADE`.
+- `service_addon_id` FK, `ON DELETE RESTRICT`.
 - `addon_code_snapshot`.
 - `addon_name_snapshot`.
 - `price_vnd_snapshot`.
+- `created_by` nullable profile FK.
+- `revoked_at`, `revoked_by`, `revoked_reason` — soft-revocation; rows are never deleted, only revoked. Re-adding after revocation creates a new row (new price snapshot); entitlement derives from non-revoked rows only. `project_id`, `service_addon_id`, both snapshot fields, `created_by`, and `created_at` are DB-guarded as permanently immutable after insert (an add-on can never be reassigned to a different Project); the revocation trio is mutable only while the parent Project is `UNPAID` and is itself frozen once `PAID`. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.6 for the exact trigger mechanism.
 - `created_at`.
 
 Constraint:
 
-- unique `(project_id, service_addon_id)` or approved equivalent.
+- partial unique index `(project_id, service_addon_id)` where `revoked_at IS NULL` — at most one *active* row per Project/add-on.
+
+Once the parent Project's `payment_status = 'PAID'`, add-ons (and the Project's package fields) become frozen — no normal insert/update/revoke is possible. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.6/§D for the exact trigger mechanism and how totals stay atomically consistent.
 
 Entitlement such as Guest Tool must derive from Project add-on state, not an arbitrary browser boolean.
 
@@ -219,7 +223,9 @@ Suggested fields:
 - `love_story` optional.
 - `lunar_date_display` optional (display-only until/if a canonical lunar-date system is implemented).
 - `additional_note` optional.
-- gift/bank display fields only if not better normalized in a future dedicated domain.
+- `groom_bank_name`, `groom_bank_account_name`, `groom_bank_account_number`, `groom_bank_qr_media_id` — groom-side gift account, shown on GROOM invitations and on COMMON.
+- `bride_bank_name`, `bride_bank_account_name`, `bride_bank_account_number`, `bride_bank_qr_media_id` — bride-side gift account, shown on BRIDE invitations and on COMMON. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.7 for exact types/nullability; resolved as fixed fields on this table (not a separate normalized table) since the cardinality is permanently exactly two sides.
+- Both QR media references use a **composite FK against `(project_media.id, project_media.project_id)`**, not a plain FK to `project_media(id)` alone — this guarantees at the database level that a gift QR image cannot belong to a different Project's media inventory. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.7.
 - timestamps.
 
 Constraint:
@@ -238,7 +244,7 @@ Suggested fields:
 
 - `id`.
 - `project_id` FK.
-- `event_type` — examples `VU_QUY`, `THANH_HON`, `RECEPTION`, `CUSTOM`.
+- `occasion_type` — examples `VU_QUY`, `THANH_HON`, `RECEPTION`, `CUSTOM`. (Named `occasion_type`, not `event_type`, to avoid colliding in vocabulary with `projects.event_type`, which is the unrelated top-level `EventType` concept — `WEDDING` today, future `BIRTHDAY`/etc.)
 - `side` — `COMMON`, `GROOM`, `BRIDE` or approved neutral value.
 - `title`.
 - `starts_at` canonical timestamp.
@@ -248,13 +254,14 @@ Suggested fields:
 - `map_url` optional.
 - `description` optional.
 - `sort_order` integer.
-- `is_primary` optional if needed by resolver.
+- `is_primary` boolean, `NOT NULL DEFAULT false` — at most one primary event per `(project_id, side)`, enforced by a partial unique index. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.8 for the exact resolution rule the variant resolver uses (which side's primary event feeds countdown/calendar for COMMON/GROOM/BRIDE).
 - timestamps.
 
 Indexes:
 
 - `project_id`.
-- potentially `(project_id, starts_at)`.
+- `(project_id, starts_at)`.
+- unique partial index on `(project_id, side)` where `is_primary = true`.
 
 Do not store weekday as canonical data; derive it.
 
@@ -319,10 +326,9 @@ Suggested fields:
 - `template_id` FK.
 - `version_number` integer/string with defined ordering.
 - `renderer_key` unique, e.g. `wedding.elegant-editorial.v1`.
-- `manifest` JSONB for supported features/presets metadata.
-- `is_active_for_new_projects`.
+- `manifest` JSONB for supported features/presets metadata. **Frozen after creation, DB-guarded** — a changed manifest requires a new template version (`docs/CLAUDE.md` §9), not an in-place edit.
 - `created_at`.
-- `retired_at` nullable.
+- `retired_at` nullable — single source of truth for availability (`NULL` = selectable for new projects/designs; non-null = retired). No separate `is_active_for_new_projects` boolean, to avoid two fields that could disagree about the same fact. **`retired_at` is the only column a normal `UPDATE` may ever change** — see `docs/PHYSICAL_DATABASE_PLAN.md` §2.11.
 
 Constraint:
 
@@ -357,7 +363,9 @@ Rules:
 
 ---
 
-## 15. `invitations`
+## 15. `project_invitations`
+
+**Physical name approved by Task 001 (`docs/DECISIONS.md`): `project_invitations`.** This is the permanent name, not a placeholder — it is not renamed back to `invitations` at any point. It exists specifically so V1's own `invitations` table can remain untouched with no naming collision.
 
 Purpose: logical invitation variant belonging to a Project.
 
@@ -366,7 +374,7 @@ Suggested fields:
 - `id`.
 - `project_id` FK.
 - `variant` — `COMMON`, `GROOM`, `BRIDE`.
-- `slug` or public routing identifier, if stored here.
+- `public_slug` — `TEXT NOT NULL UNIQUE`, the public routing identifier (not an authorization credential), generated from `project_code` + `variant` and stable/frozen after first publish. Set by a `BEFORE INSERT` trigger, **not a column `DEFAULT`** — a `DEFAULT` expression cannot reference sibling columns of the same row, which `project_code`+`variant`-based generation requires. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.13.
 - `current_review_version_id` nullable.
 - `published_version_id` nullable.
 - `created_at`.
@@ -389,15 +397,19 @@ Purpose: stable Review/Published snapshots.
 Suggested fields:
 
 - `id`.
-- `invitation_id` FK.
+- `invitation_id` FK (references `project_invitations`).
 - `version_number`.
-- `version_type` or lifecycle metadata such as `REVIEW` / `PUBLISHED` if needed.
+- `version_type` — `REVIEW` / `PUBLISHED`.
+- `source_review_version_id` nullable self-referencing FK — for a `PUBLISHED` row, which `REVIEW` row's payload it was copied (promoted) from.
 - `template_version_id` FK.
-- `renderer_key_snapshot` optional redundant safety metadata.
+- `renderer_key_snapshot` redundant safety metadata.
 - `payload` JSONB containing normalized render snapshot.
+- Media dependencies are recorded in a separate normalized junction table, `invitation_version_media` (`invitation_version_id`, `project_media_id`, `ON DELETE RESTRICT` toward `project_media`) — not a denormalized array column on this table. This gives a real FK-enforced guarantee that media referenced by any retained snapshot (current or historical) cannot be deleted. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.15/§K.
 - `created_by` nullable profile FK.
 - `created_at`.
 - `published_at` nullable.
+
+Rows are fully immutable and append-only: no application role may `UPDATE` or `DELETE` a row once created. Publish is copy-on-publish — a `PUBLISHED` row's payload is copied verbatim from the approved `REVIEW` row, never re-derived from draft state at the moment of publishing.
 
 Constraints:
 
@@ -421,13 +433,15 @@ Suggested fields:
 - `project_id` FK.
 - `access_link_id` FK optional.
 - `payload` JSONB.
-- `status` — `PENDING`, `APPLIED`, `REJECTED` or equivalent.
+- `status` — `TEXT CHECK IN ('PENDING','APPLIED','REJECTED')`, default `'PENDING'`.
 - `submitted_at`.
 - `reviewed_by` nullable.
 - `reviewed_at` nullable.
 - optional staff note.
 
 Customer submission should not automatically overwrite canonical data unless a future approved rule explicitly allows it.
+
+`project_id`, `access_link_id`, `payload`, and `submitted_at` are DB-guarded as immutable after insert — this is an append-only audit record of exactly what the customer submitted, not a convention staff/code review must remember to respect. A normal `UPDATE` may only ever change `status`, `reviewed_by`, `reviewed_at`, and `staff_note`. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.16.
 
 ---
 
@@ -446,22 +460,22 @@ Suggested fields:
 - `id`.
 - `project_id` FK.
 - `link_type`.
-- `token_hash` unique.
+- `token_hash` — `BYTEA`, SHA-256 digest (32 bytes) of the raw token, unique.
 - `token_hint` optional non-sensitive prefix/suffix for staff display.
-- `review_version_group/reference` where required for Review semantics.
-- `is_active`.
 - `expires_at` nullable.
-- `revoked_at` nullable.
+- `revoked_at` nullable — sole source of truth for active/revoked state (no separate `is_active` boolean). Rotation creates a new row and revokes the old one; token values are never updated in place. **DB-guarded, not just by convention:** `project_id`, `link_type`, `token_hash`, `created_by`, `created_at` cannot be changed by any normal `UPDATE` — only `revoked_at`, `expires_at`, and `last_used_at` may change. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.17.
 - `created_by`.
 - `created_at`.
 - `last_used_at` optional.
 
-Never store raw token unnecessarily if hash-based resolution is implemented.
+No `review_version_group/reference` field: approval is anchored per-version through `review_feedback.invitation_version_id` instead of pinning the link itself to one version (see `docs/PHYSICAL_DATABASE_PLAN.md` §F and Open Question Q2).
+
+Raw token is never stored — only its SHA-256 hash.
 
 Indexes:
 
 - unique `token_hash`.
-- `(project_id, link_type, is_active)` as appropriate.
+- `(project_id, link_type, revoked_at)`.
 
 ---
 
@@ -490,15 +504,16 @@ Purpose: personalized guest records.
 Suggested fields:
 
 - `id`.
-- `project_id` FK.
+- `project_id` FK. **Immutable after insert** — a Guest belongs permanently to the Project it was created under; there is no "move to another Project" operation. If a guest was created under the wrong Project, staff creates a new Guest record rather than reassigning this one. DB-guarded, not by convention — see `docs/PHYSICAL_DATABASE_PLAN.md` §2.19.
 - `display_name` required.
 - `invitation_variant` nullable/controlled depending on package.
 - `group_name` optional.
 - `phone` optional.
 - `note` optional.
-- `token_hash` unique.
+- `created_by` nullable profile FK — staff accountability for manual entry/Excel import.
+- `token_hash` — `BYTEA`, SHA-256 digest (32 bytes) of the raw token, unique.
 - `token_hint` optional.
-- `is_active`.
+- `revoked_at` nullable — sole source of truth for active/revoked state (no separate `is_active` boolean, consistent with `project_access_links`).
 - `created_at`.
 - `updated_at`.
 
@@ -525,24 +540,26 @@ Suggested fields:
 
 - `id`.
 - `project_id` FK.
-- `guest_id` nullable FK.
-- `guest_name` nullable for non-personalized flow.
-- `attendance` boolean or typed enum.
-- `party_size` integer.
-- `message` optional.
+- `guest_id` nullable FK (`ON DELETE SET NULL`, not cascade — deleting a guest must not destroy their actual RSVP response).
+- `guest_display_name_snapshot` nullable — required (NOT NULL in effect via CHECK) when `guest_id` is null (non-personalized flow); for personalized flow, a copy of `guests.display_name` at submission time so the response stays legible even if the guest row is later removed.
+- `attendance` — `TEXT CHECK IN ('ATTENDING','NOT_ATTENDING')`, not boolean (see `docs/PHYSICAL_DATABASE_PLAN.md` §A for rationale).
+- `party_size` integer, bounded (`0`–`20`).
+- `message` optional, bounded length.
 - `created_at`.
 - `updated_at`.
 
 Rules:
 
-- personalized guest should have one current RSVP; enforce unique `guest_id` where non-null if using single-row current-state design;
-- `party_size` must be non-negative and bounded by an approved reasonable maximum;
-- when `attendance = false`, party size should normally be 0 or normalized centrally;
-- server validates Project/guest relationship.
+- personalized guest has one current RSVP; enforced via a partial unique index on `guest_id WHERE guest_id IS NOT NULL`;
+- `party_size` must be non-negative and bounded by an approved reasonable maximum (20);
+- `attendance = 'ATTENDING'` requires `party_size` between 1 and 20; `attendance = 'NOT_ATTENDING'` requires `party_size = 0` — both directions enforced by a single hard `CHECK`;
+- `guest_id IS NOT NULL OR guest_display_name_snapshot IS NOT NULL`, enforced by a hard `CHECK`;
+- server validates Project/guest relationship;
+- all writes (personalized and non-personalized) go through the trusted server RSVP use case — never a direct client `INSERT`/`UPDATE`.
 
-Potential constraint:
+Constraint:
 
-- unique `guest_id` where `guest_id IS NOT NULL`.
+- partial unique index on `guest_id` where `guest_id IS NOT NULL`.
 
 Indexes:
 
@@ -562,7 +579,7 @@ Suggested fields:
 - `id`.
 - `project_id` FK.
 - `title`.
-- `status`.
+- `status` — `TEXT CHECK IN ('TODO','IN_PROGRESS','DONE','CANCELLED')`, default `'TODO'`. Fixed controlled list, not arbitrary text.
 - `due_at` nullable.
 - `assigned_staff_id` nullable.
 - `sort_order` optional.
@@ -580,12 +597,14 @@ Suggested fields:
 
 - `id`.
 - `project_id` FK.
-- `actor_type` — staff/customer/system.
+- `actor_type` — `STAFF`/`CUSTOMER`/`GUEST`/`SYSTEM`.
 - `actor_profile_id` nullable.
 - `action_type`.
 - `summary`.
 - `metadata` JSONB optional.
 - `created_at`.
+
+No table-level `INSERT` policy exists for any role, including authenticated staff. Writes happen only as a side effect of trusted server business-action functions (e.g. publish, mark-paid, approve). The internal `log_activity(...)` helper that those functions call is **not** itself granted `EXECUTE` to any externally-reachable role (not `authenticated`, not `service_role`) — an ordinary authenticated session cannot manufacture an arbitrary audit row either by issuing a raw `INSERT` or by calling a generic logging RPC directly. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.22/§L.
 
 Log meaningful domain events, not every keystroke.
 
@@ -667,23 +686,12 @@ Do not drop or mutate them destructively during initial V2 foundation work.
 
 Create V2 schema/migrations alongside them, validate V2, then retire legacy through a separate approved task.
 
-If a naming conflict occurs because V1 already has `invitations`, the implementation plan must resolve it explicitly before migration. Possible strategies include transitional naming or controlled rename after validation. Do not improvise silently.
+**Resolved by Task 001 (`docs/DECISIONS.md`):** the V2 invitation table is permanently named `project_invitations`. V1's `invitations` table is untouched and is not renamed; `project_invitations` is not a transitional name.
 
 ---
 
 ## 28. Physical Schema Review Gate
 
-Before executing the first V2 migration, Claude must produce a physical schema plan containing:
+**Satisfied by Task 001:** the physical schema plan is `docs/PHYSICAL_DATABASE_PLAN.md`, containing actual table names, columns/types, primary keys, foreign keys, unique/check constraints, indexes, RLS policy intent, migration ordering, the V1 naming-conflict resolution, and delete/archive strategy per table.
 
-- actual table names;
-- actual columns/types;
-- primary keys;
-- foreign keys;
-- unique/check constraints;
-- indexes;
-- RLS policies;
-- migration ordering;
-- strategy for V1 naming conflicts;
-- rollback/repair considerations.
-
-No production schema change should happen before this plan is reviewed.
+No production schema change happens before that plan passes external review, and no migration SQL has been authored yet.
