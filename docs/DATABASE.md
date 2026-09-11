@@ -190,14 +190,14 @@ Suggested fields:
 - `addon_name_snapshot`.
 - `price_vnd_snapshot`.
 - `created_by` nullable profile FK.
-- `revoked_at`, `revoked_by`, `revoked_reason` — soft-revocation; rows are never deleted, only revoked. Re-adding after revocation creates a new row (new price snapshot); entitlement derives from non-revoked rows only. `project_id`, `service_addon_id`, both snapshot fields, `created_by`, and `created_at` are DB-guarded as permanently immutable after insert (an add-on can never be reassigned to a different Project); the revocation trio is mutable only while the parent Project is `UNPAID` and is itself frozen once `PAID`. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.6 for the exact trigger mechanism.
+- `revoked_at`, `revoked_by`, `revoked_reason` — soft-revocation; rows are never deleted, only revoked. Re-adding after revocation creates a new row (new price snapshot); entitlement derives from non-revoked rows only. `project_id`, `service_addon_id`, both snapshot fields, `created_by`, and `created_at` are DB-guarded as permanently immutable after insert (an add-on can never be reassigned to a different Project). The revocation trio may be set once, from `NULL` to non-`NULL` (the first revocation), only while the parent Project is `UNPAID`; once `revoked_at` is non-`NULL` it is DB-guarded as immutable — it can never be reset to `NULL` ("un-revoking") and never changed to a different value (rewriting revocation history) — and the whole trio is additionally frozen (blocked from even a first revocation) once the parent Project is `PAID`. Choosing the same add-on again after revocation, while still `UNPAID`, always creates a new row. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.6 for the exact trigger mechanism.
 - `created_at`.
 
 Constraint:
 
 - partial unique index `(project_id, service_addon_id)` where `revoked_at IS NULL` — at most one *active* row per Project/add-on.
 
-Once the parent Project's `payment_status = 'PAID'`, add-ons (and the Project's package fields) become frozen — no normal insert/update/revoke is possible. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.6/§D for the exact trigger mechanism and how totals stay atomically consistent.
+Once the parent Project's `payment_status = 'PAID'`, add-ons (and the Project's package fields) become frozen — no normal insert/update/revoke is possible. Commercial addon mutations for one Project are serialized by locking the parent `projects` row before mutation, so concurrent add-on changes cannot produce a lost-update/stale-total race, and an add-on mutation cannot race the `UNPAID → PAID` transition itself. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.6/§D for the exact trigger mechanism and how totals stay atomically consistent.
 
 Entitlement such as Guest Tool must derive from Project add-on state, not an arbitrary browser boolean.
 
