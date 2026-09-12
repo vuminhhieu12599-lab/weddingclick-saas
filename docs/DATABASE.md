@@ -600,15 +600,17 @@ Purpose: audit-oriented record of important Project actions.
 Suggested fields:
 
 - `id`.
-- `project_id` FK.
+- `project_id` FK, `ON DELETE CASCADE`.
 - `actor_type` — `STAFF`/`CUSTOMER`/`GUEST`/`SYSTEM`.
-- `actor_profile_id` nullable.
+- `actor_profile_id` nullable, `REFERENCES profiles(id) ON DELETE SET NULL`. Row-level `CHECK (actor_profile_id IS NULL OR actor_type = 'STAFF')` — one-way: non-`STAFF` rows can never carry it, while a `STAFF` row may still later read `NULL` here via the FK's own `ON DELETE SET NULL` (an exceptional profile hard-delete must not be blocked by an already-immutable audit row). The stricter two-way check is deliberately not used, for that reason.
 - `action_type`.
-- `summary`.
+- `summary`, `CHECK` length 1–500.
 - `metadata` JSONB optional.
-- `created_at`.
+- `created_at`. No `updated_at` — the table is append-only.
 
 No table-level `INSERT` policy exists for any role, including authenticated staff. Writes happen only as a side effect of trusted server business-action functions (e.g. publish, mark-paid, approve). The internal `log_activity(...)` helper that those functions call is **not** itself granted `EXECUTE` to any externally-reachable role (not `authenticated`, not `service_role`) — an ordinary authenticated session cannot manufacture an arbitrary audit row either by issuing a raw `INSERT` or by calling a generic logging RPC directly. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.22/§L.
+
+**Frozen signature:** `public.log_activity(p_project_id uuid, p_actor_type text, p_action_type text, p_summary text, p_metadata jsonb DEFAULT NULL) RETURNS void`. No `p_actor_profile_id` parameter and no overloads. When `p_actor_type = 'STAFF'`, the function requires `auth.uid() IS NOT NULL` and `public.is_staff()` (raising otherwise) and sets `actor_profile_id` from `auth.uid()` internally; for every other actor type, `actor_profile_id` is `NULL`. The function does not return the inserted row's `id`.
 
 Log meaningful domain events, not every keystroke.
 

@@ -739,11 +739,33 @@ Purpose: audit-oriented record of meaningful domain events. Not a keystroke/tele
 | `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
 | `project_id` | `UUID` | NOT NULL | *(none)* | `REFERENCES projects(id) ON DELETE CASCADE` |
 | `actor_type` | `TEXT` | NOT NULL | *(none)* | `CHECK (actor_type IN ('STAFF','CUSTOMER','GUEST','SYSTEM'))` |
-| `actor_profile_id` | `UUID` | NULL | *(none)* | `REFERENCES profiles(id) ON DELETE SET NULL` — set only when `actor_type = 'STAFF'` |
+| `actor_profile_id` | `UUID` | NULL | *(none)* | `REFERENCES profiles(id) ON DELETE SET NULL` — non-NULL only permitted when `actor_type = 'STAFF'` (enforced by the row-level `CHECK` below); a STAFF row may still later read NULL here via this FK's own `ON DELETE SET NULL` action (see rationale below) |
 | `action_type` | `TEXT` | NOT NULL | *(none)* | Short stable code (e.g. `PROJECT_PUBLISHED`); centralized as a TypeScript union in the domain layer rather than a DB `CHECK` list, because new action types are expected frequently as features ship — the one deliberate exception to the "CHECK for controlled vocabularies" rule in §A |
 | `summary` | `TEXT` | NOT NULL | *(none)* | `CHECK (char_length(summary) BETWEEN 1 AND 500)` |
 | `metadata` | `JSONB` | NULL | *(none)* | Must never contain a raw token/secret — a code-review discipline, not a DB constraint (a constraint cannot reliably detect "this JSON contains a secret") |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | |
+
+**Actor/profile consistency — approved decision:** row-level `CHECK (actor_profile_id IS NULL OR actor_type = 'STAFF')`. This is deliberately **one-way**: a non-`STAFF` row (`CUSTOMER`/`GUEST`/`SYSTEM`) can never carry `actor_profile_id`, while a `STAFF` row may have it set at insertion time or `NULL`. The stricter two-way form `(actor_type = 'STAFF') = (actor_profile_id IS NOT NULL)` is explicitly rejected: it would conflict with `actor_profile_id`'s own `ON DELETE SET NULL` FK to `profiles` — an exceptional hard-delete of the referenced `profiles` row (§14's "Task-014 clarification" pattern, applied here) must be free to null out `actor_profile_id` on an already-immutable historical STAFF-attributed row without that referential-action `UPDATE` itself violating a two-way invariant. Establishing the correct value at insertion time (an active STAFF caller's `auth.uid()` for a `STAFF` row, `NULL` for every other `actor_type`) is `log_activity()`'s responsibility, described exactly below; the `CHECK` is the DB-level backstop that even a direct manual `INSERT` cannot bypass.
+
+**`log_activity(...)` — approved exact signature and semantics, frozen:**
+
+```text
+public.log_activity(
+  p_project_id uuid,
+  p_actor_type text,
+  p_action_type text,
+  p_summary text,
+  p_metadata jsonb DEFAULT NULL
+)
+RETURNS void
+```
+
+No `p_actor_profile_id` parameter exists and none may be added — actor identity for a `STAFF` event is derived internally, never accepted from the caller (closing the same forgeability gap described below one level further: a caller cannot even choose whose `actor_profile_id` gets attributed). No overload of this function exists. Internal logic, executed inside the function body:
+
+- If `p_actor_type = 'STAFF'`: require `auth.uid() IS NOT NULL` **and** `public.is_staff()`, raising an exception if either fails; set `v_actor_profile_id := auth.uid()`.
+- For every other `p_actor_type` value: `v_actor_profile_id := NULL` unconditionally.
+- `INSERT INTO public.activity_logs (project_id, actor_type, actor_profile_id, action_type, summary, metadata) VALUES (p_project_id, p_actor_type, v_actor_profile_id, p_action_type, p_summary, p_metadata);` — `p_action_type` is inserted as given, with no coercion (the table's `actor_type` `CHECK` remains the sole vocabulary guard, and `action_type` itself intentionally has none, per §3.A); `p_metadata` is inserted as given, unmodified (secret/token exclusion remains application/code-review discipline, not a function-level scrub).
+- The function does not return the inserted row's `id`; callers that need it must not be written to expect one.
 
 **Write path — [R17], further corrected by [F13]:** there is **no** table-level INSERT policy for `authenticated`/`is_staff()`, unchanged from Revision 2. However, Revision 2's `log_activity(...)` was a *generic*, directly client-callable RPC granted to `authenticated` — and the review correctly points out that this is still forgeable in an important sense: even though `actor_profile_id` is set server-side from `auth.uid()` (so *who* is logged can't be spoofed), any authenticated staff session could still call this generic RPC directly with an arbitrary `project_id`/`action_type`/`summary` of its own choosing, logging events that never actually happened (e.g. `PROJECT_PUBLISHED` for a project they never published) — *what* gets logged was never actually verified against a real business action.
 
