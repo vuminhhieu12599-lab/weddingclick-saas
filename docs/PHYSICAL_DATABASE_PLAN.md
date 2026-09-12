@@ -642,7 +642,8 @@ Purpose: customer review feedback and approval events — a fully append-only lo
 
 Triggers — **[R13]**:
 - `guard_feedback_targets_review_version()` — `BEFORE INSERT ON review_feedback FOR EACH ROW`: looks up the referenced `invitation_versions` row; raises unless `version_type = 'REVIEW'`. This applies to **all** `feedback_type` values (not just `APPROVAL`), per the recommendation that all review-flow feedback references the exact `REVIEW` version shown — it also has the side effect of structurally preventing approval (or any feedback) of a `PUBLISHED` row, satisfying that requirement directly.
-- `guard_approval_targets_current_review()` — `BEFORE INSERT ON review_feedback FOR EACH ROW WHEN (NEW.feedback_type = 'APPROVAL')` — **[R-Q2]**: joins to `invitation_versions` to find `invitation_id`, then to `project_invitations` to read `current_review_version_id` for that invitation; raises an exception unless it equals `NEW.invitation_version_id`. This is the concrete mechanism that rejects "approval of a stale version" server-side — enforced at the database level, not merely by application discipline.
+- `guard_approval_targets_current_review()` — `BEFORE INSERT ON review_feedback FOR EACH ROW WHEN (NEW.feedback_type = 'APPROVAL')` — **[R-Q2]**: joins to `invitation_versions` to find `invitation_id`, then reads `current_review_version_id` from the corresponding `project_invitations` row **using `SELECT ... FOR UPDATE` on that exact row** (**Task-016 approved concurrency hardening**), and raises an exception unless the locked value equals `NEW.invitation_version_id`. This is the concrete mechanism that rejects "approval of a stale version" server-side — enforced at the database level, not merely by application discipline.
+  **Concurrency rationale (Task-016):** a plain, unlocked `SELECT` here would be vulnerable to a TOCTOU race under `READ COMMITTED` — T1 reads `current_review_version_id = A` while inserting `APPROVAL(A)`; T2 concurrently `UPDATE`s that same `project_invitations` row, advancing the pointer to `B`, and commits; T1, holding a stale snapshot, would then wrongly approve against superseded version `A`. Because pointer advancement is necessarily an `UPDATE` on this exact `project_invitations` row, and `UPDATE` always takes a row-level lock, a `SELECT ... FOR UPDATE` in the guard on that same row is sufficient to serialize the two: whichever transaction locks the row first blocks the other until it commits or rolls back, so the guard always evaluates the post-commit current value rather than a stale one. This is the same reasoning already documented for `guard_project_addon_commercial_freeze()` (§2.6) — a single shared row touched by both sides of the race — and is deliberately **not** the disjoint-rows case that required `guard_last_active_admin()`'s `pg_advisory_xact_lock` (§2.1, **[F12]**); no advisory lock is used or needed here.
 
 Constraints: partial unique index `CREATE UNIQUE INDEX ON review_feedback (invitation_version_id) WHERE feedback_type = 'APPROVAL'` — at most one approval event per version (a new review round gets a new version and hence a fresh opportunity to approve). **[R13]**
 
@@ -1187,6 +1188,11 @@ Circular dependency between `project_invitations` (pointer columns) and `invitat
       (0013, now trustworthy per [F3]'s re-check) + guard_review_link_type(),
       guard_feedback_targets_review_version(),
       guard_approval_targets_current_review() triggers.
+    - guard_approval_targets_current_review() locks the resolved
+      project_invitations row via SELECT ... FOR UPDATE before comparing
+      current_review_version_id (Task-016 approved concurrency hardening,
+      §2.18) — serializes APPROVAL insertion against concurrent pointer
+      advancement on that same row. No advisory lock; see §2.18 rationale.
 0017_guests.sql
     - composite FK (project_id, invitation_variant) → project_invitations
       (project_id, variant), RESTRICT.
