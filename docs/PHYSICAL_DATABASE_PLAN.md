@@ -571,7 +571,7 @@ Purpose: customer-submitted information awaiting staff review/application. **Nev
 
 | Column | Type | Null | Default | Notes |
 |---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
+| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK. **Immutable after INSERT — [G2]**, see below. |
 | `project_id` | `UUID` | NOT NULL | *(none)* | `REFERENCES projects(id) ON DELETE CASCADE`. **Immutable after INSERT — [G2]**, see below. |
 | `access_link_id` | `UUID` | NULL | *(none)* | See §11-C below. **Immutable after INSERT — [G2]**, see below. |
 | `payload` | `JSONB` | NOT NULL | *(none)* | **Immutable after INSERT, DB-guarded — [G2]**, see below. This is an audit-integrity rule, not a convention. |
@@ -587,7 +587,7 @@ Indexes: `(project_id, status)`.
 
 **Payload immutability — [G2], new, DB-guarded (not convention):** `intake_submissions` is meant to be a permanent, exact record of what the customer actually submitted — an audit-integrity rule, not a soft preference. Enforced by:
 
-- `guard_intake_submission_immutability()` — `BEFORE UPDATE ON intake_submissions FOR EACH ROW`: raises an exception if any of `project_id, access_link_id, payload, submitted_at` differ between `OLD` and `NEW`. **Only `status`, `reviewed_by`, `reviewed_at`, and `staff_note` may ever change through a normal `UPDATE`** — exactly the staff review-workflow fields, and nothing else.
+- `guard_intake_submission_immutability()` — `BEFORE UPDATE ON intake_submissions FOR EACH ROW`: raises an exception if any of `id, project_id, access_link_id, payload, submitted_at` differ between `OLD` and `NEW`. `id` is included because PostgreSQL primary keys are updatable unless explicitly guarded. **Only `status`, `reviewed_by`, `reviewed_at`, and `staff_note` may ever change through a normal `UPDATE`** — exactly the staff review-workflow fields, and nothing else.
 
 RLS: enabled + forced. SELECT: `is_staff()`. INSERT: **server-only** via `service_role` (the customer INTAKE token flow — no Supabase Auth session exists for that actor, §1.6). UPDATE: `is_staff()`, enforced to `status`/`reviewed_by`/`reviewed_at`/`staff_note` only by `guard_intake_submission_immutability()` above — not by convention. DELETE: no policy (audit trail of what the customer actually sent). Anonymous/guest: none.
 
@@ -876,7 +876,7 @@ rsvps
 | `project_invitations` | Cannot delete while it has any `invitation_versions` row | The composite `RESTRICT` FK from `invitation_versions` (§2.14, **[F3]**) — tighter than Revision 2's "only while never published" — plus the existing slug-freeze/deletion trigger (§2.13) |
 | `invitation_versions` | Fully immutable, append-only | No UPDATE/DELETE policy for any role; `REVIEW`/`PUBLISHED` lifecycle fields now mutually exclusive and complete by a single strengthened `CHECK` (**[F4]**) |
 | `invitation_version_media` | Effectively immutable | No UPDATE/DELETE policy; `(project_media_id, project_id)` composite FK is `RESTRICT`, protecting referenced media indefinitely (§22) and guaranteeing same-Project media (**[F5]**) |
-| `intake_submissions` | Append-only payload, mutable status | `project_id`/`access_link_id`/`payload`/`submitted_at` DB-guarded immutable by `guard_intake_submission_immutability()` (§2.16, **[G2]**); only `status`/`reviewed_by`/`reviewed_at`/`staff_note` mutable; no DELETE |
+| `intake_submissions` | Append-only payload, mutable status | `id`/`project_id`/`access_link_id`/`payload`/`submitted_at` DB-guarded immutable by `guard_intake_submission_immutability()` (§2.16, **[G2]**); only `status`/`reviewed_by`/`reviewed_at`/`staff_note` mutable; no DELETE |
 | `project_access_links` | Soft-revoke only | Rotation = new row + revoke old, now DB-guarded (**[F14]** `guard_access_link_identity_immutability()`, §2.17) rather than by convention, including `created_by` and (Task-014 hardening) `token_hint` — see the profile-hard-delete note below the table; no DELETE |
 | `review_feedback` | Append-only | No UPDATE/DELETE |
 | `guests` | Hard-deletable by staff | `rsvps.guest_id` is `SET NULL` (not CASCADE) on delete, preserving the actual RSVP via `guest_display_name_snapshot` |
@@ -1180,7 +1180,7 @@ Circular dependency between `project_invitations` (pointer columns) and `invitat
       project_access_links(id, project_id) + guard_intake_link_type() trigger
       — valid here since 0014 already exists.
     - guard_intake_submission_immutability() trigger (**[G2]**, new) — blocks
-      any UPDATE that changes project_id/access_link_id/payload/submitted_at.
+      any UPDATE that changes id/project_id/access_link_id/payload/submitted_at.
 
 0016_review_feedback.sql
     - composite FKs to project_access_links (0014) and invitation_versions
@@ -1253,7 +1253,7 @@ Walked the entire `0001`→`0020` order in §16 in sequence. Result, per migrati
 
 ### Revision 4 — Final Micro Patch
 
-Two further items surfaced by a third external review, tagged **[G1]**/**[G2]** (distinct from the **[F#]** series to mark them as a separate, later patch): **[G1]** `guests.project_id` is now DB-guarded immutable after `INSERT` via `guard_guest_project_immutability()` (§2.19) — closing the gap where `rsvps.guard_rsvp_guest_same_project()` validated the guest/project relationship only at RSVP-write time, not for the remaining lifetime of the guest row. **[G2]** `intake_submissions`' `project_id`/`access_link_id`/`payload`/`submitted_at` are now DB-guarded immutable via `guard_intake_submission_immutability()` (§2.16) — replacing the "by convention" wording with an actual trigger; only `status`/`reviewed_by`/`reviewed_at`/`staff_note` may change through a normal `UPDATE`. Both are additive guards on already-defined tables; no other table, migration step, or architectural decision changed.
+Two further items surfaced by a third external review, tagged **[G1]**/**[G2]** (distinct from the **[F#]** series to mark them as a separate, later patch): **[G1]** `guests.project_id` is now DB-guarded immutable after `INSERT` via `guard_guest_project_immutability()` (§2.19) — closing the gap where `rsvps.guard_rsvp_guest_same_project()` validated the guest/project relationship only at RSVP-write time, not for the remaining lifetime of the guest row. **[G2]** `intake_submissions`' `id`/`project_id`/`access_link_id`/`payload`/`submitted_at` are now DB-guarded immutable via `guard_intake_submission_immutability()` (§2.16) — replacing the "by convention" wording with an actual trigger; only `status`/`reviewed_by`/`reviewed_at`/`staff_note` may change through a normal `UPDATE`. Both are additive guards on already-defined tables; no other table, migration step, or architectural decision changed.
 
 ---
 

@@ -441,7 +441,7 @@ Suggested fields:
 
 Customer submission should not automatically overwrite canonical data unless a future approved rule explicitly allows it.
 
-`project_id`, `access_link_id`, `payload`, and `submitted_at` are DB-guarded as immutable after insert — this is an append-only audit record of exactly what the customer submitted, not a convention staff/code review must remember to respect. A normal `UPDATE` may only ever change `status`, `reviewed_by`, `reviewed_at`, and `staff_note`. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.16.
+`id`, `project_id`, `access_link_id`, `payload`, and `submitted_at` are DB-guarded as immutable after insert — this is an append-only audit record of exactly what the customer submitted, not a convention staff/code review must remember to respect. A normal `UPDATE` may only ever change `status`, `reviewed_by`, `reviewed_at`, and `staff_note`. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.16.
 
 ---
 
