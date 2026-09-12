@@ -612,7 +612,7 @@ No table-level `INSERT` policy exists for any role, including authenticated staf
 
 **Frozen signature:** `public.log_activity(p_project_id uuid, p_actor_type text, p_action_type text, p_summary text, p_metadata jsonb DEFAULT NULL) RETURNS void`. No `p_actor_profile_id` parameter and no overloads. When `p_actor_type = 'STAFF'`, the function requires `auth.uid() IS NOT NULL` and `public.is_staff()` (raising otherwise) and sets `actor_profile_id` from `auth.uid()` internally; for every other actor type, `actor_profile_id` is `NULL`. The function does not return the inserted row's `id`.
 
-Log meaningful domain events, not every keystroke.
+Log meaningful domain events, not every keystroke. The frozen initial `action_type` union is defined in `docs/API_CONTRACT.md` §6.
 
 Examples:
 

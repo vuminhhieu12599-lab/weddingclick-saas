@@ -37,6 +37,7 @@ Before making any non-trivial code change, read:
 - `docs/SECURITY.md`
 - `docs/DEVELOPMENT_RULES.md`
 - `docs/TESTING.md`
+- `docs/API_CONTRACT.md` (when the task touches Route Handlers, server actions, business-action RPCs, or activity logging)
 
 Read `docs/ROADMAP.md` when the task affects milestone sequencing.
 Read `docs/LEGACY_AUDIT.md` when changing or removing V1 behavior.

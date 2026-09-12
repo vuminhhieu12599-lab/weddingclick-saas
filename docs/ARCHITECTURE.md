@@ -153,6 +153,8 @@ Implementation may use Next.js Route Handlers and/or Server Actions when appropr
 
 Do not expose Supabase service-role credentials to client components.
 
+The full per-use-case contract (direct-RLS vs. trusted-business-action classification, the two customer/guest security paths, error model, and activity-log union) is frozen in `docs/API_CONTRACT.md`.
+
 ---
 
 ## 6. Domain Modules
