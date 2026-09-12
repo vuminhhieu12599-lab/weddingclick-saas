@@ -463,7 +463,7 @@ Suggested fields:
 - `token_hash` — `BYTEA`, SHA-256 digest (32 bytes) of the raw token, unique.
 - `token_hint` optional non-sensitive prefix/suffix for staff display.
 - `expires_at` nullable.
-- `revoked_at` nullable — sole source of truth for active/revoked state (no separate `is_active` boolean). Rotation creates a new row and revokes the old one; token values are never updated in place. **DB-guarded, not just by convention:** `project_id`, `link_type`, `token_hash`, `created_by`, `created_at` cannot be changed by any normal `UPDATE` — only `revoked_at`, `expires_at`, and `last_used_at` may change. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.17.
+- `revoked_at` nullable — sole source of truth for active/revoked state (no separate `is_active` boolean). Rotation creates a new row and revokes the old one; token values are never updated in place. **DB-guarded, not just by convention:** `id`, `project_id`, `link_type`, `token_hash`, `token_hint`, `created_by`, `created_at` (seven columns) cannot be changed by any normal `UPDATE` — only `revoked_at`, `expires_at`, and `last_used_at` may change (Task-014 approved hardening added `token_hint` and `id` to the immutable set alongside `token_hash`; `id` is included because a primary key is otherwise updatable). `revoked_at` is additionally monotonic: the first `NULL → non-NULL` transition is allowed, then it is frozen forever — no un-revoking, no rewriting the revocation timestamp. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.17.
 - `created_by`.
 - `created_at`.
 - `last_used_at` optional.
@@ -471,6 +471,10 @@ Suggested fields:
 No `review_version_group/reference` field: approval is anchored per-version through `review_feedback.invitation_version_id` instead of pinning the link itself to one version (see `docs/PHYSICAL_DATABASE_PLAN.md` §F and Open Question Q2).
 
 Raw token is never stored — only its SHA-256 hash.
+
+`service_role` receives only `SELECT` and `UPDATE` object privileges on this table (Task-014 approved hardening) — no `INSERT`, no `DELETE`. This supports the trusted-server-only token resolution flow (look up by `token_hash`, then update `last_used_at`) without granting `service_role` the ability to create or delete links. Normal staff link creation/revocation/rotation stays on the authenticated-session + RLS path. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.17/§10.
+
+`created_by` is immutable (above) and `profiles` are deactivate-only in normal operation, never hard-deleted — an exceptional out-of-band hard-delete of the referenced `profiles`/`auth.users` row is expected to fail rather than silently null out `created_by`. This is accepted provenance-protection behavior, not a defect. See `docs/PHYSICAL_DATABASE_PLAN.md` §5/C for the full explanation (also applies to `project_addons`).
 
 Indexes:
 

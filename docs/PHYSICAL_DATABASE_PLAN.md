@@ -601,9 +601,9 @@ Purpose: secure capability links for customers. Types: `INTAKE`, `REVIEW`, `PORT
 | `project_id` | `UUID` | NOT NULL | *(none)* | `REFERENCES projects(id) ON DELETE CASCADE` |
 | `link_type` | `TEXT` | NOT NULL | *(none)* | `CHECK (link_type IN ('INTAKE','REVIEW','PORTAL'))` |
 | `token_hash` | `BYTEA` | NOT NULL | *(none)* | `UNIQUE`, `CHECK (octet_length(token_hash) = 32)` — SHA-256 digest of the raw ≥32-random-byte, URL-safe-encoded token. Raw token is never stored. |
-| `token_hint` | `TEXT` | NULL | *(none)* | Non-sensitive fragment for staff display only |
+| `token_hint` | `TEXT` | NULL | *(none)* | Non-sensitive fragment for staff display only. **Task-014 approved hardening:** identity-immutable together with `token_hash` (see below) — it carries the same rotation-time identity as the hash it describes. |
 | `expires_at` | `TIMESTAMPTZ` | NULL | *(none)* | `NULL` = no expiration (§R-Q3) |
-| `revoked_at` | `TIMESTAMPTZ` | NULL | *(none)* | Sole source of truth for active/revoked; rotation = new row + revoke old, never an in-place token swap |
+| `revoked_at` | `TIMESTAMPTZ` | NULL | *(none)* | Sole source of truth for active/revoked; rotation = new row + revoke old, never an in-place token swap. **Task-014 approved hardening:** monotonic — see below. |
 | `created_by` | `UUID` | NULL | *(none)* | `REFERENCES profiles(id) ON DELETE SET NULL` |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | |
 | `last_used_at` | `TIMESTAMPTZ` | NULL | *(none)* | Updated by server code on each successful resolution |
@@ -614,10 +614,13 @@ Indexes: `(project_id, link_type, revoked_at)` for staff "list active links for 
 
 No REVIEW-specific version-pinning column: approval anchors per-version through `review_feedback.invitation_version_id` instead (§F, §R-Q2).
 
-Triggers — **[F14]**, new:
-- `guard_access_link_identity_immutability()` — `BEFORE UPDATE ON project_access_links FOR EACH ROW`: raises an exception if any of `project_id, link_type, token_hash, created_by, created_at` differ between `OLD` and `NEW`. Rotation is defined as creating a **new** row and revoking the old one (§2.17, unchanged) — it was never intended to mutate `token_hash` in place, but Revision 2 only said so in prose ("restricted in practice"). This trigger makes it an actual guard: only `revoked_at`, `expires_at`, and `last_used_at` may ever change through a normal `UPDATE`.
+Triggers — **[F14]**, extended by Task-014 approved hardening:
+- `guard_access_link_identity_immutability()` — `BEFORE UPDATE ON project_access_links FOR EACH ROW`: raises an exception if any of `id, project_id, link_type, token_hash, token_hint, created_by, created_at` (seven columns) differ between `OLD` and `NEW`. **Task-014 approved hardening adds `token_hint` and `id` to this list** (Revision 4/[F14] originally listed only `project_id, link_type, token_hash, created_by, created_at`) — `token_hint` is part of a link's token identity and must rotate together with `token_hash`, never independently, and `id` is protected because PostgreSQL primary keys are updatable unless a guard explicitly prevents it. Rotation is defined as creating a **new** row and revoking the old one (§2.17, unchanged) — it was never intended to mutate `token_hash`/`token_hint`/`id` in place. Only `revoked_at`, `expires_at`, and `last_used_at` may ever change through a normal `UPDATE`.
+- `guard_access_link_revocation_immutability()` — **Task-014 approved hardening, new** — `BEFORE UPDATE ON project_access_links FOR EACH ROW`: raises an exception if `OLD.revoked_at IS NOT NULL AND NEW.revoked_at IS DISTINCT FROM OLD.revoked_at`. This makes `revoked_at` monotonic: `NULL → NULL` and the first `NULL → non-NULL` transition (the actual revocation) remain allowed; once non-NULL, it is frozen forever — `non-NULL → NULL` (un-revoke) and `non-NULL → a different timestamp` (rewriting revocation history) are both blocked unconditionally. Mirrors `guard_project_addon_revocation_immutability()` (§2.6). Does not auto-fill `revoked_at` (staff/server business logic supplies the timestamp) and does not freeze `expires_at`/`last_used_at`.
 
-RLS: enabled + forced. SELECT/INSERT: `is_staff()`. UPDATE: `is_staff()`, enforced to `revoked_at`/`expires_at`/`last_used_at` only by the trigger above (not by convention). DELETE: no policy (soft-revoke only). Anonymous/guest: none — token verification happens server-side via `service_role` (§H).
+RLS: enabled + forced. SELECT/INSERT: `is_staff()`. UPDATE: `is_staff()`, enforced to `revoked_at` (monotonic, first-revocation-only)/`expires_at`/`last_used_at` only by the two triggers above (not by convention). DELETE: no policy (soft-revoke only). Anonymous/guest: none — token verification happens server-side via `service_role` (§H).
+
+**Task-014 approved `service_role` table privileges:** `SELECT` and `UPDATE` only — no `INSERT`, no `DELETE`. Purpose: trusted-server-only bearer-token resolution reads this table by `token_hash` (`SELECT`) and records successful resolution via `last_used_at` (`UPDATE`); normal staff link creation/revocation/rotation remains the authenticated-session + RLS path (§1.4), never `service_role`.
 
 ### 2.18 `review_feedback` — **[R11-D], [R13]**
 
@@ -863,23 +866,36 @@ rsvps
 
 | Entity | Strategy | Mechanism |
 |---|---|---|
-| `profiles` | Never hard-deleted | `is_active = false`; last-active-admin guarded (§P.2) |
+| `profiles` | Never hard-deleted in normal operation | `is_active = false`; last-active-admin guarded (§P.2). **Task-014 clarification:** normal operation is deactivate-only — see the note immediately below the table for what happens if an `auth.users`/`profiles` row is ever hard-deleted anyway. |
 | `customers` | Must not be destroyed | No DELETE policy for any role; `projects.customer_id` is `RESTRICT`; exceptional erasure is a manual documented `service_role` procedure (§Q5) |
 | `projects` | Soft-archive only | `status='ARCHIVED'` + `archived_at`; no DELETE policy; exceptional erasure per §Q5 |
 | `service_packages`, `service_addons`, `templates` | Retire, never delete once used | `is_active=false`; referencing FKs `RESTRICT` |
 | `template_versions` | Immutable, retire via timestamp | `retired_at` is the only mutable column, DB-guarded by `guard_template_version_immutability()` (§2.11, **[F10]** — `manifest` is now frozen too, not just "by convention"); `RESTRICT` from `project_design`/`invitation_versions` |
-| `project_addons` | Soft-revoke, immutable snapshot | Identity/snapshot columns DB-guarded as permanently immutable by `guard_project_addon_identity_immutability()` (§2.6, **[F9]**); `revoked_at`/`revoked_by`/`revoked_reason` mutable only while parent `projects.payment_status='UNPAID'`, frozen entirely once `'PAID'` (§7, **[R7]**) |
+| `project_addons` | Soft-revoke, immutable snapshot | Identity/snapshot columns DB-guarded as permanently immutable by `guard_project_addon_identity_immutability()` (§2.6, **[F9]**), including `created_by` — see the profile-hard-delete note below the table. `revoked_at`/`revoked_by`/`revoked_reason` mutable only while parent `projects.payment_status='UNPAID'`, frozen entirely once `'PAID'` (§7, **[R7]**) |
 | `wedding_details`, `project_events`, `project_media`, `project_design` | Mutable draft data | Full staff CRUD pre-publish-freeze concerns; cascades with project. `project_media` additionally guarded by `invitation_version_media` `RESTRICT` (§K) and the asset-identity-immutability trigger (§2.9, **[R16]**, placement fixed by **[F16]**); `wedding_details`' gift-QR references are project-scoped by composite FK (**[F6]**) |
 | `project_invitations` | Cannot delete while it has any `invitation_versions` row | The composite `RESTRICT` FK from `invitation_versions` (§2.14, **[F3]**) — tighter than Revision 2's "only while never published" — plus the existing slug-freeze/deletion trigger (§2.13) |
 | `invitation_versions` | Fully immutable, append-only | No UPDATE/DELETE policy for any role; `REVIEW`/`PUBLISHED` lifecycle fields now mutually exclusive and complete by a single strengthened `CHECK` (**[F4]**) |
 | `invitation_version_media` | Effectively immutable | No UPDATE/DELETE policy; `(project_media_id, project_id)` composite FK is `RESTRICT`, protecting referenced media indefinitely (§22) and guaranteeing same-Project media (**[F5]**) |
 | `intake_submissions` | Append-only payload, mutable status | `project_id`/`access_link_id`/`payload`/`submitted_at` DB-guarded immutable by `guard_intake_submission_immutability()` (§2.16, **[G2]**); only `status`/`reviewed_by`/`reviewed_at`/`staff_note` mutable; no DELETE |
-| `project_access_links` | Soft-revoke only | Rotation = new row + revoke old, now DB-guarded (**[F14]** `guard_access_link_identity_immutability()`, §2.17) rather than by convention; no DELETE |
+| `project_access_links` | Soft-revoke only | Rotation = new row + revoke old, now DB-guarded (**[F14]** `guard_access_link_identity_immutability()`, §2.17) rather than by convention, including `created_by` and (Task-014 hardening) `token_hint` — see the profile-hard-delete note below the table; no DELETE |
 | `review_feedback` | Append-only | No UPDATE/DELETE |
 | `guests` | Hard-deletable by staff | `rsvps.guest_id` is `SET NULL` (not CASCADE) on delete, preserving the actual RSVP via `guest_display_name_snapshot` |
 | `rsvps` | Staff read-only; admin may delete | No staff UPDATE/DELETE; all content mutation via the trusted RSVP use case (`service_role`) |
 | `project_tasks` | Fully staff-manageable | Low risk, full CRUD |
 | `activity_logs` | Append-only, immutable | Function-mediated INSERT only (§2.22, **[R17]**); no UPDATE/DELETE for any role including admin |
+
+**Task-014 clarification — `profiles` hard-delete vs. immutable `created_by` attribution (accepted behavior, not a defect):** `profiles.id REFERENCES auth.users(id) ON DELETE CASCADE`, and several tables reference `profiles(id)` from a `created_by` column with `ON DELETE SET NULL` (e.g. `project_addons`, `project_access_links`). Normal WeddingClick staff lifecycle is **deactivate-only** (`profiles.is_active = false`, §1.3's "Inactive profile → no authorization," this table's `profiles` row above) — a staff `profiles`/`auth.users` row is never hard-deleted as part of ordinary application operation, and no application code path attempts it.
+
+`ON DELETE SET NULL` is nonetheless declared on these `created_by` FKs, as a physically frozen referential action. If an `auth.users` row were ever hard-deleted through some exceptional, manual, out-of-band procedure (never a normal app feature — §Q5), Postgres would cascade-delete the corresponding `profiles` row and then attempt to satisfy each `created_by` FK's `ON DELETE SET NULL` action by issuing an internal `UPDATE ... SET created_by = NULL` against the referencing table. On a table whose provenance/identity guard trigger (e.g. `guard_project_addon_identity_immutability()` §2.6/**[F9]**, `guard_access_link_identity_immutability()` §2.17/**[F14]**) freezes `created_by` unconditionally, that internal UPDATE is **rejected by the same guard that protects every other normal UPDATE** — because PostgreSQL implements FK referential actions as ordinary UPDATE/DELETE statements against the referencing table, and those statements fire that table's normal `BEFORE UPDATE`/`BEFORE DELETE` row-level triggers exactly as if application code had issued them. The hard-delete transaction then fails instead of silently nulling out historical attribution.
+
+This is **intentional and accepted**, not a bug to work around:
+
+- Provenance/audit attribution (`created_by`) on an already-immutable historical row must never silently change, including via a referential-action side effect the row's own guard was never told to distinguish from an ordinary application UPDATE.
+- The identical pattern already exists in the frozen, applied `project_addons` table (migration `0006`) — Task 014 does not introduce a new class of risk, it extends the same accepted shape to `project_access_links`.
+- Failing loudly (the hard-delete transaction errors) is preferable to failing silently (attribution quietly rewritten) — consistent with `CLAUDE.md` §22's "never show success until success is confirmed" / never-swallow-errors principle, applied here to a rare operator-driven procedure rather than a customer-facing flow.
+- No FK/trigger workaround (changing `ON DELETE SET NULL` to `RESTRICT`, adding a trigger-depth or "is this an FK-cascade update" existence check, or excluding `created_by` from the guard) is authorized. The FK stays exactly as physically frozen; the guard stays exactly as specified.
+
+**Operational consequence:** operators/runbooks must not assume hard-deleting an `auth.users`/`profiles` row always succeeds. Where that row is referenced as `created_by` on a table with an identity/provenance immutability guard, the exceptional hard-delete procedure will fail with an explicit exception rather than completing — this is the expected, safe outcome, and is not itself a release-blocking bug. There is no supported schema-level workaround; if an operator genuinely needs to remove such a `profiles` row, that is out of scope for normal V1/V2 operation and would require a separately documented, explicitly approved exceptional procedure (not authored by Task 014).
 
 ---
 
@@ -1002,6 +1018,8 @@ Per §1.6, anonymous/guest-token/all three customer-token types never receive di
 | `activity_logs` | — | — | — | — | — | R; C only as a side effect of a trusted business-action function (§2.22/**[F13]** — `log_activity()` itself is not directly callable by any role, including `authenticated`); no U/D | same |
 
 Legend: R=SELECT, C=INSERT, U=UPDATE, D=DELETE, `—`=no access, `server-only`=no RLS grant, trusted server code + `service_role` after independent validation.
+
+**`project_access_links` `service_role` object privileges (Task-014 approved hardening):** `SELECT` + `UPDATE` only, no `INSERT`/`DELETE` — this is the object-grant layer behind the `server-only` cells above for future INTAKE/REVIEW/PORTAL token resolution (not yet implemented as of Task 014): `service_role` may look up a link by `token_hash` and update `last_used_at` after a validated resolution, but can never create or delete a link — link issuance/revocation/rotation remains exclusively the `is_staff()`-gated authenticated-session path. See §2.17.
 
 ---
 
@@ -1148,7 +1166,14 @@ Circular dependency between `project_invitations` (pointer columns) and `invitat
     - project_access_links + RLS + UNIQUE(token_hash) + UNIQUE(id, project_id)
       (composite-FK target for 0015's intake_submissions and 0016's
       review_feedback).
-    - guard_access_link_identity_immutability() ([F14], new).
+    - guard_access_link_identity_immutability() ([F14], Task-014 approved
+      hardening: also covers id and token_hint, not just project_id,
+      link_type, token_hash, created_by, created_at — seven columns total).
+    - guard_access_link_revocation_immutability() (Task-014 approved
+      hardening, new — revoked_at is monotonic, mirrors
+      guard_project_addon_revocation_immutability() from 0006).
+    - service_role granted SELECT + UPDATE only on this table (Task-014
+      approved hardening) — no INSERT, no DELETE.
 
 0015_intake_submissions.sql — final order per [F17]
     - includes composite FK (access_link_id, project_id) →
