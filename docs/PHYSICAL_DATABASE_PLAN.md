@@ -325,7 +325,7 @@ requiring `project_media` to carry `UNIQUE (id, project_id)` (§2.9, added by **
 
 **Resolved design (§R20):** a small, fixed two-slot shape (groom/bride) directly on `wedding_details`, not a separate normalized "gifts" table. A normalized table would be justified for a variable-cardinality collection; here the cardinality is permanently exactly two (one per side), so a dedicated table would be pure structure without benefit. Variant resolver rule: `GROOM` invitation renders `groom_bank_*` only; `BRIDE` renders `bride_bank_*` only; `COMMON` renders both (whichever side has data — omit a side's gift section entirely if all four of that side's fields are null, per the optional-content rule in `docs/TEMPLATE_SYSTEM.md` §10).
 
-RLS: enabled + forced. SELECT/INSERT/UPDATE: `is_staff()`. DELETE: no policy (cascades only with the parent Project). Anonymous/guest token: none. Customer INTAKE: none via RLS — a submission lands in `intake_submissions.payload`, never written directly here (§R5, §M); staff applies it. Customer REVIEW: server-only read (rendering the review payload, which is itself a frozen `invitation_versions.payload` copy, not a live read of this table — see §F).
+RLS: enabled + forced. SELECT: `is_staff()`. INSERT/UPDATE: policies for `is_staff()` remain present from this migration, but **feature migration `0021_save_wedding_details` (Task 022) revoked the underlying `authenticated` table-level `INSERT`/`UPDATE` privileges**, making these policies unreachable in practice — see §16a. Canonical create/update is now performed exclusively by the audited `public.save_wedding_details(...)` `SECURITY DEFINER` business-action function (independently self-authorizing via `is_staff()`, no-op-suppressed, logging `CANONICAL_DATA_APPLIED` only on real change), not by a direct authenticated-session table write. DELETE: no policy (cascades only with the parent Project). Anonymous/guest token: none. Customer INTAKE: none via RLS — a submission lands in `intake_submissions.payload`, never written directly here (§R5, §M); staff applies it. Customer REVIEW: server-only read (rendering the review payload, which is itself a frozen `invitation_versions.payload` copy, not a live read of this table — see §F).
 
 ### 2.8 `project_events` — **[R21]**
 
@@ -1024,7 +1024,7 @@ Per §1.6, anonymous/guest-token/all three customer-token types never receive di
 | `projects` | — | — | server-only (minimal display context read) | server-only | server-only | R/C/U (U frozen post-`PAID`, §7) | same; no D |
 | `service_packages`, `service_addons` | — | — | — | — | server-only (price display) | R | R/C/U; no hard D once used |
 | `project_addons` | — | — | — | — | server-only | R/C/U (frozen post-`PAID`) | same |
-| `wedding_details` | — | — | **—** (submissions land in `intake_submissions`, not here — [R5]) | server-only | — | R/C/U | R/C/U |
+| `wedding_details` | — | — | **—** (submissions land in `intake_submissions`, not here — [R5]) | server-only | — | R only direct; C/U only via `save_wedding_details()` business action, §16a | same |
 | `project_events` | — | — | **—** (same reason) | server-only | server-only (event summary) | R/C/U/D | R/C/U/D |
 | `project_media` | — | server-only (signed URL for published media) | — (upload-during-intake deferred, not yet scoped) | server-only | server-only | R/C/U/D (RESTRICT/trigger-guarded) | same |
 | `templates`, `template_versions` | — | — | — | — | — | R | R/C/U; no hard D once used |
@@ -1233,6 +1233,29 @@ Circular dependency between `project_invitations` (pointer columns) and `invitat
       authored in Task 002/Foundation; they are later feature-implementation
       work that this plan's architecture accommodates).
 ```
+
+### 16a. Post-Foundation Feature Migrations
+
+The migration list in §16 (`0001`–`0020`) is the frozen foundation schema phase and is not renumbered or rewritten by later work (§API_CONTRACT.md §9). Feature migrations landing after the foundation are recorded here as they ship, without altering §16:
+
+```text
+0021_save_wedding_details.sql (Task 022)
+    - Adds public.save_wedding_details(...), a SECURITY DEFINER audited
+      canonical create/update ("Save") for wedding_details: independently
+      self-authorizes via is_staff() (does not rely solely on the caller's
+      RLS grant), performs the upsert, suppresses no-op writes (no row
+      change -> no audit event), and logs 'CANONICAL_DATA_APPLIED' via
+      log_activity() only when a real change is applied.
+    - Revokes authenticated table-level INSERT/UPDATE privileges on
+      wedding_details. The is_staff() INSERT/UPDATE RLS policies created in
+      0008 remain present in the catalog but are unreachable without the
+      table privilege, so direct authenticated writes are no longer
+      executable. SELECT privilege/policy is unchanged.
+    - Table shape (§2.7 columns/constraints/FKs) is unchanged by this
+      migration — privilege/workflow tightening only.
+```
+
+This is a privilege/workflow tightening only, not a schema shape change: no column, constraint, or FK on `wedding_details` was added, removed, or altered.
 
 ---
 

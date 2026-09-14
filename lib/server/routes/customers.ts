@@ -15,7 +15,10 @@ import { ApiError, apiErrorStatus } from "../errors/api-error";
  * lib/server/routes/staff-me.ts (Task 004).
  */
 export interface ApiResult<TBody> {
-  status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 500;
+  // 422 added by Task 022's error-contract patch to apiErrorStatus's shared
+  // return type (ApiErrorKind gained INVARIANT) — type-only widening, no
+  // Customer route ever constructs an INVARIANT ApiError today.
+  status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 422 | 500;
   body: TBody | { error: string };
 }
 
