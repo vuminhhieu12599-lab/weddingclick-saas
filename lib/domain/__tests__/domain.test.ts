@@ -13,7 +13,17 @@ import { INTAKE_SUBMISSION_STATUSES } from "../intake-submission-status";
 import { RSVP_ATTENDANCE_STATUSES } from "../rsvp-attendance";
 import { INVITATION_VERSION_TYPES } from "../invitation-version-type";
 import { PROJECT_TASK_STATUSES } from "../project-task-status";
-import { MEDIA_TYPES } from "../media-type";
+import {
+  MEDIA_TYPES,
+  IMAGE_MEDIA_MIME_TYPES,
+  AUDIO_MEDIA_MIME_TYPES,
+  IMAGE_MEDIA_MAX_BYTES,
+  AUDIO_MEDIA_MAX_BYTES,
+  PROJECT_MEDIA_BUCKET_MAX_BYTES,
+  allowedMimeTypesForMediaType,
+  maxBytesForMediaType,
+  type MediaType,
+} from "../media-type";
 import { SERVICE_PACKAGE_CODES } from "../service-package-code";
 import { SERVICE_ADDON_CODES } from "../service-addon-code";
 
@@ -111,6 +121,50 @@ describe("ProjectTaskStatus", () => {
 describe("MediaType", () => {
   it("matches the exact set in docs/PHYSICAL_DATABASE_PLAN.md §2.9", () => {
     expect(MEDIA_TYPES).toEqual(["COVER", "GALLERY", "AUDIO", "QR_GROOM", "QR_BRIDE", "QR_COMMON"]);
+  });
+});
+
+describe("MediaUploadPolicy", () => {
+  it("IMAGE_MEDIA_MIME_TYPES matches the exact Task 024 frozen list", () => {
+    expect(IMAGE_MEDIA_MIME_TYPES).toEqual(["image/jpeg", "image/png", "image/webp"]);
+  });
+
+  it("AUDIO_MEDIA_MIME_TYPES matches the exact Task 024 frozen list", () => {
+    expect(AUDIO_MEDIA_MIME_TYPES).toEqual(["audio/mpeg", "audio/mp4"]);
+  });
+
+  it("IMAGE_MEDIA_MAX_BYTES is exactly 10 MiB", () => {
+    expect(IMAGE_MEDIA_MAX_BYTES).toBe(10 * 1024 * 1024);
+    expect(IMAGE_MEDIA_MAX_BYTES).toBe(10485760);
+  });
+
+  it("AUDIO_MEDIA_MAX_BYTES is exactly 20 MiB", () => {
+    expect(AUDIO_MEDIA_MAX_BYTES).toBe(20 * 1024 * 1024);
+    expect(AUDIO_MEDIA_MAX_BYTES).toBe(20971520);
+  });
+
+  it("PROJECT_MEDIA_BUCKET_MAX_BYTES is exactly 20 MiB, matching the bucket's own hard limit", () => {
+    expect(PROJECT_MEDIA_BUCKET_MAX_BYTES).toBe(20 * 1024 * 1024);
+    expect(PROJECT_MEDIA_BUCKET_MAX_BYTES).toBe(20971520);
+  });
+
+  const imageMediaTypes: MediaType[] = ["COVER", "GALLERY", "QR_GROOM", "QR_BRIDE", "QR_COMMON"];
+
+  it.each(imageMediaTypes)("%s maps to the IMAGE MIME allow-list and 10 MiB limit", (mediaType) => {
+    expect(allowedMimeTypesForMediaType(mediaType)).toEqual(IMAGE_MEDIA_MIME_TYPES);
+    expect(maxBytesForMediaType(mediaType)).toBe(IMAGE_MEDIA_MAX_BYTES);
+  });
+
+  it("AUDIO maps to the AUDIO MIME allow-list and 20 MiB limit", () => {
+    expect(allowedMimeTypesForMediaType("AUDIO")).toEqual(AUDIO_MEDIA_MIME_TYPES);
+    expect(maxBytesForMediaType("AUDIO")).toBe(AUDIO_MEDIA_MAX_BYTES);
+  });
+
+  it("every MediaType is covered by exactly one of the two policies", () => {
+    for (const mediaType of MEDIA_TYPES) {
+      const mimeTypes = allowedMimeTypesForMediaType(mediaType);
+      expect(mimeTypes === IMAGE_MEDIA_MIME_TYPES || mimeTypes === AUDIO_MEDIA_MIME_TYPES).toBe(true);
+    }
   });
 });
 
