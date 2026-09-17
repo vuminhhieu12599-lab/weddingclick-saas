@@ -6,7 +6,10 @@ import type { MediaGateway } from "../../media/media-gateway";
 import type { ProjectMediaRecord } from "../../media/media-types";
 import {
   handleCreateMediaUploadIntentRequest,
+  handleDeleteProjectMediaRequest,
   handleFinalizeMediaRequest,
+  handleListProjectMediaRequest,
+  handleUpdateProjectMediaRequest,
 } from "../project-media";
 
 interface FakeClient {
@@ -36,8 +39,10 @@ const activeStaffAuth = createFakeAuthGateway({
 const projectId = "11111111-1111-1111-1111-111111111111";
 const storagePath = `${projectId}/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa`;
 
+const mediaId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+
 const record: ProjectMediaRecord = {
-  id: "media-1",
+  id: mediaId,
   projectId,
   mediaType: "COVER",
   storageBucket: "project-media",
@@ -55,7 +60,13 @@ const record: ProjectMediaRecord = {
 
 function unusedGatewayMethods(): Pick<
   MediaGateway<FakeClient>,
-  "createSignedUploadPath" | "getStorageObjectInfo" | "insertProjectMedia"
+  | "createSignedUploadPath"
+  | "getStorageObjectInfo"
+  | "insertProjectMedia"
+  | "listProjectMedia"
+  | "updateProjectMedia"
+  | "deleteProjectMedia"
+  | "removeMediaStorageObject"
 > {
   return {
     async createSignedUploadPath() {
@@ -65,6 +76,18 @@ function unusedGatewayMethods(): Pick<
       throw new Error("should not be called");
     },
     async insertProjectMedia() {
+      throw new Error("should not be called");
+    },
+    async listProjectMedia() {
+      throw new Error("should not be called");
+    },
+    async updateProjectMedia() {
+      throw new Error("should not be called");
+    },
+    async deleteProjectMedia() {
+      throw new Error("should not be called");
+    },
+    async removeMediaStorageObject() {
       throw new Error("should not be called");
     },
   };
@@ -326,5 +349,413 @@ describe("ApiError kind -> HTTP status mapping used by this route", () => {
     );
 
     expect(result.status).toBe(status);
+  });
+});
+
+describe("handleListProjectMediaRequest (Task 024 Phase 3)", () => {
+  it("returns 401 for a missing bearer token", async () => {
+    const gateway: MediaGateway<FakeClient> = {
+      ...unusedGatewayMethods(),
+      async projectExists() {
+        return true;
+      },
+      async listProjectMedia() {
+        return [];
+      },
+    };
+
+    const result = await handleListProjectMediaRequest(null, projectId, activeStaffAuth, gateway);
+
+    expect(result.status).toBe(401);
+  });
+
+  it("returns 200 with { data: [] } for a project with no media", async () => {
+    const gateway: MediaGateway<FakeClient> = {
+      ...unusedGatewayMethods(),
+      async projectExists() {
+        return true;
+      },
+      async listProjectMedia() {
+        return [];
+      },
+    };
+
+    const result = await handleListProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      activeStaffAuth,
+      gateway,
+    );
+
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ data: [] });
+  });
+
+  it("returns 200 with { data: [record] } on success", async () => {
+    const gateway: MediaGateway<FakeClient> = {
+      ...unusedGatewayMethods(),
+      async projectExists() {
+        return true;
+      },
+      async listProjectMedia() {
+        return [record];
+      },
+    };
+
+    const result = await handleListProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      activeStaffAuth,
+      gateway,
+    );
+
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ data: [record] });
+  });
+
+  it("maps a malformed project id to 400", async () => {
+    const gateway: MediaGateway<FakeClient> = {
+      ...unusedGatewayMethods(),
+      async projectExists() {
+        return true;
+      },
+      async listProjectMedia() {
+        return [];
+      },
+    };
+
+    const result = await handleListProjectMediaRequest(
+      "Bearer valid-token",
+      "not-a-uuid",
+      activeStaffAuth,
+      gateway,
+    );
+
+    expect(result.status).toBe(400);
+  });
+
+  it("maps a missing project to 404", async () => {
+    const gateway: MediaGateway<FakeClient> = {
+      ...unusedGatewayMethods(),
+      async projectExists() {
+        return false;
+      },
+      async listProjectMedia() {
+        return [];
+      },
+    };
+
+    const result = await handleListProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      activeStaffAuth,
+      gateway,
+    );
+
+    expect(result.status).toBe(404);
+  });
+
+  it("propagates a StaffAuthError FORBIDDEN as 403", async () => {
+    const inactiveStaffAuth = createFakeAuthGateway({ userId: "staff-1", profile: null });
+    const gateway: MediaGateway<FakeClient> = {
+      ...unusedGatewayMethods(),
+      async projectExists() {
+        return true;
+      },
+      async listProjectMedia() {
+        return [];
+      },
+    };
+
+    const result = await handleListProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      inactiveStaffAuth,
+      gateway,
+    );
+
+    expect(result.status).toBe(403);
+  });
+});
+
+describe("handleUpdateProjectMediaRequest (Task 024 Phase 3)", () => {
+  function fullGateway(overrides?: Partial<MediaGateway<FakeClient>>): MediaGateway<FakeClient> {
+    return {
+      ...unusedGatewayMethods(),
+      async projectExists() {
+        return true;
+      },
+      async updateProjectMedia() {
+        return { kind: "UPDATED", media: record };
+      },
+      ...overrides,
+    };
+  }
+
+  it("returns 401 for a missing bearer token", async () => {
+    const result = await handleUpdateProjectMediaRequest(
+      null,
+      projectId,
+      record.id,
+      { altText: "x" },
+      activeStaffAuth,
+      fullGateway(),
+    );
+
+    expect(result.status).toBe(401);
+  });
+
+  it("returns 200 with { media } on success", async () => {
+    const result = await handleUpdateProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      record.id,
+      { altText: "x" },
+      activeStaffAuth,
+      fullGateway(),
+    );
+
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ media: record });
+  });
+
+  it("maps a malformed media id to 400", async () => {
+    const result = await handleUpdateProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      "not-a-uuid",
+      { altText: "x" },
+      activeStaffAuth,
+      fullGateway(),
+    );
+
+    expect(result.status).toBe(400);
+  });
+
+  it("maps an unknown field to 400", async () => {
+    const result = await handleUpdateProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      record.id,
+      { mediaType: "GALLERY" },
+      activeStaffAuth,
+      fullGateway(),
+    );
+
+    expect(result.status).toBe(400);
+  });
+
+  it("maps an empty patch to 400", async () => {
+    const result = await handleUpdateProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      record.id,
+      {},
+      activeStaffAuth,
+      fullGateway(),
+    );
+
+    expect(result.status).toBe(400);
+  });
+
+  it("maps a missing project to 404", async () => {
+    const result = await handleUpdateProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      record.id,
+      { altText: "x" },
+      activeStaffAuth,
+      fullGateway({
+        async projectExists() {
+          return false;
+        },
+      }),
+    );
+
+    expect(result.status).toBe(404);
+  });
+
+  it("maps a wrong-project/nonexistent media id to 404 with the same message", async () => {
+    const result = await handleUpdateProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      record.id,
+      { altText: "x" },
+      activeStaffAuth,
+      fullGateway({
+        async updateProjectMedia() {
+          return { kind: "NOT_FOUND" };
+        },
+      }),
+    );
+
+    expect(result.status).toBe(404);
+    expect(result.body).toEqual({ error: "Media not found" });
+  });
+
+  it("propagates a StaffAuthError FORBIDDEN as 403", async () => {
+    const inactiveStaffAuth = createFakeAuthGateway({ userId: "staff-1", profile: null });
+
+    const result = await handleUpdateProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      record.id,
+      { altText: "x" },
+      inactiveStaffAuth,
+      fullGateway(),
+    );
+
+    expect(result.status).toBe(403);
+  });
+});
+
+describe("handleDeleteProjectMediaRequest (Task 024 Phase 3)", () => {
+  function fullGateway(overrides?: Partial<MediaGateway<FakeClient>>): MediaGateway<FakeClient> {
+    return {
+      ...unusedGatewayMethods(),
+      async projectExists() {
+        return true;
+      },
+      async deleteProjectMedia() {
+        return { kind: "DELETED", storageBucket: "project-media", storagePath };
+      },
+      async removeMediaStorageObject() {
+        return true;
+      },
+      ...overrides,
+    };
+  }
+
+  it("returns 401 for a missing bearer token", async () => {
+    const result = await handleDeleteProjectMediaRequest(
+      null,
+      projectId,
+      record.id,
+      activeStaffAuth,
+      fullGateway(),
+    );
+
+    expect(result.status).toBe(401);
+  });
+
+  it("returns 200 with { deleted: true } on success", async () => {
+    const result = await handleDeleteProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      record.id,
+      activeStaffAuth,
+      fullGateway(),
+    );
+
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ deleted: true });
+  });
+
+  it("returns 200 with { deleted: true } even when Storage removal fails", async () => {
+    const result = await handleDeleteProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      record.id,
+      activeStaffAuth,
+      fullGateway({
+        async removeMediaStorageObject() {
+          return false;
+        },
+      }),
+    );
+
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ deleted: true });
+  });
+
+  it("maps a malformed media id to 400", async () => {
+    const result = await handleDeleteProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      "not-a-uuid",
+      activeStaffAuth,
+      fullGateway(),
+    );
+
+    expect(result.status).toBe(400);
+  });
+
+  it("maps a missing project to 404", async () => {
+    const result = await handleDeleteProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      record.id,
+      activeStaffAuth,
+      fullGateway({
+        async projectExists() {
+          return false;
+        },
+      }),
+    );
+
+    expect(result.status).toBe(404);
+  });
+
+  it("maps a wrong-project/nonexistent media id to 404", async () => {
+    const result = await handleDeleteProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      record.id,
+      activeStaffAuth,
+      fullGateway({
+        async deleteProjectMedia() {
+          return { kind: "NOT_FOUND" };
+        },
+      }),
+    );
+
+    expect(result.status).toBe(404);
+    expect(result.body).toEqual({ error: "Media not found" });
+  });
+
+  it("maps a referenced-media conflict to 409", async () => {
+    const result = await handleDeleteProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      record.id,
+      activeStaffAuth,
+      fullGateway({
+        async deleteProjectMedia() {
+          return { kind: "REFERENCED_CONFLICT" };
+        },
+      }),
+    );
+
+    expect(result.status).toBe(409);
+  });
+
+  it("maps an unexpected DB failure to 500", async () => {
+    const result = await handleDeleteProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      record.id,
+      activeStaffAuth,
+      fullGateway({
+        async deleteProjectMedia() {
+          return { kind: "OTHER_FAILURE" };
+        },
+      }),
+    );
+
+    expect(result.status).toBe(500);
+  });
+
+  it("propagates a StaffAuthError FORBIDDEN as 403", async () => {
+    const inactiveStaffAuth = createFakeAuthGateway({ userId: "staff-1", profile: null });
+
+    const result = await handleDeleteProjectMediaRequest(
+      "Bearer valid-token",
+      projectId,
+      record.id,
+      inactiveStaffAuth,
+      fullGateway(),
+    );
+
+    expect(result.status).toBe(403);
   });
 });

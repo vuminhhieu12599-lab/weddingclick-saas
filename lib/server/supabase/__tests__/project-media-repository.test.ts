@@ -2,6 +2,7 @@ import { StorageApiError, type SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
 import type { InsertProjectMediaRow } from "../../media/media-gateway";
+import type { UpdateProjectMediaPatch } from "../../media/media-types";
 import { supabaseProjectMediaGateway } from "../project-media-repository";
 
 const projectId = "11111111-1111-1111-1111-111111111111";
@@ -407,5 +408,361 @@ describe("supabaseProjectMediaGateway Storage methods", () => {
 
       expect(result).toEqual({ sizeBytes: 4096, contentType: "image/jpeg" });
     });
+  });
+});
+
+describe("supabaseProjectMediaGateway.listProjectMedia (Task 024 Phase 3)", () => {
+  function fakeListClient(result: {
+    data?: unknown;
+    error?: { message: string } | null;
+    captureOrder?: (calls: Array<[string, boolean]>) => void;
+  }): SupabaseClient {
+    const orderCalls: Array<[string, boolean]> = [];
+    const chain = {
+      eq: (column: string, value: string) => {
+        expect(column).toBe("project_id");
+        expect(value).toBe(projectId);
+        return chain;
+      },
+      order: (column: string, opts: { ascending: boolean }) => {
+        orderCalls.push([column, opts.ascending]);
+        result.captureOrder?.(orderCalls);
+        return chain;
+      },
+      then: (resolve: (value: { data: unknown; error: unknown }) => void) =>
+        resolve({ data: result.data ?? null, error: result.error ?? null }),
+    };
+    return {
+      from: (table: string) => {
+        expect(table).toBe("project_media");
+        return { select: () => chain };
+      },
+    } as unknown as SupabaseClient;
+  }
+
+  it("filters exactly by project_id and orders sort_order, created_at, id ascending", async () => {
+    let capturedOrder: Array<[string, boolean]> = [];
+    const client = fakeListClient({
+      data: [successMediaRow],
+      captureOrder: (calls) => {
+        capturedOrder = calls;
+      },
+    });
+
+    const result = await supabaseProjectMediaGateway.listProjectMedia(client, projectId);
+
+    expect(capturedOrder).toEqual([
+      ["sort_order", true],
+      ["created_at", true],
+      ["id", true],
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe(successMediaRow.id);
+  });
+
+  it("returns an empty array when no rows match", async () => {
+    const client = fakeListClient({ data: [] });
+
+    const result = await supabaseProjectMediaGateway.listProjectMedia(client, projectId);
+
+    expect(result).toEqual([]);
+  });
+
+  it("throws a plain Error on a Postgrest error, never the raw message", async () => {
+    const client = fakeListClient({ error: { message: "raw postgres internals" } });
+
+    const error = await supabaseProjectMediaGateway
+      .listProjectMedia(client, projectId)
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).not.toMatch(/raw postgres internals/);
+  });
+});
+
+describe("supabaseProjectMediaGateway.updateProjectMedia (Task 024 Phase 3)", () => {
+  function fakeUpdateClient(result: {
+    data?: unknown;
+    error?: { message: string } | null;
+    captureUpdate?: (payload: Record<string, unknown>) => void;
+    captureEq?: (calls: Array<[string, string]>) => void;
+  }): SupabaseClient {
+    const eqCalls: Array<[string, string]> = [];
+    return {
+      from: (table: string) => {
+        expect(table).toBe("project_media");
+        return {
+          update: (payload: Record<string, unknown>) => {
+            result.captureUpdate?.(payload);
+            const chain = {
+              eq: (column: string, value: string) => {
+                eqCalls.push([column, value]);
+                result.captureEq?.(eqCalls);
+                return chain;
+              },
+              select: () => ({
+                maybeSingle: async () => ({ data: result.data ?? null, error: result.error ?? null }),
+              }),
+            };
+            return chain;
+          },
+        };
+      },
+    } as unknown as SupabaseClient;
+  }
+
+  it("builds the UPDATE payload from exactly the keys present on the patch — altText only", async () => {
+    let captured: Record<string, unknown> | undefined;
+    const client = fakeUpdateClient({
+      data: successMediaRow,
+      captureUpdate: (payload) => {
+        captured = payload;
+      },
+    });
+
+    const patch: UpdateProjectMediaPatch = { altText: "hello" };
+    await supabaseProjectMediaGateway.updateProjectMedia(client, projectId, successMediaRow.id, patch);
+
+    expect(captured).toEqual({ alt_text: "hello" });
+    expect(captured).not.toHaveProperty("sort_order");
+  });
+
+  it("builds the UPDATE payload from exactly the keys present on the patch — sortOrder only", async () => {
+    let captured: Record<string, unknown> | undefined;
+    const client = fakeUpdateClient({
+      data: successMediaRow,
+      captureUpdate: (payload) => {
+        captured = payload;
+      },
+    });
+
+    const patch: UpdateProjectMediaPatch = { sortOrder: 7 };
+    await supabaseProjectMediaGateway.updateProjectMedia(client, projectId, successMediaRow.id, patch);
+
+    expect(captured).toEqual({ sort_order: 7 });
+    expect(captured).not.toHaveProperty("alt_text");
+  });
+
+  it("includes both columns when both fields are present", async () => {
+    let captured: Record<string, unknown> | undefined;
+    const client = fakeUpdateClient({
+      data: successMediaRow,
+      captureUpdate: (payload) => {
+        captured = payload;
+      },
+    });
+
+    const patch: UpdateProjectMediaPatch = { altText: "x", sortOrder: 2 };
+    await supabaseProjectMediaGateway.updateProjectMedia(client, projectId, successMediaRow.id, patch);
+
+    expect(captured).toEqual({ alt_text: "x", sort_order: 2 });
+  });
+
+  it("scopes the UPDATE by project_id and id together", async () => {
+    let capturedEq: Array<[string, string]> = [];
+    const client = fakeUpdateClient({
+      data: successMediaRow,
+      captureEq: (calls) => {
+        capturedEq = calls;
+      },
+    });
+
+    await supabaseProjectMediaGateway.updateProjectMedia(client, projectId, successMediaRow.id, {
+      altText: "x",
+    });
+
+    expect(capturedEq).toEqual([
+      ["project_id", projectId],
+      ["id", successMediaRow.id],
+    ]);
+  });
+
+  it("returns UPDATED with a mapped camelCase record on success", async () => {
+    const client = fakeUpdateClient({ data: successMediaRow });
+
+    const outcome = await supabaseProjectMediaGateway.updateProjectMedia(
+      client,
+      projectId,
+      successMediaRow.id,
+      { altText: "x" },
+    );
+
+    expect(outcome.kind).toBe("UPDATED");
+    if (outcome.kind === "UPDATED") {
+      expect(outcome.media.id).toBe(successMediaRow.id);
+    }
+  });
+
+  it("returns NOT_FOUND when zero rows match (wrong-project or nonexistent media)", async () => {
+    const client = fakeUpdateClient({ data: null });
+
+    const outcome = await supabaseProjectMediaGateway.updateProjectMedia(
+      client,
+      projectId,
+      successMediaRow.id,
+      { altText: "x" },
+    );
+
+    expect(outcome).toEqual({ kind: "NOT_FOUND" });
+  });
+
+  it("throws a plain Error on a Postgrest error, never the raw message", async () => {
+    const client = fakeUpdateClient({ error: { message: "raw postgres internals" } });
+
+    const error = await supabaseProjectMediaGateway
+      .updateProjectMedia(client, projectId, successMediaRow.id, { altText: "x" })
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).not.toMatch(/raw postgres internals/);
+  });
+});
+
+describe("supabaseProjectMediaGateway.deleteProjectMedia (Task 024 Phase 3)", () => {
+  function fakeDeleteClient(result: {
+    data?: unknown;
+    error?: { code?: string; message: string } | null;
+    captureEq?: (calls: Array<[string, string]>) => void;
+    captureSelect?: (columns: string) => void;
+  }): SupabaseClient {
+    const eqCalls: Array<[string, string]> = [];
+    return {
+      from: (table: string) => {
+        expect(table).toBe("project_media");
+        return {
+          delete: () => {
+            const chain = {
+              eq: (column: string, value: string) => {
+                eqCalls.push([column, value]);
+                result.captureEq?.(eqCalls);
+                return chain;
+              },
+              select: (columns: string) => {
+                result.captureSelect?.(columns);
+                return {
+                  maybeSingle: async () => ({
+                    data: result.data ?? null,
+                    error: result.error ?? null,
+                  }),
+                };
+              },
+            };
+            return chain;
+          },
+        };
+      },
+    } as unknown as SupabaseClient;
+  }
+
+  it("issues one DELETE scoped by project_id and id, returning storage_bucket/storage_path", async () => {
+    let capturedEq: Array<[string, string]> = [];
+    let capturedSelect = "";
+    const client = fakeDeleteClient({
+      data: { storage_bucket: "project-media", storage_path: storagePath },
+      captureEq: (calls) => {
+        capturedEq = calls;
+      },
+      captureSelect: (columns) => {
+        capturedSelect = columns;
+      },
+    });
+
+    const outcome = await supabaseProjectMediaGateway.deleteProjectMedia(
+      client,
+      projectId,
+      "media-1",
+    );
+
+    expect(capturedEq).toEqual([
+      ["project_id", projectId],
+      ["id", "media-1"],
+    ]);
+    expect(capturedSelect).toBe("storage_bucket, storage_path");
+    expect(outcome).toEqual({
+      kind: "DELETED",
+      storageBucket: "project-media",
+      storagePath,
+    });
+  });
+
+  it("returns NOT_FOUND when zero rows match (wrong-project or nonexistent media)", async () => {
+    const client = fakeDeleteClient({ data: null });
+
+    const outcome = await supabaseProjectMediaGateway.deleteProjectMedia(
+      client,
+      projectId,
+      "media-1",
+    );
+
+    expect(outcome).toEqual({ kind: "NOT_FOUND" });
+  });
+
+  it("classifies a 23503 foreign-key violation as REFERENCED_CONFLICT", async () => {
+    const client = fakeDeleteClient({
+      error: { code: "23503", message: "update or delete on table violates foreign key" },
+    });
+
+    const outcome = await supabaseProjectMediaGateway.deleteProjectMedia(
+      client,
+      projectId,
+      "media-1",
+    );
+
+    expect(outcome).toEqual({ kind: "REFERENCED_CONFLICT" });
+  });
+
+  it("classifies any other Postgrest error as OTHER_FAILURE, never leaking the raw message", async () => {
+    const client = fakeDeleteClient({ error: { code: "XXOOO", message: "raw postgres internals" } });
+
+    const outcome = await supabaseProjectMediaGateway.deleteProjectMedia(
+      client,
+      projectId,
+      "media-1",
+    );
+
+    expect(outcome).toEqual({ kind: "OTHER_FAILURE" });
+  });
+});
+
+describe("supabaseProjectMediaGateway.removeMediaStorageObject (Task 024 Phase 3)", () => {
+  function fakeRemoveClient(overrides: {
+    remove?: (paths: string[]) => Promise<{ data: unknown; error: unknown }>;
+  }): SupabaseClient {
+    return {
+      storage: {
+        from: (bucket: string) => {
+          expect(bucket).toBe("project-media");
+          return {
+            remove:
+              overrides.remove ?? (async () => ({ data: null, error: { message: "not configured" } })),
+          };
+        },
+      },
+    } as unknown as SupabaseClient;
+  }
+
+  it("calls Storage remove() with exactly one path, against project-media, and returns true on success", async () => {
+    let receivedPaths: string[] | undefined;
+    const client = fakeRemoveClient({
+      remove: async (paths) => {
+        receivedPaths = paths;
+        return { data: [{ name: storagePath }], error: null };
+      },
+    });
+
+    const result = await supabaseProjectMediaGateway.removeMediaStorageObject(client, storagePath);
+
+    expect(result).toBe(true);
+    expect(receivedPaths).toEqual([storagePath]);
+  });
+
+  it("returns false (never throws) when Storage reports an error", async () => {
+    const client = fakeRemoveClient({
+      remove: async () => ({ data: null, error: { message: "object not found" } }),
+    });
+
+    const result = await supabaseProjectMediaGateway.removeMediaStorageObject(client, storagePath);
+
+    expect(result).toBe(false);
   });
 });

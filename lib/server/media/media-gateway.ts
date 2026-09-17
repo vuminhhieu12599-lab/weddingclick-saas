@@ -1,5 +1,5 @@
 import type { MediaType } from "../../domain";
-import type { ProjectMediaRecord } from "./media-types";
+import type { ProjectMediaRecord, UpdateProjectMediaPatch } from "./media-types";
 
 /** Exact fields finalize needs from Storage's object-info response. */
 export interface StorageObjectInfo {
@@ -46,6 +46,35 @@ export type InsertProjectMediaOutcome =
   | { kind: "OTHER_FAILURE" };
 
 /**
+ * Task 024 Phase 3 — outcome of a direct partial RLS UPDATE scoped by
+ * (project_id, id). `NOT_FOUND` covers both "media never existed" and
+ * "media belongs to a different project" identically — the repository
+ * must never distinguish them (anti-enumeration, mirrors PE004's
+ * documented behavior in project-events-rpc-error-codes.ts).
+ */
+export type UpdateProjectMediaOutcome =
+  | { kind: "UPDATED"; media: ProjectMediaRecord }
+  | { kind: "NOT_FOUND" };
+
+/**
+ * Task 024 Phase 3 — outcome of the single atomic
+ * `DELETE ... WHERE project_id = ? AND id = ? RETURNING storage_bucket,
+ * storage_path` statement. `DELETED` carries the server-returned asset
+ * location captured in the same statement that performed the delete — the
+ * use case never re-derives or trusts a separately-fetched path.
+ * `REFERENCED_CONFLICT` covers every current incoming RESTRICT FK toward
+ * project_media (invitation_version_media, and wedding_details' groom/bride
+ * bank-QR references) — blanket-mapping SQLSTATE 23503 to this outcome is
+ * safe specifically because those three FKs are the only possible source of
+ * a 23503 on this exact DELETE shape (see the Phase 3 preflight report).
+ */
+export type DeleteProjectMediaOutcome =
+  | { kind: "DELETED"; storageBucket: string; storagePath: string }
+  | { kind: "NOT_FOUND" }
+  | { kind: "REFERENCED_CONFLICT" }
+  | { kind: "OTHER_FAILURE" };
+
+/**
  * Small seam (Task 024 Phase 2, mirrors ProjectEventsGateway /
  * WeddingDetailsGateway) decoupling the upload-intent/finalize use cases
  * from the real @supabase/supabase-js + Storage client shape.
@@ -60,10 +89,13 @@ export type InsertProjectMediaOutcome =
  * migration 0007) — never an RPC. No media-specific trusted business
  * action exists or is authorized for Phase 2 (API_CONTRACT.md §3.2).
  *
- * No Storage-removal method exists on this interface. The Finding 2 patch
- * removed the synchronous ownership-recheck-then-remove cleanup path
- * entirely (TOCTOU race) and did not replace it with anything — no
- * background cleanup job is in scope for Phase 2.
+ * Phase 2 finalize/INSERT failure still has no synchronous Storage cleanup:
+ * the Finding 2 patch removed the unsafe ownership-recheck-then-remove path
+ * (TOCTOU race) and that path remains retired — no INSERT-failure outcome
+ * calls Storage removal. Phase 3 adds `removeMediaStorageObject` below, but
+ * only as cleanup after a confirmed, already-committed `project_media`
+ * DELETE (see that method's own doc comment) — this does not weaken or
+ * reopen the Phase 2 No-Cleanup Rule.
  */
 export interface MediaGateway<TClient> {
   projectExists(client: TClient, projectId: string): Promise<boolean>;
@@ -73,4 +105,44 @@ export interface MediaGateway<TClient> {
     client: TClient,
     row: InsertProjectMediaRow,
   ): Promise<InsertProjectMediaOutcome>;
+
+  /** Task 024 Phase 3 — direct RLS SELECT, ordered sort_order/created_at/id. */
+  listProjectMedia(client: TClient, projectId: string): Promise<ProjectMediaRecord[]>;
+
+  /**
+   * Task 024 Phase 3 — direct partial RLS UPDATE scoped by
+   * (project_id, id). `patch` must contain only the fields actually
+   * present in the validated request — the implementation must never
+   * read the full row first and write it back (see update-project-media.ts).
+   */
+  updateProjectMedia(
+    client: TClient,
+    projectId: string,
+    mediaId: string,
+    patch: UpdateProjectMediaPatch,
+  ): Promise<UpdateProjectMediaOutcome>;
+
+  /**
+   * Task 024 Phase 3 — single atomic
+   * `DELETE ... WHERE project_id = ? AND id = ? RETURNING storage_bucket,
+   * storage_path`. Never a separate SELECT-then-DELETE.
+   */
+  deleteProjectMedia(
+    client: TClient,
+    projectId: string,
+    mediaId: string,
+  ): Promise<DeleteProjectMediaOutcome>;
+
+  /**
+   * Task 024 Phase 3 — Storage cleanup performed only AFTER a confirmed
+   * DB delete. Deliberately named differently from the Phase 2 Finding 2
+   * cleanup method that was retired (an unsafe recheck-then-remove path
+   * against an INSERT failure) — this method's caller never faces that
+   * TOCTOU shape, since it only ever runs once the DB row is already
+   * committed-deleted. Resolves `true` on confirmed Storage success,
+   * `false` on a reported (non-thrown) Storage error; the caller treats
+   * both a `false` result and a thrown rejection identically — log-only,
+   * never a failed API response (see delete-project-media.ts).
+   */
+  removeMediaStorageObject(client: TClient, storagePath: string): Promise<boolean>;
 }

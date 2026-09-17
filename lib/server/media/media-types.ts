@@ -49,3 +49,24 @@ export interface ProjectMediaRecord {
 export interface FinalizeMediaResult {
   media: ProjectMediaRecord;
 }
+
+/**
+ * Task 024 Phase 3 — validated PATCH payload. Optional keys are used to
+ * preserve field-presence (absent vs. explicitly provided) rather than
+ * collapsing "not sent" and "sent as its default" into the same shape —
+ * `updateProjectMedia`/the repository build the SQL UPDATE from exactly
+ * the keys present here, never a full-row read-modify-write (see
+ * update-project-media.ts).
+ */
+export interface UpdateProjectMediaPatch {
+  altText?: string | null;
+  sortOrder?: number;
+}
+
+export interface UpdateProjectMediaResult {
+  media: ProjectMediaRecord;
+}
+
+export interface DeleteProjectMediaResult {
+  deleted: true;
+}

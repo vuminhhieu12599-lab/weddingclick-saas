@@ -22,13 +22,30 @@ const validBody = { mediaType: "COVER", mimeType: "image/jpeg", sizeBytes: 1024 
 
 function unusedGatewayMethods(): Pick<
   MediaGateway<FakeClient>,
-  "getStorageObjectInfo" | "insertProjectMedia"
+  | "getStorageObjectInfo"
+  | "insertProjectMedia"
+  | "listProjectMedia"
+  | "updateProjectMedia"
+  | "deleteProjectMedia"
+  | "removeMediaStorageObject"
 > {
   return {
     async getStorageObjectInfo() {
       throw new Error("should not be called");
     },
     async insertProjectMedia() {
+      throw new Error("should not be called");
+    },
+    async listProjectMedia() {
+      throw new Error("should not be called");
+    },
+    async updateProjectMedia() {
+      throw new Error("should not be called");
+    },
+    async deleteProjectMedia() {
+      throw new Error("should not be called");
+    },
+    async removeMediaStorageObject() {
       throw new Error("should not be called");
     },
   };

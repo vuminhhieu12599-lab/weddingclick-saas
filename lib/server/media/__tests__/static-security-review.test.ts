@@ -29,18 +29,33 @@ const FEATURE_FILES = [
   "lib/server/media/generate-media-storage-path.ts",
   "lib/server/media/validate-upload-intent-input.ts",
   "lib/server/media/validate-finalize-media-input.ts",
+  "lib/server/media/validate-update-project-media-input.ts",
   "lib/server/media/create-upload-intent.ts",
   "lib/server/media/finalize-media.ts",
+  "lib/server/media/list-project-media.ts",
+  "lib/server/media/update-project-media.ts",
+  "lib/server/media/delete-project-media.ts",
   "lib/server/supabase/project-media-repository.ts",
   "lib/server/routes/project-media.ts",
   "app/api/v2/internal/projects/[id]/media/upload-intent/route.ts",
   "app/api/v2/internal/projects/[id]/media/finalize/route.ts",
+  "app/api/v2/internal/projects/[id]/media/route.ts",
+  "app/api/v2/internal/projects/[id]/media/[mediaId]/route.ts",
 ];
 
 const ROUTE_FILES = [
   "app/api/v2/internal/projects/[id]/media/upload-intent/route.ts",
   "app/api/v2/internal/projects/[id]/media/finalize/route.ts",
 ];
+
+/**
+ * Task 024 Phase 3 route files are handled by a separate assertion below
+ * (list/PATCH/DELETE): the GET route never reads a body at all, and the
+ * PATCH route parses JSON same as finalize/upload-intent — but neither is
+ * folded into ROUTE_FILES's formData/body/arrayBuffer/blob check because
+ * DELETE deliberately never calls request.json() at all (no body).
+ */
+const PHASE_3_JSON_BODY_ROUTE_FILES = ["app/api/v2/internal/projects/[id]/media/[mediaId]/route.ts"];
 
 function read(relativePath: string): string {
   return readFileSync(join(ROOT, relativePath), "utf8");
@@ -125,8 +140,88 @@ describe("Task 024 Phase 2 static/security review", () => {
     },
   );
 
-  it("project-media-repository.ts never calls Storage .remove(...) at all", () => {
+  it.each(PHASE_3_JSON_BODY_ROUTE_FILES)(
+    "%s parses JSON only for its body-bearing method — never formData/body/arrayBuffer/blob",
+    (relativePath) => {
+      const contents = read(relativePath);
+      expect(contents).toMatch(/request\.json\(\)/);
+      expect(contents).not.toMatch(/request\.formData\(/);
+      expect(contents).not.toMatch(/request\.body\b/);
+      expect(contents).not.toMatch(/request\.arrayBuffer\(/);
+      expect(contents).not.toMatch(/request\.blob\(/);
+    },
+  );
+
+  it("validate-update-project-media-input.ts's accepted-field set is exactly altText and sortOrder", () => {
+    const contents = read("lib/server/media/validate-update-project-media-input.ts");
+    const setMatch = contents.match(/ACCEPTED_FIELDS = new Set\(\[([\s\S]*?)\]\)/);
+    expect(setMatch).not.toBeNull();
+    const fields = setMatch![1];
+    expect(fields).toMatch(/"altText"/);
+    expect(fields).toMatch(/"sortOrder"/);
+    for (const forbidden of [
+      "id",
+      "projectId",
+      "mediaType",
+      "storageBucket",
+      "storagePath",
+      "mimeType",
+      "sizeBytes",
+      "width",
+      "height",
+      "createdBy",
+      "createdAt",
+      "updatedAt",
+    ]) {
+      expect(fields).not.toMatch(new RegExp(`"${forbidden}"`));
+    }
+  });
+
+  it("Task 024 Phase 3 production files never call Storage .remove(...) directly — only project-media-repository.ts's removeMediaStorageObject may", () => {
+    const filesAllowedToCallStorageRemove = new Set([
+      "lib/server/supabase/project-media-repository.ts",
+    ]);
+    for (const relativePath of FEATURE_FILES) {
+      if (filesAllowedToCallStorageRemove.has(relativePath)) {
+        continue;
+      }
+      expect(read(relativePath)).not.toMatch(/\.remove\(/);
+    }
+  });
+
+  it("project-media-repository.ts's only Storage .remove(...) call lives inside removeMediaStorageObject", () => {
     const contents = read("lib/server/supabase/project-media-repository.ts");
-    expect(contents).not.toMatch(/\.remove\(/);
+    const removeMatches = contents.match(/\.remove\(/g) ?? [];
+    expect(removeMatches).toHaveLength(1);
+    expect(contents).toMatch(/async removeMediaStorageObject\([^)]*\)[^{]*\{[\s\S]*?\.remove\(/);
+  });
+
+  it("no Phase 3 production file is named or exports removeStorageObject — that name is retired by Phase 2's No-Cleanup Rule", () => {
+    for (const relativePath of FEATURE_FILES) {
+      expect(read(relativePath)).not.toMatch(/removeStorageObject\b/);
+    }
+  });
+
+  it("Phase 3 delete failure throws (NOT_FOUND/REFERENCED_CONFLICT/OTHER_FAILURE) all appear, in source order, before the one removeMediaStorageObject call", () => {
+    const contents = read("lib/server/media/delete-project-media.ts");
+    const notFoundThrow = contents.indexOf('throw new ApiError("NOT_FOUND", "Media not found")');
+    const conflictThrow = contents.indexOf('throw new ApiError("CONFLICT"');
+    const otherFailureThrow = contents.indexOf('throw new ApiError("INTERNAL"');
+    const removalCall = contents.indexOf("gateway.removeMediaStorageObject(");
+
+    expect(notFoundThrow).toBeGreaterThan(-1);
+    expect(conflictThrow).toBeGreaterThan(-1);
+    expect(otherFailureThrow).toBeGreaterThan(-1);
+    expect(removalCall).toBeGreaterThan(-1);
+
+    expect(notFoundThrow).toBeLessThan(removalCall);
+    expect(conflictThrow).toBeLessThan(removalCall);
+    expect(otherFailureThrow).toBeLessThan(removalCall);
+  });
+
+  it("delete-project-media.ts never reinserts or compensates a DB row after a Storage failure", () => {
+    const contents = read("lib/server/media/delete-project-media.ts");
+    expect(contents).not.toMatch(/\.insert\(/);
+    expect(contents).not.toMatch(/\.upsert\(/);
   });
 });

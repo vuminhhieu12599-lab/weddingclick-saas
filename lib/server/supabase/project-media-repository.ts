@@ -3,12 +3,14 @@ import { StorageApiError, type SupabaseClient } from "@supabase/supabase-js";
 import type { MediaType } from "../../domain";
 import { PROJECT_MEDIA_BUCKET } from "../media/media-constants";
 import type {
+  DeleteProjectMediaOutcome,
   InsertProjectMediaOutcome,
   InsertProjectMediaRow,
   MediaGateway,
   StorageObjectInfo,
+  UpdateProjectMediaOutcome,
 } from "../media/media-gateway";
-import type { ProjectMediaRecord } from "../media/media-types";
+import type { ProjectMediaRecord, UpdateProjectMediaPatch } from "../media/media-types";
 
 /**
  * Production MediaGateway (Task 024 Phase 2): the only place in this
@@ -41,6 +43,19 @@ const PROJECT_MEDIA_COLUMNS =
 
 /** Postgres SQLSTATE for a unique-constraint violation (project_media_storage_object_unique, migration 0007). */
 const UNIQUE_VIOLATION = "23505";
+
+/**
+ * Postgres SQLSTATE for a foreign-key-violation (Task 024 Phase 3). project_media
+ * has exactly three incoming RESTRICT FKs today
+ * (invitation_version_media_project_media_fkey, migration 0013b;
+ * wedding_details_groom_bank_qr_media_fk / wedding_details_bride_bank_qr_media_fk,
+ * migration 0008) — every one of them means "this media row is currently
+ * referenced elsewhere and cannot be deleted." Blanket-mapping this code on
+ * the exact DELETE shape below (scoped by project_id + id, no other
+ * statement in this repository can raise it) is therefore safe without
+ * parsing the constraint name out of the free-form error message/details.
+ */
+const FOREIGN_KEY_VIOLATION = "23503";
 
 /**
  * Narrow, conservative predicate for "the Storage object does not exist"
@@ -194,5 +209,108 @@ export const supabaseProjectMediaGateway: MediaGateway<SupabaseClient> = {
     } catch {
       return { kind: "AMBIGUOUS_FAILURE" };
     }
+  },
+
+  /** Task 024 Phase 3 — direct RLS SELECT, deterministic three-key order. */
+  async listProjectMedia(client, projectId: string): Promise<ProjectMediaRecord[]> {
+    const { data, error } = await client
+      .from("project_media")
+      .select(PROJECT_MEDIA_COLUMNS)
+      .eq("project_id", projectId)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true });
+
+    if (error) {
+      throw new Error("Failed to query project media");
+    }
+
+    return (data as unknown as ProjectMediaRow[]).map(toProjectMediaRecord);
+  },
+
+  /**
+   * Task 024 Phase 3 — genuine partial RLS UPDATE. Builds the SQL payload
+   * from exactly the keys present on `patch` (never a full-row
+   * read-modify-write), scoped by (project_id, id) together so a
+   * wrong-project media id behaves identically to a nonexistent one.
+   */
+  async updateProjectMedia(
+    client,
+    projectId: string,
+    mediaId: string,
+    patch: UpdateProjectMediaPatch,
+  ): Promise<UpdateProjectMediaOutcome> {
+    const update: Record<string, unknown> = {};
+    if ("altText" in patch) {
+      update.alt_text = patch.altText;
+    }
+    if ("sortOrder" in patch) {
+      update.sort_order = patch.sortOrder;
+    }
+
+    const { data, error } = await client
+      .from("project_media")
+      .update(update)
+      .eq("project_id", projectId)
+      .eq("id", mediaId)
+      .select(PROJECT_MEDIA_COLUMNS)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error("Failed to update project media");
+    }
+
+    if (!data) {
+      return { kind: "NOT_FOUND" };
+    }
+
+    return { kind: "UPDATED", media: toProjectMediaRecord(data as unknown as ProjectMediaRow) };
+  },
+
+  /**
+   * Task 024 Phase 3 — single atomic
+   * `DELETE ... WHERE project_id = ? AND id = ? RETURNING storage_bucket,
+   * storage_path`. Never a separate SELECT-then-DELETE — the returned
+   * storage location comes from the same statement that commits the
+   * delete.
+   */
+  async deleteProjectMedia(
+    client,
+    projectId: string,
+    mediaId: string,
+  ): Promise<DeleteProjectMediaOutcome> {
+    const { data, error } = await client
+      .from("project_media")
+      .delete()
+      .eq("project_id", projectId)
+      .eq("id", mediaId)
+      .select("storage_bucket, storage_path")
+      .maybeSingle();
+
+    if (error) {
+      if (error.code === FOREIGN_KEY_VIOLATION) {
+        return { kind: "REFERENCED_CONFLICT" };
+      }
+      return { kind: "OTHER_FAILURE" };
+    }
+
+    if (!data) {
+      return { kind: "NOT_FOUND" };
+    }
+
+    const row = data as unknown as { storage_bucket: string; storage_path: string };
+    return { kind: "DELETED", storageBucket: row.storage_bucket, storagePath: row.storage_path };
+  },
+
+  /**
+   * Task 024 Phase 3 — Storage cleanup performed only after a confirmed DB
+   * delete (see delete-project-media.ts). Deliberately named
+   * `removeMediaStorageObject` — the Phase 2 No-Cleanup Rule guard
+   * (static-security-review.test.ts) retires the shorter cleanup-method
+   * name that Finding 2 removed.
+   */
+  async removeMediaStorageObject(client, storagePath: string): Promise<boolean> {
+    const { error } = await client.storage.from(PROJECT_MEDIA_BUCKET).remove([storagePath]);
+    return !error;
   },
 };

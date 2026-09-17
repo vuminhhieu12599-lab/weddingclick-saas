@@ -56,6 +56,18 @@ function baseGateway(overrides?: Partial<MediaGateway<FakeClient>>): MediaGatewa
     async insertProjectMedia() {
       return { kind: "INSERTED", media: insertedRecord };
     },
+    async listProjectMedia() {
+      throw new Error("should not be called");
+    },
+    async updateProjectMedia() {
+      throw new Error("should not be called");
+    },
+    async deleteProjectMedia() {
+      throw new Error("should not be called");
+    },
+    async removeMediaStorageObject() {
+      throw new Error("should not be called");
+    },
     ...overrides,
   };
 }
