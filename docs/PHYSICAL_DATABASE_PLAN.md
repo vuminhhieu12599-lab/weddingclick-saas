@@ -362,7 +362,7 @@ Indexes: `(project_id)`; `(project_id, starts_at)`.
 
 This selection feeds countdown target, primary calendar emphasis, and the template's primary-event display — it is resolver/domain-layer logic, not a database constraint, because "which side is relevant for a given variant" is a presentation concern; the partial unique index only guarantees the *input* to that logic is unambiguous per side.
 
-RLS: enabled + forced. SELECT/INSERT/UPDATE/DELETE: `is_staff()`. Anonymous/guest/customer-token: none (server-only reads for display/countdown, §M).
+RLS: enabled + forced. SELECT: `is_staff()`. INSERT/UPDATE/DELETE: policies for `is_staff()` remain present from this migration, but **feature migration `0022_project_events_actions` (Task 023) revoked the underlying `authenticated` table-level `INSERT`/`UPDATE`/`DELETE` privileges**, making these policies unreachable in practice — see §16a. Canonical create/update/delete is now performed exclusively by the audited `public.create_project_event(...)`/`public.update_project_event(...)`/`public.delete_project_event(...)` `SECURITY DEFINER` business-action functions (independently self-authorizing via `is_staff()`, update no-op-suppressed, logging `CANONICAL_DATA_APPLIED` only on create/update-with-real-change/delete), not by a direct authenticated-session table write. Anonymous/guest/customer-token: none (server-only reads for display/countdown, §M).
 
 ### 2.9 `project_media` — **[R15], [R16]**
 
@@ -895,7 +895,7 @@ rsvps
 | `service_packages`, `service_addons`, `templates` | Retire, never delete once used | `is_active=false`; referencing FKs `RESTRICT` |
 | `template_versions` | Immutable, retire via timestamp | `retired_at` is the only mutable column, DB-guarded by `guard_template_version_immutability()` (§2.11, **[F10]** — `manifest` is now frozen too, not just "by convention"); `RESTRICT` from `project_design`/`invitation_versions` |
 | `project_addons` | Soft-revoke, immutable snapshot | Identity/snapshot columns DB-guarded as permanently immutable by `guard_project_addon_identity_immutability()` (§2.6, **[F9]**), including `created_by` — see the profile-hard-delete note below the table. `revoked_at`/`revoked_by`/`revoked_reason` mutable only while parent `projects.payment_status='UNPAID'`, frozen entirely once `'PAID'` (§7, **[R7]**) |
-| `wedding_details`, `project_events`, `project_media`, `project_design` | Mutable draft data | Full staff CRUD pre-publish-freeze concerns; cascades with project. `project_media` additionally guarded by `invitation_version_media` `RESTRICT` (§K) and the asset-identity-immutability trigger (§2.9, **[R16]**, placement fixed by **[F16]**); `wedding_details`' gift-QR references are project-scoped by composite FK (**[F6]**) |
+| `wedding_details`, `project_events`, `project_media`, `project_design` | Mutable draft data | Full staff CRUD pre-publish-freeze concerns; cascades with project. `wedding_details` C/U now via `save_wedding_details()` business action (§16a, Task 022), not raw RLS INSERT/UPDATE; `project_events` C/U/D now via `create_project_event()`/`update_project_event()`/`delete_project_event()` business actions (§16a, Task 023), not raw RLS INSERT/UPDATE/DELETE. `project_media` additionally guarded by `invitation_version_media` `RESTRICT` (§K) and the asset-identity-immutability trigger (§2.9, **[R16]**, placement fixed by **[F16]**); `wedding_details`' gift-QR references are project-scoped by composite FK (**[F6]**) |
 | `project_invitations` | Cannot delete while it has any `invitation_versions` row | The composite `RESTRICT` FK from `invitation_versions` (§2.14, **[F3]**) — tighter than Revision 2's "only while never published" — plus the existing slug-freeze/deletion trigger (§2.13) |
 | `invitation_versions` | Fully immutable, append-only | No UPDATE/DELETE policy for any role; `REVIEW`/`PUBLISHED` lifecycle fields now mutually exclusive and complete by a single strengthened `CHECK` (**[F4]**) |
 | `invitation_version_media` | Effectively immutable | No UPDATE/DELETE policy; `(project_media_id, project_id)` composite FK is `RESTRICT`, protecting referenced media indefinitely (§22) and guaranteeing same-Project media (**[F5]**) |
@@ -1025,7 +1025,7 @@ Per §1.6, anonymous/guest-token/all three customer-token types never receive di
 | `service_packages`, `service_addons` | — | — | — | — | server-only (price display) | R | R/C/U; no hard D once used |
 | `project_addons` | — | — | — | — | server-only | R/C/U (frozen post-`PAID`) | same |
 | `wedding_details` | — | — | **—** (submissions land in `intake_submissions`, not here — [R5]) | server-only | — | R only direct; C/U only via `save_wedding_details()` business action, §16a | same |
-| `project_events` | — | — | **—** (same reason) | server-only | server-only (event summary) | R/C/U/D | R/C/U/D |
+| `project_events` | — | — | **—** (same reason) | server-only | server-only (event summary) | R only direct; C/U/D only via `create_project_event()`/`update_project_event()`/`delete_project_event()` business actions, §16a | same |
 | `project_media` | — | server-only (signed URL for published media) | — (upload-during-intake deferred, not yet scoped) | server-only | server-only | R/C/U/D (RESTRICT/trigger-guarded) | same |
 | `templates`, `template_versions` | — | — | — | — | — | R | R/C/U; no hard D once used |
 | `project_design` | — | — | — | server-only | — | R/C/U | R/C/U |
@@ -1253,9 +1253,45 @@ The migration list in §16 (`0001`–`0020`) is the frozen foundation schema pha
       executable. SELECT privilege/policy is unchanged.
     - Table shape (§2.7 columns/constraints/FKs) is unchanged by this
       migration — privilege/workflow tightening only.
+
+0022_project_events_actions.sql (Task 023)
+    - Adds public.create_project_event(...), public.update_project_event(...),
+      and public.delete_project_event(...), three SECURITY DEFINER audited
+      canonical mutations for project_events, mirroring 0021's pattern
+      exactly: each independently self-authorizes via is_staff() (locking
+      the caller's own profiles row first), locks the target Project row
+      FOR UPDATE, and (update/delete) additionally locks the target Event
+      row FOR UPDATE scoped to that Project in the same statement. Only
+      authenticated gets EXECUTE (REVOKE ALL FROM PUBLIC/anon/authenticated/
+      service_role, then GRANT EXECUTE TO authenticated only) — PUBLIC,
+      anon, and service_role get none.
+    - Each mutation logs 'CANONICAL_DATA_APPLIED' via log_activity() with
+      minimal metadata {"domain":"project_events","operation":"CREATED"|
+      "UPDATED"|"DELETED"}. update_project_event compares all 11 editable
+      columns against the locked, persisted row and suppresses both the
+      UPDATE statement and the audit event when nothing changed (no-op
+      Save, same rule as 0021). create_project_event and
+      delete_project_event have no no-op concept — a create or a delete is
+      always a real, always-audited change.
+    - A dedicated error code, PE005, translates ONLY a unique_violation
+      whose CONSTRAINT_NAME is the exact
+      project_events_one_primary_per_project_side_idx partial unique index
+      (0009) into a stable application error; any other unique_violation on
+      project_events is re-raised unchanged rather than mistranslated.
+    - Revokes authenticated table-level INSERT/UPDATE/DELETE privileges on
+      project_events. The project_events_insert_staff /
+      project_events_update_staff / project_events_delete_staff is_staff()
+      RLS policies created in 0009 remain present in the catalog but are
+      unreachable without the table privilege, so direct authenticated
+      writes are no longer executable. SELECT privilege/policy is
+      unchanged.
+    - Table shape (§2.8 columns/constraints/indexes/RLS policies) is
+      unchanged by this migration — privilege/workflow tightening only, no
+      column, constraint, index, or RLS policy was added, removed, or
+      altered.
 ```
 
-This is a privilege/workflow tightening only, not a schema shape change: no column, constraint, or FK on `wedding_details` was added, removed, or altered.
+Both 0021 and 0022 are privilege/workflow tightening only, not schema shape changes: no column, constraint, index, or FK on `wedding_details` or `project_events` was added, removed, or altered by either migration.
 
 ---
 
