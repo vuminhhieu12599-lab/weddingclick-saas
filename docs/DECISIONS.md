@@ -125,6 +125,65 @@ Approved conceptual lifecycle:
 
 Exact naming may be refined during schema implementation only if product meaning remains unchanged and documentation is updated.
 
+## Task 025 — Project Lifecycle / Payment / Assignment
+
+Frozen decisions implemented by migration `0024_project_lifecycle_payment_assignment.sql` (`transition_project_status`, `mark_project_paid`, `reassign_project_staff`).
+
+**A. Manual transition graph**
+
+```text
+NEW               -> WAITING_FOR_INFO
+WAITING_FOR_INFO  -> IN_PROGRESS
+IN_PROGRESS       -> INTERNAL_REVIEW
+INTERNAL_REVIEW   -> IN_PROGRESS
+REVISION_REQUIRED -> IN_PROGRESS
+APPROVED          -> AWAITING_PAYMENT
+AWAITING_PAYMENT  -> READY_TO_PUBLISH   (only when payment_status = PAID)
+PUBLISHED         -> COMPLETED
+COMPLETED         -> ARCHIVED
+```
+
+No other manual edge is allowed. `ARCHIVED` is terminal.
+
+**B. Reserved targets for `transition_project_status`**
+
+`CUSTOMER_REVIEW`, `REVISION_REQUIRED`, `APPROVED`, and `PUBLISHED` never appear as a target (`to_status`) of this generic function.
+
+- `CUSTOMER_REVIEW` / `REVISION_REQUIRED` / `APPROVED` belong to Task 030 (Review workflow).
+- `PUBLISHED` belongs to Task 031 (publish_invitation).
+- No `ADMIN` override exists in V1.
+
+**C. Status semantics**
+
+- A same-status request is a conflict/no-op, never an error about illegality.
+- A structurally invalid edge is an invariant failure.
+- Reaching `COMPLETED` sets `completed_at`; reaching `ARCHIVED` sets `archived_at`. No Task 025 transition ever clears either timestamp.
+- The optional `reason` is trimmed; a blank result becomes `NULL`; it is capped at 2000 characters; it is stored only in activity metadata, never as a `projects` column.
+
+**D. Payment**
+
+- Payment confirmation is manual/offline only.
+- `mark_project_paid` succeeds only when `status = AWAITING_PAYMENT` and `payment_status = UNPAID`.
+- On success it sets `payment_status = PAID` and `paid_at = now()`. It does not change project lifecycle status.
+- `PAID -> UNPAID` is not a normal V1 application action.
+- The `AWAITING_PAYMENT -> READY_TO_PUBLISH` edge additionally requires `payment_status = PAID`.
+
+**E. Commercial freeze**
+
+Commercial terms remain editable only under the already-frozen UNPAID rules. After `PAID`, the existing database commercial-freeze mechanisms (migrations 0005/0006) remain authoritative. Task 025 adds no commercial-edit API.
+
+**F. Assignment**
+
+Assignment (`assigned_staff_id`) is responsibility metadata only — never a visibility/RLS filter. Any active `STAFF`/`ADMIN` may self-assign, assign another active `STAFF`/`ADMIN`, reassign, or unassign (set `NULL`). A non-null assignee must resolve to an existing, active, `STAFF` or `ADMIN` profile. Assigning the same value the Project already has is a conflict/no-op.
+
+**G. Activity**
+
+- An ordinary manual status transition logs `PROJECT_STATUS_CHANGED`.
+- Reaching `ARCHIVED` logs `PROJECT_ARCHIVED` only (never both).
+- `mark_project_paid` logs `PROJECT_MARKED_PAID`.
+- An assignment change logs `STAFF_ASSIGNMENT_CHANGED`.
+- Every mutation and its activity row are written atomically, in the same transaction.
+
 ## Draft / Review / Publish
 
 1. Save is not Publish.
