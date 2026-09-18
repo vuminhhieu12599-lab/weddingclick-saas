@@ -20,6 +20,12 @@ import { describe, expect, it } from "vitest";
  * lib/server/project-events/__tests__/static-security-review.test.ts
  * (Task 023): read the actual migration text and assert on it directly,
  * never assume its contents or hand-duplicate the transition graph.
+ *
+ * Task 025 Phase 2 (application/API layer authoring) adds the
+ * "Task 025 Phase 2 static/security review" describe block below, mirroring
+ * lib/server/project-events/__tests__/static-security-review.test.ts's own
+ * FILES_UNDER_REVIEW pattern. Migration 0024 remains untouched and every
+ * Phase 1 assertion above is unchanged.
  */
 const ROOT = join(__dirname, "..", "..", "..", "..");
 const MIGRATIONS_DIR = join(ROOT, "supabase", "migrations");
@@ -585,5 +591,147 @@ describe("Task 025 Phase 1 — static/security review of existing Phase 1 files"
   it.each(FILES_UNDER_REVIEW)("%s never calls log_activity directly", (relativePath) => {
     const contents = readFileSync(join(ROOT, relativePath), "utf8");
     expect(contents).not.toMatch(/log_activity/);
+  });
+});
+
+/**
+ * Task 025 Phase 2 static/security review — application/API layer authoring
+ * (task spec §11), mirroring
+ * lib/server/project-events/__tests__/static-security-review.test.ts
+ * (Task 023). Reviews every production file introduced by Phase 2: the
+ * three validators/use cases/gateway interface, the Supabase repository, the
+ * pure route-handler module, and the three Next.js route files. Migration
+ * 0024 (reviewed above) is unchanged by Phase 2 and not re-asserted here.
+ */
+const PHASE_2_FILES_UNDER_REVIEW = [
+  "lib/server/project-lifecycle/project-lifecycle-types.ts",
+  "lib/server/project-lifecycle/project-lifecycle-gateway.ts",
+  "lib/server/project-lifecycle/validate-transition-status-input.ts",
+  "lib/server/project-lifecycle/validate-mark-paid-input.ts",
+  "lib/server/project-lifecycle/validate-reassign-staff-input.ts",
+  "lib/server/project-lifecycle/transition-project-status.ts",
+  "lib/server/project-lifecycle/mark-project-paid.ts",
+  "lib/server/project-lifecycle/reassign-project-staff.ts",
+  "lib/server/supabase/project-lifecycle-repository.ts",
+  "lib/server/routes/project-lifecycle.ts",
+  "app/api/v2/internal/projects/[id]/status/route.ts",
+  "app/api/v2/internal/projects/[id]/payment/route.ts",
+  "app/api/v2/internal/projects/[id]/assignment/route.ts",
+];
+
+describe("Task 025 Phase 2 static/security review", () => {
+  it.each(PHASE_2_FILES_UNDER_REVIEW)("%s never references service_role", (relativePath) => {
+    const contents = readFileSync(join(ROOT, relativePath), "utf8");
+    expect(contents).not.toMatch(/service_role/i);
+  });
+
+  it.each(PHASE_2_FILES_UNDER_REVIEW)(
+    "%s never references SUPABASE_SERVICE_ROLE",
+    (relativePath) => {
+      const contents = readFileSync(join(ROOT, relativePath), "utf8");
+      expect(contents).not.toMatch(/SUPABASE_SERVICE_ROLE/i);
+    },
+  );
+
+  it.each(PHASE_2_FILES_UNDER_REVIEW)("%s never calls log_activity directly", (relativePath) => {
+    const contents = readFileSync(join(ROOT, relativePath), "utf8");
+    expect(contents).not.toMatch(/log_activity/);
+  });
+
+  it.each(PHASE_2_FILES_UNDER_REVIEW)(
+    "%s never issues a direct activity_logs INSERT",
+    (relativePath) => {
+      const contents = readFileSync(join(ROOT, relativePath), "utf8");
+      expect(contents).not.toMatch(/\.from\(\s*["']activity_logs["']\s*\)/);
+    },
+  );
+
+  it("project-lifecycle-repository.ts never issues a direct .from(...).update(...)/.insert(...)/.delete(...) call on any table (RPC-only mutations)", () => {
+    const contents = readFileSync(
+      join(ROOT, "lib/server/supabase/project-lifecycle-repository.ts"),
+      "utf8",
+    );
+    expect(contents).not.toMatch(/\.update\s*\(/);
+    expect(contents).not.toMatch(/\.insert\s*\(/);
+    expect(contents).not.toMatch(/\.delete\s*\(/);
+    expect(contents).not.toMatch(/\.from\s*\(/);
+  });
+
+  it("no production Phase 2 file ever calls .from(\"projects\").update(", () => {
+    for (const relativePath of PHASE_2_FILES_UNDER_REVIEW) {
+      const contents = readFileSync(join(ROOT, relativePath), "utf8");
+      expect(contents).not.toMatch(/\.from\(\s*["']projects["']\s*\)[^;]*\.update\s*\(/);
+    }
+  });
+
+  it("project-lifecycle-repository.ts's mutations call only the three trusted RPCs", () => {
+    const contents = readFileSync(
+      join(ROOT, "lib/server/supabase/project-lifecycle-repository.ts"),
+      "utf8",
+    );
+    expect(contents).toMatch(/client\.rpc\(\s*["']transition_project_status["']/);
+    expect(contents).toMatch(/client\.rpc\(\s*["']mark_project_paid["']/);
+    expect(contents).toMatch(/client\.rpc\(\s*["']reassign_project_staff["']/);
+
+    const rpcCalls = contents.match(/client\.rpc\(\s*["'][a-z_]+["']/g) ?? [];
+    const rpcNames = new Set(rpcCalls.map((call) => call.match(/["']([a-z_]+)["']/)?.[1]));
+    expect(rpcNames).toEqual(
+      new Set(["transition_project_status", "mark_project_paid", "reassign_project_staff"]),
+    );
+  });
+
+  it("no Phase 2 file re-implements the frozen transition graph (no hand-duplicated FROM/TO edge list)", () => {
+    for (const relativePath of PHASE_2_FILES_UNDER_REVIEW) {
+      const contents = readFileSync(join(ROOT, relativePath), "utf8");
+      expect(contents).not.toMatch(/WAITING_FOR_INFO['"]\s*,\s*['"]IN_PROGRESS/);
+      expect(contents).not.toMatch(/AWAITING_PAYMENT['"]\s*,\s*['"]READY_TO_PUBLISH/);
+    }
+  });
+
+  it("no Phase 2 use case or validator prechecks the target assignee profile (no profiles table reference)", () => {
+    const usecaseAndValidatorFiles = PHASE_2_FILES_UNDER_REVIEW.filter(
+      (p) =>
+        p.includes("reassign-project-staff") || p.includes("validate-reassign-staff-input"),
+    );
+    for (const relativePath of usecaseAndValidatorFiles) {
+      const contents = readFileSync(join(ROOT, relativePath), "utf8");
+      expect(contents).not.toMatch(/\.from\(\s*["']profiles["']\s*\)/);
+      expect(contents).not.toMatch(/is_active/);
+    }
+  });
+
+  it("no anon/public route exists — every route file requires staff auth via requireStaff", () => {
+    const routeFiles = PHASE_2_FILES_UNDER_REVIEW.filter((p) => p.startsWith("app/api/"));
+    expect(routeFiles).toHaveLength(3);
+    for (const relativePath of routeFiles) {
+      const contents = readFileSync(join(ROOT, relativePath), "utf8");
+      expect(contents).toMatch(/supabaseStaffAuthGateway/);
+    }
+
+    const routesModule = readFileSync(join(ROOT, "lib/server/routes/project-lifecycle.ts"), "utf8");
+    const requireStaffCalls = routesModule.match(/requireStaff\(/g) ?? [];
+    expect(requireStaffCalls.length).toBe(3);
+    expect(routesModule).not.toMatch(/requireAdmin\(/);
+  });
+
+  it("no payment reversal path or generic payment setter exists anywhere in Phase 2", () => {
+    for (const relativePath of PHASE_2_FILES_UNDER_REVIEW) {
+      const contents = readFileSync(join(ROOT, relativePath), "utf8");
+      expect(contents).not.toMatch(/mark_project_unpaid/i);
+      expect(contents).not.toMatch(/MARK_UNPAID/);
+      expect(contents).not.toMatch(/p_payment_status/);
+    }
+  });
+
+  it("the payment route/use case/validator only ever accept the fixed MARK_PAID action", () => {
+    const paymentFiles = [
+      "lib/server/project-lifecycle/validate-mark-paid-input.ts",
+      "lib/server/project-lifecycle/mark-project-paid.ts",
+      "app/api/v2/internal/projects/[id]/payment/route.ts",
+    ];
+    for (const relativePath of paymentFiles) {
+      const contents = readFileSync(join(ROOT, relativePath), "utf8");
+      expect(contents).not.toMatch(/action\s*!==?\s*["'](?!MARK_PAID)/);
+    }
   });
 });

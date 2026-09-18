@@ -274,3 +274,125 @@ Task 022 (next implementation task) is deliberately narrow:
 - Reuses the existing Task 004 staff auth/server boundary as-is.
 - No UI implementation unless separately authorized.
 - May require one feature migration adding the narrowly-scoped business-action function. This is permitted: the **table schema phase is frozen**, but later feature migrations may add reviewed functions/RPCs without changing any frozen table shape.
+
+---
+
+## 10. Task 025 — Project Lifecycle / Payment / Assignment HTTP Contract (frozen)
+
+Task 025 Phase 2 implements the HTTP surface over the three trusted business actions frozen in migration `0024_project_lifecycle_payment_assignment.sql` (§8): `transition_project_status`, `mark_project_paid`, `reassign_project_staff`. All three are internal STAFF/ADMIN endpoints — `requireStaff` only, per §2's Path A; there is no ADMIN-only branch on any of the three. Each route handler calls exactly one of the three RPCs via the frozen `ProjectLifecycleGateway` and never performs a direct `UPDATE` of a governed `projects` column (`status`, `payment_status`, `paid_at`, `assigned_staff_id`, `completed_at`, `archived_at`) or a direct `activity_logs`/`log_activity` write — every audited side effect (`PROJECT_STATUS_CHANGED`, `PROJECT_ARCHIVED`, `PROJECT_MARKED_PAID`, `STAFF_ASSIGNMENT_CHANGED`, §6) happens atomically inside the RPC.
+
+Each RPC is declared to return exactly one row (`FOR UPDATE` row lock + `RETURNS TABLE`/`RETURNING`); a client-library result that is `null`, an empty array, more than one row, or a row that fails field-level shape validation is treated as a generic `INTERNAL` (500) failure, never forwarded to the caller.
+
+### 10.1 `PATCH /api/v2/internal/projects/[id]/status`
+
+Manual project lifecycle transition.
+
+Request body:
+
+```json
+{
+  "targetStatus": "<ProjectStatus>",
+  "reason": "string (optional)"
+}
+```
+
+- `targetStatus` is required and must be one of the 12 canonical `ProjectStatus` values (`lib/domain/project-status.ts`). The HTTP validator accepts all 12 syntactically, including the reserved targets `CUSTOMER_REVIEW`, `REVISION_REQUIRED`, `APPROVED`, and `PUBLISHED` — those are rejected only by `transition_project_status` itself (`INVARIANT`, 422), never at the HTTP validation layer, so the transition graph is defined exactly once.
+- `reason` is optional. It is trimmed; a blank or omitted value normalizes to `null`; a trimmed value over 2000 characters is rejected `BAD_REQUEST` (400) at the HTTP boundary, mirroring the RPC's own 2000-character limit.
+- Unknown request fields are rejected `BAD_REQUEST` (400) — the request body shape is exact, not partial.
+- A malformed project id (not a UUID) is rejected `BAD_REQUEST` (400) before any RPC call.
+- Requesting the project's current status is `CONFLICT` (409).
+- An illegal transition, a reserved target, or `READY_TO_PUBLISH` requested while `payment_status <> PAID` is `INVARIANT` (422).
+- A missing project is `NOT_FOUND` (404).
+
+Success (200):
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "status": "<ProjectStatus>",
+    "completedAt": "timestamptz | null",
+    "archivedAt": "timestamptz | null",
+    "updatedAt": "timestamptz"
+  }
+}
+```
+
+### 10.2 `PATCH /api/v2/internal/projects/[id]/payment`
+
+Manual/offline payment acknowledgement only. There is no `MARK_UNPAID` and no generic payment-status setter — this endpoint can only move a project from `UNPAID` to `PAID`.
+
+Request body (exact shape):
+
+```json
+{
+  "action": "MARK_PAID"
+}
+```
+
+- `action` is required and must be the literal string `"MARK_PAID"`. Any other value, a missing `action`, or an unknown field is `BAD_REQUEST` (400).
+- A malformed project id is `BAD_REQUEST` (400).
+- Already `PAID` is `CONFLICT` (409).
+- A project in a lifecycle state that does not permit marking paid is `INVARIANT` (422).
+- A missing project is `NOT_FOUND` (404).
+- Success does not change `projects.status` — marking paid is independent of the manual status transition in §10.1.
+
+Success (200):
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "status": "<ProjectStatus>",
+    "paymentStatus": "PAID",
+    "paidAt": "timestamptz",
+    "updatedAt": "timestamptz"
+  }
+}
+```
+
+### 10.3 `PATCH /api/v2/internal/projects/[id]/assignment`
+
+Staff assignment/reassignment/unassignment. Assignment is responsibility metadata only — it is never an RLS or visibility condition on the assigned project.
+
+Request body (exact shape):
+
+```json
+{
+  "assignedStaffId": "uuid | null"
+}
+```
+
+- `assignedStaffId` is required even when `null` — a missing key is `BAD_REQUEST` (400); `null` means unassign.
+- A non-null value that is not a syntactically valid UUID is `BAD_REQUEST` (400).
+- A malformed project id is `BAD_REQUEST` (400).
+- Unknown request fields are `BAD_REQUEST` (400).
+- The HTTP layer never prechecks whether a non-null assignee resolves to an active STAFF/ADMIN profile — `reassign_project_staff` is the sole authority for that invariant. An invalid, inactive, or missing assignee is `INVARIANT` (422).
+- Assigning the project to its current assignee (including re-submitting the current `null`) is `CONFLICT` (409).
+- A missing project is `NOT_FOUND` (404).
+
+Success (200):
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "assignedStaffId": "uuid | null",
+    "updatedAt": "timestamptz"
+  }
+}
+```
+
+### 10.4 Error model
+
+All three routes use the frozen error model (§5) exactly, mapped from the RPCs' own `PLxxx` SQLSTATE codes (migration `0024`) by a fixed, static application-owned message table — the underlying Postgres error message is never forwarded to a caller:
+
+| HTTP | Kind | Condition |
+|---|---|---|
+| 400 | `BAD_REQUEST` | malformed project UUID; malformed/wrong-shape/unknown-field request body |
+| 401 | `UNAUTHENTICATED` | missing/invalid staff session |
+| 403 | `FORBIDDEN` | authenticated but not active STAFF/ADMIN |
+| 404 | `NOT_FOUND` | project does not exist |
+| 409 | `CONFLICT` | same-status / already-paid / same-assignment |
+| 422 | `INVARIANT` | illegal or reserved status transition; `READY_TO_PUBLISH` without `PAID`; wrong lifecycle state for payment; invalid/inactive/missing assignee |
+| 500 | `INTERNAL` | unexpected RPC failure or unexpected result shape — generic message only |
