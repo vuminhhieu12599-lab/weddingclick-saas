@@ -281,11 +281,56 @@ describe("Task 026 Phase 2 — no HTTP route added (§18)", () => {
     }
   });
 
-  it("no app/api route path segment names resolve/access-link/token", () => {
+  /**
+   * Narrowed by Task 026 Phase 3 (explicitly reported — see the Phase 3
+   * authoring report's "Phase 1/2 frozen code" section, further narrowed by
+   * independent-review Finding C): the original blanket assertion here ("no
+   * app/api route path segment names resolve/access-link/token") predated
+   * Phase 3's frozen staff issue/rotate/revoke HTTP contract, which mandates
+   * exactly the path `app/api/v2/internal/projects/[id]/access-links` — an
+   * authenticated STAFF/ADMIN-only mutation surface, not the public/customer
+   * token-resolution route this describe block (§18) actually guards
+   * against. The exemption is an exact allowlist of the three specific,
+   * now-frozen Phase 3 route files — never a blanket `/internal/` carve-out
+   * — so every other current and future internal route (a hypothetical
+   * `/internal/.../resolve-access-link/route.ts`, for example) remains
+   * caught by the original guard.
+   */
+  const PHASE_3_AUTHORIZED_ROUTE_FILES = new Set([
+    "app/api/v2/internal/projects/[id]/access-links/route.ts",
+    "app/api/v2/internal/projects/[id]/access-links/[linkId]/rotate/route.ts",
+    "app/api/v2/internal/projects/[id]/access-links/[linkId]/revoke/route.ts",
+  ]);
+
+  it("no app/api route path segment names access-link/token, except the three exact, authorized Task 026 Phase 3 staff mutation routes", () => {
     const apiFiles = listProductionTsFiles("app/api");
     for (const file of apiFiles) {
-      expect(file.toLowerCase()).not.toMatch(/resolve|access-link/);
+      if (PHASE_3_AUTHORIZED_ROUTE_FILES.has(file)) {
+        continue;
+      }
+      expect(file.toLowerCase()).not.toMatch(/access-link|token/);
     }
+  });
+
+  it("no app/api route path segment names 'resolve', anywhere, including the three authorized Phase 3 routes", () => {
+    const apiFiles = listProductionTsFiles("app/api");
+    for (const file of apiFiles) {
+      expect(file.toLowerCase()).not.toMatch(/resolve/);
+    }
+  });
+
+  it("the exact three authorized Phase 3 route files actually exist (the allowlist above is not vacuous)", () => {
+    const apiFiles = new Set(listProductionTsFiles("app/api"));
+    for (const authorized of PHASE_3_AUTHORIZED_ROUTE_FILES) {
+      expect(apiFiles.has(authorized)).toBe(true);
+    }
+  });
+
+  it("no OTHER current internal route path is globally exempted (a hypothetical /internal/access-link-other/route.ts would still be caught)", () => {
+    const hypotheticalOtherInternalRoute =
+      "app/api/v2/internal/projects/[id]/access-link-other/route.ts";
+    expect(PHASE_3_AUTHORIZED_ROUTE_FILES.has(hypotheticalOtherInternalRoute)).toBe(false);
+    expect(hypotheticalOtherInternalRoute.toLowerCase()).toMatch(/access-link/);
   });
 });
 

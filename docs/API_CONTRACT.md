@@ -1,7 +1,7 @@
 # WeddingClick V2 — Application Workflow & API Contract
 
 **Status:** Approved contract freeze (Task 021, Final Revision)
-**Last updated:** 2026-09-12
+**Last updated:** 2026-09-19
 **Depends on:** `CLAUDE.md`, `docs/DECISIONS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/PHYSICAL_DATABASE_PLAN.md`, `docs/SECURITY.md`, `docs/DEVELOPMENT_RULES.md`, `docs/TESTING.md`, `docs/ROADMAP.md`
 
 This document freezes the application/API workflow between the finished, frozen V2 database (migrations `0001`–`0020`) and the remaining V2 application work. It governs which server mechanism (direct RLS vs. trusted business action) each use case uses, the two customer/guest-facing security paths, the error model, and the activity-log contract. Table schema itself is governed by `docs/DATABASE.md` / `docs/PHYSICAL_DATABASE_PLAN.md` and is not reopened here — this document does not change any frozen table shape.
@@ -396,3 +396,109 @@ All three routes use the frozen error model (§5) exactly, mapped from the RPCs'
 | 409 | `CONFLICT` | same-status / already-paid / same-assignment |
 | 422 | `INVARIANT` | illegal or reserved status transition; `READY_TO_PUBLISH` without `PAID`; wrong lifecycle state for payment; invalid/inactive/missing assignee |
 | 500 | `INTERNAL` | unexpected RPC failure or unexpected result shape — generic message only |
+
+---
+
+## 11. Task 026 Phase 3 — Staff Access-Link Issue/Rotate/Revoke HTTP Contract (frozen)
+
+Phase 3 implements the HTTP surface over the three trusted business actions frozen in migration `0025_access_link_actions.sql` (Task 026 §8, `docs/DECISIONS.md` D14): `issue_review_link`, `rotate_access_link`, `revoke_access_link`, plus the direct-RLS INTAKE/PORTAL issuance path (§7.4). All three routes are internal STAFF/ADMIN endpoints — `requireStaff` only, per §2's Path A; there is no ADMIN-only branch on any of the three. No public/customer token-resolution route exists here or anywhere in Task 026 — that remains later-workflow-task scope (027/030/032), per D1.
+
+### 11.1 `POST /api/v2/internal/projects/[id]/access-links`
+
+Issues a new access link. Request body (exact shape):
+
+```json
+{
+  "linkType": "INTAKE | REVIEW | PORTAL",
+  "expiresAt": "RFC3339 timestamp | null"
+}
+```
+
+- `linkType` is required and must be one of the three canonical `AccessLinkType` values. `expiresAt` is optional; omitted or explicit `null` both mean "never expires." A non-null value must be a valid RFC 3339 timestamp — a valid past, exactly-now, or future timestamp is all accepted; there is no TTL minimum, maximum, or default (`docs/DECISIONS.md` D6).
+- Unknown request fields are rejected `BAD_REQUEST` (400) — the request body shape is exact. In particular, a caller-supplied `token`, `rawToken`, `tokenHash`, `tokenHint`, `createdBy`, or `projectId` is rejected the same way any other unknown field is; none of those are legal request fields.
+- A malformed project id (not a UUID) is rejected `BAD_REQUEST` (400) before any DB call.
+- **INTAKE/PORTAL:** a direct-RLS existence check on the target Project precedes a direct-RLS `INSERT` carrying exactly the six issuance columns (`docs/DECISIONS.md` D12); a missing Project is `NOT_FOUND` (404). No activity log is written (§7.4, unchanged).
+- **REVIEW:** no pre-read; `issue_review_link` is called directly, and its own AL002 is the sole authority for a missing Project (`NOT_FOUND`, 404). Audited `REVIEW_LINK_ISSUED` (§6) inside the RPC.
+
+Success (201):
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "projectId": "uuid",
+    "linkType": "INTAKE | REVIEW | PORTAL",
+    "token": "<one-time raw opaque token>",
+    "expiresAt": "timestamptz | null",
+    "createdAt": "timestamptz"
+  }
+}
+```
+
+`token` is the raw capability token, returned exactly once. The raw token itself is never persisted — the database persists only non-raw token material: `token_hash` (a SHA-256 digest of the raw token) and `token_hint` (the raw token's final 8 characters, display-only, never used for lookup or authentication). The response never includes `tokenHint` or `token_hash`. Every response from this route — success or error — carries `Cache-Control: no-store`.
+
+### 11.2 `POST /api/v2/internal/projects/[id]/access-links/[linkId]/rotate`
+
+Rotates an existing access link. **Takes no request-body input** — every mutation input (a fresh raw token, hash, and hint) is generated server-side, so the route never reads the request body at all.
+
+- Malformed project or link id (not a UUID) is `BAD_REQUEST` (400).
+- Calls `rotate_access_link` (`docs/DECISIONS.md` D8) — the source link must exist, belong to the project, be unrevoked, and be unexpired. A not-found source is `NOT_FOUND` (404, AL003). An already-revoked source is `CONFLICT` (409, AL004). An expired source is `CONFLICT` (409, AL005) — expired links are not rotatable; revocation remains available instead. No sibling link of the same `(project_id, link_type)` is touched (D2).
+- Audited `ACCESS_LINK_ROTATED` (§6) inside the RPC.
+
+Success (200):
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "projectId": "uuid",
+    "linkType": "INTAKE | REVIEW | PORTAL",
+    "token": "<NEW one-time raw opaque token>",
+    "expiresAt": "timestamptz | null",
+    "createdAt": "timestamptz"
+  }
+}
+```
+
+`token` is the **new** raw token only — the old token is never re-derivable (neither the RPC nor the repository ever returns `token_hash`) and never appears in this response. Every response from this route — success or error — carries `Cache-Control: no-store`.
+
+### 11.3 `POST /api/v2/internal/projects/[id]/access-links/[linkId]/revoke`
+
+Revokes an existing access link. **Takes no request-body input**, for the same reason as rotate — no token generation occurs at all.
+
+- Malformed project or link id is `BAD_REQUEST` (400).
+- Calls `revoke_access_link` (`docs/DECISIONS.md` D9) — the target link must exist and belong to the project. An already-revoked target is `CONFLICT` (409, AL004). An expired-but-not-revoked target may still be revoked — expiry never blocks revocation. There is no un-revoke path.
+- Audited `ACCESS_LINK_REVOKED` (§6) inside the RPC.
+
+Success (200):
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "projectId": "uuid",
+    "linkType": "INTAKE | REVIEW | PORTAL",
+    "revokedAt": "timestamptz"
+  }
+}
+```
+
+No token field of any kind. `Cache-Control: no-store` is not required on this route (nothing secret in the payload).
+
+### 11.4 Error model
+
+All three routes use the frozen error model (§5), but the error *mapping mechanism* differs by path — not all three are RPC-based:
+
+- **Direct INTAKE/PORTAL issue** (§11.1) is not RPC-based at all: a malformed request/UUID is `BAD_REQUEST`; a missing Project — detected via the staff-RLS `projectExists` precheck — is `NOT_FOUND`; an unexpected `INSERT` failure (including a residual FK race after the precheck), an unexpected result shape, or a token-hash collision is generic `INTERNAL`. No raw PostgreSQL error-string matching ever occurs.
+- **REVIEW issuance, rotation, and revocation** each call exactly one migration-`0025` trusted RPC and are mapped from that RPC's own `ALxxx` SQLSTATE code (migration `0025`) by the fixed, static `ACCESS_LINK_RPC_ERROR_CODES` map — the underlying Postgres error message is never forwarded to a caller.
+
+`EXPIRED_TOKEN`/`REVOKED_TOKEN` (410) are token-*resolution* error kinds (§4.1, customer/guest-facing) and are never used here — an expired rotation source is `CONFLICT` (409, AL005), not 410, because this is a staff mutation conflict, not a customer token-consumption failure:
+
+| HTTP | Kind | Condition |
+|---|---|---|
+| 400 | `BAD_REQUEST` | malformed project/link UUID; malformed/wrong-shape/unknown-field issue body |
+| 401 | `UNAUTHENTICATED` | missing/invalid staff session |
+| 403 | `FORBIDDEN` | authenticated but not active STAFF/ADMIN (AL001, REVIEW/rotate/revoke only — the direct INTAKE/PORTAL path is authorized by RLS, not an AL code) |
+| 404 | `NOT_FOUND` | **Project does not exist** — via the INTAKE/PORTAL direct `projectExists` precheck, or via AL002 (raised only by REVIEW issuance's `issue_review_link` RPC). **Access link does not exist, or does not resolve to the requested project** — AL003 (rotate/revoke). Both conditions are the same 404/`NOT_FOUND` outcome; no new observable distinction is introduced. |
+| 409 | `CONFLICT` | access link already revoked (AL004, rotate/revoke); access link expired and not rotatable (AL005, rotate only) |
+| 500 | `INTERNAL` | unexpected RPC failure or unexpected RPC result shape; unexpected direct-`INSERT` failure (including a residual FK race after the `projectExists` precheck); a token-hash collision (either path); or a mutation-result identity mismatch (an RPC-returned row's project/id does not match the request) — generic message only, never a raw Postgres detail |
