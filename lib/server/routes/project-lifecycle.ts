@@ -20,7 +20,7 @@ import { transitionProjectStatus } from "../project-lifecycle/transition-project
  * ADMIN-only branch.
  */
 export interface ApiResult<TBody> {
-  status: 200 | 400 | 401 | 403 | 404 | 409 | 422 | 500;
+  status: 200 | 400 | 401 | 403 | 404 | 409 | 410 | 422 | 500;
   body: TBody | { error: string };
 }
 

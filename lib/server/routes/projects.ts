@@ -20,7 +20,7 @@ export interface ApiResult<TBody> {
   // 422 added by Task 022's error-contract patch to apiErrorStatus's shared
   // return type (ApiErrorKind gained INVARIANT) — type-only widening, no
   // Project route ever constructs an INVARIANT ApiError today.
-  status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 422 | 500;
+  status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 410 | 422 | 500;
   body: TBody | { error: string };
 }
 

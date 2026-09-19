@@ -23,7 +23,7 @@ import { updateProjectMedia } from "../media/update-project-media";
  * proxies a file body (Task 024 Phase 2 §0 — Next.js handles JSON only).
  */
 export interface ApiResult<TBody> {
-  status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 422 | 500;
+  status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 410 | 422 | 500;
   body: TBody | { error: string };
 }
 

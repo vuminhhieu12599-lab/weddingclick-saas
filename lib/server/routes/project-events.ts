@@ -18,7 +18,7 @@ import { updateProjectEvent } from "../project-events/update-project-event";
  * endpoints (Task 023) — mirrors lib/server/routes/wedding-details.ts.
  */
 export interface ApiResult<TBody> {
-  status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 422 | 500;
+  status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 410 | 422 | 500;
   body: TBody | { error: string };
 }
 

@@ -15,7 +15,7 @@ import type {
  * endpoints (Task 022) — mirrors lib/server/routes/projects.ts.
  */
 export interface ApiResult<TBody> {
-  status: 200 | 400 | 401 | 403 | 404 | 409 | 422 | 500;
+  status: 200 | 400 | 401 | 403 | 404 | 409 | 410 | 422 | 500;
   body: TBody | { error: string };
 }
 
