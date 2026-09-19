@@ -414,8 +414,10 @@ IntakeSubmission (pending)
     ↓
 Staff reviews/applies changes
     ↓
-Canonical WeddingDetails / Events / Media update
+Canonical WeddingDetails update
 ```
+
+Frozen V1 scope (Task 027 Phase 1, `docs/DECISIONS.md`): the canonical apply target is `WeddingDetails` only. No Events/Media intake apply action exists or is planned for initial V1 — Project Events and Project Media keep their own separate staff-entry paths (§§ above), independent of the intake-submission workflow.
 
 This protects near-final Projects from unintended customer overwrites and supports an audit trail.
 

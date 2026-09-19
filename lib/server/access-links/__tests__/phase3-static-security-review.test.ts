@@ -357,10 +357,23 @@ describe("Task 026 Phase 3 — migration 0025 untouched", () => {
     expect(matches.length).toBe(3);
   });
 
-  it("no new migration file exists after 0025", () => {
+  // Deliberately does NOT assert "0025 is the newest migration in the
+  // repository," and deliberately does NOT scan every migration filename
+  // for the substring "access_link" (Task 027 Phase 1 Independent Review,
+  // Patch 1 Finding B and Patch 2 Finding E): both were Task-026-scope
+  // guards that accidentally reached into filenames future tasks own.
+  // Patch 1's replacement still banned any later task from ever naming a
+  // migration containing "access_link" (e.g. a legitimate future
+  // 0035_access_link_rate_limit.sql) — this test must assert only
+  // historical facts Task 026 itself owns, never constrain a later task's
+  // migration naming. The one fact this test actually needs to keep
+  // guaranteeing: Task 026 owns migration slot 0025, and that slot is
+  // exactly the one file below (no Phase 3 addition, no future task ever
+  // reusing or duplicating the 0025 slot).
+  it("Task 026 owns exactly migration slot 0025: 20260911041145_0025_access_link_actions.sql", () => {
     const migrationsDir = join(ROOT, "supabase", "migrations");
-    const files = readdirSync(migrationsDir).sort();
-    const idx0025 = files.findIndex((f) => f.includes("0025_access_link_actions"));
-    expect(idx0025).toBe(files.length - 1);
+    const files = readdirSync(migrationsDir);
+    const task026Slot = files.filter((f) => f.includes("_0025_"));
+    expect(task026Slot).toEqual(["20260911041145_0025_access_link_actions.sql"]);
   });
 });
