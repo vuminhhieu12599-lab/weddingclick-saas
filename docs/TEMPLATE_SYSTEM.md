@@ -162,6 +162,35 @@ Example capabilities:
 
 Editor options should be generated/validated from template capabilities rather than scattered hard-coded conditions.
 
+### Task 028 — `TemplateDesignManifestV1` (frozen design-config subset)
+
+Task 028 froze the renderer-independent slice of the conceptual manifest above that is needed to validate a Project's design selection. It does **not** define or freeze the rest of the conceptual manifest — `code`, `name`, `eventType`, `version`, `rendererKey`, `supportedVariants`, `supportedFeatures`, `sectionCapabilities`, and preview metadata remain Task-029+ concerns, read from the same `template_versions.manifest` JSONB but never interpreted by Task 028.
+
+Exactly six required top-level fields, each required as an own property (not merely inherited):
+
+```text
+schemaVersion: 1
+palettes: string[]
+fontPresets: string[]
+effectPresets: string[]
+sectionSettingsSchema: Record<string, ManifestSettingSpec>
+designSettingsSchema: Record<string, ManifestSettingSpec>
+```
+
+`ManifestSettingSpec` is a closed, discriminated shape — its only valid own keys are `type` (required) and `enumValues` (optional); any other own key is malformed:
+
+```text
+{ type: "string";  enumValues?: string[] }
+{ type: "number";  enumValues?: number[] }
+{ type: "boolean"; enumValues?: boolean[] }
+```
+
+Any other RAW top-level key the manifest carries (future renderer/layout/animation metadata) is allowed to coexist and is simply never read or interpreted by Task 028 — Task 029 may add such fields later without changing this contract's shape or semantics.
+
+Task 028 validates every `project_design` write against this subset, and `GET /api/v2/internal/templates` (`docs/API_CONTRACT.md` §13.1) exposes only this validated subset as `designManifest` — the raw manifest is never exposed. Validation is fail-closed: a malformed required field in this subset is a `500 INTERNAL` (a persisted catalog-data problem), while a well-formed submission that disagrees with an otherwise-valid manifest (undeclared key, wrong type, value outside `enumValues`) is a `422 INVARIANT` (a client-input problem) — never silently coerced or dropped. `sectionSettingsSchema`/`designSettingsSchema` are allow-lists, not "all keys required" lists — a `project_design` write may be a strict subset of the declared keys.
+
+`template_versions` themselves remain immutable once created (`docs/PHYSICAL_DATABASE_PLAN.md` §2.11) — renderer/manifest changes still happen only through a new `template_version` row, never an in-place edit, unchanged by Task 028.
+
 ---
 
 ## 7. Template Code Versioning
@@ -283,6 +312,8 @@ Conceptual settings:
 By default, COMMON/GROOM/BRIDE use the same design system for one Project.
 
 Per-variant visual overrides are not a V1 requirement.
+
+Task 028 froze the persistence/API layer for this configuration — see `docs/API_CONTRACT.md` §13 and §6's `TemplateDesignManifestV1` subsection above. `template version`/`palette key`/`font preset key`/`effect preset key`/`section visibility/settings`/`template-approved settings` above map directly onto `project_design.template_version_id`/`palette_key`/`font_preset_key`/`effect_preset_key`/`section_settings`/`design_settings`.
 
 ---
 

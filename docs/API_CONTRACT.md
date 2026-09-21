@@ -622,3 +622,107 @@ Success (200):
 - No rate limiting exists in Task 027 (deferred to Task 035, §7.6).
 - No events/media/lifecycle/publish/portal/guest/RSVP behavior of any kind is touched by any Task 027 route.
 - `service_role` is used only by the PUBLIC submit route (via the existing Task-026 resolution repository and a narrow, isolated Task-027 intake-submit repository — the two never import each other). All three STAFF routes use exclusively the authenticated staff client for both reads (RLS) and mutations (RPC `EXECUTE`) — never `service_role`.
+
+---
+
+## 13. Task 028 — Project Design APIs HTTP Contract (frozen)
+
+Implements the application/API layer over the already-frozen `project_design`/`templates`/`template_versions` schema (migrations `0010`/`0011`) — no migration was required. All three routes are internal STAFF/ADMIN endpoints (`requireStaff` only, Path A) — direct RLS reads/writes throughout; no `service_role`, no RPC (`project_design` get/upsert has no corresponding action type in the frozen Activity Union, §6, so it is never a trusted business action). Every response from every route — success or error — carries `Cache-Control: no-store`.
+
+### 13.1 `GET /api/v2/internal/templates`
+
+Complete template/version catalog — active and inactive template families, retired and non-retired versions all included, never filtered out. `templates` ordered `sort_order ASC, id ASC`; nested `versions[]` ordered `version_number ASC, id ASC`.
+
+Success (200):
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid", "code": "string", "eventType": "WEDDING", "name": "string",
+      "description": "string | null", "isActive": "boolean", "sortOrder": "number",
+      "previewMediaPath": "string | null",
+      "versions": [
+        {
+          "id": "uuid", "versionNumber": "number", "rendererKey": "string",
+          "designManifest": "TemplateDesignManifestV1 — see docs/TEMPLATE_SYSTEM.md §6",
+          "retiredAt": "timestamptz | null", "selectable": "boolean"
+        }
+      ]
+    }
+  ]
+}
+```
+
+`selectable` is server-derived (`templates.is_active === true && template_versions.retired_at === null`) — never accepted from a client, and does not factor in any Project's `event_type` (this route has no Project context; `PUT /design`, §13.3, is the real event-type compatibility authority). The raw `template_versions.manifest` JSONB is never exposed — only the validated `TemplateDesignManifestV1` subset (`designManifest`, `docs/TEMPLATE_SYSTEM.md` §6) is. A malformed persisted manifest fails the whole request closed (generic `500` `INTERNAL`), never a partial/degraded catalog.
+
+- Missing/invalid staff session: `401` `UNAUTHENTICATED`.
+- Malformed persisted design-manifest subset on any version: `500` `INTERNAL`.
+
+### 13.2 `GET /api/v2/internal/projects/[id]/design`
+
+Reads the Project's current mutable design selection. No join/duplication of template/version metadata — the caller resolves `templateVersionId` against §13.1's already-complete catalog.
+
+Success (200): `{ "data": ProjectDesignRecord | null }` — `null` when the Project exists but has no design row yet.
+
+```text
+ProjectDesignRecord = {
+  id, projectId, templateVersionId, paletteKey, fontPresetKey, effectPresetKey,
+  sectionSettings: Record<string, string | number | boolean>,
+  designSettings: Record<string, string | number | boolean>,
+  createdAt, updatedAt
+}
+```
+
+- Malformed project id: `400` `BAD_REQUEST`.
+- Missing/invalid staff session: `401` `UNAUTHENTICATED`.
+- Project does not exist: `404` `NOT_FOUND`.
+
+### 13.3 `PUT /api/v2/internal/projects/[id]/design`
+
+Direct-RLS upsert (`.upsert(..., { onConflict: "project_id" })`) — one design row per Project, last-write-wins (no optimistic concurrency token).
+
+**Frozen auth/body ordering:** transport-auth parse → `requireStaff` → lazy body read (invoked only once staff authorization has already succeeded) → body-shape validation → use case. A missing/wrong-scheme/expired-token transport failure, or an authenticated-but-non-staff caller, never triggers a body read — identical in kind to Task 027 Phase 2's Finding A precedent (§12.5).
+
+Request body — exactly the closed six fields, no others accepted:
+
+```json
+{
+  "templateVersionId": "uuid",
+  "paletteKey": "string", "fontPresetKey": "string", "effectPresetKey": "string",
+  "sectionSettings": { "<key>": "string | number | boolean" },
+  "designSettings": { "<key>": "string | number | boolean" }
+}
+```
+
+No caller-controlled `id`/`projectId`/`createdAt`/`updatedAt`/`templateId`/`templateCode`/`rendererKey`/`manifest`/`designManifest`/`isActive`/`retiredAt`/`selectable` — any such field is rejected outright (`400`).
+
+Save algorithm: validate body shape → read Project → read current design (if any) → read requested `template_versions` row → read parent `templates` row → validate the persisted `TemplateDesignManifestV1` subset → event-type compatibility → retired/inactive selection rule → validate submitted config against the manifest → upsert → return.
+
+**Version pinning:** `templateVersionId` pins an exact immutable `template_versions` row, never a template family — deterministic/reproducible across draft edits.
+
+**Inactive/retired rule:** a **new or changed** `templateVersionId` selection targeting a retired version, or a version under an inactive template, is rejected. An **unchanged** existing selection (`templateVersionId` identical to the Project's current stored design) may continue receiving config edits even after its template/version later becomes inactive/retired — grandfathered, matching `template_versions.retired_at`'s own documented semantics (`docs/PHYSICAL_DATABASE_PLAN.md` §2.11: "only blocks new selection, never resolution of an already-referenced version").
+
+Success (200): `{ "data": ProjectDesignRecord }` (same shape as §13.2).
+
+Error table:
+
+| Condition | Kind | HTTP |
+|---|---|---|
+| Missing/malformed Authorization, invalid/expired token | `UNAUTHENTICATED` | 401 |
+| Authenticated, not active STAFF/ADMIN | `FORBIDDEN` | 403 |
+| Malformed JSON body (active staff) | `BAD_REQUEST` | 400 |
+| Malformed project id / `templateVersionId` / closed-body-shape violation | `BAD_REQUEST` | 400 |
+| Project not found | `NOT_FOUND` | 404 |
+| `template_versions` row not found | `NOT_FOUND` | 404 |
+| New/changed selection targets an inactive template or a retired version | `INVARIANT` | 422 |
+| `templates.event_type ≠ projects.event_type` | `INVARIANT` | 422 |
+| Submitted `paletteKey`/`fontPresetKey`/`effectPresetKey`/`sectionSettings`/`designSettings` violates the selected manifest (undeclared key, wrong type, value outside `enumValues`) | `INVARIANT` | 422 |
+| Malformed persisted design-manifest subset, malformed DB row/result, unexpected DB failure | `INTERNAL` | 500 |
+
+### 13.4 Cross-cutting
+
+- Every Task 028 route response — success or error, all three endpoints — carries `Cache-Control: no-store`.
+- No `service_role`, no RPC, no activity logging (no activity type exists for design changes in the frozen Activity Union, §6), no project lifecycle mutation, no `invitation_versions`/`project_invitations` access.
+- No template catalog seeding, no renderer/UI implementation — both remain Task 029+ scope.
+- See `docs/TEMPLATE_SYSTEM.md` §6 for the full `TemplateDesignManifestV1`/`ManifestSettingSpec` contract this feature validates against, and `docs/DECISIONS.md` "Task 028 — Project Design APIs" for the full decision record and DEV/STAGING verification evidence.
