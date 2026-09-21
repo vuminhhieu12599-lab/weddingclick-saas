@@ -13,6 +13,16 @@ const ROOT = join(__dirname, "..", "..", "..", "..");
 
 const SERVICE_ROLE_CLIENT_PATH = "lib/server/supabase/service-role-client.ts";
 const RESOLUTION_REPOSITORY_PATH = "lib/server/supabase/access-link-resolution-repository.ts";
+/**
+ * Task 027 Phase 2 compatibility addition (explicitly reported — see the
+ * Phase 2 authoring report's "Task-026 compatibility change" section): the
+ * PUBLIC intake-submit path's service-role-backed step (frozen Task 027
+ * Phase 2 contract §7/§8) requires its own narrow service-role repository,
+ * deliberately isolated from and never importing this Phase 2 resolution
+ * repository — see lib/server/intake/__tests__/phase2-static-security-review.test.ts
+ * for that isolation check.
+ */
+const INTAKE_SUBMIT_REPOSITORY_PATH = "lib/server/supabase/intake-submit-repository.ts";
 
 const PHASE_2_PRODUCTION_FILES = [
   "lib/server/auth/access-token-crypto.ts",
@@ -189,11 +199,23 @@ describe("Task 026 Phase 2 — SUPABASE_SERVICE_ROLE_KEY reference boundary", ()
 describe("Task 026 Phase 2 — service-role client import boundary (§7)", () => {
   const IMPORT_PATTERN = /from\s+["'][^"']*service-role-client["']/;
 
-  it("only the resolution repository imports service-role-client.ts", () => {
+  /**
+   * Narrowed by Task 027 Phase 2 (explicitly reported — see the Phase 2
+   * authoring report's "Task-026 compatibility change" section): Task 027's
+   * PUBLIC intake-submit path requires its own narrow service-role
+   * repository, distinct from this Phase 2 resolution repository (frozen
+   * Task 027 Phase 2 contract §7: "PUBLIC submission: token resolver ->
+   * service-role-backed narrow submit gateway -> submit_intake_submission
+   * RPC"). The allowlist below is an exact two-file list — never a blanket
+   * exemption — so a THIRD future service-role importer remains caught.
+   */
+  it("only the resolution repository and the exact, authorized Task 027 intake-submit repository import service-role-client.ts", () => {
     const importers = ALL_PRODUCTION_FILES.filter(
       (f) => f !== SERVICE_ROLE_CLIENT_PATH && IMPORT_PATTERN.test(readFile(f)),
     );
-    expect(importers).toEqual([RESOLUTION_REPOSITORY_PATH]);
+    expect(importers.sort()).toEqual(
+      [RESOLUTION_REPOSITORY_PATH, INTAKE_SUBMIT_REPOSITORY_PATH].sort(),
+    );
   });
 
   it("no app/ file (client components, browser modules, or any route) imports service-role-client.ts", () => {
@@ -271,13 +293,42 @@ describe("Task 026 Phase 2 — no guest token table touched anywhere in this pha
   });
 });
 
-describe("Task 026 Phase 2 — no HTTP route added (§18)", () => {
-  it("no app/api file references resolveAccessLink or the resolution repository", () => {
+describe("Task 026 token-resolution — authorized HTTP consumer boundary (§18)", () => {
+  /**
+   * Narrowed by Task 027 Phase 2 (explicitly reported — see the Phase 2
+   * authoring report's "Task-026 compatibility change" section): Task 027
+   * introduces the first actual PUBLIC HTTP consumer of resolveAccessLink()
+   * — the exact, frozen route POST /api/v2/public/intake-submissions
+   * (frozen Task 027 Phase 2 contract §2.1/§7). That route file imports the
+   * resolution repository's production wiring function
+   * (getServiceRoleAccessLinkResolutionRepository) to construct a fresh
+   * service-role client per request, exactly mirroring how every other
+   * app/api route in this codebase wires its own production gateway
+   * singleton — so its source text legitimately contains the substring
+   * "access-link-resolution". The exemption below is an exact one-file
+   * allowlist, never a blanket app/api/v2/public/** carve-out: every other
+   * current and future route remains caught by this guard.
+   */
+  const TASK_027_AUTHORIZED_PUBLIC_ROUTE_FILES = new Set([
+    "app/api/v2/public/intake-submissions/route.ts",
+  ]);
+
+  it("no app/api file references resolveAccessLink or the resolution repository, except the one exact, authorized Task 027 public intake-submit route", () => {
     const apiFiles = listProductionTsFiles("app/api");
     for (const file of apiFiles) {
+      if (TASK_027_AUTHORIZED_PUBLIC_ROUTE_FILES.has(file)) {
+        continue;
+      }
       const contents = readFile(file);
       expect(contents).not.toMatch(/resolveAccessLink/);
       expect(contents).not.toMatch(/access-link-resolution/);
+    }
+  });
+
+  it("the exact one authorized Task 027 public route file actually exists (the allowlist above is not vacuous)", () => {
+    const apiFiles = new Set(listProductionTsFiles("app/api"));
+    for (const authorized of TASK_027_AUTHORIZED_PUBLIC_ROUTE_FILES) {
+      expect(apiFiles.has(authorized)).toBe(true);
     }
   });
 
@@ -396,11 +447,17 @@ describe("Task 026 Phase 2 — indirect (transitive) client-reachability to serv
     },
   );
 
-  it("the resolution repository is the only node with a direct edge to service-role-client.ts, across the whole graph", () => {
+  /**
+   * Narrowed by Task 027 Phase 2 — same exact two-file allowlist as the
+   * import-boundary describe block above.
+   */
+  it("the resolution repository and the intake-submit repository are the only nodes with a direct edge to service-role-client.ts, across the whole graph", () => {
     const directImporters = ALL_PRODUCTION_FILES.filter((file) =>
       (importGraph.get(file) ?? []).includes(SERVICE_ROLE_CLIENT_PATH),
     );
-    expect(directImporters).toEqual([RESOLUTION_REPOSITORY_PATH]);
+    expect(directImporters.sort()).toEqual(
+      [RESOLUTION_REPOSITORY_PATH, INTAKE_SUBMIT_REPOSITORY_PATH].sort(),
+    );
   });
 });
 

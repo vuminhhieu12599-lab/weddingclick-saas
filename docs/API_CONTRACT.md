@@ -1,7 +1,7 @@
 # WeddingClick V2 — Application Workflow & API Contract
 
 **Status:** Approved contract freeze (Task 021, Final Revision)
-**Last updated:** 2026-09-19
+**Last updated:** 2026-09-21
 **Depends on:** `CLAUDE.md`, `docs/DECISIONS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/PHYSICAL_DATABASE_PLAN.md`, `docs/SECURITY.md`, `docs/DEVELOPMENT_RULES.md`, `docs/TESTING.md`, `docs/ROADMAP.md`
 
 This document freezes the application/API workflow between the finished, frozen V2 database (migrations `0001`–`0020`) and the remaining V2 application work. It governs which server mechanism (direct RLS vs. trusted business action) each use case uses, the two customer/guest-facing security paths, the error model, and the activity-log contract. Table schema itself is governed by `docs/DATABASE.md` / `docs/PHYSICAL_DATABASE_PLAN.md` and is not reopened here — this document does not change any frozen table shape.
@@ -502,3 +502,123 @@ All three routes use the frozen error model (§5), but the error *mapping mechan
 | 404 | `NOT_FOUND` | **Project does not exist** — via the INTAKE/PORTAL direct `projectExists` precheck, or via AL002 (raised only by REVIEW issuance's `issue_review_link` RPC). **Access link does not exist, or does not resolve to the requested project** — AL003 (rotate/revoke). Both conditions are the same 404/`NOT_FOUND` outcome; no new observable distinction is introduced. |
 | 409 | `CONFLICT` | access link already revoked (AL004, rotate/revoke); access link expired and not rotatable (AL005, rotate only) |
 | 500 | `INTERNAL` | unexpected RPC failure or unexpected RPC result shape; unexpected direct-`INSERT` failure (including a residual FK race after the `projectExists` precheck); a token-hash collision (either path); or a mutation-result identity mismatch (an RPC-returned row's project/id does not match the request) — generic message only, never a raw Postgres detail |
+
+---
+
+## 12. Task 027 — Intake Workflow HTTP Contract (frozen)
+
+Phase 2 implements the HTTP surface over the three trusted business actions frozen in migration `20260911041146_0026_intake_actions.sql` (Task 027 Phase 1, `docs/DECISIONS.md`): `submit_intake_submission`, `apply_intake_submission`, `reject_intake_submission`. Unlike §§10–11, the PUBLIC submit route uses Path B (§1) — no Supabase Auth session exists — while the three STAFF routes use Path A (`requireStaff`), identical in kind to Tasks 025/026 Phase 3.
+
+### 12.1 `POST /api/v2/public/intake-submissions`
+
+Public customer INTAKE submission. Transport auth is `Authorization: Bearer <raw INTAKE token>` — never a Supabase Auth session. Frozen order: transport-auth parse → `resolveAccessLink` (the existing Task 026 Phase 2 resolver, `expectedLinkType: "INTAKE"`, `expectedProjectId` omitted) → body parse/validation → `submit_intake_submission` RPC via `service_role`. `projectId`/`accessLinkId` are never read from the URL or the request body — both come only from the resolved token context.
+
+- Missing/malformed transport (`Authorization` absent, wrong scheme, or an empty bearer credential): `401` `UNAUTHENTICATED`, resolved before the resolver is ever invoked.
+- Malformed token shape, unknown token hash, or a non-INTAKE-purpose token: `404` `NOT_FOUND` (§4.1 anti-enumeration — indistinguishable from each other).
+- Revoked INTAKE link: `410` `REVOKED_TOKEN`.
+- Expired INTAKE link: `410` `EXPIRED_TOKEN`.
+- Request body must be exactly `{ "weddingDetails": { ...the Task-022 writable Wedding Details fields... } }`; a non-object body, an unknown top-level field, or a missing `weddingDetails` key: `400` `BAD_REQUEST`. Auth/token resolution always precedes body parsing — a malformed-JSON body never preempts or reorders a transport/resolver failure above.
+
+Success (201):
+
+```json
+{
+  "id": "uuid",
+  "projectId": "uuid",
+  "status": "PENDING",
+  "createdAt": "timestamptz"
+}
+```
+
+Never echoes the raw token, `token_hash`, `token_hint`, `accessLinkId`, or the submitted payload. Every response from this route — success or error — carries `Cache-Control: no-store`. Multiple simultaneously-`PENDING` submissions per Project are permitted by design (no partial unique index, no auto-supersede of a sibling submission).
+
+### 12.2 `GET /api/v2/internal/projects/[id]/intake-submissions`
+
+Staff list. Path A only — direct-RLS `SELECT` (`is_staff()`), never `service_role`.
+
+- Malformed project id: `400` `BAD_REQUEST`.
+- Missing/invalid staff session: `401` `UNAUTHENTICATED`.
+- Project does not exist: `404` `NOT_FOUND`.
+- An empty result (`"data": []`) is a valid `200`, not an error.
+
+Success (200): `{ "data": [ <IntakeSubmissionRecord>, ... ] }`, newest-first by `submittedAt`. Each record: `id`, `projectId`, `accessLinkId`, `status`, `submittedAt`, `reviewedBy`, `reviewedAt`, `staffNote`, `weddingDetails` (the stored 20-key Task-022 snapshot). Never includes a `token`/`tokenHash`/`tokenHint` field.
+
+### 12.3 `GET /api/v2/internal/projects/[id]/intake-submissions/[submissionId]`
+
+Staff detail. Same auth/RLS boundary as §12.2.
+
+- Malformed project or submission id: `400` `BAD_REQUEST`.
+- Project does not exist: `404` `NOT_FOUND`.
+- Submission does not exist, **or exists but belongs to a different Project**: both collapse to the same `404` `NOT_FOUND` — no cross-project existence leakage.
+
+Success (200): `{ "data": <IntakeSubmissionRecord> }` (same shape as one §12.2 row).
+
+### 12.4 `POST /api/v2/internal/projects/[id]/intake-submissions/[submissionId]/apply`
+
+Applies a `PENDING` submission's stored immutable snapshot to canonical `wedding_details` via `apply_intake_submission`, composing Task 022's `save_wedding_details()` exactly once.
+
+**Frozen no-body contract:** this route never reads a request body under any circumstance — a body-less request and a request carrying deliberately malformed/non-JSON bytes produce the identical result. The stored snapshot is the only apply source.
+
+- Malformed project or submission id: `400` `BAD_REQUEST` (checked before any RPC call).
+- Missing/invalid staff session: `401` `UNAUTHENTICATED`.
+- Project does not exist: `404` `NOT_FOUND` (`IS003`).
+- Submission does not exist or belongs to a different Project: `404` `NOT_FOUND` (`IS007`).
+- Submission is not `PENDING` (already `APPLIED`/`REJECTED`): `409` `CONFLICT` (`IS008`) — no idempotent success on a repeat.
+- A propagated `WD004` (Gift QR media same-Project FK violation) from the nested `save_wedding_details()` call: `422` `INVARIANT` (checked against the existing `SAVE_WEDDING_DETAILS_RPC_ERROR_CODES` map after the Task-027-native `IS`xxx map).
+- Any other unrecognized SQLSTATE: generic `500` `INTERNAL`.
+
+Success (200):
+
+```json
+{
+  "id": "uuid",
+  "projectId": "uuid",
+  "status": "APPLIED",
+  "reviewedBy": "uuid",
+  "reviewedAt": "timestamptz",
+  "weddingDetailsChanged": "boolean"
+}
+```
+
+`CANONICAL_DATA_APPLIED` (§6) is emitted — or correctly suppressed on a true no-op — exclusively by the nested `save_wedding_details()` call; `apply_intake_submission` never calls `log_activity` itself.
+
+### 12.5 `POST /api/v2/internal/projects/[id]/intake-submissions/[submissionId]/reject`
+
+Rejects a `PENDING` submission via `reject_intake_submission`. Never mutates canonical `wedding_details`; no activity type exists for rejection in the frozen Activity Union (§6), and none is emitted.
+
+Frozen order: transport auth → `requireStaff` → body parse/validation → RPC. The request body is read only after staff authorization has already succeeded — a missing/wrong-scheme/empty-bearer transport failure, or an authenticated-but-non-staff caller, never triggers a body read.
+
+Request body (exact shape):
+
+```json
+{ "staffNote": "string | null (optional)" }
+```
+
+`staffNote` is optional; omitted or explicit `null` both normalize to `null`; a non-null value is trimmed, and an empty-after-trim result also normalizes to `null`. No business max-length is enforced beyond the unbounded `TEXT` column.
+
+- Missing/invalid staff session: `401` `UNAUTHENTICATED` — checked before the body is ever read.
+- Active staff + malformed JSON, a non-object body, or an unknown field: `400` `BAD_REQUEST`.
+- Malformed project or submission id: `400` `BAD_REQUEST`.
+- Project does not exist: `404` `NOT_FOUND` (`IS003`).
+- Submission does not exist or belongs to a different Project: `404` `NOT_FOUND` (`IS007`).
+- Submission is not `PENDING`: `409` `CONFLICT` (`IS008`).
+
+Success (200):
+
+```json
+{
+  "id": "uuid",
+  "projectId": "uuid",
+  "status": "REJECTED",
+  "reviewedBy": "uuid",
+  "reviewedAt": "timestamptz",
+  "staffNote": "string | null"
+}
+```
+
+### 12.6 Cross-cutting
+
+- Every Task 027 route response — success or error, all five endpoints — carries `Cache-Control: no-store`.
+- No rate limiting exists in Task 027 (deferred to Task 035, §7.6).
+- No events/media/lifecycle/publish/portal/guest/RSVP behavior of any kind is touched by any Task 027 route.
+- `service_role` is used only by the PUBLIC submit route (via the existing Task-026 resolution repository and a narrow, isolated Task-027 intake-submit repository — the two never import each other). All three STAFF routes use exclusively the authenticated staff client for both reads (RLS) and mutations (RPC `EXECUTE`) — never `service_role`.

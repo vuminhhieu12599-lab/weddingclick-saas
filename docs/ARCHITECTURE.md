@@ -1,7 +1,7 @@
 # WeddingClick V2 — Application Architecture
 
 **Status:** Approved architectural baseline  
-**Last updated:** 2026-09-10
+**Last updated:** 2026-09-21
 
 ## 1. Current Core Stack
 
@@ -417,9 +417,11 @@ Staff reviews/applies changes
 Canonical WeddingDetails update
 ```
 
-Frozen V1 scope (Task 027 Phase 1, `docs/DECISIONS.md`): the canonical apply target is `WeddingDetails` only. No Events/Media intake apply action exists or is planned for initial V1 — Project Events and Project Media keep their own separate staff-entry paths (§§ above), independent of the intake-submission workflow.
+Frozen V1 scope (Task 027, `docs/DECISIONS.md`): the canonical apply target is `WeddingDetails` only. No Events/Media intake apply action exists or is planned for initial V1 — Project Events and Project Media keep their own separate staff-entry paths (§§ above), independent of the intake-submission workflow.
 
 This protects near-final Projects from unintended customer overwrites and supports an audit trail.
+
+Implemented (Task 027, both phases complete): the customer submission side follows the Access Token Architecture pattern (§13, Path B) exactly — a raw INTAKE token resolves through the same server-side resolver used by every other customer capability link, never a Project id or slug, and only the resolved Project/link ids (never the raw token) reach the trusted database action that creates the immutable submission. The staff review side follows the internal Staff path instead (Supabase Auth session + RLS for list/detail, a trusted server-side business action for apply/reject) — the two paths never cross: staff review never uses the customer token mechanism, and customer submission never uses a staff session. See `docs/API_CONTRACT.md` §12 for the full wire contract.
 
 ---
 
