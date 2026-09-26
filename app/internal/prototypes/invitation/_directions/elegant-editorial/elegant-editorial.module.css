@@ -1,0 +1,1069 @@
+.root {
+  /* Luxury editorial reads through ivory/champagne/gold/taupe, with deep
+     warm-brown text — never a black-dominant page. */
+  --ink: #3d2f22;
+  --mocha: #a9895f;
+  --cream: #f4ede1;
+  --ivory: #faf6ef;
+  --champagne: #f1e0bd;
+  --taupe-surface: #ddd0ba;
+  --metal: #c9a869;
+  --gold-deep: #9c7f42;
+  --on-dark: #faf6ef;
+
+  min-height: 100%;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, "Times New Roman", serif;
+  overflow-x: hidden;
+}
+
+.musicButton {
+  position: sticky;
+  top: 16px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 16px 16px 0 auto;
+  border-radius: 50%;
+  border: 1px solid var(--metal);
+  background: rgba(253, 251, 246, 0.92);
+  cursor: pointer;
+  box-shadow: 0 8px 18px -10px rgba(107, 79, 51, 0.45);
+}
+
+.musicButtonActive {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.musicIcon {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--gold-deep);
+}
+
+.musicButtonActive .musicIcon {
+  color: var(--on-dark);
+  animation: elegant-music-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes elegant-music-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Opening — full-bleed editorial photograph, floating text card over its  */
+/* lower third. Text-over-image, never a flat colored panel.               */
+/* ---------------------------------------------------------------------- */
+
+.cover {
+  position: absolute;
+  inset: 0;
+  z-index: 21;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0 20px 40px;
+}
+
+.coverPhoto {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.55), transparent 55%),
+    radial-gradient(circle at 82% 78%, rgba(107, 79, 51, 0.22), transparent 55%),
+    linear-gradient(160deg, #f1e2bf 0%, #ddc38f 40%, var(--metal) 72%, #96793f 100%);
+}
+
+.coverPhotoScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(253, 251, 246, 0) 38%, rgba(61, 47, 34, 0.16) 100%);
+}
+
+.coverGrain {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    100deg,
+    rgba(107, 79, 51, 0.05) 0px,
+    rgba(107, 79, 51, 0.05) 1px,
+    transparent 1px,
+    transparent 28px
+  );
+  pointer-events: none;
+}
+
+.coverFrameMark {
+  position: absolute;
+  inset: 22px;
+  pointer-events: none;
+}
+
+.coverFrameMark::before,
+.coverFrameMark::after {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(250, 246, 239, 0.85);
+}
+
+.coverFrameMark::before {
+  top: 0;
+  left: 0;
+  border-right: none;
+  border-bottom: none;
+}
+
+.coverFrameMark::after {
+  bottom: 0;
+  right: 0;
+  border-left: none;
+  border-top: none;
+}
+
+.coverCard {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: rgba(253, 251, 246, 0.94);
+  padding: 28px 26px 24px;
+  text-align: center;
+  box-shadow: 0 24px 54px -22px rgba(107, 79, 51, 0.5);
+}
+
+.coverEyebrow {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+
+.coverNames {
+  font-size: 34px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.coverAmp {
+  display: inline-block;
+  font-size: 15px;
+  color: var(--gold-deep);
+  margin: 0 8px;
+}
+
+.coverKicker {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: #6b5a46;
+}
+
+.openButtonRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+  min-height: 44px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+}
+
+.openButtonRule {
+  width: 20px;
+  height: 1px;
+  background: rgba(61, 47, 34, 0.35);
+}
+
+.openButtonLabel {
+  color: var(--ink);
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+
+.openButtonRow:active {
+  transform: scale(0.98);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Hero — asymmetric layered pair: dominant portrait with a smaller accent */
+/* photo tucked behind it, name plate overlapping both.                    */
+/* ---------------------------------------------------------------------- */
+
+.heroZone {
+  position: relative;
+  background: var(--cream);
+  padding: 26px 0 8px;
+}
+
+.heroAccentPhoto {
+  position: absolute;
+  top: 10px;
+  left: 6%;
+  width: 46%;
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(200deg, var(--taupe-surface), var(--mocha));
+  box-shadow: 0 16px 30px -20px rgba(107, 79, 51, 0.4);
+}
+
+.heroPhoto {
+  position: relative;
+  width: 80%;
+  margin-left: auto;
+  aspect-ratio: 3 / 4;
+  background:
+    linear-gradient(200deg, rgba(107, 79, 51, 0.12), transparent 55%),
+    linear-gradient(200deg, var(--taupe-surface), var(--metal) 55%, var(--mocha));
+  box-shadow: 0 24px 40px -26px rgba(107, 79, 51, 0.5);
+}
+
+.heroPlate {
+  position: relative;
+  width: 72%;
+  margin: -54px 0 0 20px;
+  background: var(--cream);
+  padding: 20px 22px;
+  box-shadow: 0 10px 26px -18px rgba(107, 79, 51, 0.35);
+}
+
+.heroKicker {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  margin-bottom: 10px;
+}
+
+.heroNames {
+  font-size: 27px;
+  line-height: 1.25;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Content sections — each zone owns its own background/texture for       */
+/* scroll progression rather than one flat page color.                    */
+/* ---------------------------------------------------------------------- */
+
+.sectionMessage {
+  background: var(--ivory);
+  padding: 40px 30px 34px;
+  text-align: center;
+}
+
+.message {
+  font-size: 15px;
+  line-height: 1.9;
+  color: #5a4c3c;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Family — ceremonial two-column presentation on a textured taupe        */
+/* surface, ordered by variant priority.                                  */
+/* ---------------------------------------------------------------------- */
+
+.sectionFamily {
+  position: relative;
+  background: var(--taupe-surface);
+  padding: 42px 24px 46px;
+  text-align: center;
+}
+
+.sectionFamily::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(45deg, rgba(107, 79, 51, 0.05) 0 2px, transparent 2px 16px),
+    repeating-linear-gradient(-45deg, rgba(107, 79, 51, 0.05) 0 2px, transparent 2px 16px);
+  pointer-events: none;
+}
+
+.familyOrnament {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.familyOrnamentRule {
+  width: 36px;
+  height: 1px;
+  background: var(--metal);
+}
+
+.familyOrnamentMark {
+  color: var(--gold-deep);
+  font-size: 15px;
+}
+
+.familyColumns {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.familyColumn {
+  flex: 1;
+  padding: 0 14px;
+}
+
+.familySideLabel {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  margin-bottom: 14px;
+}
+
+.familyParentRow {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.8;
+}
+
+.familyAddress {
+  margin-top: 10px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10.5px;
+  color: #7a6547;
+  line-height: 1.7;
+}
+
+.familyDivider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--metal);
+  opacity: 0.5;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Duo image — two symmetrical editorial frames.                          */
+/* ---------------------------------------------------------------------- */
+
+.sectionDuo {
+  background: var(--cream);
+  padding: 4px 18px;
+}
+
+.duoRow {
+  display: flex;
+  gap: 8px;
+}
+
+.duoPhoto {
+  flex: 1;
+  aspect-ratio: 4 / 5;
+  box-shadow: 0 14px 26px -18px rgba(107, 79, 51, 0.4);
+}
+
+.sectionCeremony {
+  background: var(--ivory);
+  padding: 6px 24px 34px;
+}
+
+.ceremonyCard {
+  border-top: 1px solid var(--metal);
+  border-bottom: 1px solid var(--metal);
+  padding: 26px 6px;
+  text-align: center;
+}
+
+.ceremonyTitle {
+  font-size: 20px;
+  margin: 0 0 14px;
+}
+
+.ceremonyDate {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+
+.ceremonyVenue {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #6b5a46;
+  line-height: 1.7;
+}
+
+.countdownRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.countdownCell {
+  text-align: center;
+  border-top: 1px solid rgba(201, 168, 105, 0.5);
+  padding-top: 10px;
+}
+
+.countdownValue {
+  font-size: 21px;
+  display: block;
+}
+
+.countdownLabel {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9c8a6c;
+}
+
+.sectionDetails {
+  background: var(--ivory);
+  padding: 4px 26px 36px;
+  text-align: center;
+}
+
+.rsvpCard {
+  border: 1px solid rgba(201, 168, 105, 0.5);
+  padding: 26px 22px;
+}
+
+.rsvpHeading {
+  font-size: 18px;
+  margin: 0 0 10px;
+}
+
+.rsvpHeadingRule {
+  display: block;
+  width: 40px;
+  height: 1px;
+  background: var(--metal);
+  margin: 0 auto 20px;
+}
+
+.rsvpForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.rsvpNameInput,
+.rsvpMessageInput {
+  border: 1px solid rgba(201, 168, 105, 0.6);
+  background: #ffffff;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--ink);
+}
+
+.rsvpNameInput {
+  min-height: 44px;
+}
+
+.rsvpMessageInput {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.rsvpSubmitButton {
+  min-height: 44px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--on-dark);
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.rsvpSubmitButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rsvpSubmitButton:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.rsvpConfirm {
+  text-align: center;
+}
+
+.rsvpMessageRecap {
+  margin-top: 10px;
+  font-size: 13px;
+  font-style: italic;
+  color: #6b5a46;
+}
+
+.rsvpEditButton {
+  margin-top: 14px;
+  border: none;
+  background: transparent;
+  text-decoration: underline;
+  font-size: 12px;
+  color: var(--gold-deep);
+  cursor: pointer;
+}
+
+.rsvpButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rsvpButton {
+  min-height: 44px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.rsvpButton:active {
+  transform: scale(0.98);
+}
+
+.rsvpButtonActive {
+  background: var(--ink);
+  color: var(--on-dark);
+}
+
+.rsvpFeedback {
+  margin-top: 14px;
+  font-size: 12px;
+  color: #6b5a46;
+  font-style: italic;
+}
+
+.giftBlock {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.giftNote {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #6b5a46;
+  margin: 0 0 16px;
+}
+
+.giftButton {
+  min-height: 44px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--on-dark);
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 12px 26px;
+  cursor: pointer;
+}
+
+.giftButton:active {
+  transform: scale(0.98);
+}
+
+/* ------------------------------------------------------------------ */
+/* Logistics (reception time / venue / directions) inside ceremony card */
+/* ------------------------------------------------------------------ */
+
+.logisticsBlock {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(201, 168, 105, 0.4);
+}
+
+.logisticsLabel {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  margin-bottom: 8px;
+}
+
+.logisticsRow {
+  font-size: 13px;
+  color: #5a4c3c;
+  line-height: 1.7;
+}
+
+.logisticsSide {
+  display: inline-block;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  margin-right: 8px;
+}
+
+.directionsRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.directionsButton {
+  display: inline-block;
+  min-height: 44px;
+  line-height: 44px;
+  border: 1px solid var(--metal);
+  color: var(--ink);
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ */
+/* Timeline                                                            */
+/* ------------------------------------------------------------------ */
+
+.sectionTimeline {
+  background: var(--ivory);
+  padding: 40px 28px 34px;
+}
+
+.timelineList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.timelineItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.timelineTime {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--gold-deep);
+  width: 46px;
+}
+
+.timelineDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--metal);
+  flex-shrink: 0;
+}
+
+.timelineItemLabel {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------------ */
+/* Dress code                                                          */
+/* ------------------------------------------------------------------ */
+
+.sectionDressCode {
+  background: var(--taupe-surface);
+  padding: 36px 28px 40px;
+  text-align: center;
+}
+
+.dressCodeText {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #5a4632;
+  max-width: 300px;
+  margin: 0 auto 18px;
+}
+
+.dressCodeSwatches {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.dressCodeSwatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(107, 79, 51, 0.25);
+}
+
+/* ------------------------------------------------------------------ */
+/* Gift modal                                                          */
+/* ------------------------------------------------------------------ */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.modalScrim {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: rgba(61, 47, 34, 0.5);
+  cursor: pointer;
+}
+
+.modalPanel {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  background: var(--ivory);
+  padding: 24px 22px 28px;
+  box-shadow: 0 -20px 50px rgba(107, 79, 51, 0.3);
+}
+
+.modalClose {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.modalTabs {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 20px;
+}
+
+.modalTab {
+  flex: 1;
+  min-height: 40px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.modalTabActive {
+  background: var(--ink);
+  color: var(--on-dark);
+}
+
+.modalQr {
+  width: 128px;
+  height: 128px;
+  margin: 4px auto 20px;
+  background:
+    linear-gradient(45deg, var(--ink) 25%, transparent 25%, transparent 75%, var(--ink) 75%),
+    linear-gradient(45deg, var(--ink) 25%, var(--ivory) 25%, var(--ivory) 75%, var(--ink) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+  border: 1px solid var(--ink);
+}
+
+.modalRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(201, 168, 105, 0.4);
+}
+
+.modalRowLabel {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  flex-shrink: 0;
+  width: 92px;
+}
+
+.modalRowValue {
+  font-size: 13px;
+  color: var(--ink);
+  flex: 1;
+}
+
+.modalCopyButton {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Three-photo editorial spread — dominant portrait + overlapping         */
+/* supporting images, warm neutral surface.                              */
+/* ---------------------------------------------------------------------- */
+
+.sectionSpread {
+  background: var(--taupe-surface);
+  padding: 44px 20px 20px;
+}
+
+.spreadKicker {
+  text-align: center;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #6b5a3f;
+  margin-bottom: 26px;
+}
+
+.spreadGrid {
+  position: relative;
+  height: 400px;
+}
+
+.spreadMain {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 60%;
+  aspect-ratio: 3 / 4;
+  box-shadow: 0 20px 34px -22px rgba(107, 79, 51, 0.45);
+}
+
+.spreadSecondaryA {
+  position: absolute;
+  right: 0;
+  top: 36px;
+  width: 44%;
+  aspect-ratio: 4 / 5;
+  box-shadow: 0 16px 28px -20px rgba(107, 79, 51, 0.45);
+}
+
+.spreadSecondaryB {
+  position: absolute;
+  left: 32%;
+  bottom: 0;
+  width: 42%;
+  aspect-ratio: 4 / 3;
+  box-shadow: 0 16px 28px -20px rgba(107, 79, 51, 0.45);
+}
+
+.spreadCaption {
+  position: absolute;
+  right: 4%;
+  bottom: -6px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6b5a3f;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Love story — full-bleed photo, floating quote card over a warm scrim.  */
+/* The page's clearest text-over-image moment.                            */
+/* ---------------------------------------------------------------------- */
+
+.sectionStory {
+  position: relative;
+  min-height: 420px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0 26px 44px;
+}
+
+.storyPhoto {
+  position: absolute;
+  inset: 0;
+}
+
+.storyScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(61, 47, 34, 0.04) 0%, rgba(61, 47, 34, 0.78) 100%);
+}
+
+.storyCardWrap {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 300px;
+}
+
+.storyCard {
+  text-align: center;
+}
+
+.storyQuoteMark {
+  display: block;
+  font-family: Georgia, serif;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--metal);
+  margin-bottom: 6px;
+}
+
+.storyQuote {
+  font-size: 16px;
+  line-height: 1.85;
+  font-style: italic;
+  color: var(--on-dark);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Final gallery — editorial rhythm, varied sizes, not a rigid grid.      */
+/* ---------------------------------------------------------------------- */
+
+.sectionGallery {
+  background: var(--cream);
+  padding: 42px 16px 20px;
+}
+
+.galleryKicker {
+  text-align: center;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  margin-bottom: 20px;
+}
+
+.galleryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 46px;
+  grid-auto-flow: dense;
+  gap: 8px;
+}
+
+.galleryItem {
+  box-shadow: 0 10px 20px -16px rgba(107, 79, 51, 0.45);
+}
+
+.tone0 {
+  background: linear-gradient(200deg, var(--taupe-surface), var(--mocha));
+}
+.tone1 {
+  background: linear-gradient(200deg, #e6dcc7, var(--metal));
+}
+.tone2 {
+  background: linear-gradient(200deg, var(--cream), var(--taupe-surface));
+}
+.tone3 {
+  background: linear-gradient(200deg, var(--metal), var(--mocha));
+}
+
+/* ---------------------------------------------------------------------- */
+/* Closing — full-bleed photo bookend matching the opening.               */
+/* ---------------------------------------------------------------------- */
+
+.sectionClosing {
+  position: relative;
+  min-height: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 40px 28px;
+}
+
+.closingPhoto {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(200deg, var(--metal), var(--mocha) 70%, #7c6440);
+}
+
+.closingScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(61, 47, 34, 0.5) 0%, rgba(61, 47, 34, 0.72) 100%);
+}
+
+.closingCardWrap {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+
+.closingFrame {
+  border-top: 1px solid rgba(250, 246, 239, 0.5);
+  border-bottom: 1px solid rgba(250, 246, 239, 0.5);
+  padding: 26px 0;
+}
+
+.closingLine {
+  font-size: 14px;
+  font-style: italic;
+  color: var(--on-dark);
+  margin-bottom: 14px;
+}
+
+.closingNames {
+  font-size: 22px;
+  color: var(--on-dark);
+}
+
+.footer {
+  background: var(--cream);
+  padding: 20px 22px 46px;
+  text-align: center;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

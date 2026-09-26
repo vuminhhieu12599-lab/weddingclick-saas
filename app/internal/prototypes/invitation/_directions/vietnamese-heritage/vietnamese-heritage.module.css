@@ -1,0 +1,2713 @@
+.root {
+  --paper: #f4ecd8;
+  --silk: #f8efe0;
+  --ivory: #f7f0e2;
+  --vermilion: #9c2b34;
+  --vermilion-deep: #7c2028;
+  --vermilion-wash: #f2ddd6;
+  --gold: #b8935a;
+  --ink: #2c1c19;
+
+  min-height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Palatino Linotype", Georgia, "Times New Roman", serif;
+  /* One numeral system for the whole template: Cormorant Garamond's       */
+  /* proportional lining figures (its old-style 0/1 read as o/ı at small   */
+  /* sizes). Numeric-only elements set Cormorant as their family below.    */
+  font-variant-numeric: lining-nums proportional-nums;
+  overflow-x: hidden;
+}
+
+/* Large faint chữ Hỷ watermark — decorative depth behind a zone, never    */
+/* the focal element itself. */
+.hyWatermark {
+  position: absolute;
+  font-family: Georgia, serif;
+  color: rgba(156, 43, 52, 0.07);
+  pointer-events: none;
+  user-select: none;
+}
+
+.musicButton {
+  position: sticky;
+  top: 16px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 16px 16px 0 auto;
+  border-radius: 50%;
+  border: 1px solid var(--gold);
+  background: rgba(247, 240, 226, 0.92);
+  cursor: pointer;
+  box-shadow: 0 8px 18px -10px rgba(44, 28, 25, 0.4);
+}
+
+.musicButtonActive {
+  background: var(--vermilion);
+  border-color: var(--gold);
+}
+
+.musicIcon {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--vermilion);
+}
+
+.musicButtonActive .musicIcon {
+  color: var(--silk);
+  animation: heritage-music-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes heritage-music-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Opening — two ceremonial red doors that split left/right.              */
+/*                                                                        */
+/* Each door clips one half of an identical full-cover face (.doorFace is */
+/* the full cover width), so while closed the two halves meet with no   */
+/* visible seam and no centre divider line; on open, the Song Hỷ          */
+/* medallion parts with the doors like a traditional gate.                */
+/* ---------------------------------------------------------------------- */
+
+/* While the cover is up (including while the doors part), the invitation */
+/* behind it must not scroll the cover out of the first viewport — and    */
+/* releasing scroll only after the doors clear avoids a mid-animation     */
+/* layout shift when a desktop scrollbar appears. */
+.rootClosed {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cover {
+  /* Soft champagne gold — never bright yellow. */
+  --cover-gold: #d8bf8e;
+  --cover-gold-soft: rgba(216, 191, 142, 0.42);
+  --cover-ivory: #f3e8d2;
+  /* Border pieces are drawn at 64% of the cover height; the supplied
+     artwork's ornament is ≈10.5% of its own height wide. The text column
+     is inset just past that. */
+  --border-piece-h: calc((100cqh - 28px) * 0.64);
+  --border-reach: calc(var(--border-piece-h) * 0.105 + 12px);
+
+  position: absolute;
+  inset: 0;
+  z-index: 21;
+  overflow: hidden;
+  container-type: size;
+}
+
+.door {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  overflow: hidden;
+}
+
+/* The left door runs 1px under the right one: both show the identical   */
+/* face at the same coordinates, so the overlap is invisible and hides    */
+/* any anti-aliased seam between the two composited door layers. */
+.doorLeft {
+  left: 0;
+  width: calc(50% + 1px);
+}
+
+.doorRight {
+  right: 0;
+}
+
+.doorFace {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100cqw;
+  background-color: #8a1a20;
+  background-size: 620px auto;
+  background-position: center;
+}
+
+.doorLeft .doorFace {
+  left: 0;
+}
+
+.doorRight .doorFace {
+  left: -50cqw;
+}
+
+/* Tone the supplied red paper toward a deeper vermilion and add a soft   */
+/* centre light + edge vignette — tactile, never a flat red rectangle. */
+.doorFace::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 75% 60% at 50% 46%, rgba(255, 222, 184, 0.1), transparent 70%),
+    radial-gradient(ellipse 125% 95% at 50% 50%, transparent 60%, rgba(58, 10, 14, 0.38) 100%),
+    linear-gradient(rgba(92, 14, 20, 0.46), rgba(92, 14, 20, 0.46));
+  pointer-events: none;
+}
+
+/* Fine double hairline frame just inside the side borders. */
+.doorFrame {
+  position: absolute;
+  inset: 14px;
+  border: 1px solid var(--cover-gold-soft);
+  pointer-events: none;
+}
+
+.doorFrame::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(216, 191, 142, 0.18);
+}
+
+/* Supplied side border, drawn smaller and only as corner pieces: each   */
+/* piece keeps its end-cap and fades out toward the middle, so the sides  */
+/* read as slim accents rather than a dense continuous column. */
+.coverBorder {
+  position: absolute;
+  height: var(--border-piece-h);
+  aspect-ratio: 724 / 2172;
+  opacity: 0.62;
+  filter: saturate(0.65) brightness(0.93);
+  pointer-events: none;
+}
+
+.coverBorderTop {
+  top: 14px;
+  mask-image: linear-gradient(to bottom, #000 0%, #000 18%, transparent 46%);
+}
+
+.coverBorderBottom {
+  bottom: 14px;
+  mask-image: linear-gradient(to top, #000 0%, #000 18%, transparent 46%);
+}
+
+.coverBorderLeft {
+  left: 8px;
+}
+
+.coverBorderRight {
+  right: 8px;
+}
+
+.coverFloral {
+  position: absolute;
+  width: 21cqw;
+  aspect-ratio: 1;
+  opacity: 0.9;
+  pointer-events: none;
+  filter: saturate(0.8) drop-shadow(0 4px 8px rgba(30, 2, 5, 0.25));
+}
+
+.coverFloralTopLeft {
+  top: -1.5cqw;
+  left: -2cqw;
+}
+
+.coverFloralBottomRight {
+  bottom: -1.5cqw;
+  right: -2cqw;
+}
+
+/* Centred composition, inset past the side borders on both sides. */
+.coverContent {
+  position: absolute;
+  inset: 0 var(--border-reach);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6cqh 0 5cqh;
+  text-align: center;
+  color: var(--cover-ivory);
+}
+
+.coverText {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.coverTitle {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.42em;
+  /* Letter-spacing adds trailing space after the last glyph; re-centre. */
+  margin-right: -0.42em;
+  text-transform: uppercase;
+  color: var(--cover-gold);
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+.coverDivider {
+  position: relative;
+  width: min(112px, 100%);
+  aspect-ratio: 2172 / 724;
+  margin: 0.6cqh 0 1.4cqh;
+  opacity: 0.75;
+  filter: saturate(0.7);
+}
+
+.coverNames {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--vh-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(31px, 9.8cqw, 41px);
+  line-height: 1.14;
+  color: #eedcb4;
+  text-shadow: 0 1px 8px rgba(40, 3, 6, 0.3);
+  overflow-wrap: anywhere;
+}
+
+.coverAmp {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-style: italic;
+  font-size: 0.5em;
+  line-height: 1.5;
+  color: var(--cover-gold);
+  opacity: 0.85;
+}
+
+.coverDate {
+  margin-top: 2.6cqh;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 500;
+  font-size: 15px;
+  letter-spacing: 0.2em;
+  margin-right: -0.2em;
+  color: var(--cover-ivory);
+  opacity: 0.9;
+}
+
+.coverWeekday {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  margin-right: -0.34em;
+  text-transform: uppercase;
+  color: var(--cover-gold);
+}
+
+.coverMedallion {
+  position: relative;
+  flex-shrink: 0;
+  width: min(39cqw, 19.5cqh);
+  aspect-ratio: 1;
+  margin-top: 3.6cqh;
+  filter: saturate(0.82) drop-shadow(0 6px 12px rgba(30, 2, 5, 0.32));
+}
+
+/* Small warm glow that blooms behind the medallion on tap. */
+.coverMedallionGlow {
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(236, 200, 130, 0.5), transparent 65%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.coverHintWrap {
+  margin-top: 5.6cqh;
+}
+
+.coverHint {
+  display: block;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  margin-right: -0.3em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--cover-ivory);
+  text-shadow: 0 1px 6px rgba(40, 6, 9, 0.45);
+  animation: heritage-hint-breathe 2.6s ease-in-out infinite;
+}
+
+@keyframes heritage-hint-breathe {
+  0%, 100% { opacity: 0.72; }
+  50% { opacity: 0.96; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coverHint {
+    animation: none;
+    opacity: 0.9;
+  }
+}
+
+/* Soft shade on each door's inner edge — only faded in once the doors    */
+/* start parting, so the closed cover never shows a centre line. */
+.doorEdge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.doorLeft .doorEdge {
+  right: 0;
+  background: linear-gradient(to left, rgba(40, 6, 9, 0.28), transparent);
+}
+
+.doorRight .doorEdge {
+  left: 0;
+  background: linear-gradient(to right, rgba(40, 6, 9, 0.28), transparent);
+}
+
+.coverOpenButton {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.coverOpenButton:focus-visible {
+  outline: 2px solid var(--cover-gold);
+  outline-offset: -8px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Hero — first inner screen revealed behind the split doors. Warm ivory  */
+/* paper, one large framed wedding photograph with a Song Hỷ seal on its  */
+/* top edge, then the ceremony wording, names and date close beneath.     */
+/* ---------------------------------------------------------------------- */
+
+.hero {
+  position: relative;
+  /* Sit under the sticky music button so the Hero starts at the very top */
+  /* of the screen (button: 40px + 16px top margin). */
+  margin-top: -56px;
+  /* One first screen, less a short peek: ends at the weekday/date/time    */
+  /* line with the Song Hỷ / family section following close beneath, so    */
+  /* spare height on tall phones no longer pools under the date. Height    */
+  /* comes from the measured scroll viewport (100svh until measured);      */
+  /* never shorter than content, so short/wide screens are unaffected.     */
+  height: calc(var(--hero-viewport-h, 100svh) - 72px);
+  min-height: min-content;
+  padding: 40px 26px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Any spare height is shared evenly above the photo and below the date. */
+  justify-content: center;
+  text-align: center;
+  background-color: #f5ecdb;
+  background-size: 620px auto;
+  container-type: inline-size;
+  overflow: hidden;
+}
+
+/* Lift the supplied ivory paper slightly so the photo and text stay the  */
+/* focus; a faint warm fade at the bottom hands off to the next section.  */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 55% at 50% 40%, rgba(255, 250, 240, 0.35), transparent 75%),
+    linear-gradient(to bottom, transparent 80%, rgba(244, 236, 216, 0.9));
+  pointer-events: none;
+}
+
+.hero > * {
+  position: relative;
+}
+
+/* The photo takes the screen height left after the text: it grows up to */
+/* a 5:8 portrait, and shrinks (never below 220px) on short viewports so  */
+/* the text still fits. (cqw here = the Hero's content width.) */
+.heroPhotoWrap {
+  position: relative;
+  flex: 1 1 calc(100cqw * 1.4);
+  width: 100%;
+  max-width: 400px;
+  max-height: min(calc(100cqw * 1.6), 620px);
+  min-height: 220px;
+}
+
+/* Hairline gold border on a narrow ivory mat, with a soft lifted shadow. */
+.heroPhotoFrame {
+  height: 100%;
+  box-sizing: border-box;
+  padding: 4px;
+  border: 0.5px solid rgba(184, 147, 90, 0.62);
+  background: #fbf6ec;
+  box-shadow:
+    0 1px 2px rgba(92, 14, 20, 0.05),
+    0 12px 26px -18px rgba(92, 14, 20, 0.26);
+}
+
+.heroPhotoInner {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 0.5px rgba(184, 147, 90, 0.35);
+}
+
+.heroPhoto {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+/* Song Hỷ seal centred on the frame's top edge, on a small ivory disc so */
+/* the hairline border reads as passing behind it. */
+.heroSeal {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 46px;
+  aspect-ratio: 1;
+  margin: -23px 0 0 -23px;
+  padding: 3px;
+  border-radius: 50%;
+  background: #fbf6ec;
+  box-shadow:
+    0 0 0 0.5px rgba(184, 147, 90, 0.55),
+    0 4px 10px -6px rgba(92, 14, 20, 0.3);
+}
+
+.heroSealImage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  filter: saturate(0.82) drop-shadow(0 2px 4px rgba(92, 14, 20, 0.16));
+}
+
+/* Gold ornament line interrupting the frame's bottom edge. */
+.heroOrnament {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 132px;
+  height: 18px;
+  margin: 0 0 -9px -66px;
+  /* Soft ivory backing so the frame's hairline appears to pass behind. */
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, #f8f1e3 62%, rgba(248, 241, 227, 0) 100%);
+}
+
+/* The supplied divider art sits in the middle third of its 3:1 canvas,  */
+/* so the full canvas is centred on the 18px band. */
+.heroOrnamentImage {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 50%;
+  aspect-ratio: 2172 / 724;
+  transform: translateY(-50%);
+  opacity: 0.85;
+  filter: saturate(0.75);
+}
+
+/* Corner clusters: the supplied flowers, smaller than before, each with  */
+/* a gold line-art lotus tucked in front. */
+.heroCorner {
+  position: absolute;
+  pointer-events: none;
+}
+
+.heroCornerTopLeft {
+  width: 19cqw;
+  aspect-ratio: 1;
+  top: -5cqw;
+  left: -5cqw;
+}
+
+.heroCornerBottomRight {
+  width: 20.5cqw;
+  aspect-ratio: 1;
+  right: -5cqw;
+  bottom: -5.5cqw;
+}
+
+.heroFloral {
+  position: absolute;
+  inset: 0;
+  opacity: 0.84;
+  filter: saturate(0.72) drop-shadow(0 2px 5px rgba(60, 10, 14, 0.12));
+}
+
+.heroLotus {
+  position: absolute;
+  width: 16cqw;
+  color: #9a733c;
+  filter: drop-shadow(0 1px 1px rgba(251, 246, 236, 0.9));
+}
+
+.heroCornerTopLeft .heroLotus {
+  right: -9cqw;
+  top: 2cqw;
+  transform: rotate(14deg);
+}
+
+.heroCornerBottomRight .heroLotus {
+  left: -9cqw;
+  bottom: 2cqw;
+  transform: rotate(-14deg);
+}
+
+.heroCeremony {
+  flex-shrink: 0;
+  margin-top: 26px;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.38em;
+  margin-right: -0.38em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+  white-space: nowrap;
+}
+
+.heroNames {
+  flex-shrink: 0;
+  margin: 14px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--vh-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(30px, 9.4cqw, 38px);
+  line-height: 1.1;
+  color: var(--vermilion-deep);
+  overflow-wrap: anywhere;
+}
+
+.heroAmp {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-size: 0.5em;
+  line-height: 1.45;
+  color: var(--gold);
+}
+
+.heroDate {
+  flex-shrink: 0;
+  margin-top: 18px;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 500;
+  font-size: 13.5px;
+  letter-spacing: 0.18em;
+  margin-right: -0.18em;
+  text-transform: uppercase;
+  color: #6e4a3c;
+  white-space: nowrap;
+}
+
+.heroDateSep {
+  margin: 0 0.45em;
+  color: var(--gold);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Ceremonial page — the formal inner sheet after the Hero, composed as   */
+/* one printed invitation: Song Hỷ, both families, three portraits,       */
+/* "Trân Trọng Kính Mời" + guest, then the rite's date block. Same ivory  */
+/* paper as the Hero, slim gold side borders, no boxed cards.             */
+/* ---------------------------------------------------------------------- */
+
+.page {
+  position: relative;
+  /* Pulled up into the Hero's spare bottom space so the date line hands */
+  /* off to the Song Hỷ + families without a large empty band. */
+  margin-top: -10px;
+  padding: 28px 30px 52px;
+  /* Cormorant defaults to old-style figures; dates and addresses read    */
+  /* better with lining numerals. */
+  font-variant-numeric: lining-nums;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: #f4ecd8;
+  background-size: 620px auto;
+  container-type: inline-size;
+  overflow: hidden;
+}
+
+/* Soften the paper a touch so text stays crisp; continuous with the     */
+/* Hero's lower fade. */
+.page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(244, 236, 216, 0.55), rgba(244, 236, 216, 0.35));
+  pointer-events: none;
+}
+
+.page > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Side borders: a gold hairline down each edge, below the content, with */
+/* the supplied border artwork only as short end caps fading inward.     */
+.page > .pageBorders {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.pageBorders::before,
+.pageBorders::after {
+  content: "";
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  width: 0.5px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(184, 147, 90, 0.55) 12%,
+    rgba(184, 147, 90, 0.55) 88%,
+    transparent
+  );
+}
+
+.pageBorders::before {
+  left: 11px;
+}
+
+.pageBorders::after {
+  right: 11px;
+}
+
+.pageBorderCap {
+  position: absolute;
+  width: 44px;
+  aspect-ratio: 724 / 2172;
+  opacity: 0.5;
+  filter: saturate(0.65) brightness(0.95);
+}
+
+.pageBorderCapTop {
+  top: 10px;
+  mask-image: linear-gradient(to bottom, #000 0%, #000 22%, transparent 70%);
+}
+
+.pageBorderCapBottom {
+  bottom: 10px;
+  mask-image: linear-gradient(to top, #000 0%, #000 22%, transparent 70%);
+}
+
+.pageBorderLeft {
+  left: 5px;
+}
+
+.pageBorderRight {
+  right: 5px;
+}
+
+/* Song Hỷ — the red 囍 glyph between two short gold rules. */
+.pageHy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.pageHyRule {
+  width: 30px;
+  height: 0.5px;
+  background: rgba(184, 147, 90, 0.8);
+}
+
+.pageHyGlyph {
+  font-family: "Noto Serif CJK SC", "Songti SC", "SimSun", serif;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--vermilion);
+}
+
+/* Families — two balanced columns split by a faint gold hairline. */
+.familyColumns {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 12px;
+  align-items: start;
+}
+
+.familyColumns::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 50%;
+  width: 0.5px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(184, 147, 90, 0.3) 18%,
+    rgba(184, 147, 90, 0.3) 82%,
+    transparent
+  );
+}
+
+.familySide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.familyHeading {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.34em;
+  margin-right: -0.34em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+  white-space: nowrap;
+}
+
+.familyHeadingRule {
+  width: 22px;
+  height: 0.5px;
+  margin: 9px 0 10px;
+  background: rgba(184, 147, 90, 0.85);
+}
+
+.familyParent {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(13.5px, 4.2cqw, 15.5px);
+  line-height: 1.45;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.familyParent + .familyParent {
+  margin-top: 2px;
+}
+
+.familyAddress {
+  margin-top: 5px;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(12px, 3.55cqw, 12.5px);
+  line-height: 1.42;
+  color: #7a5a4a;
+  text-wrap: balance;
+}
+
+/* Three portraits — groom/bride narrower at the sides, the couple photo */
+/* larger in the centre; slightly wider than the text column. */
+.portraitRow {
+  width: calc(100% + 24px);
+  max-width: 452px;
+  margin: 24px -12px 0;
+  display: grid;
+  grid-template-columns: 0.82fr 1fr 0.82fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.portraitSide,
+.portraitCenter {
+  min-width: 0;
+}
+
+.portraitFrame {
+  padding: 3px;
+  border: 0.5px solid rgba(184, 147, 90, 0.62);
+  background: #fbf6ec;
+  box-shadow:
+    0 1px 2px rgba(92, 14, 20, 0.05),
+    0 10px 22px -16px rgba(92, 14, 20, 0.28);
+}
+
+.portraitPhoto {
+  aspect-ratio: 3 / 4.2;
+  background-size: cover;
+  background-position: center;
+  box-shadow: inset 0 0 0 0.5px rgba(184, 147, 90, 0.35);
+}
+
+.portraitCenter .portraitPhoto {
+  aspect-ratio: 3 / 4.3;
+}
+
+/* Centre photo lifted: slightly deeper shadow and a fine inner gold line. */
+.portraitCenter .portraitFrame {
+  position: relative;
+  z-index: 1;
+  border-color: rgba(184, 147, 90, 0.78);
+  box-shadow:
+    inset 0 0 0 2.5px #fbf6ec,
+    inset 0 0 0 3px rgba(184, 147, 90, 0.3),
+    0 2px 4px rgba(92, 14, 20, 0.06),
+    0 16px 30px -18px rgba(92, 14, 20, 0.4);
+}
+
+/* Formal invitation — calligraphic salutation over the guest line, with */
+/* two small red corner accents instead of a box. */
+.inviteBlock {
+  margin-top: 26px;
+  padding: 11px 16px 13px;
+  max-width: 100%;
+}
+
+.inviteCorner {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: rgba(156, 43, 52, 0.42);
+  border-style: solid;
+  border-width: 0;
+}
+
+.inviteCornerTopLeft {
+  top: 0;
+  left: 0;
+  border-top-width: 1px;
+  border-left-width: 1px;
+}
+
+.inviteCornerBottomRight {
+  right: 0;
+  bottom: 0;
+  border-right-width: 1px;
+  border-bottom-width: 1px;
+}
+
+.inviteSalutation {
+  margin: 0;
+  font-family: var(--vh-script), "Brush Script MT", cursive;
+  font-weight: 400;
+  font-size: clamp(24px, 7.2cqw, 32.5px);
+  line-height: 1.25;
+  color: #a2434b;
+  white-space: nowrap;
+}
+
+.inviteGuest {
+  display: inline-block;
+  max-width: 100%;
+  margin: 6px 0 0;
+  padding: 0 10px 6px;
+  border-bottom: 0.5px solid rgba(184, 147, 90, 0.65);
+  font-family: var(--vh-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(19px, 5.8cqw, 23px);
+  line-height: 1.35;
+  color: var(--vermilion-deep);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+/* Rite details — title, time, then weekday | DAY | month, year, lunar */
+/* date and the hosting family home. */
+.rite {
+  width: 100%;
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rite p {
+  margin: 0;
+}
+
+.riteTitle {
+  margin: 0;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(18px, 5.6cqw, 21px);
+  letter-spacing: 0.28em;
+  margin-right: -0.28em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+  white-space: nowrap;
+}
+
+/* Weekday between two short gold rules, above the date row. */
+.riteWeekday {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+  white-space: nowrap;
+}
+
+.riteWeekday::before,
+.riteWeekday::after {
+  content: "";
+  width: 26px;
+  height: 0.5px;
+  background: rgba(184, 147, 90, 0.75);
+}
+
+/* time | DAY over month | year — hairline gold dividers, no boxes. */
+.riteDateRow {
+  width: 100%;
+  max-width: 300px;
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
+
+.riteDateCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0;
+}
+
+.riteDateCellStart {
+  border-right: 0.5px solid rgba(184, 147, 90, 0.6);
+}
+
+.riteDateCellEnd {
+  border-left: 0.5px solid rgba(184, 147, 90, 0.6);
+}
+
+.riteSideValue {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 21px;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  color: var(--vermilion-deep);
+}
+
+.riteDayCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 18px;
+}
+
+.riteDay {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 72px;
+  line-height: 0.95;
+  color: var(--vermilion-deep);
+}
+
+.riteMonth {
+  margin-top: 4px;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.24em;
+  margin-right: -0.24em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+  white-space: nowrap;
+}
+
+.rite .riteLunar {
+  margin-top: 12px;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-style: italic;
+  font-size: 13.5px;
+  color: #7a5a4a;
+  white-space: nowrap;
+}
+
+/* Where the rite is held: the hosting family home, two-level like the  */
+/* reception venues below. */
+.riteHost {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* One tight location cluster: main line, address directly beneath. */
+.riteHost .venueAddress {
+  margin-top: 2px;
+  font-size: 13.5px;
+}
+
+.riteDivider {
+  position: relative;
+  width: 104px;
+  aspect-ratio: 2172 / 724;
+  margin: 12px auto 2px;
+  opacity: 0.8;
+  filter: saturate(0.75);
+}
+
+/* Venue name (stronger) over address (easier-reading detail). */
+.venueName {
+  max-width: 300px;
+  margin: 0;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(15px, 4.5cqw, 17px);
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--vermilion-deep);
+  text-wrap: balance;
+}
+
+.venueAddress {
+  max-width: 290px;
+  margin: 4px 0 0;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 500;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: #5a3d33;
+  text-wrap: balance;
+}
+
+/* Reception blocks — one per operational side, Nhà Trai first: side  */
+/* label, rounded cream card, then that side's directions link.        */
+.venues {
+  width: 100%;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+
+.venueBlock {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.venueSide {
+  margin-bottom: 10px;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.34em;
+  margin-right: -0.34em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+}
+
+.receptionCard {
+  width: 100%;
+  max-width: 320px;
+  padding: 20px 16px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid rgba(156, 43, 52, 0.45);
+  border-radius: 16px;
+  background: rgba(251, 246, 236, 0.85);
+  box-shadow: 0 12px 26px -20px rgba(92, 14, 20, 0.35);
+}
+
+.receptionCard p {
+  margin: 0;
+}
+
+/* Slightly tighter tracking so long venue names wrap in two lines. */
+.receptionCard .venueName {
+  letter-spacing: 0.07em;
+}
+
+.receptionTitle {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.2em;
+  margin-right: -0.2em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+  text-wrap: balance;
+}
+
+.receptionCard .receptionTime {
+  margin-top: 10px;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #5a3d33;
+}
+
+.receptionDate {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  color: var(--vermilion-deep);
+}
+
+.receptionLunar {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-style: italic;
+  font-size: 13.5px;
+  color: #7a5a4a;
+  white-space: nowrap;
+}
+
+.receptionRule {
+  width: 36px;
+  height: 0.5px;
+  margin: 14px 0 12px;
+  background: rgba(184, 147, 90, 0.85);
+}
+
+/* Compact filled pill under each card, to that side's existing Maps URL. */
+.directionsWrap {
+  margin-top: 14px;
+}
+
+.venueSide + .directionsWrap {
+  margin-top: 0;
+}
+
+.directionsButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 24px;
+  border-radius: 999px;
+  background: var(--vermilion);
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #fbf3e6;
+  text-decoration: none;
+  box-shadow: 0 8px 18px -12px rgba(92, 14, 20, 0.6);
+  transition: background-color 0.2s ease;
+}
+
+.directionsButton:hover,
+.directionsButton:active {
+  background: var(--vermilion-deep);
+}
+
+.directionsButton:focus-visible {
+  outline: 1px solid var(--vermilion);
+  outline-offset: 3px;
+}
+
+/* Compact schedule row — evenly spaced columns, gold hairline between. */
+.schedule {
+  width: 100%;
+  max-width: 320px;
+  margin: 30px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.scheduleItem {
+  min-width: 0;
+  padding: 2px 4px;
+}
+
+.scheduleItem + .scheduleItem {
+  border-left: 0.5px solid rgba(184, 147, 90, 0.6);
+}
+
+.scheduleItem > * {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.scheduleTime {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  color: var(--vermilion-deep);
+}
+
+.scheduleLabel {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.35;
+  color: #5a3d33;
+  text-wrap: balance;
+}
+
+/* Countdown keeps its existing styling, set on the same sheet. */
+.pageCountdown {
+  width: 100%;
+  max-width: 340px;
+  margin-top: 26px;
+}
+
+.timeline {
+  display: flex;
+  justify-content: space-between;
+  margin: 24px 20px 0;
+  padding-top: 18px;
+  border-top: 1px solid rgba(184, 147, 90, 0.45);
+}
+
+.timelineCell {
+  text-align: center;
+  flex: 1;
+}
+
+/* Countdown values: same Cormorant numerals; tabular only here, so the */
+/* ticking seconds don't shift sideways. */
+.timelineValue {
+  display: block;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 21px;
+  line-height: 1.2;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--vermilion);
+}
+
+.timelineLabel {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a6a55;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Love story — one editorial timeline over a muted, red-shaded photo     */
+/* backdrop: central gold axis, milestones alternating photo/text sides.  */
+/* ---------------------------------------------------------------------- */
+
+.loveStory {
+  position: relative;
+  isolation: isolate;
+  padding: 58px 14px 70px;
+  overflow: hidden;
+  /* Deep oxblood / lacquer red — warm, not brown, not scarlet. */
+  background-color: #5a161d;
+  background-image: linear-gradient(180deg, #681b23 0%, #5a161d 55%, #4d1219 100%);
+  color: #f3e8d2;
+  container-type: inline-size;
+  font-variant-numeric: lining-nums;
+}
+
+/* Thin gold hairlines inset at the top and bottom edges. */
+.loveStory::before,
+.loveStory::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  z-index: 1;
+  height: 0.5px;
+  background: rgba(216, 191, 142, 0.55);
+}
+
+.loveStory::before {
+  top: 16px;
+}
+
+.loveStory::after {
+  bottom: 16px;
+}
+
+.loveStoryBackdrop,
+.loveStoryShade,
+.loveStoryGrain {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* The couple photo only as faint tonal depth in the red — no colour cast. */
+.loveStoryBackdrop {
+  background-size: cover;
+  background-position: center;
+  filter: grayscale(1) blur(2px);
+  transform: scale(1.08);
+  opacity: 0.2;
+  mix-blend-mode: soft-light;
+}
+
+/* Soft light pool at the top and a gentle vignette at the edges. */
+.loveStoryShade {
+  background:
+    radial-gradient(ellipse 75% 40% at 50% 0%, rgba(176, 56, 64, 0.28), transparent 72%),
+    radial-gradient(ellipse 115% 85% at 50% 45%, transparent 45%, rgba(38, 6, 10, 0.5));
+}
+
+/* Very light paper/fabric grain. */
+.loveStoryGrain {
+  background-size: 620px auto;
+  opacity: 0.09;
+  mix-blend-mode: overlay;
+}
+
+.loveStoryHeader {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 38px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.loveStoryEyebrow {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 0.46em;
+  margin-right: -0.46em;
+  text-transform: uppercase;
+  color: #d8bf8e;
+}
+
+.loveStoryHeading {
+  margin: 4px 0 0;
+  font-family: var(--vh-script), "Brush Script MT", cursive;
+  font-weight: 400;
+  font-size: clamp(32px, 10cqw, 40px);
+  line-height: 1.2;
+  color: #f6ecdc;
+  white-space: nowrap;
+}
+
+.loveStoryRule {
+  width: 40px;
+  height: 0.5px;
+  margin-top: 10px;
+  background: rgba(216, 191, 142, 0.8);
+}
+
+/* Milestones: text | axis | photo, mirrored on every other row. */
+.lsList {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lsItem {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr);
+  align-items: start;
+  padding-bottom: 38px;
+}
+
+.lsItem:last-child {
+  padding-bottom: 0;
+}
+
+/* Axis segment from this marker down to just above the next one. */
+.lsSegment {
+  position: absolute;
+  top: 20px;
+  bottom: 0;
+  left: calc(50% - 0.5px);
+  width: 1px;
+  background: rgba(216, 191, 142, 0.6);
+  transform-origin: top;
+}
+
+.lsMarker {
+  position: absolute;
+  top: 3px;
+  left: calc(50% - 7px);
+  z-index: 3;
+  width: 14px;
+  height: 14px;
+}
+
+.lsMarker::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  background: var(--vermilion);
+  box-shadow:
+    0 0 0 2px #5a161d,
+    0 0 0 2.75px #d8bf8e;
+  transform: rotate(45deg);
+}
+
+.lsText {
+  grid-row: 1;
+  min-width: 0;
+}
+
+.lsItemPhotoRight .lsText {
+  grid-column: 1;
+  padding-right: 4px;
+  text-align: right;
+}
+
+.lsItemPhotoLeft .lsText {
+  grid-column: 3;
+  padding-left: 4px;
+  text-align: left;
+}
+
+.lsText p {
+  margin: 0;
+}
+
+.lsDate {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.3;
+  letter-spacing: 0.2em;
+  color: #d8bf8e;
+}
+
+.lsText .lsTitle {
+  margin-top: 4px;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 14.5px;
+  line-height: 1.35;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f6ecdc;
+  text-wrap: balance;
+}
+
+.lsText .lsDescription {
+  margin-top: 6px;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(243, 232, 210, 0.86);
+  text-wrap: pretty;
+}
+
+/* Photos keep clear of the axis; tap opens the lightbox. Width comes from */
+/* the milestone's rhythm step. */
+.lsPhotoButton {
+  grid-row: 1;
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  cursor: zoom-in;
+}
+
+.lsItemPhotoRight .lsPhotoButton {
+  grid-column: 3;
+  justify-self: end;
+}
+
+.lsItemPhotoLeft .lsPhotoButton {
+  grid-column: 1;
+  justify-self: start;
+}
+
+.lsPhotoButton:focus-visible {
+  outline: 1px solid #d8bf8e;
+  outline-offset: 3px;
+}
+
+.lsPhoto {
+  display: block;
+  width: 100%;
+  border: 3px solid rgba(243, 232, 210, 0.9);
+  border-radius: 14px;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 16px 30px -14px rgba(0, 0, 0, 0.6);
+}
+
+/* Lightbox — full-size story photo over a dark scrim. */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox .modalScrim {
+  background: rgba(20, 10, 10, 0.88);
+}
+
+.lightboxImage {
+  position: relative;
+  z-index: 1;
+  width: min(92vw, 640px);
+  height: min(78vh, 720px);
+  /* Taps anywhere but the X fall through to the scrim and close. */
+  pointer-events: none;
+}
+
+.lightboxClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(243, 232, 210, 0.6);
+  border-radius: 50%;
+  background: rgba(30, 14, 14, 0.5);
+  color: #f6ecdc;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lightboxClose:focus-visible {
+  outline: 1px solid #d8bf8e;
+  outline-offset: 3px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Wedding album — header, then curated rows of framed prints on the      */
+/* ivory paper (large / pair / tall-beside-two / wide).                   */
+/* ---------------------------------------------------------------------- */
+
+.albumSection {
+  position: relative;
+  padding: 10px 18px 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #f4ecd8;
+  background-size: 620px auto;
+  container-type: inline-size;
+}
+
+.albumSection::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(244, 236, 216, 0.55), rgba(244, 236, 216, 0.35));
+  pointer-events: none;
+}
+
+.albumHeader {
+  position: relative;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.albumDivider {
+  position: relative;
+  width: 104px;
+  aspect-ratio: 2172 / 724;
+  margin-bottom: 10px;
+  opacity: 0.8;
+  filter: saturate(0.75);
+}
+
+.albumEyebrow {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 0.4em;
+  margin-right: -0.4em;
+  text-transform: uppercase;
+  color: #a37b42;
+}
+
+.albumHeading {
+  margin: 4px 0 0;
+  font-family: var(--vh-script), "Brush Script MT", cursive;
+  font-weight: 400;
+  font-size: clamp(30px, 9cqw, 38px);
+  line-height: 1.2;
+  color: #a2434b;
+  text-wrap: balance;
+}
+
+.albumRows {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.albumRow {
+  display: flex;
+}
+
+.albumPair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* Two tall prints side by side (~57 / 43); the left sets the row height. */
+.albumTallRow {
+  display: grid;
+  grid-template-columns: 1.33fr 1fr;
+  gap: 8px;
+}
+
+/* A print: thin ivory mat, fine gold hairline, soft shadow. */
+.albumPrint {
+  display: flex;
+  width: 100%;
+  padding: 3px;
+  border: 0.5px solid rgba(184, 147, 90, 0.6);
+  border-radius: 2px;
+  background: #fbf6ec;
+  box-shadow:
+    0 1px 2px rgba(92, 14, 20, 0.05),
+    0 12px 24px -18px rgba(92, 14, 20, 0.35);
+  cursor: zoom-in;
+  transition: box-shadow 0.3s ease;
+}
+
+.albumPrint:hover {
+  box-shadow:
+    0 1px 2px rgba(92, 14, 20, 0.06),
+    0 16px 30px -16px rgba(92, 14, 20, 0.45);
+}
+
+.albumPrint:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Keeps the photo's settle-zoom inside the mat. */
+.albumClip {
+  position: relative;
+  flex: 1;
+  display: block;
+  overflow: hidden;
+}
+
+/* Fixed slot shape; the photo inside is object-fit: cover (never stretched). */
+.albumPhoto {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.albumLarge .albumPhoto,
+.albumMedium .albumPhoto {
+  aspect-ratio: 4 / 5;
+}
+
+.albumWide .albumPhoto {
+  aspect-ratio: 3 / 2;
+}
+
+.albumTall .albumPhoto {
+  aspect-ratio: 3 / 4;
+}
+
+/* The second tall print matches the first one's height. */
+.albumTallSecond .albumPhoto {
+  height: 100%;
+}
+
+/* Album viewer — the photo large on a dark, warm backdrop. */
+.albumViewer {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.albumViewerScrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(24, 10, 12, 0.94);
+  cursor: pointer;
+}
+
+/* Taps outside the photo fall through to the scrim and close. */
+.albumViewerStage {
+  position: relative;
+  z-index: 1;
+  width: min(94vw, 720px);
+  height: min(78vh, 900px);
+  pointer-events: none;
+}
+
+.albumViewerImage {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+.albumViewerClose,
+.albumViewerNav {
+  position: absolute;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(243, 232, 210, 0.55);
+  border-radius: 50%;
+  background: rgba(30, 14, 14, 0.5);
+  color: #f6ecdc;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.albumViewerClose {
+  top: 16px;
+  right: 16px;
+  font-size: 17px;
+}
+
+.albumViewerNav {
+  top: 50%;
+  font-size: 28px;
+  transform: translateY(-50%);
+}
+
+.albumViewerPrev {
+  left: 12px;
+}
+
+.albumViewerNext {
+  right: 12px;
+}
+
+.albumViewerClose:focus-visible,
+.albumViewerNav:focus-visible {
+  outline: 2px solid #d8bf8e;
+  outline-offset: 2px;
+}
+
+.albumViewerCount {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  z-index: 2;
+  margin: 0;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.3em;
+  font-variant-numeric: lining-nums;
+  color: #d8bf8e;
+  transform: translateX(-50%);
+}
+
+/* ---------------------------------------------------------------------- */
+/* RSVP + wishes — two-line title on the ivory paper over a deep red form */
+/* panel (gold inner hairline), ivory fields, one attendance select.      */
+/* ---------------------------------------------------------------------- */
+
+.rsvpSection {
+  position: relative;
+  padding: 44px 26px 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: #f4ecd8;
+  background-size: 620px auto;
+  container-type: inline-size;
+  overflow: hidden;
+}
+
+.rsvpSection::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(244, 236, 216, 0.55), rgba(244, 236, 216, 0.35));
+  pointer-events: none;
+}
+
+.rsvpSection > * {
+  position: relative;
+  z-index: 1;
+}
+
+.rsvpSection > .pageBorders {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.rsvpHeader {
+  margin-bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rsvpDivider {
+  position: relative;
+  width: 104px;
+  aspect-ratio: 2172 / 724;
+  margin-bottom: 12px;
+  opacity: 0.8;
+  filter: saturate(0.75);
+}
+
+/* Two intentional lines; each line never wraps on its own. */
+.rsvpTitle {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--vh-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(23px, 7cqw, 28px);
+  line-height: 1.25;
+  color: var(--vermilion-deep);
+}
+
+.rsvpTitle span {
+  white-space: nowrap;
+}
+
+.rsvpPanel {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  padding: 22px 15px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, #a02d37, #88222c);
+  box-shadow: 0 16px 30px -22px rgba(92, 14, 20, 0.55);
+  text-align: left;
+}
+
+.rsvpPanel::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 0.5px solid rgba(232, 208, 160, 0.34);
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+.rsvpFields {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Clean system sans for field text: stable Vietnamese diacritics at input */
+/* sizes; 16px+ keeps mobile browsers from zooming into the fields.       */
+.rsvpInput {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid rgba(216, 191, 142, 0.4);
+  border-radius: 8px;
+  background: #fbf6ec;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--ink);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rsvpInput::placeholder {
+  color: #8f7568;
+  opacity: 1;
+}
+
+.rsvpInput:focus {
+  outline: none;
+  border-color: #d8bf8e;
+  box-shadow: 0 0 0 2px rgba(216, 191, 142, 0.6);
+}
+
+.rsvpSelectWrap {
+  position: relative;
+}
+
+.rsvpSelectWrap::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 17px;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--vermilion);
+  border-bottom: 1.5px solid var(--vermilion);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+.rsvpSelect {
+  appearance: none;
+  padding-right: 42px;
+  cursor: pointer;
+}
+
+.rsvpTextarea {
+  min-height: 112px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.rsvpSubmit {
+  margin-top: 4px;
+  min-height: 48px;
+  border: 1px solid rgba(232, 208, 160, 0.85);
+  border-radius: 10px;
+  background: #5a1219;
+  box-shadow: 0 6px 14px -8px rgba(40, 6, 10, 0.7);
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #fffaf0;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.rsvpSubmit:not(:disabled):hover {
+  background: #4a0e14;
+}
+
+.rsvpSubmit:not(:disabled):active {
+  transform: scale(0.99);
+}
+
+/* Disabled until a name is entered — muted but still clearly legible. */
+.rsvpSubmit:disabled {
+  border-color: rgba(232, 208, 160, 0.45);
+  background: rgba(90, 18, 25, 0.55);
+  box-shadow: none;
+  color: rgba(255, 250, 240, 0.78);
+  cursor: default;
+}
+
+.rsvpSubmit:focus-visible,
+.rsvpEdit:focus-visible {
+  outline: 2px solid #d8bf8e;
+  outline-offset: 2px;
+}
+
+/* Confirmation, crossfaded in place of the form. */
+.rsvpDone {
+  position: relative;
+  padding: 10px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  color: #fbf3e6;
+}
+
+.rsvpDone p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.rsvpDoneThanks {
+  font-family: var(--vh-script), "Brush Script MT", cursive;
+  font-size: clamp(26px, 7.6cqw, 31px);
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.rsvpDoneChoice {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #d8bf8e;
+}
+
+.rsvpDone .rsvpDoneMessage {
+  margin-top: 4px;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.55;
+  color: rgba(251, 243, 230, 0.9);
+}
+
+.rsvpEdit {
+  margin-top: 8px;
+  min-height: 32px;
+  padding: 4px 2px;
+  border: 0;
+  border-bottom: 0.5px solid rgba(216, 191, 142, 0.8);
+  background: none;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #d8bf8e;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Wedding gift — a note and one button on the paper; bank details and QR */
+/* live only in the modal below.                                          */
+/* ---------------------------------------------------------------------- */
+
+.giftSection {
+  position: relative;
+  padding: 8px 28px 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: #f4ecd8;
+  background-size: 620px auto;
+}
+
+.giftSection::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(244, 236, 216, 0.55), rgba(244, 236, 216, 0.35));
+  pointer-events: none;
+}
+
+.giftCta {
+  position: relative;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.giftNote {
+  margin: 0 0 18px;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 16.5px;
+  line-height: 1.6;
+  color: #5a3d33;
+  text-wrap: balance;
+}
+
+.giftButton {
+  min-height: 46px;
+  padding: 0 28px;
+  border: 1px solid rgba(232, 208, 160, 0.85);
+  border-radius: 10px;
+  background: var(--vermilion);
+  box-shadow: 0 8px 18px -12px rgba(92, 14, 20, 0.6);
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 700;
+  font-size: 13.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #fffaf0;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.giftButton:hover {
+  background: var(--vermilion-deep);
+}
+
+.giftButton:active {
+  transform: scale(0.99);
+}
+
+.giftButton:focus-visible,
+.giftTab:focus-visible,
+.giftCopy:focus-visible,
+.giftClose:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Modal — cream card with a fine gold border over a soft warm scrim. */
+.giftOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.giftScrim {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: rgba(58, 22, 22, 0.5);
+  backdrop-filter: blur(2px);
+  cursor: pointer;
+}
+
+/* Scrolls inside itself if taller than the screen — never clipped. */
+.giftPanel {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 28px 22px 22px;
+  border: 1px solid rgba(184, 147, 90, 0.55);
+  border-radius: 16px;
+  background: #fbf6ec;
+  box-shadow: 0 24px 50px -20px rgba(60, 10, 14, 0.5);
+  text-align: center;
+  font-variant-numeric: lining-nums;
+}
+
+.giftPanel::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 0.5px solid rgba(156, 43, 52, 0.22);
+  border-radius: 11px;
+  pointer-events: none;
+}
+
+.giftClose {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  border: 0.5px solid rgba(184, 147, 90, 0.7);
+  border-radius: 50%;
+  background: rgba(251, 246, 236, 0.95);
+  font-size: 15px;
+  line-height: 1;
+  color: var(--vermilion);
+  cursor: pointer;
+}
+
+.giftLotus {
+  width: 36px;
+  margin: 0 auto 4px;
+  color: #a37b42;
+}
+
+.giftLotus svg {
+  display: block;
+  width: 100%;
+}
+
+.giftTitle {
+  margin: 0;
+  font-family: var(--vh-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 25px;
+  line-height: 1.25;
+  color: var(--vermilion-deep);
+}
+
+/* COMMON only: Nhà Trai / Nhà Gái segmented tabs. */
+.giftTabs {
+  width: 100%;
+  max-width: 260px;
+  margin: 16px auto 0;
+  padding: 3px;
+  display: flex;
+  gap: 2px;
+  border: 1px solid rgba(156, 43, 52, 0.35);
+  border-radius: 999px;
+}
+
+.giftTab {
+  flex: 1;
+  min-height: 38px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.giftTabActive {
+  background: var(--vermilion);
+  color: #fbf3e6;
+}
+
+.giftSideLabel {
+  margin: 10px 0 0;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.3em;
+  margin-right: -0.3em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+}
+
+.giftDetails {
+  margin-top: 18px;
+}
+
+.giftQr {
+  width: 176px;
+  aspect-ratio: 1;
+  margin: 0 auto;
+  padding: 10px;
+  border: 0.5px solid rgba(184, 147, 90, 0.7);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 8px 18px -14px rgba(60, 10, 14, 0.4);
+}
+
+.giftQrImage,
+.giftQrPlaceholder {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Neutral placeholder for the configured QR image (not a real code). */
+.giftQrPlaceholder {
+  border-radius: 4px;
+  background: radial-gradient(rgba(44, 28, 25, 0.16) 1.2px, transparent 1.6px) 0 0 / 9px 9px;
+}
+
+.giftQrFinder {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 4px solid #2c1c19;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.giftQrFinder::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 2px;
+  background: #2c1c19;
+}
+
+.giftQrFinderTopLeft {
+  top: 0;
+  left: 0;
+}
+
+.giftQrFinderTopRight {
+  top: 0;
+  right: 0;
+}
+
+.giftQrFinderBottomLeft {
+  bottom: 0;
+  left: 0;
+}
+
+.giftQrNote {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  padding: 3px 8px;
+  background: #ffffff;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #8f7568;
+  transform: translate(-50%, -50%);
+}
+
+.giftInfo {
+  margin: 18px 0 0;
+  padding: 0;
+}
+
+.giftInfoRow {
+  padding: 10px 0;
+  border-top: 0.5px solid rgba(184, 147, 90, 0.45);
+}
+
+.giftInfoRow dt {
+  margin-bottom: 3px;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #a37b42;
+}
+
+.giftInfoRow dd {
+  margin: 0;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.giftInfoRow .giftAccount {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+}
+
+.giftAccountNumber {
+  font-size: 21px;
+  letter-spacing: 0.08em;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--vermilion-deep);
+}
+
+.giftCopy {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid rgba(156, 43, 52, 0.55);
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.giftCopyDone {
+  border-color: var(--vermilion);
+  background: var(--vermilion);
+  color: #fbf3e6;
+}
+
+/* ------------------------------------------------------------------ */
+/* Dress code — a quiet printed note: gold rule, small red title,      */
+/* description, then one round swatch per configured colour.           */
+/* ------------------------------------------------------------------ */
+
+.dressSection {
+  position: relative;
+  padding: 6px 28px 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: #f4ecd8;
+  background-size: 620px auto;
+}
+
+.dressSection::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(244, 236, 216, 0.55), rgba(244, 236, 216, 0.35));
+  pointer-events: none;
+}
+
+.dressHeader {
+  position: relative;
+  max-width: 310px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Short gold rule with a centre diamond — marks the new note. */
+.dressRule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.dressRule::before,
+.dressRule::after {
+  content: "";
+  width: 34px;
+  height: 0.5px;
+  background: rgba(184, 147, 90, 0.75);
+}
+
+.dressRuleDiamond {
+  width: 5px;
+  height: 5px;
+  background: var(--gold);
+  opacity: 0.8;
+  transform: rotate(45deg);
+}
+
+.dressTitle {
+  margin: 0;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.34em;
+  margin-right: -0.34em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+}
+
+.dressText {
+  margin: 12px 0 0;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #5a3d33;
+  text-wrap: balance;
+}
+
+/* Swatches wrap to a new centred row rather than shrinking. */
+.dressSwatches {
+  position: relative;
+  max-width: 310px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px 16px;
+}
+
+/* Ivory ring + gold hairline around each colour, with a soft lift. */
+.dressSwatch {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 1px rgba(44, 28, 25, 0.08),
+    0 0 0 3px #f8f1e3,
+    0 0 0 3.5px rgba(184, 147, 90, 0.6),
+    0 5px 10px -4px rgba(60, 30, 20, 0.35);
+}
+
+/* ------------------------------------------------------------------ */
+/* Gift modal                                                          */
+/* ------------------------------------------------------------------ */
+
+.modalScrim {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: rgba(44, 28, 25, 0.65);
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Closing — paper surface, seal stamp mark, ceremonial sign-off.         */
+/* ---------------------------------------------------------------------- */
+
+/* Pulled up into the album's bottom padding (same ivory paper) so the  */
+/* closing follows the last photo closely; no side or bottom padding, so */
+/* the photo panel runs edge to edge and ends the invitation.           */
+.sectionClosing {
+  position: relative;
+  margin-top: -40px;
+  background: var(--paper);
+  padding: 30px 0 0;
+  text-align: center;
+  overflow: hidden;
+}
+
+/* Two fine gold rules around a small line-art lotus. */
+.closingDivider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 auto 10px;
+  color: #a37b42;
+}
+
+.closingDividerRule {
+  width: 52px;
+  height: 0.5px;
+  background: rgba(184, 147, 90, 0.75);
+}
+
+.closingDividerLotus {
+  display: block;
+  width: 30px;
+  opacity: 0.85;
+}
+
+.closingSeal {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--gold);
+  background: radial-gradient(circle at 34% 30%, #b8404a, var(--vermilion) 55%, var(--vermilion-deep) 100%);
+  color: var(--silk);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17.5px;
+  line-height: 1;
+  margin: 0 auto 14px;
+  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.25), inset 0 -3px 5px rgba(0, 0, 0, 0.3);
+}
+
+/* Closing panel — a full-width photo background under a soft warm      */
+/* shade, with the closing text set on top; no frame, border or shadow.  */
+.closingFrame {
+  width: 100%;
+}
+
+.closingPanel {
+  position: relative;
+  min-height: 0;
+  aspect-ratio: 3 / 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  container-type: inline-size;
+}
+
+.closingPhoto {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: saturate(0.8);
+}
+
+/* Warm, soft darkening (never flat black) plus a gentle vignette. */
+.closingShade {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 90% 80% at 50% 50%, rgba(46, 18, 18, 0.34), rgba(34, 12, 12, 0.62)),
+    linear-gradient(rgba(80, 26, 30, 0.18), rgba(40, 14, 16, 0.28));
+}
+
+.closingContent {
+  position: relative;
+  padding: 26px 16px 34px;
+  color: #fbf3e6;
+  text-shadow: 0 1px 10px rgba(20, 6, 8, 0.35);
+}
+
+.closingContent p {
+  margin: 0;
+}
+
+/* Wide lines, breaks from the message itself ("\n"); each line kept whole. */
+.closingLine {
+  font-family: var(--vh-serif), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(13.5px, 4.6cqw, 17px);
+  line-height: 1.55;
+  white-space: pre-line;
+  color: rgba(251, 243, 230, 0.94);
+}
+
+.closingContent .closingNames {
+  margin-top: 12px;
+  font-family: var(--vh-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(22px, 7cqw, 27px);
+  line-height: 1.25;
+  color: #fffaf0;
+}
+
+.closingContent .closingDate {
+  margin-top: 8px;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.22em;
+  color: #e6cc98;
+}
+
+/* Date as a quiet secondary line in muted antique gold. */
+.footer {
+  padding: 14px 22px 42px;
+  text-align: center;
+  font-family: var(--vh-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #a88a5c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

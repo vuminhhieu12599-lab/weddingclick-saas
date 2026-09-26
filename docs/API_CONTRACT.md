@@ -215,6 +215,8 @@ An explicit implementation task (Task 029, §8) must exist and complete **before
 
 No REVIEW snapshot (`create_review_version`) may be implemented before this foundation exists — it is what produces the frozen payload that function persists.
 
+> **Status note (Task 029 freeze, 2026-09-26):** Task 029 was delivered and frozen as **internal Invitation Visual Prototypes only** (`docs/DECISIONS.md` "Task 029"). None of the production Rendering Foundation deliverables listed above have been built yet. They remain an outstanding prerequisite, so Task 030's hard dependency is **not yet satisfied** and **Task 030 must not start yet**. No task/roadmap renumbering was performed, and no task number has been assigned to the remaining foundation work.
+
 ### 7.3 Guest `invitation_variant = NULL` resolution rule
 
 - **COMMON package / sole COMMON invitation:** `NULL` resolves/normalizes to `COMMON`. Prefer normalizing newly-created COMMON-context guests to `COMMON` explicitly at creation time rather than leaving `NULL` to be interpreted later.
@@ -251,7 +253,7 @@ Smaller, independently reviewable slices, replacing the previous broad 022–030
 | **026** | Access-Link & Token Foundation (token crypto/hash utility, resolution module, INTAKE/PORTAL direct RLS, `issue_review_link`, `rotate_access_link`, `revoke_access_link`) | Task 004 boundary |
 | **027** | Intake Workflow (`submit_intake`, `apply_intake_submission`, reject) | 022 (apply target), 026 (tokens) |
 | **028** | Project Design APIs (`project_design` get/upsert, template/version catalog reads) | Task 004 boundary |
-| **029** | **Invitation Rendering Foundation** (Wedding Domain Resolver, `InvitationViewModel` builder, template registry, variant/event resolution, snapshot payload construction, media reference extraction) | 022, 023, 028 |
+| **029** | **Invitation Rendering Foundation** (Wedding Domain Resolver, `InvitationViewModel` builder, template registry, variant/event resolution, snapshot payload construction, media reference extraction). *Delivered as internal visual prototypes only. The production foundation is still outstanding; see §7.2 status note.* | 022, 023, 028 |
 | **030** | Review Workflow (`create_review_version`, REVIEW resolve, `submit_review_feedback`) | **029 hard dependency** |
 | **031** | Publish Workflow (`publish_invitation`, project-level publish-eligibility) | 030, 025 (`mark_project_paid`) |
 | **032** | Guest & Portal Workflow (guest CRUD/import/revoke, PORTAL resolve reusing the published-view service per §7.1) | 026, 031 |

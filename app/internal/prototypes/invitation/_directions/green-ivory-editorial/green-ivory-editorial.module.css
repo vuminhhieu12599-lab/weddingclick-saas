@@ -1,0 +1,1436 @@
+.root {
+  /* Deep moss green / ivory / warm white — a premium botanical editorial
+     identity, distinct from the other three directions. Text stays a deep
+     moss-tinted charcoal, never pure black. */
+  --moss: #47593f;
+  --moss-deep: #2e3c29;
+  --sage: #8a9a7c;
+  --ivory: #faf7ef;
+  --white-soft: #fdfcf9;
+  /* A sage-tinted ivory, not a warm tan — keeps every neutral surface        */
+  /* reading as "green + ivory", never drifting into unrelated beige/gray.   */
+  --beige: #eef1e7;
+  --gold: #b99a5b;
+  --bronze: #8c6f4e;
+  --ink: #2c3327;
+
+  min-height: 100%;
+  background: var(--ivory);
+  color: var(--ink);
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, "Times New Roman", serif;
+  overflow-x: hidden;
+}
+
+.musicButton {
+  position: sticky;
+  top: 16px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 16px 16px 0 auto;
+  border-radius: 50%;
+  border: 1px solid var(--gold);
+  background: rgba(253, 252, 249, 0.92);
+  cursor: pointer;
+  box-shadow: 0 8px 18px -10px rgba(46, 60, 41, 0.4);
+}
+
+.musicButtonActive {
+  background: var(--moss);
+  border-color: var(--moss);
+}
+
+.musicIcon {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--bronze);
+}
+
+.musicButtonActive .musicIcon {
+  color: var(--white-soft);
+  animation: green-music-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes green-music-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Opening — moss-green ceremonial envelope with botanical framing.       */
+/* ---------------------------------------------------------------------- */
+
+.cover {
+  position: absolute;
+  inset: 0;
+  z-index: 21;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 20%, #5c7052 0%, var(--moss) 48%, var(--moss-deep) 100%);
+  perspective: 1400px;
+  /* Bottom padding lifts the centred group slightly above true centre. */
+  padding: 0 24px 48px;
+}
+
+.coverOuterFrame {
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(185, 154, 91, 0.6);
+  pointer-events: none;
+}
+
+.coverEntrance {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.coverLabel {
+  display: block;
+  margin-bottom: 20px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--beige);
+  opacity: 0.85;
+}
+
+.envelopeFloat {
+  position: relative;
+  /* Gap below the names/date. The title and names/date fade out on open, */
+  /* so the rising flap and portrait card may use their space.            */
+  margin-top: 26px;
+}
+
+/* The whole envelope is the tap target. Gentle continuous float while     */
+/* closed — a subtle "resting on air" detail; it stops once opening.       */
+.envelope {
+  position: relative;
+  display: block;
+  width: min(300px, calc(var(--frame-width, 390px) - 88px));
+  aspect-ratio: 1536 / 1024;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  perspective: 900px;
+  animation: envelope-float 4.5s ease-in-out infinite;
+}
+
+.envelope:disabled {
+  cursor: default;
+}
+
+.envelope:focus-visible {
+  outline: 1px solid var(--gold);
+  outline-offset: 6px;
+}
+
+.envelopeOpening {
+  animation: none;
+}
+
+@keyframes envelope-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.envelopeLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.envelopeLayer img,
+.envelopeFlap img,
+.envelopeSeal img {
+  object-fit: contain;
+}
+
+/* Flap canvas scaled to 95.9% and offset so its fold line (y 150 of the   */
+/* 1024px canvas, x 25-1510) lands on the body's top edge (y 68, x 56-1480) */
+/* — otherwise the fold band floats mid-way down the body's side posts.    */
+/* The hinge stays at the fold line: 14.65% down the flap box.             */
+.envelopeFlap {
+  position: absolute;
+  left: 2.08%;
+  top: -7.32%;
+  width: 95.89%;
+  height: 95.89%;
+  transform-origin: 50% 14.65%;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.22));
+}
+
+/* Wax seal centred on the (repositioned) flap tip, ~72% down the canvas.  */
+.envelopeSeal {
+  position: absolute;
+  left: 50%;
+  top: 71%;
+  width: 22%;
+  aspect-ratio: 1;
+  margin: -11% 0 0 -11%;
+  z-index: 4;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.3));
+}
+
+/* Engraved chữ Hỷ in the seal's inner disc. System CJK serif faces only  */
+/* (Songti/Noto Serif CJK ship on iOS/Android/desktop) — no font download. */
+.envelopeSealMark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Noto Serif SC", "Source Han Serif SC", "SimSun", serif;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: #7a5a24;
+  text-shadow:
+    0 1px 0 rgba(255, 236, 190, 0.55),
+    0 -1px 0 rgba(70, 48, 12, 0.35);
+  opacity: 0.9;
+}
+
+/* Clip box: unbounded above, cut at the body's bottom edge (91% of the    */
+/* canvas), so the tall card never shows below the envelope.               */
+.envelopeCardClip {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  clip-path: inset(-300% 0 9% 0);
+  pointer-events: none;
+}
+
+/* Large portrait insert (~84% of the body width). Starts just below the   */
+/* pocket opening (22.6% of the canvas) and rises until ~3/4 of it is out. */
+.envelopeCard {
+  position: absolute;
+  left: 50%;
+  top: 26%;
+  width: 80%;
+  aspect-ratio: 3 / 4;
+  margin-left: -40%;
+  padding: 7px;
+  background: var(--white-soft);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px rgba(185, 154, 91, 0.55),
+    0 18px 34px -14px rgba(0, 0, 0, 0.55);
+}
+
+.envelopeCardPhoto {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px rgba(185, 154, 91, 0.45);
+}
+
+.coverMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.envelopeNames {
+  font-size: 19px;
+  color: var(--white-soft);
+}
+
+.envelopeDate {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}
+
+.coverHint {
+  display: block;
+  margin-top: 14px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--beige);
+  opacity: 0.8;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Hero — one dominant photo, typography integrated directly over it.     */
+/* ---------------------------------------------------------------------- */
+
+.heroZone {
+  position: relative;
+  min-height: 480px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.heroPhoto {
+  position: absolute;
+  inset: 0;
+}
+
+.heroScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(46, 60, 41, 0) 40%, rgba(46, 60, 41, 0.82) 100%);
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding: 0 28px 40px;
+  text-align: center;
+}
+
+.heroKicker {
+  display: block;
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 15px;
+  color: var(--beige);
+  margin-bottom: 8px;
+}
+
+/* clamp() scales with viewport width so the full "Name & Name" string      */
+/* always fits one line at 360–430px — no wrap, no lonely word dropping.    */
+.heroNames {
+  font-size: clamp(18px, 6.2vw, 27px);
+  line-height: 1.2;
+  color: var(--white-soft);
+  white-space: nowrap;
+}
+
+.heroAmp {
+  display: inline-block;
+  font-size: 0.55em;
+  color: var(--gold);
+  margin: 0 0.2em;
+}
+
+.heroDate {
+  display: block;
+  margin-top: 12px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Portrait story — alternating asymmetric editorial blocks.              */
+/* ---------------------------------------------------------------------- */
+
+.sectionPortraitStory {
+  background: var(--white-soft);
+  padding: 6px 0;
+}
+
+/* Primary block sits below the opening quote and tight above the floral  */
+/* strip; secondary block tight below it, so quote -> photo -> flowers ->  */
+/* photo reads as one piece.                                               */
+.portraitBlock {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding: 26px 24px 12px;
+}
+
+.portraitBlockRight {
+  flex-direction: row-reverse;
+  padding: 4px 24px 30px;
+}
+
+.portraitPhoto {
+  width: 62%;
+  aspect-ratio: 3 / 4;
+  flex-shrink: 0;
+  box-shadow: 0 20px 36px -22px rgba(46, 60, 41, 0.5);
+}
+
+.portraitTextPlate {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px 18px;
+}
+
+.portraitBlockRight .portraitTextPlate {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.portraitLabel {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--bronze);
+  margin-bottom: 8px;
+}
+
+.portraitName {
+  font-size: 22px;
+  color: var(--moss);
+  line-height: 1.3;
+}
+
+/* Opening quote of the portrait story — an airy emotional lead-in above  */
+/* the first portrait.                                                     */
+.portraitQuote {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 34px 16px 4px;
+  font-family: var(--gi-quote-script), "Segoe Script", cursive;
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1.45;
+  color: var(--moss);
+  text-align: center;
+}
+
+/* Each phrase stays on its own single line. */
+.portraitQuote span {
+  white-space: nowrap;
+}
+
+/* Floral strip between the two portraits. The PNG carries ~15% transparent */
+/* padding top/bottom; negative margins trim that so it sits close to both */
+/* photos.                                                                  */
+.portraitDivider {
+  position: relative;
+  width: calc(100% - 48px);
+  max-width: 300px;
+  aspect-ratio: 2172 / 724;
+  margin: -6px auto -10px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Message + shared section chrome                                        */
+/* ---------------------------------------------------------------------- */
+
+.sectionMessage {
+  background: var(--ivory);
+  padding: 38px 30px 26px;
+  text-align: center;
+}
+
+.message {
+  font-size: 15px;
+  line-height: 1.9;
+  color: #4a5240;
+}
+
+.sectionKicker {
+  text-align: center;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--bronze);
+  margin-bottom: 22px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Family — compact two-column presentation, light and unobtrusive         */
+/* (checkpoint V10 §A — reduced from the previous heavier, textured card). */
+/* ---------------------------------------------------------------------- */
+
+/* Even rhythm: ~26px invitation line -> ornament -> ~24px -> columns.      */
+.sectionFamily {
+  background: var(--ivory);
+  padding: 0 20px 32px;
+  text-align: center;
+}
+
+.familyOrnament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.familyOrnamentLine {
+  width: 36px;
+  height: 1px;
+  background: var(--gold);
+}
+
+.familyOrnamentMark {
+  color: var(--moss);
+  font-size: 14px;
+}
+
+.familyColumns {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.familyColumn {
+  flex: 1;
+  min-width: 0;
+  padding: 0 14px;
+}
+
+.familySideLabel {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bronze);
+  margin-bottom: 10px;
+}
+
+.familyParentRow {
+  font-size: 13px;
+  color: var(--moss);
+  line-height: 1.75;
+}
+
+.familyDivider {
+  width: 1px;
+  height: 48px;
+  align-self: center;
+  background: var(--gold);
+  opacity: 0.4;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Ceremony — soft sage surface, beautiful date composition + lunar line. */
+/* ---------------------------------------------------------------------- */
+
+.sectionCeremony {
+  background: linear-gradient(180deg, var(--ivory) 0%, #eef1e7 30%, #eef1e7 70%, var(--ivory) 100%);
+  padding: 8px 24px 8px;
+}
+
+/* Cleaner composition (checkpoint V10 §A) — the card no longer wraps       */
+/* itself in a full border box; a single thin rule frames just the date     */
+/* row, letting the title/lunar line/meta breathe around it.                */
+.ceremonyCard {
+  padding: 4px 8px 8px;
+  text-align: center;
+}
+
+/* Ceremony title reads as the section heading: slightly larger, moss,    */
+/* with more air above the date rule.                                     */
+.ceremonyLabel {
+  display: block;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--moss);
+  margin-bottom: 20px;
+}
+
+.dateComposition {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 18px 0;
+  border-top: 1px solid rgba(185, 154, 91, 0.35);
+  border-bottom: 1px solid rgba(185, 154, 91, 0.35);
+}
+
+.dateDay {
+  font-size: 46px;
+  line-height: 1;
+  color: var(--moss);
+}
+
+.dateMonthYear {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bronze);
+  border-left: 1px solid rgba(185, 154, 91, 0.35);
+  padding-left: 16px;
+}
+
+.lunarLine {
+  margin-top: 16px;
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 12.5px;
+  color: #6f7a63;
+}
+
+.ceremonyMeta {
+  margin-top: 6px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--moss);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Decorative calendar card (checkpoint V11) — rounded moss card, corner    */
+/* bouquets, script-styled month title, and the wedding day marked by a    */
+/* soft pulsing heart behind its still-legible day number. Deliberately no */
+/* top-center ornament — only the two corner bouquets.                     */
+/* ---------------------------------------------------------------------- */
+
+.calendarCard {
+  position: relative;
+  max-width: 260px;
+  /* Bottom margin leaves clear space for the bottom-right bouquet's      */
+  /* overhang so it never reaches the event card below.                  */
+  margin: 34px auto 44px;
+  background: linear-gradient(165deg, var(--moss) 0%, var(--moss-deep) 100%);
+  border-radius: 22px;
+  padding: 26px 22px 22px;
+  text-align: center;
+  box-shadow: 0 18px 34px -20px rgba(46, 60, 41, 0.5);
+  overflow: visible;
+}
+
+.calendarIntro {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 14px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--beige);
+  opacity: 0.85;
+}
+
+/* System cursive stack only — no embedded/downloaded font file. Falls back */
+/* gracefully to the generic "cursive" family where the named ones aren't   */
+/* installed, still reading as script rather than the body serif.          */
+/* Same Great Vibes calligraphy as the portrait quote (next/font variable */
+/* applied on the element); system script stack only as a fallback.      */
+.calendarMonthLabel {
+  display: block;
+  font-family: var(--gi-quote-script), "Segoe Script", "Snell Roundhand", cursive;
+  font-size: 46px;
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  color: var(--white-soft);
+  margin-bottom: 14px;
+}
+
+.calendarWeekRow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 6px;
+}
+
+.calendarWeekday {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: rgba(253, 252, 249, 0.5);
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  row-gap: 11px;
+}
+
+.calendarCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  color: var(--white-soft);
+}
+
+/* Heart sits BEHIND the day number (lower z-index, larger footprint) —     */
+/* the number itself stays fully legible in white on top of it. Extra row   */
+/* gap above accommodates the enlarged glyph without crowding neighbors.    */
+.calendarHeartCell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.calendarHeartShape {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  font-size: 32px;
+  line-height: 1;
+  color: #d0433a;
+  filter: drop-shadow(0 0 6px rgba(208, 67, 58, 0.55));
+  z-index: 0;
+  animation: calendar-heart-pulse 1.8s ease-in-out infinite;
+}
+
+.calendarHeartDay {
+  position: relative;
+  z-index: 1;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--white-soft);
+  text-shadow: 0 1px 2px rgba(46, 60, 41, 0.5);
+}
+
+@keyframes calendar-heart-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.14); opacity: 1; }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Corner bouquets — real photographic floral PNG assets (checkpoint V12), */
+/* positioned to overlap the card's corners. Square wrappers preserve the  */
+/* assets' native 1:1 aspect ratio; sizing via clamp() keeps them          */
+/* decorative-scaled (never covering the heading or calendar numbers)      */
+/* across the 360/390/430px review widths.                                 */
+/* ---------------------------------------------------------------------- */
+
+.calendarFlower {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+}
+
+/* Sized off --frame-width (the reviewer's phone-frame CSS var, inherited   */
+/* from .phoneFrame) rather than vw — vw tracks the browser viewport, which */
+/* does not change when the 360/390/430px selector is used, so vw sizing    */
+/* would not actually respond to it. Pushed well outside the card so the    */
+/* dense petal mass clears the intro heading / calendar numbers; only the   */
+/* sparse trailing greenery grazes the card corner itself.                  */
+.calendarFlowerTopLeft {
+  top: -58px;
+  left: -46px;
+  width: clamp(100px, calc(var(--frame-width, 390px) * 0.3), 128px);
+  height: clamp(100px, calc(var(--frame-width, 390px) * 0.3), 128px);
+}
+
+/* Tucked onto the card's bottom-right corner (overlaps the edge, stays  */
+/* inside the phone frame at 360px).                                     */
+.calendarFlowerBottomRight {
+  bottom: -38px;
+  right: -30px;
+  width: clamp(100px, calc(var(--frame-width, 390px) * 0.3), 128px);
+  height: clamp(100px, calc(var(--frame-width, 390px) * 0.3), 128px);
+}
+
+/* One clearly separated card per operational side (checkpoint V9 §5) —    */
+/* replaces the old single dense block combining both sides' info.         */
+.eventCardStack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+/* Hierarchy: heading -> time/weekday -> large date -> lunar -> venue name */
+/* -> venue address -> directions CTA.                                    */
+.eventCard {
+  border: 1px solid rgba(185, 154, 91, 0.7);
+  border-radius: 6px;
+  background: var(--white-soft);
+  padding: 24px 20px 22px;
+  text-align: center;
+  box-shadow: 0 12px 24px -20px rgba(46, 60, 41, 0.35);
+}
+
+.eventCardTag {
+  display: inline-block;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--bronze);
+  margin-bottom: 10px;
+}
+
+.eventCardHeading {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--moss);
+  line-height: 1.5;
+}
+
+.eventCardWhen {
+  margin-top: 14px;
+}
+
+.eventCardTime {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--bronze);
+}
+
+.eventCardDate {
+  margin-top: 6px;
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  color: var(--moss);
+}
+
+.eventCardLunar {
+  margin-top: 6px;
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 12px;
+  color: #6f7a63;
+}
+
+/* Thin gold rule separates the "when" block from the "where" block. */
+.eventCardVenue {
+  margin: 16px auto 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(185, 154, 91, 0.35);
+}
+
+.eventCardVenueName {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.45;
+  color: var(--moss);
+}
+
+.eventCardVenueAddress {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #6f7a63;
+}
+
+.directionsButton {
+  display: inline-block;
+  min-height: 44px;
+  line-height: 44px;
+  padding: 0 20px;
+  border: 1px solid var(--moss);
+  color: var(--moss);
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  text-align: center;
+}
+
+/* Countdown — standalone section after Timeline (Task 029 patch 2 reorder). */
+.sectionCountdown {
+  background: var(--ivory);
+  padding: 4px 24px 34px;
+  text-align: center;
+}
+
+.countdownRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.countdownCell {
+  text-align: center;
+  border-top: 1px solid rgba(185, 154, 91, 0.5);
+  padding-top: 10px;
+}
+
+.countdownValue {
+  font-size: 20px;
+  display: block;
+  color: var(--moss);
+}
+
+.countdownLabel {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bronze);
+}
+
+.ornamentPause {
+  text-align: center;
+  padding: 26px 0 4px;
+}
+
+/* Countdown ornament sits closer to the timeline above it so the two     */
+/* read as one sequence.                                                  */
+.ornamentPauseTight {
+  padding-top: 8px;
+}
+
+.ornamentGlyph {
+  color: var(--gold);
+  font-size: 16px;
+  opacity: 0.85;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Timeline                                                                */
+/* ---------------------------------------------------------------------- */
+
+.sectionTimeline {
+  background: var(--ivory);
+  padding: 8px 28px 16px;
+}
+
+.timelineList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.timelineRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.timelineTime {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--bronze);
+  width: 46px;
+}
+
+.timelineDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--moss);
+  flex-shrink: 0;
+}
+
+.timelineLabel {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Photo story — five-photo editorial cluster: anchor (4:5), even pair     */
+/* (4:5 each), then a same-height offset pair split ~58% / ~42%. Every     */
+/* tile fills its cell, so there is no dead space between photos.          */
+/* ---------------------------------------------------------------------- */
+
+.sectionPhotoStory {
+  background: var(--white-soft);
+  padding: 10px 20px 14px;
+}
+
+.clusterGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.clusterAnchor {
+  grid-column: 1 / -1;
+  aspect-ratio: 4 / 5;
+}
+
+.clusterPairItem {
+  aspect-ratio: 4 / 5;
+}
+
+/* Row height is fixed by the container ratio so both tiles share one     */
+/* height: the wide tile reads near-square, the narrow one tall.          */
+.clusterOffsetRow {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 58fr 42fr;
+  gap: 10px;
+  aspect-ratio: 100 / 64;
+}
+
+.clusterOffsetWide,
+.clusterOffsetNarrow {
+  min-width: 0;
+  height: 100%;
+}
+
+.clusterPhoto {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  box-shadow: 0 12px 24px -18px rgba(46, 60, 41, 0.42);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Love story — full-bleed photo, floating quote card overlapping it.     */
+/* ---------------------------------------------------------------------- */
+
+.sectionStory {
+  position: relative;
+  min-height: 420px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0 26px 44px;
+}
+
+.storyPhoto {
+  position: absolute;
+  inset: 0;
+}
+
+.storyScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(46, 60, 41, 0.05) 0%, rgba(46, 60, 41, 0.78) 100%);
+}
+
+.storyCardWrap {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 300px;
+}
+
+.storyCard {
+  text-align: center;
+}
+
+.storyQuoteMark {
+  display: block;
+  font-family: Georgia, serif;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+
+.storyText {
+  font-size: 16px;
+  line-height: 1.85;
+  font-style: italic;
+  color: var(--white-soft);
+}
+
+/* ---------------------------------------------------------------------- */
+/* RSVP + wishes, gift                                                    */
+/* ---------------------------------------------------------------------- */
+
+.sectionDetails {
+  background: var(--ivory);
+  padding: 6px 26px 40px;
+  text-align: center;
+}
+
+.rsvpCard {
+  border: 1px solid var(--gold);
+  padding: 28px 22px;
+}
+
+.rsvpHeading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 21px;
+  line-height: 1.35;
+  margin: 0 0 22px;
+  color: var(--moss);
+  text-align: center;
+}
+
+.rsvpHeadingLine {
+  white-space: nowrap;
+}
+
+.rsvpHeadingAmp {
+  display: inline-block;
+  color: var(--gold);
+  margin-right: 8px;
+  font-size: 17px;
+}
+
+.rsvpForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.rsvpNameInput,
+.rsvpMessageInput {
+  border: 1px solid rgba(185, 154, 91, 0.6);
+  background: #ffffff;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--ink);
+}
+
+.rsvpNameInput {
+  min-height: 44px;
+}
+
+.rsvpMessageInput {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.rsvpSubmitButton {
+  min-height: 44px;
+  border: 1px solid var(--moss);
+  background: var(--moss);
+  color: var(--white-soft);
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.rsvpSubmitButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rsvpSubmitButton:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.rsvpConfirm {
+  text-align: center;
+}
+
+.rsvpMessageRecap {
+  margin-top: 10px;
+  font-size: 13px;
+  font-style: italic;
+  color: #4a5240;
+}
+
+.rsvpEditButton {
+  margin-top: 14px;
+  border: none;
+  background: transparent;
+  text-decoration: underline;
+  font-size: 12px;
+  color: var(--bronze);
+  cursor: pointer;
+}
+
+.rsvpSelectLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bronze);
+}
+
+.rsvpSelect {
+  min-height: 44px;
+  border: 1px solid var(--moss);
+  background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2347593f'/%3E%3C/svg%3E") no-repeat right 14px center;
+  color: var(--ink);
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: 14px;
+  letter-spacing: normal;
+  text-transform: none;
+  padding: 0 36px 0 14px;
+  appearance: none;
+  cursor: pointer;
+}
+
+.rsvpFeedback {
+  margin-top: 14px;
+  font-size: 12px;
+  color: #4a5240;
+  font-style: italic;
+}
+
+.giftBlock {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.giftNote {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #4a5240;
+  margin: 0 0 16px;
+}
+
+.giftButton {
+  min-height: 44px;
+  border: 1px solid var(--moss);
+  background: var(--moss);
+  color: var(--white-soft);
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 12px 26px;
+  cursor: pointer;
+}
+
+.giftButton:active {
+  transform: scale(0.98);
+}
+
+/* ------------------------------------------------------------------ */
+/* Gift modal                                                          */
+/* ------------------------------------------------------------------ */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.modalScrim {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: rgba(44, 51, 39, 0.55);
+  cursor: pointer;
+}
+
+.modalPanel {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  background: var(--ivory);
+  padding: 24px 22px 28px;
+  box-shadow: 0 -20px 50px rgba(46, 60, 41, 0.3);
+}
+
+.modalClose {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.modalTabs {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 20px;
+}
+
+.modalTab {
+  flex: 1;
+  min-height: 40px;
+  border: 1px solid var(--moss);
+  background: transparent;
+  color: var(--moss);
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.modalTabActive {
+  background: var(--moss);
+  color: var(--white-soft);
+}
+
+.modalQr {
+  width: 128px;
+  height: 128px;
+  margin: 4px auto 20px;
+  background:
+    linear-gradient(45deg, var(--moss) 25%, transparent 25%, transparent 75%, var(--moss) 75%),
+    linear-gradient(45deg, var(--moss) 25%, var(--ivory) 25%, var(--ivory) 75%, var(--moss) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+  border: 1px solid var(--moss);
+}
+
+.modalRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(185, 154, 91, 0.4);
+}
+
+.modalRowLabel {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bronze);
+  flex-shrink: 0;
+  width: 92px;
+}
+
+.modalRowValue {
+  font-size: 13px;
+  color: var(--ink);
+  flex: 1;
+}
+
+.modalCopyButton {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--moss);
+  background: transparent;
+  color: var(--moss);
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ */
+/* Dress code                                                          */
+/* ------------------------------------------------------------------ */
+
+.sectionDressCode {
+  background: var(--beige);
+  padding: 36px 28px 40px;
+  text-align: center;
+}
+
+.dressCodeText {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #4a5240;
+  max-width: 300px;
+  margin: 0 auto 18px;
+}
+
+.dressCodeSwatches {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.dressCodeSwatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(46, 60, 41, 0.25);
+}
+
+/* ------------------------------------------------------------------ */
+/* Final album — mixed editorial rhythm, never an equal grid.          */
+/* ------------------------------------------------------------------ */
+
+.sectionGallery {
+  background: var(--white-soft);
+  padding: 42px 16px 20px;
+}
+
+.galleryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 44px;
+  grid-auto-flow: dense;
+  gap: 8px;
+}
+
+.galleryItem {
+  box-shadow: 0 10px 20px -16px rgba(46, 60, 41, 0.4);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Closing — deep moss bookend, final page of the album.                  */
+/* ---------------------------------------------------------------------- */
+
+.sectionClosing {
+  background: linear-gradient(165deg, var(--moss) 0%, var(--moss-deep) 100%);
+  color: var(--white-soft);
+  padding: 50px 28px 44px;
+  text-align: center;
+}
+
+.closingOrnament {
+  display: block;
+  color: var(--gold);
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+
+.closingLine {
+  font-size: 14px;
+  font-style: italic;
+  color: var(--beige);
+  margin-bottom: 14px;
+  line-height: 1.8;
+}
+
+.closingNames {
+  font-size: 23px;
+  color: var(--white-soft);
+}
+
+.closingDate {
+  display: block;
+  margin-top: 12px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

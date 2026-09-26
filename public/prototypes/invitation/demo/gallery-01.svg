@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800">
+  <defs>
+    <linearGradient id="wash" x1="67.10100716628344%" y1="3.0153689607045777%" x2="32.89899283371656%" y2="96.98463103929542%">
+      <stop offset="0%" stop-color="#faf7ef" />
+      <stop offset="100%" stop-color="#8a9a7c" />
+    </linearGradient>
+    <radialGradient id="vignette" cx="50%" cy="42%" r="75%">
+      <stop offset="60%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="100%" stop-color="#2e3c29" stop-opacity="0.32" />
+    </radialGradient>
+  </defs>
+  <rect width="600" height="800" fill="url(#wash)" />
+  <rect width="600" height="800" fill="url(#vignette)" />
+
+  <g transform="translate(34 766) rotate(-20) scale(1.3)" opacity="0.16">
+    <path d="M0 0 C 14 -18, 34 -30, 60 -34" fill="none" stroke="#fdfcf9" stroke-width="2" />
+    <ellipse cx="18" cy="-14" rx="10" ry="5" fill="#fdfcf9" transform="rotate(-32 18 -14)" />
+    <ellipse cx="34" cy="-24" rx="9" ry="4.5" fill="#fdfcf9" transform="rotate(-40 34 -24)" />
+    <ellipse cx="49" cy="-31" rx="8" ry="4" fill="#fdfcf9" transform="rotate(-48 49 -31)" />
+  </g>
+
+  <g transform="translate(566 34) rotate(160) scale(1.1)" opacity="0.12">
+    <path d="M0 0 C 14 -18, 34 -30, 60 -34" fill="none" stroke="#fdfcf9" stroke-width="2" />
+    <ellipse cx="18" cy="-14" rx="10" ry="5" fill="#fdfcf9" transform="rotate(-32 18 -14)" />
+    <ellipse cx="34" cy="-24" rx="9" ry="4.5" fill="#fdfcf9" transform="rotate(-40 34 -24)" />
+    <ellipse cx="49" cy="-31" rx="8" ry="4" fill="#fdfcf9" transform="rotate(-48 49 -31)" />
+  </g>
+  <rect x="10" y="10" width="580" height="780" fill="none" stroke="#b99a5b" stroke-opacity="0.35" stroke-width="1" />
+
+  <g>
+    <rect x="507.20000000000005" y="16" width="76.8" height="22" rx="3" fill="#2e3c29" opacity="0.55" />
+    <text x="521.2" y="31" font-family="Helvetica, Arial, sans-serif" font-size="10"
+      letter-spacing="1.6" fill="#eef1e7">ALBUM 01</text>
+  </g>
+</svg>

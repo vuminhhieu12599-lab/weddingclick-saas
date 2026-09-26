@@ -1,0 +1,284 @@
+.page {
+  min-height: 100vh;
+  background: #f2f1ee;
+  color: #1c1a17;
+  padding: 24px 16px 64px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.header {
+  max-width: 960px;
+  margin: 0 auto 20px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #6b6862;
+  margin: 0 0 16px;
+}
+
+.controls {
+  max-width: 960px;
+  margin: 0 auto 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.group {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  background: #ffffff;
+  border: 1px solid #e2e0da;
+  border-radius: 999px;
+}
+
+.groupButton {
+  border: none;
+  background: transparent;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b6862;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.groupButtonActive {
+  background: #1c1a17;
+  color: #ffffff;
+}
+
+.replayButton {
+  border: 1px solid #1c1a17;
+  background: #ffffff;
+  color: #1c1a17;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.replayButton:active {
+  transform: scale(0.97);
+}
+
+.controlsRow {
+  max-width: 960px;
+  margin: 0 auto 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.personalizationToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1c1a17;
+  background: #ffffff;
+  border: 1px solid #e2e0da;
+  border-radius: 999px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.guestNameInput {
+  border: 1px solid #e2e0da;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  min-width: 200px;
+  background: #ffffff;
+  color: #1c1a17;
+}
+
+.guestNameInput:disabled {
+  opacity: 0.5;
+}
+
+.guestListPanel {
+  max-width: 960px;
+  margin: 0 auto 16px;
+  background: #ffffff;
+  border: 1px solid #e2e0da;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.guestListHeading {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1c1a17;
+}
+
+.guestListHeadingNote {
+  font-weight: 400;
+  color: #8a877f;
+}
+
+.guestListHelp {
+  font-size: 12px;
+  color: #6b6862;
+  margin: 4px 0 12px;
+  line-height: 1.6;
+}
+
+.guestListAddRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.guestListAddButton {
+  border: 1px solid #1c1a17;
+  background: #1c1a17;
+  color: #ffffff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.guestListExcelButton {
+  border: 1px dashed #c7c2b8;
+  background: transparent;
+  color: #8a877f;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: not-allowed;
+  white-space: nowrap;
+}
+
+.guestListChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.guestListChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid #e2e0da;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.guestListChipActive {
+  border-color: #1c1a17;
+}
+
+.guestListChipLabel {
+  border: none;
+  background: transparent;
+  padding: 6px 4px 6px 12px;
+  font-size: 12px;
+  color: #1c1a17;
+  cursor: pointer;
+}
+
+.guestListChipRemove {
+  border: none;
+  background: transparent;
+  padding: 6px 10px 6px 4px;
+  font-size: 10px;
+  color: #8a877f;
+  cursor: pointer;
+}
+
+.shareCoverNote {
+  max-width: 960px;
+  margin: 0 auto 20px;
+  font-size: 12px;
+  color: #6b6862;
+  line-height: 1.6;
+  background: #ffffff;
+  border: 1px dashed #c7c2b8;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.sectionsPanel {
+  max-width: 960px;
+  margin: 0 auto 24px;
+  background: #ffffff;
+  border: 1px solid #e2e0da;
+  border-radius: 12px;
+  padding: 4px 16px 14px;
+}
+
+.sectionsSummary {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 0;
+  cursor: pointer;
+  color: #1c1a17;
+}
+
+.sectionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px 16px;
+  padding-top: 6px;
+}
+
+.sectionToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #4a453d;
+  cursor: pointer;
+}
+
+.canvasArea {
+  display: flex;
+  justify-content: center;
+}
+
+.phoneFrame {
+  width: var(--frame-width, 390px);
+  height: 844px;
+  background: #000;
+  border-radius: 44px;
+  padding: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.phoneScreen {
+  width: 100%;
+  height: 100%;
+  border-radius: 34px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #ffffff;
+  position: relative;
+  -webkit-overflow-scrolling: touch;
+}
+
+.note {
+  max-width: 960px;
+  margin: 16px auto 0;
+  font-size: 12px;
+  color: #8a877f;
+  line-height: 1.6;
+}

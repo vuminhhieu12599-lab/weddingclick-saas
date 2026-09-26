@@ -371,6 +371,28 @@ Implementation: `app/api/v2/public/intake-submissions/route.ts`, `app/api/v2/int
 
 Implementation: `lib/domain/template-design-manifest.ts`; `lib/server/project-design/{project-design-types,project-design-gateway,validate-template-design-manifest,validate-save-project-design-input,validate-design-config-against-manifest,get-project-design,save-project-design}.ts`; `lib/server/templates/{templates-types,templates-gateway,list-templates}.ts`; `lib/server/supabase/{project-design-repository,templates-repository}.ts`; `lib/server/routes/{project-design,templates}.ts`; `app/api/v2/internal/projects/[id]/design/route.ts`; `app/api/v2/internal/templates/route.ts`; plus their respective `__tests__` suites (12 files).
 
+## Task 029 — Invitation Visual Prototypes (COMPLETE / FROZEN)
+
+**Status:** **COMPLETE, FROZEN.** All three visual directions are **approved** and are the visual source of truth for the production templates that come next: **Elegant Editorial**, **Vietnamese Heritage** (final QA PASS) and **Romantic Minimal** (final QA PASS). The final independent source/architecture review passed. So did the targeted re-review of the Elegant Editorial RSVP personalization MUST-FIX repair.
+
+**Relationship to the Rendering Foundation (important).** `docs/API_CONTRACT.md` §7.2/§8 defines Task 029 as the production *Invitation Rendering Foundation*. What was delivered and frozen here is **internal visual prototypes only**. No Wedding Domain Resolver, `InvitationViewModel` builder, template registry, snapshot payload construction or media reference extraction was built, so **Task 030's hard dependency is not yet satisfied** (see the §7.2 status note). **Task 030 must not start** until that foundation is delivered. No task/roadmap renumbering was performed.
+
+**Scope (frozen):** internal visual prototypes only, at `app/internal/prototypes/invitation/`. The route returns `notFound()` when `NODE_ENV === "production"` and is marked `noindex`. The prototypes use local fictional data/config (`_data/wedding-data.ts`) and cover responsive interaction (360/390/430 px review frames); COMMON/GROOM/BRIDE behavior; guest personalization; optional section toggles; album/lightbox interactions; countdown/calendar; a local-state-only RSVP; a Gift modal; and music control UI/state only (no audio playback).
+
+**Data/security boundary:** no database migration, no Supabase access or mutation, no production API, no `service_role` usage, no backend persistence, and no real financial or customer data. Names, venue and bank details are fictional placeholders.
+
+**Architecture notes for the production-renderer phase.** Current prototype flow: prototype wedding data → shared resolvers/derivations (`_shared/`) → selected visual direction. The shared prototype concerns are COMMON/GROOM/BRIDE resolution, invitation wording/personalization, ceremony/calendar/countdown derivation, section visibility, RSVP state, album assignment, lightbox helpers, the reduced-motion helper and music control state. These are *prototype* helpers, not the production `InvitationViewModel`. They are reference material for the future Rendering Foundation. **Naming/mapping:** the UI label "Elegant Editorial" currently renders `GreenIvoryEditorialPrototype` (`_directions/green-ivory-editorial/`). The legacy `_directions/elegant-editorial/` directory still exists but is not imported and is not the active renderer. It was intentionally not renamed or removed during the freeze.
+
+**Deferred (intentionally not addressed in Task 029):**
+- Production architecture: `InvitationViewModel`/renderer/template registry; side-identity comparison by explicit role instead of object identity.
+- Shared-helper consolidation: album viewer, lightbox, calendar helpers, `useCountdown` subscribe memoization.
+- Content/data: generic guest-wording normalization, cleanup of hardcoded demo copy/location, a fully data-driven Elegant Editorial gallery, and local BRIDE presentation checks for Elegant Editorial.
+- Interaction hardening: the clipboard false-positive success path, Elegant Editorial Gift modal interaction, reduced-motion handling of infinite animations, real music/audio playback, and production accessibility hardening.
+- Internal review page: review-frame scroll-reveal and overlay behavior, font preloading, and the duplicate guest-chip key edge case.
+- Assets/cleanup: unused prototype assets, raw PNG texture optimization, and removal of the legacy `_directions/elegant-editorial/` directory (needs explicit approval).
+
+Implementation: `app/internal/prototypes/invitation/{layout,page}.tsx`, `prototype.module.css`, `_data/`, `_shared/`, `_directions/{green-ivory-editorial,vietnamese-heritage,romantic-minimal,elegant-editorial}/`; assets under `public/prototypes/invitation/{decor,demo}/`.
+
 ## Draft / Review / Publish
 
 1. Save is not Publish.
