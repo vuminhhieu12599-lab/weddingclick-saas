@@ -503,10 +503,12 @@ Implementation: `app/internal/prototypes/invitation/{layout,page}.tsx`, `prototy
                lunarDateDisplay? ],
   operationalSides: EventSide[] (GROOM|BRIDE, RF4),
   content:   { invitationMessage?, loveStory? },
-  gift:      { groom?, bride? },                         // per docs/PHYSICAL_DATABASE_PLAN.md §2.7 [R20]
+  gift:      { groom?, bride? },                         // field set only: docs/PHYSICAL_DATABASE_PLAN.md §2.7 [R20];
+             // side omission / meaningful content: RF-02 clarification S7/S8
   media:     { coverMediaId?, galleryMediaIds[], audioMediaId?,
                qr: { groomMediaId?, brideMediaId?, commonMediaId? } },
-  sections:  { ...resolved section presence },
+  sections:  { invitationMessage, loveStory, gallery, music, gift },
+             // booleans = canonical content availability only (see "RF-02 Snapshot Sections Contract Clarification")
   design:    { paletteKey, fontPresetKey, effectPresetKey, sectionSettings, designSettings }
 }
 ```
@@ -519,7 +521,7 @@ Payload rules:
 - **E.** **No RSVP state:** no form state, submission result, or party-size response.
 - **F.** **No `additional_note`** (RF8).
 - **G.** Missing optional values are omitted or represented exactly as the TypeScript contract says. Demo or placeholder values are never invented.
-- **H.** `gift` includes only the variant's `operationalSides`: `GROOM` → groom only, `BRIDE` → bride only, `COMMON` → both. A side whose four gift fields are all null is omitted.
+- **H.** `gift` includes only the variant's `operationalSides`: `GROOM` → groom only, `BRIDE` → bride only, `COMMON` → both. A side with no meaningful canonical gift content is omitted: none of its three bank text fields is non-blank after trim and it has no canonical QR media reference (RF-02 clarification S7/S8).
 - **I.** Event entries use the existing `ProjectEventRecord` field names (`lib/server/project-events/project-events-types.ts`), extended in RF-L03 with `lunarDateDisplay`. Each entry's `isPrimary` is the canonical `is_primary` value passed through; it does not mean "is the ceremony". The ceremony is identified only by `ceremony.eventId`.
 - **J.** The event entry is the source of truth for event lunar text. `ceremony.lunarDateDisplay` is a derived convenience copy of the referenced entry's value, not a second independently authored value, and the builder guarantees the two are equal. The payload never contains `wedding_details.lunar_date_display` (RF6).
 
@@ -607,6 +609,81 @@ Create/update stay full-resource operations, so `lunarDateDisplay` becomes a req
 **Intake boundary.** Task 027 intake applies to `wedding_details` only; migration `0026` explicitly touches no `project_events`. Intake therefore keeps capturing the legacy project-level `lunarDateDisplay` unchanged, and that value is never copied automatically to events after RF-L01. Staff enter per-event lunar text through the Project Events API. Adding event or lunar input to intake would be a separate, future scope decision, and any such input must follow the canonical event contract (RF6).
 
 **Frozen-table-shape clarification.** `docs/API_CONTRACT.md` §9 and `docs/PHYSICAL_DATABASE_PLAN.md` §16a describe post-foundation feature migrations as adding functions without changing any frozen table shape. RF-L01 is the one explicitly approved exception, based on the Product Owner decision in RF6: a single additive, nullable, non-destructive column on `project_events`. It does not reopen any other frozen table shape, and it is recorded in §16a when it ships.
+
+## Invitation Rendering Foundation — RF-02 Snapshot Sections Contract Clarification (FROZEN)
+
+**Status:** docs only, **FROZEN** by Product Owner / Architecture decision (2026-09-28). RF-01 is frozen at `5ee6bd1` ("feat: add wedding domain resolver"). RF-02 authoring was blocked because RF11 showed `sections: { ... }` without defined keys or semantics. This section closes that gap. It completes the RF11 placeholder and replaces it; it does not reopen any other RF-00/RF-01 decision.
+
+**S1. Exact `sections` shape (payload v1).**
+
+```text
+sections: {
+  invitationMessage: boolean,
+  loveStory: boolean,
+  gallery: boolean,
+  music: boolean,
+  gift: boolean
+}
+```
+
+This is the complete v1 set. No other key is added: not ceremony, events, families, countdown, calendar, directions, dressCode, portraitStory, structured love-story milestones, RSVP, or per-side gift booleans.
+
+**S2. Meaning: canonical content availability.** Each boolean records only whether the canonical content that optional section needs is available in the payload, after variant filtering. It does **not** mean final renderer visibility, manifest capability, template support, the result of a staff toggle, or a section rendering decision.
+
+**S3. `invitationMessage`.** `true` only when `payload.content.invitationMessage` is a non-null string whose `trim()` is non-empty. Otherwise `false`.
+
+**S4. `loveStory`.** `true` only when `payload.content.loveStory` is a non-null string whose `trim()` is non-empty. Otherwise `false`.
+
+**S5. `gallery`.** `true` when `payload.media.galleryMediaIds.length > 0`. Otherwise `false`.
+
+**S6. `music`.** `true` when `payload.media.audioMediaId` is present. Otherwise `false`.
+
+**S7. `gift`.** `true` when at least one side in `resolution.operationalSides` (RF4) has meaningful canonical gift content. Otherwise `false`. A side has meaningful gift content when either:
+- at least one of its canonical persisted gift/bank text fields (`<side>_bank_name`, `<side>_bank_account_name`, `<side>_bank_account_number`, `docs/PHYSICAL_DATABASE_PLAN.md` §2.7 [R20]) is non-null and non-blank after `trim()`; or
+- it has its canonical QR media reference (`<side>_bank_qr_media_id`).
+
+Gift/QR data from a non-operational side never counts. No COMMON gift owner exists or is created.
+
+**S8. Gift side filtering.** `payload.gift` follows `operationalSides`: `COMMON` may contain `groom` and `bride`, `GROOM` may contain `groom` only, `BRIDE` may contain `bride` only. A side object is omitted when that side has no meaningful canonical gift content (S7). Opposite-side gift data is never exposed in a single-side variant, and no common gift account is created. It follows that `sections.gift` is `true` exactly when `payload.gift` contains at least one side object.
+
+**S9. QR ownership and filtering.** `payload.media.qr` also follows `operationalSides`:
+- `COMMON`: may include the canonical groom QR (`groomMediaId`) and the canonical bride QR (`brideMediaId`).
+- `GROOM`: may include `groomMediaId` only; `brideMediaId` must be absent.
+- `BRIDE`: may include `brideMediaId` only; `groomMediaId` must be absent.
+- `commonMediaId` is **absent** in payload v1, unless a future explicit canonical persisted common-QR pointer is introduced (RF13). A `project_media` row with `media_type = 'QR_COMMON'` is not enough to establish ownership. Common-QR ownership is never inferred or fabricated.
+
+**S10. `design.sectionSettings` boundary.** `design.sectionSettings` is copied into the payload unchanged, per the existing Task 028 JSON contract (`docs/API_CONTRACT.md` §13, `docs/TEMPLATE_SYSTEM.md` §6). RF-02 **must not** apply `sectionSettings` to the `sections` booleans. So `sections` = canonical content availability, and `design.sectionSettings` = persisted design/staff configuration. The final effective renderer section visibility is **not** decided in RF-02. It is resolved later, only once the renderer/manifest capability boundary exists (RF-03+/RF-04).
+
+**S11. Manifest capability boundary.** RF-02 does not depend on the unfrozen conceptual manifest `sectionCapabilities` (`docs/TEMPLATE_SYSTEM.md` §6) or any equivalent renderer-manifest section-support vocabulary. Manifest/renderer compatibility stays later foundation work (RF-04). RF-02 must be buildable without the RF-04 registry/manifest implementation.
+
+**S12. RF-02 builder BLOCKING issue codes.** These are builder/pre-snapshot validation issues:
+
+| Code | Emitted when |
+|---|---|
+| `WEDDING_DETAILS_MISSING` | the canonical `wedding_details` row is absent |
+| `GROOM_NAME_MISSING` | `wedding_details` exists and `groomName` is null or its `trim()` is empty |
+| `BRIDE_NAME_MISSING` | `wedding_details` exists and `brideName` is null or its `trim()` is empty |
+
+- If the canonical `wedding_details` row is absent, the builder-owned source/name validation stage returns exactly `[WEDDING_DETAILS_MISSING]`. It does **not** also emit `GROOM_NAME_MISSING` or `BRIDE_NAME_MISSING`: there is no row to evaluate. The builder never synthesizes an empty record, never infers that both names are missing, and never runs name validators against fake null fields. This does not prevent unrelated upstream/system invariant failures from surfacing outside the normal business-result path.
+- `GROOM_NAME_MISSING` and `BRIDE_NAME_MISSING` are evaluated only when `weddingDetails != null`.
+- A whitespace-only name counts as missing.
+- If both names are missing, the issues are emitted in this deterministic order: 1. `GROOM_NAME_MISSING`, 2. `BRIDE_NAME_MISSING`.
+- The builder never synthesizes replacement names and never modifies stored values.
+- No snapshot payload is produced when any BLOCKING issue exists (RF2).
+
+**S13. RF-01 issue preservation.** RF-02 preserves RF-01 BLOCKING issues such as `REQUIRED_CEREMONY_EVENT_MISSING`. If `resolveWeddingDomain` returns `BLOCKED`, RF-02 returns `BLOCKED` and produces no snapshot payload. RF-02 never replaces the resolver's issue with a different code.
+RF-01 remains the owner of resolver issue semantics. RF-02 never replaces a resolver issue, translates it into a builder issue, silently discards it, or changes its relative order among the resolver-returned issues. This applies to `REQUIRED_CEREMONY_EVENT_MISSING` and to any future RF-01 resolver issue.
+
+**S13a. RF-02 validation flow and issue aggregation.** RF-02 validates in this exact order:
+
+1. **Source presence.** If `weddingDetails` is absent, return `BLOCKED` with `[WEDDING_DETAILS_MISSING]`. No fake `WeddingDetailsRecord` is created. `resolveWeddingDomain` is not called, because its required canonical `WeddingDetailsRecord` input does not exist. Normal snapshot construction stops.
+2. **When `weddingDetails` exists.** Evaluate the builder-owned name issues in fixed order (`GROOM_NAME_MISSING`, then `BRIDE_NAME_MISSING`, each only if applicable). Also call `resolveWeddingDomain(...)` with the real canonical `weddingDetails` and events. The resolver is called even when a name is missing.
+3. **Aggregate.** The final RF-02 issue list is: A. the builder-owned name issues in their fixed order, then B. the RF-01 resolver issues in exactly the order `resolveWeddingDomain` returned them. Example with all three conditions: `[GROOM_NAME_MISSING, BRIDE_NAME_MISSING, REQUIRED_CEREMONY_EVENT_MISSING]`.
+4. **Payload gate.** If the combined list contains any BLOCKING issue, RF-02 status is `BLOCKED`, no payload is produced, and snapshot construction does not continue. Only zero blocking issues may produce a `SUCCESS` payload.
+
+This pipeline order is the entire RF-02 v1 ordering rule. There are no numeric priorities, severity or alphabetic sorting, global issue registry, cross-check deduplication policy, or new issue codes.
+
+**S14. Payload version.** All of the above belongs to `payloadSchemaVersion: 1`. It does not create payload v2. It completes the previously placeholder `sections` contract before any persisted Review/Publish snapshot exists. No migration is required.
 
 ## Draft / Review / Publish
 

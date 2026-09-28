@@ -95,6 +95,7 @@ Canonical Project data
 
 - The **snapshot payload** holds only stable canonical values: explicit side roles, event instant plus timezone, and `project_media` ids. It never holds signed or expiring URLs, guest identity or personalization, RSVP state, or `wedding_details.additional_note`.
 - Each payload event carries its own optional `lunarDateDisplay`. `ceremony.lunarDateDisplay` is only a derived copy from the resolved ceremony event.
+- Payload `sections` is exactly `{ invitationMessage, loveStory, gallery, music, gift }`, each a boolean meaning **canonical content availability** after variant filtering. It is not renderer visibility or template support. `design.sectionSettings` is copied unchanged and is not applied to `sections`. Final effective section visibility is decided later, at the renderer/manifest boundary. Gift and QR data follow `operationalSides`, and `qr.commonMediaId` is absent in v1 (`docs/DECISIONS.md` "RF-02 Snapshot Sections Contract Clarification").
 - The **InvitationViewModel** adds precomputed deterministic display fields (the ceremony lunar line comes straight from the ceremony event's text, with no lunar calculation), primary/secondary ordering, the guest display-name overlay, display URLs from an injected media resolver, section state, and RSVP capability metadata.
 - Templates consume only the ViewModel.
 
@@ -193,6 +194,8 @@ Editor options should be generated/validated from template capabilities rather t
 ### Task 028 — `TemplateDesignManifestV1` (frozen design-config subset)
 
 Task 028 froze the renderer-independent slice of the conceptual manifest above that is needed to validate a Project's design selection. It does **not** define or freeze the rest of the conceptual manifest — `code`, `name`, `eventType`, `version`, `rendererKey`, `supportedVariants`, `supportedFeatures`, `sectionCapabilities`, and preview metadata remain Task-029+ concerns, read from the same `template_versions.manifest` JSONB but never interpreted by Task 028.
+
+`sectionCapabilities` is still unfrozen. The RF-02 snapshot payload builder does not depend on it or on any equivalent section-support vocabulary; manifest/renderer compatibility is RF-04 work (`docs/DECISIONS.md` "RF-02 Snapshot Sections Contract Clarification" S11).
 
 Exactly six required top-level fields, each required as an own property (not merely inherited):
 
