@@ -99,7 +99,7 @@ Canonical Project data
 - The **snapshot payload** holds only stable canonical values: explicit side roles, event instant plus timezone, and `project_media` ids. It never holds signed or expiring URLs, guest identity or personalization, RSVP state, or `wedding_details.additional_note`.
 - Each payload event carries its own optional `lunarDateDisplay`. `ceremony.lunarDateDisplay` is only a derived copy from the resolved ceremony event.
 - Payload `sections` is exactly `{ invitationMessage, loveStory, gallery, music, gift }`, each a boolean meaning **canonical content availability** after variant filtering. It is not renderer visibility or template support. `design.sectionSettings` is copied unchanged and is not applied to `sections`. Final effective section visibility is decided later, at the renderer/manifest boundary. Gift and QR data follow `operationalSides`, and `qr.commonMediaId` is absent in v1 (`docs/DECISIONS.md` "RF-02 Snapshot Sections Contract Clarification").
-- The **InvitationViewModel** adds precomputed deterministic display fields (the ceremony lunar line comes straight from the ceremony event's text, with no lunar calculation), primary/secondary ordering, the guest display-name overlay, display URLs from an injected media resolver, section state, and RSVP capability metadata. RF-03 delivers only part of this: an async media resolution boundary (injected `MediaResolver`, no concrete storage adapter) plus a pure synchronous builder over Snapshot + optional guest `displayName` overlay + the complete per-media result set. A referenced media item whose URL cannot be resolved stays in the ViewModel as `UNAVAILABLE`; it is never dropped, substituted or faked, and it never blocks the ViewModel. RF-03 copies `sections` as canonical content availability and does not compute effective visibility (RF-04). RSVP capability metadata is RF-05. See `docs/DECISIONS.md` "RF-03 InvitationViewModel / Media Resolution Contract Clarification".
+- The **InvitationViewModel** adds precomputed deterministic display fields (the ceremony lunar line comes straight from the ceremony event's text, with no lunar calculation), primary/secondary ordering, the guest display-name overlay, display URLs from an injected media resolver, section state, and RSVP capability metadata. RF-03 delivers only part of this: an async media resolution boundary (injected `MediaResolver`, no concrete storage adapter) plus a pure synchronous builder over Snapshot + optional guest `displayName` overlay + the complete per-media result set. A referenced media item whose URL cannot be resolved stays in the ViewModel as `UNAVAILABLE`; it is never dropped, substituted or faked, and it never blocks the ViewModel. RF-03 copies `sections` as canonical content availability and does not compute effective visibility (RF-04, which returns it in a separate selection context without changing the ViewModel; `docs/DECISIONS.md` RF-04 clarification R16–R17). RSVP capability metadata is RF-05. See `docs/DECISIONS.md` "RF-03 InvitationViewModel / Media Resolution Contract Clarification".
 - Templates consume only the ViewModel.
 
 ---
@@ -142,9 +142,9 @@ The frozen production rules for this resolver are in `docs/DECISIONS.md` RF2–R
 
 All templates must be discoverable through one central registry.
 
-The registry maps stable renderer keys to implementations and manifests.
+The eventual production registry maps stable renderer keys to implementations and manifests. RF-04 builds only its compatibility-manifest layer: `rendererKey` → `RendererCompatibilityManifestV1`, with no renderer implementations and no production renderer registered; implementation binding follows in RF-05/RF-06 (`docs/DECISIONS.md` "RF-04 Registry / Compatibility / Effective Visibility Contract Clarification" R12–R15).
 
-Example conceptual keys:
+Example conceptual keys (examples only; RF-04 freezes no production key, and the first real key is frozen in RF-06):
 
 ```text
 wedding.elegant-editorial.v1
@@ -156,7 +156,7 @@ Adding Template 04 should not require editing RSVP, Editor domain logic, databas
 
 If adding one template requires unrelated system-wide changes, stop and reassess architecture.
 
-Lookup is **fail-closed**. An unknown `rendererKey`, an unsupported `payloadSchemaVersion`, an unsupported variant, or a manifest/renderer mismatch is an error. It never silently falls back to another renderer (`docs/DECISIONS.md` RF16).
+Lookup is **fail-closed**. An unknown `rendererKey`, an unsupported `payloadSchemaVersion`, an unsupported variant, or a manifest/renderer mismatch is an error. It never silently falls back to another renderer (`docs/DECISIONS.md` RF16). Lookup is exact string equality; compatibility is explicit list membership; failures are typed exceptions thrown in a frozen fail-fast order (RF-04 clarification R4–R6, R19–R21).
 
 ---
 
@@ -164,7 +164,7 @@ Lookup is **fail-closed**. An unknown `rendererKey`, an unsupported `payloadSche
 
 Each template version must define a manifest containing validated metadata.
 
-Conceptual manifest:
+Conceptual (eventual full) manifest. This list and the example capabilities below are **not** the RF-04 contract. RF-04 freezes only the code-owned `RendererCompatibilityManifestV1` with exactly four fields: `rendererKey`, `supportedPayloadSchemaVersions`, `supportedVariants`, `sectionCapabilities` (`docs/DECISIONS.md` RF-04 clarification R3). The full production manifest is frozen later by RF-06.
 
 ```text
 code
@@ -198,7 +198,7 @@ Editor options should be generated/validated from template capabilities rather t
 
 Task 028 froze the renderer-independent slice of the conceptual manifest above that is needed to validate a Project's design selection. It does **not** define or freeze the rest of the conceptual manifest — `code`, `name`, `eventType`, `version`, `rendererKey`, `supportedVariants`, `supportedFeatures`, `sectionCapabilities`, and preview metadata remain Task-029+ concerns, read from the same `template_versions.manifest` JSONB but never interpreted by Task 028.
 
-`sectionCapabilities` is still unfrozen. The RF-02 snapshot payload builder does not depend on it or on any equivalent section-support vocabulary; manifest/renderer compatibility is RF-04 work (`docs/DECISIONS.md` "RF-02 Snapshot Sections Contract Clarification" S11).
+`sectionCapabilities` is now frozen for RF-04 as the exact closed boolean record `{ invitationMessage, loveStory, gallery, music, gift }`, part of the code-owned compatibility manifest, not of the DB `template_versions.manifest` (`docs/DECISIONS.md` RF-04 clarification R7, R22). The RF-02 snapshot payload builder still does not depend on it (RF-02 clarification S11). Effective section visibility is `viewModel.sections[k] && sectionCapabilities[k] && sectionSettings[k] !== false` over those five keys only, returned in a separate RF-04 selection context. A present non-boolean value for one of the five reserved `sectionSettings` keys fails closed; other `sectionSettings` keys are ignored for visibility (RF-04 clarification R8–R11, R17).
 
 Exactly six required top-level fields, each required as an own property (not merely inherited):
 

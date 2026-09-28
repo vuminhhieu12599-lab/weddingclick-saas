@@ -536,7 +536,7 @@ Payload rules:
 
 **RF14. Fonts and renderer-code immutability.**
 - **Fonts.** Approving a prototype visually does **not** certify its font imports for production. RF-06 either maps the design onto approved production Font Library entries that closely preserve the approved direction, or stops for an explicit font-library decision before any unapproved font enters a production renderer. RF-00 does not expand the Font Library.
-- **Renderer code.** A versioned renderer directory (e.g. `templates/wedding/<family>/v1/`) is **immutable once that version is certified or released**. Visual or behavioral changes, including changes to fixed template copy (RF7), go into `v2/` or another new version. A static registry/regression test that enforces known renderer keys may be added in RF-04+. RF-00 adds no enforcement code.
+- **Renderer code.** A versioned renderer directory (e.g. `templates/wedding/<family>/v1/`) is **immutable once that version is certified or released**. Visual or behavioral changes, including changes to fixed template copy (RF7), go into `v2/` or another new version. A static registry/regression test that enforces known renderer keys may be added in RF-04+; because RF-04 registers no production key (RF-04 clarification R15), such enforcement can only cover real keys from RF-06 onward. RF-00 adds no enforcement code.
 
 **RF15. Shared client capability boundaries.**
 - **RSVP.** The prototype's three attendance options are **not** the persistence contract. Persisted attendance stays `RsvpAttendanceStatus` (`ATTENDING | NOT_ATTENDING`), with party size per `docs/PHYSICAL_DATABASE_PLAN.md` §2.20 (`ATTENDING` 1–20, `NOT_ATTENDING` 0). No `MAYBE` status is added. The RSVP UI does not own persistence: the renderer receives a submit capability/callback. Previews and harnesses never fake a successful persisted RSVP. Actual persistence is still Task 033.
@@ -581,7 +581,7 @@ Revised by the RF-00 contract recovery. The corrected design **does** require a 
 | RF-01 | Domain types + pure Wedding Domain Resolver |
 | RF-02 | Snapshot payload builder + media reference extraction |
 | RF-03 | `InvitationViewModel` builder + injected media resolver boundary |
-| RF-04 | Renderer registry + fail-closed lookup + manifest compatibility |
+| RF-04 | Renderer registry + fail-closed lookup + manifest compatibility (compatibility-manifest registry + effective section visibility only; exact scope in the RF-04 clarification) |
 | RF-05 | Shared renderer boundary + minimum shared client capabilities |
 | RF-06 | Elegant Editorial v1: first production renderer integration |
 
@@ -654,9 +654,9 @@ Gift/QR data from a non-operational side never counts. No COMMON gift owner exis
 - `BRIDE`: may include `brideMediaId` only; `groomMediaId` must be absent.
 - `commonMediaId` is **absent** in payload v1, unless a future explicit canonical persisted common-QR pointer is introduced (RF13). A `project_media` row with `media_type = 'QR_COMMON'` is not enough to establish ownership. Common-QR ownership is never inferred or fabricated.
 
-**S10. `design.sectionSettings` boundary.** `design.sectionSettings` is copied into the payload unchanged, per the existing Task 028 JSON contract (`docs/API_CONTRACT.md` §13, `docs/TEMPLATE_SYSTEM.md` §6). RF-02 **must not** apply `sectionSettings` to the `sections` booleans. So `sections` = canonical content availability, and `design.sectionSettings` = persisted design/staff configuration. The final effective renderer section visibility is **not** decided in RF-02. It is resolved later, only once the renderer/manifest capability boundary exists (RF-03+/RF-04). RF-03 itself does not compute it; effective visibility is RF-04 (RF-03 clarification V6).
+**S10. `design.sectionSettings` boundary.** `design.sectionSettings` is copied into the payload unchanged, per the existing Task 028 JSON contract (`docs/API_CONTRACT.md` §13, `docs/TEMPLATE_SYSTEM.md` §6). RF-02 **must not** apply `sectionSettings` to the `sections` booleans. So `sections` = canonical content availability, and `design.sectionSettings` = persisted design/staff configuration. The final effective renderer section visibility is **not** decided in RF-02. It is resolved later, only once the renderer/manifest capability boundary exists. RF-03 itself does not compute it; effective visibility is owned exactly by RF-04 (RF-03 clarification V6; formula in the RF-04 clarification R9).
 
-**S11. Manifest capability boundary.** RF-02 does not depend on the unfrozen conceptual manifest `sectionCapabilities` (`docs/TEMPLATE_SYSTEM.md` §6) or any equivalent renderer-manifest section-support vocabulary. Manifest/renderer compatibility stays later foundation work (RF-04). RF-02 must be buildable without the RF-04 registry/manifest implementation.
+**S11. Manifest capability boundary.** RF-02 does not depend on the unfrozen conceptual manifest `sectionCapabilities` (`docs/TEMPLATE_SYSTEM.md` §6) or any equivalent renderer-manifest section-support vocabulary. Manifest/renderer compatibility stays later foundation work (RF-04). RF-02 must be buildable without the RF-04 registry/manifest implementation. (RF-04 `sectionCapabilities` has since been frozen by the RF-04 clarification R7; RF-02 still does not depend on it.)
 
 **S12. RF-02 builder BLOCKING issue codes.** These are builder/pre-snapshot validation issues:
 
@@ -770,6 +770,150 @@ RF-03 v1 has no unavailable-reason taxonomy. A result never exposes storage path
 **V11. Determinism.** For the same Snapshot, guest overlay and complete resolution set, Layer B produces the same semantic result: no randomness, no implicit current time, no locale-dependent sorting, no object-identity decisions.
 
 **V12. No renderer fallback UI here.** This clarification freezes data/runtime states only. Placeholder image design, "image unavailable" labels, QR warning copy, gallery skeletons and audio error UI are later renderer/shared-presentation decisions.
+
+## Invitation Rendering Foundation — RF-04 Registry / Compatibility / Effective Visibility Contract Clarification (FROZEN)
+
+**Status:** docs only, **FROZEN** by Product Owner / Architecture decision (2026-09-28). RF-01 is frozen at `5ee6bd1`, the RF-02 implementation at `f2f9ea2`, the RF-03 clarification at `435bb3d`, and the RF-03 implementation at `260a03f`. RF-04 contract discovery stopped before any code because the docs left the manifest shape, `sectionCapabilities`, effective visibility and the failure model unfrozen. This section closes those gaps and governs what RF-04 builds. Where RF16/RF17, `docs/TEMPLATE_SYSTEM.md` §5–§6 or `docs/ARCHITECTURE.md` §10 describe the registry or manifest more broadly, those passages describe the **eventual** production registry/manifest; this section governs RF-04. It does not reopen any RF-00 through RF-03 decision and does not change the RF-03 `InvitationViewModel`. No RF-04 code exists yet. **Task 030 stays blocked** (RF16).
+
+### Ownership
+
+**R1. RF-04 owns exactly:**
+- A. the code-owned renderer **compatibility** manifest contract (R3);
+- B. the compatibility-manifest registry machinery (R12–R14);
+- C. exact, fail-closed `rendererKey` lookup (R4);
+- D. compatibility checks for `payloadSchemaVersion` (R5) and `InvitationVariant` (R6);
+- E. effective section visibility (R8–R10);
+- F. a pure RF-04 selection/context result layered on top of `SnapshotPayloadV1` and `InvitationViewModel` (R16–R17).
+
+**R2. RF-04 does not own:** a concrete renderer component/function interface; any renderer implementation; the Elegant Editorial production renderer; a Supabase/storage resolver; signing; Review/Publish orchestration; persistence; RSVP; clipboard; browser audio playback; countdown/current-time capability; shared date formatting. **RF-05** owns the shared renderer/client-capability interface boundary. **RF-06** owns the first real production renderer integration.
+
+### Compatibility manifest
+
+**R3. `RendererCompatibilityManifestV1`.** RF-04 freezes a minimal, code-owned compatibility manifest (exact TypeScript name follows repository conventions) with **exactly** these four fields and no others:
+
+```text
+RendererCompatibilityManifestV1 {
+  rendererKey:                    string                          // R4
+  supportedPayloadSchemaVersions: readonly PayloadSchemaVersion[] // R5
+  supportedVariants:              readonly InvitationVariant[]    // R6
+  sectionCapabilities:            SectionBooleanRecord            // R7
+}
+```
+
+This is **not** the full production renderer manifest. RF-04 does not freeze display name, template code, marketing name, renderer component, React component type, `supportedFeatures`, layout metadata, fonts, assets, catalog copy, design-setting schemas or renderer implementation. RF-06 may freeze a larger full production manifest that incorporates/extends this contract; the four RF-04 fields must stay consistent in it. RF-04 assigns no future full-manifest fields.
+
+**R4. `rendererKey`.** Non-empty, stable, exact, versioned, code-owned. Lookup is exact string equality: no prefix matching, normalization, display-name lookup, "latest" lookup, version fallback, or default renderer. RF-04 freezes **no** concrete production `rendererKey`; `wedding.elegant-editorial.v1` and similar strings in older docs are conceptual examples only.
+
+**R5. `supportedPayloadSchemaVersions`.** An explicit, non-empty, unique, readonly list whose element type is the supported Snapshot payload-schema-version type. Today `SnapshotPayloadV1.payloadSchemaVersion === 1`, so `1` is the only valid value. Compatibility is explicit membership only: no minimum/maximum, numeric range, `>=`/`<=`, or "latest". A future payload schema version expands the version type and may require new renderer manifests/versions.
+
+**R6. `supportedVariants`.** An explicit, non-empty, unique, readonly list of canonical `InvitationVariant` values (`COMMON`, `GROOM`, `BRIDE`). Compatibility is exact membership. No variant fallback or substitution.
+
+**R7. `sectionCapabilities`.** Supersedes the earlier "still unfrozen" status (`docs/TEMPLATE_SYSTEM.md` §6, RF-02 clarification S11) for RF-04. An exact, closed boolean record over the five Snapshot Sections v1 keys:
+
+```text
+{ invitationMessage: boolean, loveStory: boolean, gallery: boolean, music: boolean, gift: boolean }
+```
+
+Every key is required; no extra keys. RSVP, countdown, map, calendar, guest personalization, clipboard, playback, directions, families and ceremony are **not** Snapshot Sections v1 visibility keys and do not belong in RF-04 `sectionCapabilities`; they belong to later capability/presentation contracts if needed. The conceptual capability list in `docs/TEMPLATE_SYSTEM.md` §6 ("Example capabilities") describes the eventual full manifest, not RF-04.
+
+### Effective section visibility
+
+**R8. Key vocabulary.** The RF-04 effective-section keys are exactly the Snapshot Sections v1 keys: `invitationMessage`, `loveStory`, `gallery`, `music`, `gift`. RF-04 never creates effective visibility for arbitrary manifest or `sectionSettings` keys.
+
+**R9. Formula (frozen).** For each of the five keys `k`:
+
+```text
+effectiveSections[k] =
+     viewModel.sections[k]                              // canonical content availability (RF-02 S2)
+  && compatibilityManifest.sectionCapabilities[k]       // renderer capability
+  && sectionSettingAllows(k)
+
+sectionSettingAllows(k) =
+  TRUE   when viewModel.design.sectionSettings has no own property k
+  TRUE   when viewModel.design.sectionSettings[k] === true
+  FALSE  when viewModel.design.sectionSettings[k] === false
+```
+
+Equivalently `effective = contentAvailable && rendererCapable && setting !== false`, applied only after the reserved-setting value validation in R10.
+- **Setting `true` never creates content.** If `viewModel.sections[k] === false`, the effective value is `false` regardless of setting or capability.
+- **Renderer capability is a hard limit.** If `sectionCapabilities[k] === false`, the effective value is `false` regardless of content or setting. Staff settings cannot enable a capability the renderer does not have.
+- **Staff disable.** `sectionSettings[k] === false` for a reserved key makes the effective value `false`.
+- **Absent setting** means "not explicitly disabled", never `false`; the effective value is then content availability AND renderer capability.
+
+**R10. Setting values.**
+- **Reserved keys.** The five R8 keys are boolean visibility settings. If a reserved key is present in `design.sectionSettings` with a non-boolean runtime value, RF-04 fails closed with a typed `RendererSelectionError` (R20). No truthy/falsy coercion, no ignoring the key, no interpreting it as enabled. (Task 028's generic setting storage may still hold string/number/boolean values for unrelated renderer settings.)
+- **Unknown keys.** A `sectionSettings` key outside the five reserved keys creates no effective section, does not affect `effectiveSections`, is ignored by the RF-04 visibility computation, and is **not** rejected by RF-04. Later renderer-specific design logic may still use it.
+
+**R11. Media `UNAVAILABLE` has no visibility effect.** RF-03 runtime media states (`RESOLVED`/`UNAVAILABLE`) do not enter the formula. Example: `viewModel.sections.gallery === true`, `sectionCapabilities.gallery === true`, gallery setting absent, every gallery item `UNAVAILABLE` → `effectiveSections.gallery === true`. The renderer/shared presentation layer renders that state honestly later (RF-03 V6, V12); RF-04 never silently hides it.
+
+### Registry
+
+**R12. Contents.** The RF-04 registry maps `rendererKey` → `RendererCompatibilityManifestV1` only. It contains no renderer implementation: no `React.ComponentType`, `render()`, renderer function or JSX. The eventual production registry that maps keys to implementations **and** manifests (`docs/TEMPLATE_SYSTEM.md` §5, `docs/ARCHITECTURE.md` §10) is a later renderer-binding layer that extends/composes this compatibility-manifest registry.
+
+**R13. Construction.** RF-04 defines reusable registry machinery/factory. Creation rejects a duplicate `rendererKey` with a typed invariant failure: never last-write-wins, never silent first-write-wins. Lookup is deterministic exact-key lookup. The registry never depends on filesystem scanning, module discovery, the database, `template_versions`, environment, or insertion-order fallback.
+
+**R14. Manifest invariants.** Registry construction (and selection over any registry) treats these as compatibility-manifest invariants: `rendererKey` non-empty; `supportedPayloadSchemaVersions` non-empty and unique; `supportedVariants` non-empty and unique; every `sectionCapabilities` key present; no unknown `sectionCapabilities` keys; every capability value boolean. Even where static types make a state impossible, runtime-mutated/test-fixture data that violates these fails closed with a typed invariant error. Malformed runtime registry data is never accepted silently.
+
+**R15. Production registry state.** RF-04 registers **no** real production renderer and freezes no production key (including `wedding.elegant-editorial.v1`). Registry machinery is proven with typed test fixtures only. RF-04 creates no production registry constant populated with placeholder/fake entries, and adds no shared empty registry value merely for appearance.
+
+### Selection
+
+**R16. Inputs and `payloadSchemaVersion` source.** RF-04 does **not** add `payloadSchemaVersion` (or any other field) to the frozen RF-03 `InvitationViewModel`. The selection boundary receives both, semantically:
+
+```text
+selectRendererCompatibility({ snapshot, viewModel, registry })
+```
+
+(exact naming follows repository conventions). `SnapshotPayloadV1` is the only source of `payloadSchemaVersion`; the ViewModel is the renderer-facing content/runtime media source (`sections`, `design.sectionSettings`).
+
+**R17. Output.** A separate RF-04 context type, semantically:
+
+```text
+RendererSelectionContextV1 {
+  rendererKey             // exact selected key
+  compatibilityManifest   // the selected RF-04 code-owned manifest
+  effectiveSections       // exactly { invitationMessage, loveStory, gallery, music, gift }: boolean
+}
+```
+
+`effectiveSections` has exactly the five R8 keys, no renderer-specific extra keys. RF-04 never mutates the ViewModel or adds fields to it. This context is where "renderer-friendly section state" (RF12) lives for the foundation; it is compatibility context only, not a callable renderer interface (RF-05).
+
+**R18. Snapshot/ViewModel consistency.** Snapshot and ViewModel must agree on `rendererKey`, `variant` and `templateVersionId`. On disagreement RF-04 throws a typed invariant/selection error. It never reconciles, silently prefers one side, or rebuilds the ViewModel.
+
+**R19. Fail-fast order (frozen).**
+1. validate Snapshot/ViewModel consistency invariants (R18);
+2. exact `rendererKey` lookup (R4);
+3. `payloadSchemaVersion` compatibility (R5);
+4. variant compatibility (R6);
+5. reserved `sectionSettings` value validation (R10);
+6. compute `effectiveSections` (R9);
+7. return `RendererSelectionContextV1` (R17).
+
+The first failure throws. RF-04 never aggregates multiple compatibility errors; aggregation belongs to later Review/Publish work.
+
+### Failure model
+
+**R20. Typed exceptions.** RF-04 fails closed by throwing typed exceptions. Normal compatibility/selection failures use a dedicated error family (semantically `RendererSelectionError`) with deterministic, machine-distinguishable codes for at least:
+- renderer key not registered (no fallback);
+- payload schema version unsupported (no coercion, migration or range matching);
+- variant unsupported (no substitution);
+- invalid reserved section-setting value (no coercion).
+
+Malformed registry/manifest state (R13, R14) and Snapshot/ViewModel inconsistency (R18) may use a separate typed invariant error, consistent with the existing `WeddingDomainInvariantError` / `SnapshotPayloadInvariantError` / `InvitationViewModelInvariantError` pattern. Exact identifiers follow repository conventions.
+
+**R21. Review/Publish mapping is later.** RF-04 throws typed errors only. It returns no Review/Publish issue arrays, invents no Review/Publish blocking issue codes, and persists nothing. `docs/PRODUCT.md` "Blocking errors" (e.g. "unresolved template renderer/version") is a later orchestration responsibility: Review/Publish integration will catch and map RF-04 typed errors into its blocking validation result.
+
+### Boundaries
+
+**R22. Code manifest vs DB manifest.** The RF-04 code-owned compatibility manifest drives runtime compatibility selection, lives in code, and needs no database lookup. `template_versions.manifest` stays immutable catalog/template-version JSON metadata; Task 028 keeps using its frozen design subset (`TemplateDesignManifestV1`). RF-04 never fetches the DB manifest, compares it to the code manifest, merges them, or treats the DB manifest as runtime renderer behavior.
+
+**R23. Catalog seeding unchanged (RF9).** RF-04 performs no catalog seed, no migration and no database contact. RF-06 freezes the first real key and full manifest; a later explicit data-only catalog-seeding checkpoint follows.
+
+**R24. RF-06 / Elegant Editorial.** RF-06 owns freezing the first real production `rendererKey`, freezing its full production manifest, binding its implementation, and the Elegant Editorial v1 production integration. RF-06 must not infer the key from the UI label "Elegant Editorial", the `GreenIvoryEditorialPrototype` name, or the legacy `_directions/elegant-editorial` path.
+
+**R25. Task 029 boundary.** RF-04 never imports from `app/internal/prototypes` (including `GreenIvoryEditorialPrototype` and legacy elegant-editorial directions). Task 029 remains visual source truth only.
+
+**R26. Immutability and determinism.** Selection never mutates the Snapshot, ViewModel, registry, compatibility manifest, `sectionSettings` or `sectionCapabilities`; its output has safe ownership consistent with repository conventions. The same Snapshot, ViewModel and registry always yield the same semantic selection context: no randomness, current time, locale-dependent sorting, object-identity selection or insertion-order fallback.
 
 ## Draft / Review / Publish
 

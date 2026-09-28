@@ -289,13 +289,15 @@ templates/wedding/elegant-editorial/v1/
 templates/wedding/elegant-editorial/v2/
 ```
 
-A renderer registry maps stable keys to implementations:
+A renderer registry maps stable keys to implementations (conceptual example keys only; no production key is frozen here):
 
 ```text
 wedding.elegant-editorial.v1
 wedding.vietnamese-heritage.v1
 wedding.romantic-minimal.v1
 ```
+
+This describes the eventual production registry. RF-04 builds only the compatibility-manifest layer under it (key → `RendererCompatibilityManifestV1`, no implementations, no production keys); implementation binding and the first real key come later (RF-05/RF-06). See `docs/DECISIONS.md` "RF-04 Registry / Compatibility / Effective Visibility Contract Clarification".
 
 Once a renderer version is used for production, do not alter its visual/business contract in place. Create a new version.
 

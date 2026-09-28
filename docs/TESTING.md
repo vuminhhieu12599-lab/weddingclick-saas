@@ -40,6 +40,7 @@ For deterministic domain logic such as:
 - package entitlement;
 - RSVP normalization/validation;
 - InvitationViewModel building;
+- renderer compatibility selection and effective section visibility (RF-04, typed fixtures only: exact-key lookup, schema/variant membership, duplicate-key and malformed-manifest failures, fail-fast order, the R9 formula for absent/`true`/`false`/invalid settings, `UNAVAILABLE` media not affecting visibility; `docs/DECISIONS.md` RF-04 clarification);
 - token helper behavior that can be safely unit-tested.
 
 ### Integration tests
