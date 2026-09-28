@@ -3,7 +3,7 @@
 **Task:** 001 (Revision 4 — final micro patch, two closing integrity corrections after Revision 3's review)
 **Status:** APPROVED / FROZEN — passed external review. Foundation migrations 0001–0006 (Task 002) have been executed and smoke-tested on DEV/STAGING. Migrations 0007–0020 remain planned and have not been executed yet. An additive bridge migration, `0006b_atomic_project_creation_rpc.sql` (Task 005B), has been authored — not applied — between 0006 and 0007; see §16 for its placement and the migration file itself for full detail. It does not renumber or redesign any part of this frozen plan.
 **Depends on:** `CLAUDE.md`, `docs/DECISIONS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/TEMPLATE_SYSTEM.md`, `docs/SECURITY.md`, `docs/DEVELOPMENT_RULES.md`, `docs/LEGACY_AUDIT.md`
-**Last updated:** 2026-09-11
+**Last updated:** 2026-09-26
 
 Revision 2's overall architecture was accepted. Revision 3 was a focused correction pass fixing 18 SQL/integrity blockers, cross-referenced by **[F#]** tags. This Revision 4 is a final micro patch fixing exactly two further items found in Revision 3's review, tagged **[G1]**/**[G2]** (see the closing "Revision 4 — Final Micro Patch" note near the end of this document). This plan passed external review; Task 002 has authored and executed the Foundation migrations (0001–0006) based on it.
 
@@ -301,7 +301,7 @@ Purpose: one canonical wedding-specific detail record per wedding Project.
 | `bride_family_address` | `TEXT` | NULL | *(none)* | |
 | `invitation_message` | `TEXT` | NULL | *(none)* | |
 | `love_story` | `TEXT` | NULL | *(none)* | |
-| `lunar_date_display` | `TEXT` | NULL | *(none)* | Display-only text; not canonical date data (§E) |
+| `lunar_date_display` | `TEXT` | NULL | *(none)* | Display-only text; not canonical date data (§E). **LEGACY / DEPRECATED for the production V2 renderer** (`docs/DECISIONS.md` RF6): the canonical lunar text is event-level (`project_events.lunar_date_display`, §2.8). The column is retained, not dropped; removal needs a separate approved cleanup task after a consumer compatibility audit. |
 | `additional_note` | `TEXT` | NULL | *(none)* | |
 | `groom_bank_name` | `TEXT` | NULL | *(none)* | **[R20]** groom-side gift account, shown on GROOM invitations and (alongside the bride-side fields) on COMMON |
 | `groom_bank_account_name` | `TEXT` | NULL | *(none)* | |
@@ -361,6 +361,10 @@ Indexes: `(project_id)`; `(project_id, starts_at)`.
 - `BRIDE` variant: mirrored with `side = 'BRIDE'`.
 
 This selection feeds countdown target, primary calendar emphasis, and the template's primary-event display — it is resolver/domain-layer logic, not a database constraint, because "which side is relevant for a given variant" is a presentation concern; the partial unique index only guarantees the *input* to that logic is unambiguous per side.
+
+> **Forward note (RF-00 contract recovery, 2026-09-26):** for invitation rendering, the fallback chain above is superseded by the **occasion-matched ceremony selection** in `docs/DECISIONS.md` RF2. Candidates are only the variant-visible events whose `occasion_type` is `THANH_HON` (COMMON/GROOM) or `VU_QUY` (BRIDE). The exact per-variant priority tiers and the ceremony-selection "earliest" order (`starts_at`, `sort_order`, `id`) are defined **only** in RF2; this note does not restate them. `RECEPTION`/`CUSTOM` events and other-side events never substitute. No candidate is a BLOCKING `REQUIRED_CEREMONY_EVENT_MISSING`. The column shape, the partial unique index, and the index's role (at most one primary per Project/side) are unchanged.
+>
+> **Planned additive column (checkpoint RF-L01, not yet applied):** `lunar_date_display TEXT NULL`, with no default. It holds manually entered display text for this one event and is never computed. It is the canonical lunar-date home (`docs/DECISIONS.md` RF6). This is the one approved exception to the frozen table shape. It is recorded in §16a when its migration ships, together with the matching `create_project_event`/`update_project_event` redefinition. There is **no** lunar-data backfill: existing rows stay `NULL`, and the legacy `wedding_details.lunar_date_display` is never copied into events (RF6).
 
 RLS: enabled + forced. SELECT: `is_staff()`. INSERT/UPDATE/DELETE: policies for `is_staff()` remain present from this migration, but **feature migration `0022_project_events_actions` (Task 023) revoked the underlying `authenticated` table-level `INSERT`/`UPDATE`/`DELETE` privileges**, making these policies unreachable in practice — see §16a. Canonical create/update/delete is now performed exclusively by the audited `public.create_project_event(...)`/`public.update_project_event(...)`/`public.delete_project_event(...)` `SECURITY DEFINER` business-action functions (independently self-authorizing via `is_staff()`, update no-op-suppressed, logging `CANONICAL_DATA_APPLIED` only on create/update-with-real-change/delete), not by a direct authenticated-session table write. Anonymous/guest/customer-token: none (server-only reads for display/countdown, §M).
 

@@ -1,7 +1,7 @@
 # WeddingClick V2 — Application Workflow & API Contract
 
 **Status:** Approved contract freeze (Task 021, Final Revision)
-**Last updated:** 2026-09-21
+**Last updated:** 2026-09-26
 **Depends on:** `CLAUDE.md`, `docs/DECISIONS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/PHYSICAL_DATABASE_PLAN.md`, `docs/SECURITY.md`, `docs/DEVELOPMENT_RULES.md`, `docs/TESTING.md`, `docs/ROADMAP.md`
 
 This document freezes the application/API workflow between the finished, frozen V2 database (migrations `0001`–`0020`) and the remaining V2 application work. It governs which server mechanism (direct RLS vs. trusted business action) each use case uses, the two customer/guest-facing security paths, the error model, and the activity-log contract. Table schema itself is governed by `docs/DATABASE.md` / `docs/PHYSICAL_DATABASE_PLAN.md` and is not reopened here — this document does not change any frozen table shape.
@@ -216,6 +216,14 @@ An explicit implementation task (Task 029, §8) must exist and complete **before
 No REVIEW snapshot (`create_review_version`) may be implemented before this foundation exists — it is what produces the frozen payload that function persists.
 
 > **Status note (Task 029 freeze, 2026-09-26):** Task 029 was delivered and frozen as **internal Invitation Visual Prototypes only** (`docs/DECISIONS.md` "Task 029"). None of the production Rendering Foundation deliverables listed above have been built yet. They remain an outstanding prerequisite, so Task 030's hard dependency is **not yet satisfied** and **Task 030 must not start yet**. No task/roadmap renumbering was performed, and no task number has been assigned to the remaining foundation work.
+>
+> **Tracking (RF-00, 2026-09-26):** the outstanding work is tracked as the **Invitation Rendering Foundation**, with implementation checkpoints `RF-00`, `RF-01`, …. These checkpoint IDs are not roadmap task numbers. Its frozen contract lives in `docs/DECISIONS.md` "Invitation Rendering Foundation — RF-00 Contract Closure". That contract covers variant/event resolution, the `payloadSchemaVersion: 1` snapshot payload, the payload-vs-`InvitationViewModel` split, and the media URL boundary. Task 030's dependency on "029" means that document's **foundation completion gate (RF16)**, whose proving renderer is Elegant Editorial v1. A staff preview route is not part of that gate.
+>
+> **Contract recovery (RF-00, 2026-09-26):** lunar date is manual display text owned by each event (`docs/DECISIONS.md` RF6), so the foundation now has these API/schema prerequisites:
+> - **Schema migration: YES.** Checkpoints RF-L01/RF-L02 add nullable `project_events.lunar_date_display` and redefine the existing `create_project_event`/`update_project_event` business actions. This is the one approved additive exception to the §9 "no frozen table shape change" rule; see the DECISIONS RF17 "Frozen-table-shape clarification".
+> - **Project Events API/domain: YES.** Checkpoint RF-L03 extends the existing Task 023 staff Project Events read/write contract (`GET`/`POST` `/api/v2/internal/projects/[id]/events` and `PUT` `.../events/[eventId]`; `DELETE` is unaffected) with `lunarDateDisplay`. This stays Path A with the same `CANONICAL_DATA_APPLIED` action type.
+> - **Unchanged:** the Task 028 Project Design APIs. No `service_role` and no new public endpoint.
+> - Task 030 stays blocked until the revised RF16 gate, which includes RF-L01–RF-L03, is met.
 
 ### 7.3 Guest `invitation_variant = NULL` resolution rule
 
@@ -253,8 +261,8 @@ Smaller, independently reviewable slices, replacing the previous broad 022–030
 | **026** | Access-Link & Token Foundation (token crypto/hash utility, resolution module, INTAKE/PORTAL direct RLS, `issue_review_link`, `rotate_access_link`, `revoke_access_link`) | Task 004 boundary |
 | **027** | Intake Workflow (`submit_intake`, `apply_intake_submission`, reject) | 022 (apply target), 026 (tokens) |
 | **028** | Project Design APIs (`project_design` get/upsert, template/version catalog reads) | Task 004 boundary |
-| **029** | **Invitation Rendering Foundation** (Wedding Domain Resolver, `InvitationViewModel` builder, template registry, variant/event resolution, snapshot payload construction, media reference extraction). *Delivered as internal visual prototypes only. The production foundation is still outstanding; see §7.2 status note.* | 022, 023, 028 |
-| **030** | Review Workflow (`create_review_version`, REVIEW resolve, `submit_review_feedback`) | **029 hard dependency** |
+| **029** | **Invitation Rendering Foundation** (Wedding Domain Resolver, `InvitationViewModel` builder, template registry, variant/event resolution, snapshot payload construction, media reference extraction). *Delivered as internal visual prototypes only. The production foundation is still outstanding and is tracked as the Invitation Rendering Foundation (RF checkpoints); see the §7.2 status note.* | 022, 023, 028 |
+| **030** | Review Workflow (`create_review_version`, REVIEW resolve, `submit_review_feedback`) | **029 hard dependency**: satisfied only by the Invitation Rendering Foundation completion gate (`docs/DECISIONS.md` RF16) |
 | **031** | Publish Workflow (`publish_invitation`, project-level publish-eligibility) | 030, 025 (`mark_project_paid`) |
 | **032** | Guest & Portal Workflow (guest CRUD/import/revoke, PORTAL resolve reusing the published-view service per §7.1) | 026, 031 |
 | **033** | Guest Token & RSVP Workflow (guest resolve, RSVP submit/read) | 031, 032 |

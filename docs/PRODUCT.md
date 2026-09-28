@@ -1,7 +1,7 @@
 # WeddingClick V2 — Product Specification
 
 **Status:** Approved baseline for V1 commercial launch  
-**Last updated:** 2026-09-10
+**Last updated:** 2026-09-26
 
 ## 1. Product Vision
 
@@ -224,7 +224,8 @@ Each event may include:
 - venue name;
 - address;
 - map link;
-- optional description.
+- optional description;
+- optional lunar-date display text, entered manually for that event and never calculated. It is shown with the ceremony event only (`docs/DECISIONS.md` RF6).
 
 ### Content
 
@@ -233,7 +234,7 @@ Potential optional content includes:
 - invitation message;
 - love story;
 - additional note;
-- lunar date display;
+- lunar date display (legacy project-level field; production V2 invitations use the per-event value above, see `docs/DECISIONS.md` RF6);
 - wedding gift/bank information;
 - gallery;
 - music.
@@ -339,7 +340,7 @@ Before Review/Publish, validation must identify:
 Examples:
 
 - missing groom/bride name;
-- required event missing;
+- required event missing, including no ceremony event matching the variant: Lễ Thành Hôn (`THANH_HON`) for COMMON/GROOM, Lễ Vu Quy (`VU_QUY`) for BRIDE. A reception or custom event never counts (`docs/DECISIONS.md` RF2);
 - invalid date/time;
 - invalid invitation variant/package combination;
 - missing template;

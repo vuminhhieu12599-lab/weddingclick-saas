@@ -1,7 +1,7 @@
 # WeddingClick V2 — Template System Specification
 
 **Status:** Approved architectural baseline  
-**Last updated:** 2026-09-10
+**Last updated:** 2026-09-26
 
 ## 1. Purpose
 
@@ -80,6 +80,24 @@ Exact TypeScript types will be defined centrally during implementation.
 
 No template may invent a second incompatible view-model shape for the same core information.
 
+### Snapshot payload vs InvitationViewModel (RF-00, frozen)
+
+These are two distinct objects (`docs/DECISIONS.md` RF11–RF13):
+
+```text
+Canonical Project data
+  -> Wedding Domain Resolver
+  -> Snapshot payload (payloadSchemaVersion: 1)    persisted later in invitation_versions.payload
+  -> InvitationViewModel                           render-time only, never persisted
+       = payload + guest overlay + resolved media URLs + runtime capabilities
+  -> Template Renderer
+```
+
+- The **snapshot payload** holds only stable canonical values: explicit side roles, event instant plus timezone, and `project_media` ids. It never holds signed or expiring URLs, guest identity or personalization, RSVP state, or `wedding_details.additional_note`.
+- Each payload event carries its own optional `lunarDateDisplay`. `ceremony.lunarDateDisplay` is only a derived copy from the resolved ceremony event.
+- The **InvitationViewModel** adds precomputed deterministic display fields (the ceremony lunar line comes straight from the ceremony event's text, with no lunar calculation), primary/secondary ordering, the guest display-name overlay, display URLs from an injected media resolver, section state, and RSVP capability metadata.
+- Templates consume only the ViewModel.
+
 ---
 
 ## 4. Variant Resolver
@@ -106,6 +124,14 @@ Provides both sides appropriately.
 
 Templates use resolved values such as `primaryPerson` and `ceremony.title`; they do not reproduce conditional business logic.
 
+The frozen production rules for this resolver are in `docs/DECISIONS.md` RF2–RF6. In summary:
+- **Event visibility by explicit `side`:** GROOM = GROOM + COMMON events; BRIDE = BRIDE + COMMON events; COMMON = all.
+- **Ceremony event:** chosen only from visible events whose `occasion_type` matches the variant: `THANH_HON` for COMMON/GROOM, `VU_QUY` for BRIDE. RECEPTION/CUSTOM never substitute. No match is the BLOCKING `REQUIRED_CEREMONY_EVENT_MISSING`.
+- **Ceremony title:** COMMON "Lễ Thành Hôn", GROOM "Lễ Thành Hôn", BRIDE "Lễ Vu Quy".
+- **COMMON display order** is groom-first, with both sides first-class.
+- **Sides are compared by explicit role**, never by object identity.
+- **Lunar date** is manual display text owned by the ceremony event (`project_events.lunar_date_display`). It is never calculated, and it is omitted when empty. The legacy `wedding_details.lunar_date_display` is never used.
+
 ---
 
 ## 5. Template Registry
@@ -125,6 +151,8 @@ wedding.romantic-minimal.v1
 Adding Template 04 should not require editing RSVP, Editor domain logic, database logic, or variant resolver.
 
 If adding one template requires unrelated system-wide changes, stop and reassess architecture.
+
+Lookup is **fail-closed**. An unknown `rendererKey`, an unsupported `payloadSchemaVersion`, an unsupported variant, or a manifest/renderer mismatch is an error. It never silently falls back to another renderer (`docs/DECISIONS.md` RF16).
 
 ---
 
@@ -216,6 +244,8 @@ templates/
 Do not redesign `v1` in place after customers have published invitations using it.
 
 Create `v2` and migrate Projects only through explicit upgrade/republish flow.
+
+A versioned renderer directory is immutable once that version is certified or released. This includes its fixed template-owned copy: section headings, closing/thank-you copy, gift intro copy, default salutation, and default generic guest label (`docs/DECISIONS.md` RF7/RF14). Catalog rows for a renderer are seeded only after its key, version and manifest are frozen, and only through a reproducible data-only migration (RF9).
 
 ---
 
@@ -428,6 +458,8 @@ Handle:
 
 No template should show a fake music icon that does nothing.
 
+With no `AUDIO` media, no music control is shown. A fake "playing" state without real playback blocks certification (`docs/DECISIONS.md` RF15).
+
 ---
 
 ## 18. Countdown and Calendar
@@ -439,6 +471,8 @@ Templates must not manually parse date strings.
 Calendar must handle real month length/leap-year rules through shared utilities.
 
 If no valid target event exists, countdown/calendar should fail safely and validation should warn/block as appropriate.
+
+The countdown target and calendar emphasis are the resolved ceremony event (`docs/DECISIONS.md` RF2). Its absence is the BLOCKING `REQUIRED_CEREMONY_EVENT_MISSING`.
 
 ---
 
@@ -472,6 +506,12 @@ RSVP UI must support:
 - party size when relevant;
 - guest name when not personalized;
 - optional message.
+
+Persisted attendance values are only `ATTENDING`/`NOT_ATTENDING` (no `MAYBE`). The renderer receives a submit capability and never owns persistence. Previews and harnesses never fake a persisted success (`docs/DECISIONS.md` RF15).
+
+## 20a. Clipboard
+
+Copy actions (for example, bank account numbers) use one shared capability. It reports success only after the browser copy has actually succeeded. A failure is never presented as success (`docs/DECISIONS.md` RF15).
 
 ---
 

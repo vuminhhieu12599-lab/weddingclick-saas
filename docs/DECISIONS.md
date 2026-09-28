@@ -1,7 +1,7 @@
 # WeddingClick V2 — Approved Product & Architecture Decisions
 
 **Status:** Source of truth for approved decisions  
-**Last updated:** 2026-09-21
+**Last updated:** 2026-09-26
 
 This file records decisions that Claude Code must not silently reinterpret.
 
@@ -392,6 +392,221 @@ Implementation: `lib/domain/template-design-manifest.ts`; `lib/server/project-de
 - Assets/cleanup: unused prototype assets, raw PNG texture optimization, and removal of the legacy `_directions/elegant-editorial/` directory (needs explicit approval).
 
 Implementation: `app/internal/prototypes/invitation/{layout,page}.tsx`, `prototype.module.css`, `_data/`, `_shared/`, `_directions/{green-ivory-editorial,vietnamese-heritage,romantic-minimal,elegant-editorial}/`; assets under `public/prototypes/invitation/{decor,demo}/`.
+
+## Invitation Rendering Foundation — RF-00 Contract Closure (FROZEN)
+
+**Status:** RF-00 = contract closure only, docs only, **FROZEN**. RF-00 does not implement anything. RF-01 has not started. Task 030 has not started.
+
+**Contract recovery (2026-09-26).** The independent RF-00 review blocked two rules: B1, the project-level lunar-date ambiguity rule, and B2, a primary-event fallback that could pair the fixed ceremony title with the wrong occasion. Both are resolved here by Product Owner decision. RF2 now selects the ceremony event by matching occasion type. RF6 now uses manual, event-level lunar text. RF11, RF16 and RF17 are updated to match. The earlier RF6 date-comparison rule is withdrawn.
+
+**Final blocker correction (2026-09-28).** A second independent review blocked two remaining items, both corrected here by Product Owner decision: B1, the conditional legacy lunar-date backfill, is withdrawn, so no automatic backfill exists (RF6, RF-L01 scope); B2, the COMMON ceremony tiers, now preserve §2.8's original COMMON semantics (primary `COMMON` → earliest `COMMON` → earliest in the candidate set) with no primary `GROOM`/`BRIDE` tiers (RF2). No other RF-00 decision is reopened.
+
+**RF1. Tracking identity.** The production scope that `docs/API_CONTRACT.md` §7.2 requires (and that Task 029 did not deliver) is tracked under the implementation-track name **Invitation Rendering Foundation**. Its checkpoints are `RF-00`, `RF-01`, `RF-02`, …. **RF IDs are implementation checkpoints, not roadmap task numbers.** No roadmap task is renumbered or newly numbered. Task 029 (Invitation Visual Prototypes) stays **COMPLETE / FROZEN**. **Task 030 stays blocked** until the completion gate (RF16) is met.
+
+**RF2. Variant event visibility.** The Wedding Domain Resolver filters canonical `project_events` by explicit `side` (`EventSide` = `COMMON | GROOM | BRIDE`, `lib/domain/event-side.ts`):
+
+| Variant | Included `side` values | Excluded |
+|---|---|---|
+| `GROOM` | `GROOM`, `COMMON` | `BRIDE` |
+| `BRIDE` | `BRIDE`, `COMMON` | `GROOM` |
+| `COMMON` | `GROOM`, `BRIDE`, `COMMON` | — |
+
+**Event display order.** Visible events are ordered for display by `sort_order ASC`, then `starts_at ASC`, then `id ASC` as a deterministic tie-break. This display order is **not** the "earliest" order used by ceremony selection below; the two orderings are separate and must not be conflated. No event is ever duplicated, including `COMMON` events. Only the resolver owns this filtering and ordering. Templates receive the already-ordered visible events and the already-resolved ceremony event; they never decide which canonical events belong to a variant and never run either ordering or the ceremony-selection algorithm themselves.
+
+**Ceremony event selection (product decision, RF-00 contract recovery).** This replaces §2.8's generic primary-event fallback for rendering purposes (`docs/PHYSICAL_DATABASE_PLAN.md` §2.8 [R21] carries a forward note to this rule). The ceremony event is chosen using both variant visibility and the required occasion type:
+
+| Variant | Required `occasion_type` | Ceremony candidates `C` |
+|---|---|---|
+| `COMMON` | `THANH_HON` | visible events (all sides) with `occasion_type = 'THANH_HON'` |
+| `GROOM` | `THANH_HON` | visible events (`GROOM`, `COMMON`) with `occasion_type = 'THANH_HON'` |
+| `BRIDE` | `VU_QUY` | visible events (`BRIDE`, `COMMON`) with `occasion_type = 'VU_QUY'` |
+
+- `RECEPTION` and `CUSTOM` events are **never** ceremony candidates. A `VU_QUY` event is never the ceremony for `COMMON`/`GROOM`. A `THANH_HON` event is never the ceremony for `BRIDE`. An event from an invisible side is never a candidate.
+- **Ceremony-selection "earliest" order.** Wherever a tier below says "earliest", or a tier could match more than one row, the order is `starts_at ASC`, then `sort_order ASC`, then `id ASC`, and the first row wins. This is deliberately different from the event display order above. No step depends on JavaScript object identity or input array order.
+- **Priority tiers (final, RF-00 blocker correction B2).** Tiers are evaluated in order, only within `C`; the first tier that yields a row wins. These are the only active tiers:
+  - `COMMON` (`C` = visible `THANH_HON` events from `GROOM`, `BRIDE` and `COMMON` sides), preserving §2.8's original COMMON semantics:
+    1. the `is_primary` event with `side = COMMON`;
+    2. otherwise, the earliest event with `side = COMMON`;
+    3. otherwise, the earliest event in `C`, regardless of `GROOM`/`BRIDE` side.
+
+    There is **no** "primary `GROOM`" or "primary `BRIDE`" tier for `COMMON`. A primary `GROOM`-side or `BRIDE`-side `THANH_HON` event is only reachable through tier 3, and only as the earliest remaining event.
+  - `GROOM` (`C` = visible `THANH_HON` events from `GROOM` and `COMMON` sides):
+    1. the `is_primary` event with `side = GROOM`;
+    2. otherwise, the `is_primary` event with `side = COMMON`;
+    3. otherwise, the earliest event with `side = COMMON`;
+    4. otherwise, the earliest event in `C`.
+  - `BRIDE` (`C` = visible `VU_QUY` events from `BRIDE` and `COMMON` sides):
+    1. the `is_primary` event with `side = BRIDE`;
+    2. otherwise, the `is_primary` event with `side = COMMON`;
+    3. otherwise, the earliest event with `side = COMMON`;
+    4. otherwise, the earliest event in `C`.
+- The partial unique index `(project_id, side) WHERE is_primary` means an `is_primary` tier normally matches at most one row. If more than one row ever matches a tier, the resolver still picks deterministically by the ceremony-selection "earliest" order.
+- **`is_primary` semantics.** `is_primary` is an *input* to ceremony selection, not a statement that the event *is* the resolved ceremony. A primary event is considered only if it is in `C` (visible to the active variant **and** of the required `occasion_type`) and only in the tier that names its side. A primary event of the wrong occasion type, or from a side the variant cannot see, is ignored for ceremony resolution.
+- If `C` is empty, there is no ceremony event and the domain result reports the **BLOCKING** validation issue `REQUIRED_CEREMONY_EVENT_MISSING` (`docs/PRODUCT.md` §10). The resolver never borrows the opposite side's ceremony, never substitutes a `RECEPTION`/`CUSTOM` event, and never changes the ceremony title to hide bad source data.
+- No snapshot payload may be built from a result that has a BLOCKING issue.
+- The resolved ceremony event is the single source for the ceremony's date, time, weekday, month, year, calendar emphasis, countdown target and lunar line (RF6). An `is_primary` flag on a non-candidate event (for example a primary `RECEPTION`) has no effect on ceremony selection.
+
+**RF3. Ceremony title.** Fixed at the domain/ViewModel layer: `COMMON` → **"Lễ Thành Hôn"**, `GROOM` → **"Lễ Thành Hôn"**, `BRIDE` → **"Lễ Vu Quy"**. Templates may style the title but never change its wording. Canonical per-event `title` values are passed through unchanged. Because ceremony selection (RF2) only accepts an event whose `occasion_type` matches the variant (`THANH_HON` for `COMMON`/`GROOM`, `VU_QUY` for `BRIDE`), the fixed title and the ceremony event's data can never contradict each other.
+
+**RF4. Person order and operational sides.** `GROOM`: primary side = `GROOM`, secondary = `BRIDE`. `BRIDE`: primary = `BRIDE`, secondary = `GROOM`. `COMMON`: display order is groom-first (primary = `GROOM`, secondary = `BRIDE`). This matches the approved Task 029 visual source of truth and the COMMON "Lễ Thành Hôn" title. Both sides stay first-class: this is display order only, never exclusion. `operationalSides` (the sides whose gift/operational data render) is `[GROOM]` for `GROOM`, `[BRIDE]` for `BRIDE`, and `[GROOM, BRIDE]` for `COMMON`.
+
+**RF5. Explicit side identity.** Every person, family, gift and operational-side structure carries an explicit stable side role (`GROOM`/`BRIDE`). Production code compares sides by that role, **never by JavaScript object identity**. The Task 029 prototype's `side === data.bride` style must not be carried into production.
+
+**RF6. Lunar date: manual, per event (Product Owner decision, RF-00 contract recovery).** This replaces the earlier RF-00 draft rule, which compared the civil dates of the project's events to decide whether one project-level lunar string was safe to show. That comparison rule is withdrawn and must not be implemented.
+- **No calculation.** WeddingClick never calculates a lunar date. Staff (or a future customer workflow) enter lunar-date display text manually for each ceremony event. No lunar-calendar library, service or dependency is required, and timezone is used only to interpret the event's civil date/time.
+- **Canonical home: `project_events.lunar_date_display`.** It is nullable `TEXT`, display text only (not a computed lunar-date object), and belongs to exactly one event row. Vu Quy and Thành Hôn carry independent values, for example `"07/09 Âm lịch"` on a 2026-10-17 Vu Quy and `"08/09 Âm lịch"` on a 2026-10-18 Thành Hôn. The column does not exist yet. It is added by checkpoint RF-L01 (RF17); see `docs/PHYSICAL_DATABASE_PLAN.md` §2.8.
+- **Rendering.** The ceremony lunar line comes only from the resolved ceremony event's (RF2) `lunar_date_display`. If it is null or empty, the lunar line is omitted gracefully. That is not a BLOCKING issue. The renderer never infers it from another event, never falls back to `wedding_details.lunar_date_display`, never calculates it, and never compares event dates to guess ownership.
+- **Non-ceremony events.** The column is permitted on any event row. Production v1 renderers show lunar text only on the ceremony. `RECEPTION`/`CUSTOM` cards never inherit ceremony lunar text. An event's own lunar text may be shown with that same event only under a future explicit UI contract.
+- **Legacy project-level field.** `wedding_details.lunar_date_display` is **LEGACY / DEPRECATED** for the production V2 renderer. The Invitation Rendering Foundation must not read it as a lunar-date source, and it never enters the snapshot payload or `InvitationViewModel`. New V2 event editing and rendering use the event-level field. The column is **not** dropped by RF-00, and it stays readable/writable through the existing Task 022 wedding-details API and Task 027 intake paths. It may be dropped only by a later, explicitly approved cleanup task, after a compatibility audit confirms every consumer has migrated.
+- **No automatic backfill (final, RF-00 blocker correction B1).** There is **no** automatic backfill from `wedding_details.lunar_date_display` to `project_events.lunar_date_display`, under any condition. The legacy project-level text never recorded which ceremony/event it belongs to, so its ownership cannot be proven safely. Therefore:
+  - when the event-level column is introduced, every existing `project_events` row has `lunar_date_display = NULL`;
+  - no migration (RF-L01 or any other) copies the legacy value into one or more events, and no value is guessed;
+  - staff manually enter the correct lunar text for each relevant ceremony event through the Project Events workflow (RF-L03);
+  - `wedding_details.lunar_date_display` is left untouched and stays LEGACY / DEPRECATED for V2 rendering; the V2 renderer never reads it;
+  - NULL is always preferred over an uncertain lunar date.
+
+**RF7. Content with no canonical home.** Customer-authored content is **never** hidden inside `designSettings`.
+- **Future schema/content task. Not persisted today, and RF-01+ must not invent storage for it:** dress code; love-story milestones/structured timeline (the canonical free-text `wedding_details.love_story` *does* exist and is used as-is); portrait-specific media roles; image focal points. Production V1 templates must work gracefully without these.
+- **Fixed template copy (template-owned and versioned):** section headings; closing/thank-you copy; gift intro copy; default salutation; default generic guest label. This copy is part of the immutable renderer version (RF14), so changing it requires a new renderer/template version.
+- **Derived from canonical data:** the invitation body/message comes from `wedding_details.invitation_message`. No separate customer-authored "invitation wording template" may exist in `designSettings`. Templates may wrap canonical text in versioned fixed copy but never invent persisted customer content.
+
+**RF8. `additional_note` is internal and not renderable.** `wedding_details.additional_note` is **INTERNAL / NON-RENDERABLE** by default. It never enters the snapshot payload, the `InvitationViewModel`, or any public, review or portal output. Reclassifying it requires a future explicit product decision. `docs/PRODUCT.md` §6 lists "additional note" only as *potential* optional content, which this closes.
+
+**RF9. Template catalog seeding.**
+- RF-01 through RF-05 need **no** database catalog rows and make **no** database contact. Domain, payload, ViewModel and registry tests use typed fixtures.
+- For the first real production renderer, the `rendererKey` and manifest are frozen in code and docs first. Only then are catalog rows seeded.
+- Seeding mechanism: a reproducible **data-only migration** that inserts only the approved immutable `templates`/`template_versions` catalog rows. It is not a schema migration.
+- One-off ADMIN UI/RLS insertion is **not** the canonical environment setup, because DEV/STAGING/production must stay reproducible.
+- The seed checkpoint happens only after the first renderer key, version and manifest are final. RF-00 performs no seeding.
+
+**RF10. Staff preview scope.**
+- The core foundation does **not** need a new staff preview API for RF-01 through RF-06 to proceed.
+- RF-01 to RF-05 are pure and unit-testable.
+- RF-06 may use a fixture-driven internal rendering harness for implementation QA.
+- A production staff preview route/API is a **separate, later checkpoint**, needed before operational staff preview. It is not Task 030, and no preview API is added in RF-00 or RF-01.
+- Any future staff preview uses authenticated STAFF/ADMIN RLS (Path A). **`service_role` is never permitted for staff preview.**
+
+**RF11. Snapshot payload, `payloadSchemaVersion: 1`.** The version marker lives **inside the JSON payload**, so the marker itself needs no column or migration. The event-level `lunarDateDisplay` field does depend on the RF-L01 schema change (RF6, RF17). The payload is JSON-serializable, deterministic, pinned to a renderer version, and safe to persist unchanged into `invitation_versions.payload` later. Top-level semantic shape (exact TypeScript types are fixed in RF-01/RF-02 using the existing domain type names):
+
+```text
+{
+  payloadSchemaVersion: 1,
+  project:   { code },                                   // projects.project_code
+  template:  { templateVersionId, rendererKey },
+  variant:   InvitationVariant,
+  people:    { groom, bride, primarySide, secondarySide },   // each person carries side: GROOM|BRIDE
+  families:  { groom, bride },                           // each carries side; father/mother/address
+  ceremony:  { eventId, occasionType, title, startsAt, timezone, lunarDateDisplay? },
+             // eventId = RF2 resolved ceremony event; all fields except title are derived copies of that entry
+  events:    [ ...variant-visible events, RF2 order, each with id/side/occasionType/title/
+               startsAt/timezone/venueName?/address?/mapUrl?/description?/sortOrder/isPrimary/
+               lunarDateDisplay? ],
+  operationalSides: EventSide[] (GROOM|BRIDE, RF4),
+  content:   { invitationMessage?, loveStory? },
+  gift:      { groom?, bride? },                         // per docs/PHYSICAL_DATABASE_PLAN.md §2.7 [R20]
+  media:     { coverMediaId?, galleryMediaIds[], audioMediaId?,
+               qr: { groomMediaId?, brideMediaId?, commonMediaId? } },
+  sections:  { ...resolved section presence },
+  design:    { paletteKey, fontPresetKey, effectPresetKey, sectionSettings, designSettings }
+}
+```
+
+Payload rules:
+- **A.** Side identity is explicit (RF5).
+- **B.** Dates are stored as the canonical instant (`starts_at`) plus IANA `timezone`. All display parts (date, weekday, month, year, time, calendar, countdown) are derived deterministically from those two values and are never stored separately.
+- **C.** Media is stored as stable `project_media` ids only. **Never** signed URLs, expiring URLs, or storage paths meant for display. Media with several candidates is ordered `sort_order ASC, id ASC`: cover and audio take the first `COVER`/`AUDIO` row, and the gallery takes all `GALLERY` rows. The referenced id set is the input to `invitation_version_media` (media reference extraction).
+- **D.** **No guest data:** no guest display name, no token-derived identity, no personalization state.
+- **E.** **No RSVP state:** no form state, submission result, or party-size response.
+- **F.** **No `additional_note`** (RF8).
+- **G.** Missing optional values are omitted or represented exactly as the TypeScript contract says. Demo or placeholder values are never invented.
+- **H.** `gift` includes only the variant's `operationalSides`: `GROOM` → groom only, `BRIDE` → bride only, `COMMON` → both. A side whose four gift fields are all null is omitted.
+- **I.** Event entries use the existing `ProjectEventRecord` field names (`lib/server/project-events/project-events-types.ts`), extended in RF-L03 with `lunarDateDisplay`. Each entry's `isPrimary` is the canonical `is_primary` value passed through; it does not mean "is the ceremony". The ceremony is identified only by `ceremony.eventId`.
+- **J.** The event entry is the source of truth for event lunar text. `ceremony.lunarDateDisplay` is a derived convenience copy of the referenced entry's value, not a second independently authored value, and the builder guarantees the two are equal. The payload never contains `wedding_details.lunar_date_display` (RF6).
+
+**RF12. Payload vs `InvitationViewModel`.** The **snapshot payload** is the stable canonical rendering snapshot, and it is what gets persisted. The **`InvitationViewModel`** is a render-time object derived from payload + guest overlay + resolved media URLs + runtime capabilities. It may contain normalized primary/secondary ordering, explicit side roles, precomputed deterministic display fields (the ceremony lunar line is taken directly from the resolved ceremony event's `lunarDateDisplay`, never calculated), the guest display-name overlay, resolved media URLs, renderer-friendly section state, and RSVP callback/capability metadata. **The ViewModel is never persisted as the snapshot.**
+
+**RF13. Media boundary.**
+- **URLs.** The payload stores media references only. Signed or private display URLs are resolved per request, while the ViewModel is built, by an **injected media resolver**. Templates never query Supabase, sign URLs, or know storage internals. They receive usable display URLs from the ViewModel.
+- **`QR_COMMON`.** COMMON bank/gift data is never fabricated. Groom and bride gift data comes from the canonical per-side `wedding_details` fields, including `groom_bank_qr_media_id`/`bride_bank_qr_media_id`. `qr.commonMediaId` is filled only through a defined canonical reference. None exists today (`wedding_details` has no common-QR column), and the builder must not infer one from `project_media` rows by `media_type` alone, so it is **absent** in payload V1. The COMMON gift UI uses the existing groom/bride sides, never an invented third account.
+- **Dimensions.** `project_media` width/height may be null. The foundation never assumes dimensions exist. Orientation-sensitive logic uses a deterministic neutral fallback: no crash, no fabricated dimensions. Orientation metadata enrichment is a later enhancement.
+
+**RF14. Fonts and renderer-code immutability.**
+- **Fonts.** Approving a prototype visually does **not** certify its font imports for production. RF-06 either maps the design onto approved production Font Library entries that closely preserve the approved direction, or stops for an explicit font-library decision before any unapproved font enters a production renderer. RF-00 does not expand the Font Library.
+- **Renderer code.** A versioned renderer directory (e.g. `templates/wedding/<family>/v1/`) is **immutable once that version is certified or released**. Visual or behavioral changes, including changes to fixed template copy (RF7), go into `v2/` or another new version. A static registry/regression test that enforces known renderer keys may be added in RF-04+. RF-00 adds no enforcement code.
+
+**RF15. Shared client capability boundaries.**
+- **RSVP.** The prototype's three attendance options are **not** the persistence contract. Persisted attendance stays `RsvpAttendanceStatus` (`ATTENDING | NOT_ATTENDING`), with party size per `docs/PHYSICAL_DATABASE_PLAN.md` §2.20 (`ATTENDING` 1–20, `NOT_ATTENDING` 0). No `MAYBE` status is added. The RSVP UI does not own persistence: the renderer receives a submit capability/callback. Previews and harnesses never fake a successful persisted RSVP. Actual persistence is still Task 033.
+- **Music.** `AUDIO` media is the canonical input. With no audio, no music control is shown. A fake "playing" state without real playback is not acceptable for a certified template. Real shared playback is required before any template that claims music support is certified, but it does not block RF-01 to RF-04.
+- **Clipboard.** Success is shown only after the browser copy operation has actually succeeded. A failure is never swallowed and then presented as success. The shared production capability must fix the prototype's known false-positive path.
+
+**RF16. Foundation completion gate (Task 030 blocker).** The foundation is **not** complete just because RF-01 types exist. Before Task 030 may begin, all of the following must be delivered:
+1. production domain types;
+2. an explicit-side Wedding Domain Resolver;
+3. deterministic variant/event resolution, including occasion-matched ceremony selection and the BLOCKING `REQUIRED_CEREMONY_EVENT_MISSING` result (RF2);
+4. the `payloadSchemaVersion: 1` contract;
+5. a snapshot payload builder;
+6. media-reference extraction;
+7. an `InvitationViewModel` builder;
+8. an injected media URL boundary;
+9. a code-side renderer registry;
+10. fail-closed renderer lookup (an unknown `rendererKey`, an unsupported `payloadSchemaVersion` or an unsupported variant is an error, never a fallback to another renderer);
+11. manifest/renderer compatibility validation;
+12. a shared renderer boundary;
+13. an RSVP UI contract boundary;
+14. shared clipboard behavior that reports success only after actual success;
+15. unit tests for `COMMON`/`GROOM`/`BRIDE`;
+16. at least **one** production renderer integration that proves the architecture;
+17. canonical event-level manual lunar-date support: RF-L01 migration authored and independently reviewed, RF-L02 applied and runtime-verified, and RF-L03 Project Events domain/API integration delivered (RF6, RF17);
+18. the Wedding Domain Resolver, payload builder and `InvitationViewModel` read lunar text only from the resolved ceremony event's `lunarDateDisplay`;
+19. no production V2 renderer path reads `wedding_details.lunar_date_display`.
+
+The legacy `wedding_details.lunar_date_display` column does **not** need to be physically dropped for this gate.
+
+The first proving renderer is **Elegant Editorial v1**. This matches `docs/ROADMAP.md` Week 3's "architecture proving template". Vietnamese Heritage and Romantic Minimal do **not** block this gate: no authoritative doc requires all three before Task 030, and ROADMAP places them in Week 5. They follow RF-06 as separate, controlled checkpoints. Template certification (`docs/TEMPLATE_SYSTEM.md` §25) is still a separate, stricter gate before any template becomes active.
+
+**RF17. Checkpoint plan** (recorded, not implemented):
+
+Revised by the RF-00 contract recovery. The corrected design **does** require a database schema migration before the complete foundation can be integrated with canonical data. The lunar schema/API prerequisites are separate `RF-L` checkpoints and come before renderer-domain work.
+
+| Checkpoint | Scope |
+|---|---|
+| RF-00 | Contract closure (docs only) |
+| RF-L01 | Event-level lunar-date schema: migration authoring + static review only, **no database apply** |
+| RF-L02 | Apply the RF-L01 migration and verify it at runtime, in DEV/STAGING, following the existing migration workflow, only after the independent RF-L01 review has passed |
+| RF-L03 | Project Events domain/API integration: add the event lunar field to the canonical read/write paths, with tests |
+| RF-01 | Domain types + pure Wedding Domain Resolver |
+| RF-02 | Snapshot payload builder + media reference extraction |
+| RF-03 | `InvitationViewModel` builder + injected media resolver boundary |
+| RF-04 | Renderer registry + fail-closed lookup + manifest compatibility |
+| RF-05 | Shared renderer boundary + minimum shared client capabilities |
+| RF-06 | Elegant Editorial v1: first production renderer integration |
+
+No RF-07 is a mandatory foundation requirement. Staff preview (RF10), catalog seeding (RF9), and the Vietnamese Heritage/Romantic Minimal integrations are separate follow-up checkpoints. RF IDs, including `RF-L` IDs, remain checkpoint IDs and never renumber roadmap tasks.
+
+**Order.** RF-L01 → RF-L02 → RF-L03 → RF-01 → … → RF-06. RF-01 domain event types must mirror the extended `ProjectEventRecord` delivered by RF-L03. RF-01 through RF-05 remain pure TypeScript with typed fixtures and make no database contact (RF9).
+
+**RF-L01 scope, from the current write path.** `project_events` has no direct authenticated writes (migration `0022` revoked them). Create and update go only through the `SECURITY DEFINER` business actions `public.create_project_event(...)` / `public.update_project_event(...)`; delete is `public.delete_project_event(uuid, uuid)`. The RF-L01 migration must therefore:
+- add nullable `project_events.lunar_date_display TEXT`;
+- redefine `create_project_event` and `update_project_event` to accept, write and return the new column;
+- include the new column in `update_project_event`'s no-op comparison, so a lunar-only edit counts as a real change and is logged as `CANONICAL_DATA_APPLIED`;
+- re-apply the existing `REVOKE`/`GRANT EXECUTE` pattern exactly, keeping `authenticated` only;
+- perform **no** lunar-data backfill: existing rows remain `NULL`, and `wedding_details.lunar_date_display` is left untouched (RF6).
+
+Changing a function's parameter list or `RETURNS TABLE` shape cannot be done in place with `CREATE OR REPLACE`. The migration must replace the functions without leaving the old overload callable. `delete_project_event` is unaffected. RF-00 writes no SQL.
+
+**RF-L03 scope, from the current code.**
+- `ProjectEventRecord` and `ProjectEventInput` in `lib/server/project-events/project-events-types.ts`.
+- `validate-project-event-input.ts`: nullable display text, following the existing optional-text validation convention.
+- `project-events-gateway.ts` and `lib/server/supabase/project-events-repository.ts`: the `PROJECT_EVENT_COLUMNS` select and the RPC parameter mapping.
+- Create/update/list services and `lib/server/routes/project-events.ts`.
+- Staff routes `app/api/v2/internal/projects/[id]/events/route.ts` and `.../events/[eventId]/route.ts`.
+- Their `__tests__` suites.
+
+Create/update stay full-resource operations, so `lunarDateDisplay` becomes a required-present (nullable) input field. The path stays Path A (staff auth/RLS plus trusted business action). **No `service_role`, no new public endpoint, and no Task 028 Project Design API change.**
+
+**Intake boundary.** Task 027 intake applies to `wedding_details` only; migration `0026` explicitly touches no `project_events`. Intake therefore keeps capturing the legacy project-level `lunarDateDisplay` unchanged, and that value is never copied automatically to events after RF-L01. Staff enter per-event lunar text through the Project Events API. Adding event or lunar input to intake would be a separate, future scope decision, and any such input must follow the canonical event contract (RF6).
+
+**Frozen-table-shape clarification.** `docs/API_CONTRACT.md` §9 and `docs/PHYSICAL_DATABASE_PLAN.md` §16a describe post-foundation feature migrations as adding functions without changing any frozen table shape. RF-L01 is the one explicitly approved exception, based on the Product Owner decision in RF6: a single additive, nullable, non-destructive column on `project_events`. It does not reopen any other frozen table shape, and it is recorded in §16a when it ships.
 
 ## Draft / Review / Publish
 
