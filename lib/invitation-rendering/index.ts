@@ -5,3 +5,7 @@ export * from "./resolve-wedding-domain";
 export * from "./snapshot-payload-types";
 export * from "./build-snapshot-payload";
 export * from "./extract-snapshot-media-refs";
+export * from "./invitation-view-model-types";
+export { InvitationViewModelInvariantError } from "./media-resolution";
+export * from "./resolve-snapshot-media";
+export * from "./build-invitation-view-model";
