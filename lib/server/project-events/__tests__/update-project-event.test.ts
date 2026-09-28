@@ -36,6 +36,7 @@ const validBody = {
   description: null,
   sortOrder: 0,
   isPrimary: true,
+  lunarDateDisplay: null,
 };
 
 function fakeRecord(input: ProjectEventInput): ProjectEventRecord {
@@ -94,6 +95,53 @@ describe("updateProjectEvent", () => {
     expect(received?.input).toEqual(validBody);
     expect(result.changed).toBe(true);
     expect(result.operation).toBe("UPDATED");
+  });
+
+  it("passes a manual lunarDateDisplay through to the gateway (trimmed) and back in the result", async () => {
+    let receivedInput: ProjectEventInput | undefined;
+    const gateway: ProjectEventsGateway<FakeClient> = {
+      ...unusedGatewayMethods(),
+      async updateProjectEvent(_client, _pid, _eid, input) {
+        receivedInput = input;
+        return { event: fakeRecord(input), changed: true, operation: "UPDATED" };
+      },
+    };
+
+    const result = await updateProjectEvent(
+      projectId,
+      eventId,
+      { ...validBody, lunarDateDisplay: " Ngày 17 tháng 01 năm Đinh Mùi  " },
+      staff,
+      gateway,
+    );
+
+    expect(receivedInput?.lunarDateDisplay).toBe("Ngày 17 tháng 01 năm Đinh Mùi");
+    expect(result.event.lunarDateDisplay).toBe("Ngày 17 tháng 01 năm Đinh Mùi");
+  });
+
+  it("rejects a body missing lunarDateDisplay as BAD_REQUEST without calling the gateway", async () => {
+    let called = false;
+    const gateway: ProjectEventsGateway<FakeClient> = {
+      ...unusedGatewayMethods(),
+      async updateProjectEvent() {
+        called = true;
+        throw new Error("should not be called");
+      },
+    };
+    const withoutLunar: Record<string, unknown> = { ...validBody };
+    delete withoutLunar.lunarDateDisplay;
+
+    const error = await updateProjectEvent(
+      projectId,
+      eventId,
+      withoutLunar,
+      staff,
+      gateway,
+    ).catch((e) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).kind).toBe("BAD_REQUEST");
+    expect(called).toBe(false);
   });
 
   it("rejects a malformed project id as BAD_REQUEST without calling the gateway", async () => {

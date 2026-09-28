@@ -4,7 +4,10 @@ import type { EventSide, OccasionType } from "../../domain";
  * Project Event domain shapes (Task 023).
  *
  * Mirrors migration 0009_project_events.sql / docs/PHYSICAL_DATABASE_PLAN.md
- * §2.8 exactly — no invented fields. `id`, `projectId`, `createdAt`,
+ * §2.8 exactly — no invented fields — plus `lunarDateDisplay`
+ * (0027_project_events_lunar_date_display.sql): manually entered,
+ * event-owned display text, never calculated and never defaulted from
+ * wedding_details.lunar_date_display. `id`, `projectId`, `createdAt`,
  * `updatedAt` are server-owned and never accepted as create/update input.
  */
 export interface ProjectEventRecord {
@@ -23,6 +26,7 @@ export interface ProjectEventRecord {
   isPrimary: boolean;
   createdAt: string;
   updatedAt: string;
+  lunarDateDisplay: string | null;
 }
 
 /**
@@ -45,6 +49,7 @@ export interface ProjectEventInput {
   description: string | null;
   sortOrder: number;
   isPrimary: boolean;
+  lunarDateDisplay: string | null;
 }
 
 export interface CreateProjectEventResult {

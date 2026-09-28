@@ -37,11 +37,13 @@ interface ProjectEventRow {
   is_primary: boolean;
   created_at: string;
   updated_at: string;
+  lunar_date_display: string | null;
 }
 
 const PROJECT_EVENT_COLUMNS =
   "id, project_id, occasion_type, side, title, starts_at, timezone, venue_name, " +
-  "address, map_url, description, sort_order, is_primary, created_at, updated_at";
+  "address, map_url, description, sort_order, is_primary, created_at, updated_at, " +
+  "lunar_date_display";
 
 function toProjectEventRecord(row: ProjectEventRow): ProjectEventRecord {
   return {
@@ -60,6 +62,7 @@ function toProjectEventRecord(row: ProjectEventRow): ProjectEventRecord {
     isPrimary: row.is_primary,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    lunarDateDisplay: row.lunar_date_display,
   };
 }
 
@@ -76,16 +79,24 @@ function toRpcInput(input: ProjectEventInput) {
     p_description: input.description,
     p_sort_order: input.sortOrder,
     p_is_primary: input.isPrimary,
+    // Always sent, even when null — 0027 made p_lunar_date_display a
+    // required (no DEFAULT) parameter of both create/update RPCs.
+    p_lunar_date_display: input.lunarDateDisplay,
   };
 }
 
-/** create_project_event RPC row shape — the project_events columns above. */
+/**
+ * create_project_event RPC row shape — the project_events columns above,
+ * lunar_date_display last
+ * (supabase/migrations/20260911041147_0027_project_events_lunar_date_display.sql).
+ */
 type CreateProjectEventRpcRow = ProjectEventRow;
 
 /**
  * update_project_event RPC row shape — the project_events columns above
- * plus `changed`/`operation`
- * (supabase/migrations/20260911041142_0022_project_events_actions.sql).
+ * (lunar_date_display included) plus trailing `changed`/`operation`
+ * (supabase/migrations/20260911041142_0022_project_events_actions.sql,
+ * redefined by 20260911041147_0027_project_events_lunar_date_display.sql).
  */
 interface UpdateProjectEventRpcRow extends ProjectEventRow {
   changed: boolean;

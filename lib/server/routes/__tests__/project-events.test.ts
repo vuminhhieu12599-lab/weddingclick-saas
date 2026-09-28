@@ -59,7 +59,10 @@ const existingEvent: ProjectEventRecord = {
   isPrimary: true,
   createdAt: "2026-09-12T00:00:00.000Z",
   updatedAt: "2026-09-12T00:00:00.000Z",
+  lunarDateDisplay: null,
 };
+
+const lunarText = "Ngày 17 tháng 01 năm Đinh Mùi";
 
 const validCreateBody = {
   occasionType: "VU_QUY",
@@ -73,7 +76,14 @@ const validCreateBody = {
   description: null,
   sortOrder: 0,
   isPrimary: true,
+  lunarDateDisplay: null,
 };
+
+function withoutLunarDateDisplay(body: typeof validCreateBody): Record<string, unknown> {
+  const copy: Record<string, unknown> = { ...body };
+  delete copy.lunarDateDisplay;
+  return copy;
+}
 
 function createFakeGateway(options?: {
   projectExists?: boolean;
@@ -128,6 +138,25 @@ describe("handleListProjectEventsRequest", () => {
 
     expect(result.status).toBe(200);
     expect(result.body).toEqual({ data: [existingEvent] });
+  });
+
+  it("returns lunarDateDisplay on every event (string and null)", async () => {
+    const lunarEvent: ProjectEventRecord = {
+      ...existingEvent,
+      id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      lunarDateDisplay: lunarText,
+    };
+
+    const result = await handleListProjectEventsRequest(
+      "Bearer good-token",
+      existingProjectId,
+      activeStaffAuth,
+      createFakeGateway({ projectExists: true, events: [existingEvent, lunarEvent] }),
+    );
+
+    expect(result.status).toBe(200);
+    const { data } = result.body as { data: ProjectEventRecord[] };
+    expect(data.map((e) => e.lunarDateDisplay)).toEqual([null, lunarText]);
   });
 
   it("returns 200 with data: [] when the project exists but has no events", async () => {
@@ -201,6 +230,72 @@ describe("handleCreateProjectEventRequest", () => {
 
     expect(result.status).toBe(201);
     expect((result.body as CreateProjectEventResult).event.title).toBe("Lễ Vu Quy");
+  });
+
+  it("accepts a lunarDateDisplay string and returns the normalized value", async () => {
+    let receivedInput: ProjectEventInput | undefined;
+    const gateway = createFakeGateway({
+      createProjectEvent: async (_client, _pid, input) => {
+        receivedInput = input;
+        return { event: { ...existingEvent, ...input } };
+      },
+    });
+
+    const result = await handleCreateProjectEventRequest(
+      "Bearer good-token",
+      existingProjectId,
+      { ...validCreateBody, lunarDateDisplay: `  ${lunarText}  ` },
+      activeStaffAuth,
+      gateway,
+    );
+
+    expect(result.status).toBe(201);
+    expect(receivedInput?.lunarDateDisplay).toBe(lunarText);
+    expect((result.body as CreateProjectEventResult).event.lunarDateDisplay).toBe(lunarText);
+  });
+
+  it("accepts lunarDateDisplay: null and returns null", async () => {
+    let receivedInput: ProjectEventInput | undefined;
+    const gateway = createFakeGateway({
+      createProjectEvent: async (_client, _pid, input) => {
+        receivedInput = input;
+        return { event: { ...existingEvent, ...input } };
+      },
+    });
+
+    const result = await handleCreateProjectEventRequest(
+      "Bearer good-token",
+      existingProjectId,
+      validCreateBody,
+      activeStaffAuth,
+      gateway,
+    );
+
+    expect(result.status).toBe(201);
+    expect(receivedInput).toHaveProperty("lunarDateDisplay", null);
+    expect((result.body as CreateProjectEventResult).event.lunarDateDisplay).toBeNull();
+  });
+
+  it("returns 400 when lunarDateDisplay is missing, without calling the gateway", async () => {
+    let called = false;
+    const gateway = createFakeGateway({
+      createProjectEvent: async () => {
+        called = true;
+        throw new Error("should not be called");
+      },
+    });
+
+    const result = await handleCreateProjectEventRequest(
+      "Bearer good-token",
+      existingProjectId,
+      withoutLunarDateDisplay(validCreateBody),
+      activeStaffAuth,
+      gateway,
+    );
+
+    expect(result.status).toBe(400);
+    expect(result.body).toEqual({ error: '"lunarDateDisplay" is required' });
+    expect(called).toBe(false);
   });
 
   it("returns 401 without an Authorization header", async () => {
@@ -345,6 +440,75 @@ describe("handleUpdateProjectEventRequest", () => {
     expect(result.status).toBe(200);
     expect((result.body as UpdateProjectEventResult).changed).toBe(true);
     expect((result.body as UpdateProjectEventResult).operation).toBe("UPDATED");
+  });
+
+  it("accepts a lunarDateDisplay string and returns it on the updated event", async () => {
+    let receivedInput: ProjectEventInput | undefined;
+    const gateway = createFakeGateway({
+      updateProjectEvent: async (_client, _pid, _eid, input) => {
+        receivedInput = input;
+        return { event: { ...existingEvent, ...input }, changed: true, operation: "UPDATED" };
+      },
+    });
+
+    const result = await handleUpdateProjectEventRequest(
+      "Bearer good-token",
+      existingProjectId,
+      existingEventId,
+      { ...validCreateBody, lunarDateDisplay: `${lunarText}   ` },
+      activeStaffAuth,
+      gateway,
+    );
+
+    expect(result.status).toBe(200);
+    expect(receivedInput?.lunarDateDisplay).toBe(lunarText);
+    expect((result.body as UpdateProjectEventResult).event.lunarDateDisplay).toBe(lunarText);
+  });
+
+  it("accepts lunarDateDisplay: null (e.g. clearing a previous value) and returns null", async () => {
+    let receivedInput: ProjectEventInput | undefined;
+    const gateway = createFakeGateway({
+      updateProjectEvent: async (_client, _pid, _eid, input) => {
+        receivedInput = input;
+        return { event: { ...existingEvent, ...input }, changed: true, operation: "UPDATED" };
+      },
+    });
+
+    const result = await handleUpdateProjectEventRequest(
+      "Bearer good-token",
+      existingProjectId,
+      existingEventId,
+      validCreateBody,
+      activeStaffAuth,
+      gateway,
+    );
+
+    expect(result.status).toBe(200);
+    expect(receivedInput).toHaveProperty("lunarDateDisplay", null);
+    expect((result.body as UpdateProjectEventResult).event.lunarDateDisplay).toBeNull();
+  });
+
+  it("returns 400 when lunarDateDisplay is missing, without calling the gateway", async () => {
+    let called = false;
+    const gateway = createFakeGateway({
+      updateProjectEvent: async () => {
+        called = true;
+        throw new Error("should not be called");
+      },
+    });
+
+    const result = await handleUpdateProjectEventRequest(
+      "Bearer good-token",
+      existingProjectId,
+      existingEventId,
+      withoutLunarDateDisplay(validCreateBody),
+      activeStaffAuth,
+      gateway,
+    );
+
+    expect(result.status).toBe(400);
+    expect(result.body).toEqual({ error: '"lunarDateDisplay" is required' });
+    expect(called).toBe(false);
   });
 
   it("returns 200 with changed=false for a no-op update", async () => {

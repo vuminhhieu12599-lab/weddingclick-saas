@@ -22,7 +22,12 @@ const MAX_FIELD_LENGTH = 20000;
 const INT4_MIN = -2147483648;
 const INT4_MAX = 2147483647;
 
-const NULLABLE_TEXT_FIELDS = ["venueName", "address", "description"] as const;
+const NULLABLE_TEXT_FIELDS = [
+  "venueName",
+  "address",
+  "description",
+  "lunarDateDisplay",
+] as const;
 
 /**
  * Fields the client must never be able to set on a project_events create or

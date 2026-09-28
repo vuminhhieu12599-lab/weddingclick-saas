@@ -35,6 +35,7 @@ const existingEvent: ProjectEventRecord = {
   isPrimary: true,
   createdAt: "2026-09-12T00:00:00.000Z",
   updatedAt: "2026-09-12T00:00:00.000Z",
+  lunarDateDisplay: "Ngày 17 tháng 01 năm Đinh Mùi",
 };
 
 function createFakeGateway(options: {

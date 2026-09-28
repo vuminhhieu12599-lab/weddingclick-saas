@@ -17,7 +17,10 @@ const validInput: ProjectEventInput = {
   description: null,
   sortOrder: 0,
   isPrimary: true,
+  lunarDateDisplay: null,
 };
+
+const lunarText = "Ngày 17 tháng 01 năm Đinh Mùi";
 
 const projectId = "11111111-1111-1111-1111-111111111111";
 const eventId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
@@ -38,6 +41,7 @@ const successRow = {
   is_primary: validInput.isPrimary,
   created_at: "2026-09-12T00:00:00.000Z",
   updated_at: "2026-09-12T00:00:00.000Z",
+  lunar_date_display: null,
 };
 
 function fakeClientWithRpcResult(result: {
@@ -79,7 +83,40 @@ describe("supabaseProjectEventsGateway.createProjectEvent", () => {
       p_description: null,
       p_sort_order: validInput.sortOrder,
       p_is_primary: validInput.isPrimary,
+      p_lunar_date_display: null,
     });
+    // Explicit null, never an omitted key — 0027's p_lunar_date_display has no DEFAULT.
+    expect(captured?.params).toHaveProperty("p_lunar_date_display", null);
+  });
+
+  it("passes a manual lunarDateDisplay string through as p_lunar_date_display", async () => {
+    let captured: Record<string, unknown> | undefined;
+    const client = fakeClientWithRpcResult({
+      data: [{ ...successRow, lunar_date_display: lunarText }],
+      captureCall: (_fn, params) => {
+        captured = params as Record<string, unknown>;
+      },
+    });
+
+    await supabaseProjectEventsGateway.createProjectEvent(client, projectId, {
+      ...validInput,
+      lunarDateDisplay: lunarText,
+    });
+
+    expect(captured?.p_lunar_date_display).toBe(lunarText);
+  });
+
+  it("maps a returned lunar_date_display to lunarDateDisplay", async () => {
+    const client = fakeClientWithRpcResult({
+      data: [{ ...successRow, lunar_date_display: lunarText }],
+    });
+
+    const result = await supabaseProjectEventsGateway.createProjectEvent(client, projectId, {
+      ...validInput,
+      lunarDateDisplay: lunarText,
+    });
+
+    expect(result.event.lunarDateDisplay).toBe(lunarText);
   });
 
   it("maps the RPC row to a CreateProjectEventResult", async () => {
@@ -107,6 +144,7 @@ describe("supabaseProjectEventsGateway.createProjectEvent", () => {
       isPrimary: true,
       createdAt: successRow.created_at,
       updatedAt: successRow.updated_at,
+      lunarDateDisplay: null,
     });
   });
 
@@ -178,10 +216,96 @@ describe("supabaseProjectEventsGateway.updateProjectEvent", () => {
     );
 
     expect(captured?.fn).toBe("update_project_event");
-    expect(captured?.params).toMatchObject({
+    expect(captured?.params).toEqual({
       p_project_id: projectId,
       p_event_id: eventId,
+      p_occasion_type: validInput.occasionType,
+      p_side: validInput.side,
+      p_title: validInput.title,
+      p_starts_at: validInput.startsAt,
+      p_timezone: validInput.timezone,
+      p_venue_name: null,
+      p_address: null,
+      p_map_url: null,
+      p_description: null,
+      p_sort_order: validInput.sortOrder,
+      p_is_primary: validInput.isPrimary,
+      p_lunar_date_display: null,
     });
+    expect(captured?.params).toHaveProperty("p_lunar_date_display", null);
+  });
+
+  it("passes a manual lunarDateDisplay string through as p_lunar_date_display", async () => {
+    let captured: Record<string, unknown> | undefined;
+    const client = fakeClientWithRpcResult({
+      data: [{ ...successRow, lunar_date_display: lunarText, changed: true, operation: "UPDATED" }],
+      captureCall: (_fn, params) => {
+        captured = params as Record<string, unknown>;
+      },
+    });
+
+    await supabaseProjectEventsGateway.updateProjectEvent(client, projectId, eventId, {
+      ...validInput,
+      lunarDateDisplay: lunarText,
+    });
+
+    expect(captured?.p_lunar_date_display).toBe(lunarText);
+  });
+
+  it("maps the 0027 update row (16 event columns, lunar_date_display, then changed/operation)", async () => {
+    const client = fakeClientWithRpcResult({
+      data: [{ ...successRow, lunar_date_display: lunarText, changed: true, operation: "UPDATED" }],
+    });
+
+    const result = await supabaseProjectEventsGateway.updateProjectEvent(
+      client,
+      projectId,
+      eventId,
+      { ...validInput, lunarDateDisplay: lunarText },
+    );
+
+    expect(result).toEqual({
+      event: {
+        id: eventId,
+        projectId,
+        occasionType: "VU_QUY",
+        side: "BRIDE",
+        title: "Lễ Vu Quy",
+        startsAt: successRow.starts_at,
+        timezone: "Asia/Ho_Chi_Minh",
+        venueName: null,
+        address: null,
+        mapUrl: null,
+        description: null,
+        sortOrder: 0,
+        isPrimary: true,
+        createdAt: successRow.created_at,
+        updatedAt: successRow.updated_at,
+        lunarDateDisplay: lunarText,
+      },
+      changed: true,
+      operation: "UPDATED",
+    });
+    // changed/operation stay result-level, never leak into the event record.
+    expect(result.event).not.toHaveProperty("changed");
+    expect(result.event).not.toHaveProperty("operation");
+  });
+
+  it("maps a non-null -> null lunar update (returned lunar_date_display null)", async () => {
+    const client = fakeClientWithRpcResult({
+      data: [{ ...successRow, lunar_date_display: null, changed: true, operation: "UPDATED" }],
+    });
+
+    const result = await supabaseProjectEventsGateway.updateProjectEvent(
+      client,
+      projectId,
+      eventId,
+      validInput,
+    );
+
+    expect(result.event.lunarDateDisplay).toBeNull();
+    expect(result.changed).toBe(true);
+    expect(result.operation).toBe("UPDATED");
   });
 
   it("maps changed=false / operation=null through unchanged", async () => {
@@ -314,6 +438,55 @@ describe("supabaseProjectEventsGateway.projectExists / listProjectEvents", () =>
     expect(result).toHaveLength(1);
     expect(result[0]?.id).toBe(eventId);
     expect(result[0]?.title).toBe(successRow.title);
+    expect(result[0]?.lunarDateDisplay).toBeNull();
+  });
+
+  it("listProjectEvents maps lunar_date_display to lunarDateDisplay", async () => {
+    const client = fakeClientWithFromResult({
+      eventsData: [{ ...successRow, lunar_date_display: lunarText }],
+    });
+    const result = await supabaseProjectEventsGateway.listProjectEvents(client, projectId);
+
+    expect(result[0]?.lunarDateDisplay).toBe(lunarText);
+  });
+
+  it("listProjectEvents selects an explicit column list including lunar_date_display (never *)", async () => {
+    let selected: string | undefined;
+    const client = {
+      from: () => ({
+        select: (columns: string) => {
+          selected = columns;
+          return {
+            eq: () => ({
+              order: () => ({
+                order: async () => ({ data: [], error: null }),
+              }),
+            }),
+          };
+        },
+      }),
+    } as unknown as SupabaseClient;
+
+    await supabaseProjectEventsGateway.listProjectEvents(client, projectId);
+
+    expect(selected?.split(",").map((c) => c.trim())).toEqual([
+      "id",
+      "project_id",
+      "occasion_type",
+      "side",
+      "title",
+      "starts_at",
+      "timezone",
+      "venue_name",
+      "address",
+      "map_url",
+      "description",
+      "sort_order",
+      "is_primary",
+      "created_at",
+      "updated_at",
+      "lunar_date_display",
+    ]);
   });
 
   it("listProjectEvents returns an empty array when no events exist", async () => {
