@@ -1,0 +1,199 @@
+import { describe, expect, expectTypeOf, it } from "vitest";
+
+import type { RsvpAttendanceStatus } from "../../domain";
+import {
+  RSVP_ATTENDING_PARTY_SIZE_MAX,
+  RSVP_ATTENDING_PARTY_SIZE_MIN,
+  RSVP_MESSAGE_MAX_LENGTH,
+  RSVP_SUBMIT_RESULT_STATUSES,
+  isValidRsvpSubmitInputV1,
+  type RsvpCapabilityV1,
+  type RsvpSubmitInputV1,
+  type RsvpSubmitResultStatusV1,
+  type RsvpSubmitResultV1,
+} from "../rsvp-capability";
+import { deepFreeze } from "./invitation-view-model-fixtures";
+import { rsvpInput } from "./renderer-contract-fixtures";
+
+const PERSONALIZED = { personalized: true } as const;
+const UNPERSONALIZED = { personalized: false } as const;
+
+function valid(input: unknown, context: { personalized: boolean } = PERSONALIZED): boolean {
+  return isValidRsvpSubmitInputV1(input, context);
+}
+
+// ---------------------------------------------------------------------------
+// Types and constants (K15, K17)
+// ---------------------------------------------------------------------------
+
+describe("RSVP contract types", () => {
+  it("input has exactly four fields over the canonical attendance type", () => {
+    expectTypeOf<keyof RsvpSubmitInputV1>().toEqualTypeOf<"attendance" | "partySize" | "message" | "guestName">();
+    expectTypeOf<RsvpSubmitInputV1["attendance"]>().toEqualTypeOf<RsvpAttendanceStatus>();
+    expectTypeOf<RsvpSubmitInputV1["attendance"]>().toEqualTypeOf<"ATTENDING" | "NOT_ATTENDING">();
+    expectTypeOf<RsvpSubmitInputV1["partySize"]>().toEqualTypeOf<number>();
+    expectTypeOf<RsvpSubmitInputV1["message"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<RsvpSubmitInputV1["guestName"]>().toEqualTypeOf<string | null>();
+  });
+
+  it("result is a status-only union of exactly four outcomes", () => {
+    expect(RSVP_SUBMIT_RESULT_STATUSES).toEqual(["SUCCESS", "INVALID", "UNAVAILABLE", "FAILED"]);
+    expectTypeOf<RsvpSubmitResultStatusV1>().toEqualTypeOf<"SUCCESS" | "INVALID" | "UNAVAILABLE" | "FAILED">();
+    expectTypeOf<RsvpSubmitResultV1>().toEqualTypeOf<
+      | { readonly status: "SUCCESS" }
+      | { readonly status: "INVALID" }
+      | { readonly status: "UNAVAILABLE" }
+      | { readonly status: "FAILED" }
+    >();
+    expectTypeOf<keyof RsvpSubmitResultV1>().toEqualTypeOf<"status">();
+  });
+
+  it("capability has only submit(input) → Promise<RsvpSubmitResultV1>", () => {
+    expectTypeOf<keyof RsvpCapabilityV1>().toEqualTypeOf<"submit">();
+    expectTypeOf<Parameters<RsvpCapabilityV1["submit"]>>().toEqualTypeOf<[input: RsvpSubmitInputV1]>();
+    expectTypeOf<ReturnType<RsvpCapabilityV1["submit"]>>().toEqualTypeOf<Promise<RsvpSubmitResultV1>>();
+  });
+
+  it("has no MAYBE attendance or result", () => {
+    const maybe: RsvpSubmitInputV1 = {
+      // @ts-expect-error -- no MAYBE (RF15)
+      attendance: "MAYBE",
+      partySize: 1,
+      message: null,
+      guestName: null,
+    };
+    // @ts-expect-error -- no extra payload on a result (K17)
+    const withMessage: RsvpSubmitResultV1 = { status: "FAILED", message: "boom" };
+    expect(valid(maybe)).toBe(false);
+    expect(withMessage).toBeDefined();
+  });
+
+  it("exposes the canonical §2.20 limits", () => {
+    expect(RSVP_ATTENDING_PARTY_SIZE_MIN).toBe(1);
+    expect(RSVP_ATTENDING_PARTY_SIZE_MAX).toBe(20);
+    expect(RSVP_MESSAGE_MAX_LENGTH).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Validator (K16)
+// ---------------------------------------------------------------------------
+
+describe("isValidRsvpSubmitInputV1 — party size", () => {
+  it.each([
+    [0, false],
+    [1, true],
+    [20, true],
+    [21, false],
+    [1.5, false],
+    [-1, false],
+    [Number.NaN, false],
+    [Number.POSITIVE_INFINITY, false],
+    ["1", false],
+  ])("ATTENDING partySize %s → %s", (partySize, expected) => {
+    expect(valid({ ...rsvpInput(), attendance: "ATTENDING", partySize })).toBe(expected);
+  });
+
+  it.each([
+    [0, true],
+    [1, false],
+    [-0.5, false],
+    ["0", false],
+  ])("NOT_ATTENDING partySize %s → %s", (partySize, expected) => {
+    expect(valid({ ...rsvpInput(), attendance: "NOT_ATTENDING", partySize })).toBe(expected);
+  });
+});
+
+describe("isValidRsvpSubmitInputV1 — attendance", () => {
+  it.each(["MAYBE", "attending", "", null, undefined, 1])("rejects attendance %s", (attendance) => {
+    expect(valid({ ...rsvpInput(), attendance })).toBe(false);
+  });
+});
+
+describe("isValidRsvpSubmitInputV1 — message", () => {
+  it("accepts null, empty string and exactly 500 characters", () => {
+    expect(valid(rsvpInput({ message: null }))).toBe(true);
+    expect(valid(rsvpInput({ message: "" }))).toBe(true);
+    expect(valid(rsvpInput({ message: "a".repeat(500) }))).toBe(true);
+  });
+
+  it("rejects 501 characters", () => {
+    expect(valid(rsvpInput({ message: "a".repeat(501) }))).toBe(false);
+  });
+
+  it("counts Unicode code points like PostgreSQL char_length, not UTF-16 units", () => {
+    const emoji500 = "💐".repeat(500);
+    expect(emoji500.length).toBe(1000);
+    expect(valid(rsvpInput({ message: emoji500 }))).toBe(true);
+    expect(valid(rsvpInput({ message: "💐".repeat(501) }))).toBe(false);
+    expect(valid(rsvpInput({ message: "Chúc mừng hạnh phúc ".repeat(25) }))).toBe(true);
+  });
+
+  it.each([0, true, {}, ["x"], undefined])("rejects non-string message %s", (message) => {
+    expect(valid({ ...rsvpInput(), message })).toBe(false);
+  });
+});
+
+describe("isValidRsvpSubmitInputV1 — guestName", () => {
+  it("non-personalized requires a non-blank string", () => {
+    expect(valid(rsvpInput({ guestName: null }), UNPERSONALIZED)).toBe(false);
+    expect(valid(rsvpInput({ guestName: "" }), UNPERSONALIZED)).toBe(false);
+    expect(valid(rsvpInput({ guestName: "  \t\n " }), UNPERSONALIZED)).toBe(false);
+    expect(valid(rsvpInput({ guestName: "Em và sự cô đơn" }), UNPERSONALIZED)).toBe(true);
+    expect(valid(rsvpInput({ guestName: "  Team Marketing  " }), UNPERSONALIZED)).toBe(true);
+  });
+
+  it("personalized accepts null or any string", () => {
+    expect(valid(rsvpInput({ guestName: null }), PERSONALIZED)).toBe(true);
+    expect(valid(rsvpInput({ guestName: "Chú B và người thương" }), PERSONALIZED)).toBe(true);
+    expect(valid(rsvpInput({ guestName: "" }), PERSONALIZED)).toBe(true);
+  });
+
+  it("adds no length limit", () => {
+    expect(valid(rsvpInput({ guestName: "Anh ".repeat(1000) }), UNPERSONALIZED)).toBe(true);
+  });
+
+  it.each([0, {}, undefined])("rejects non-string guestName %s", (guestName) => {
+    expect(valid({ ...rsvpInput(), guestName }, PERSONALIZED)).toBe(false);
+    expect(valid({ ...rsvpInput(), guestName }, UNPERSONALIZED)).toBe(false);
+  });
+});
+
+describe("isValidRsvpSubmitInputV1 — object shape", () => {
+  it.each([null, undefined, [], [rsvpInput()], "ATTENDING", 1, true])("rejects non-object %s", (input) => {
+    expect(valid(input)).toBe(false);
+  });
+
+  it.each(["attendance", "partySize", "message", "guestName"] as const)("rejects a missing %s", (key) => {
+    const input: Record<string, unknown> = { ...rsvpInput() };
+    delete input[key];
+    expect(valid(input)).toBe(false);
+  });
+
+  it.each(["message", "guestName"] as const)("rejects undefined instead of null for %s", (key) => {
+    expect(valid({ ...rsvpInput(), [key]: undefined })).toBe(false);
+  });
+
+  it("rejects unknown extra keys", () => {
+    expect(valid({ ...rsvpInput(), guestId: "g-1" })).toBe(false);
+    expect(valid({ ...rsvpInput(), token: "raw" })).toBe(false);
+    expect(valid({ ...rsvpInput(), [Symbol("extra")]: true })).toBe(false);
+  });
+
+  it("rejects inherited substitutes for own keys", () => {
+    expect(valid(Object.create(rsvpInput()))).toBe(false);
+    const { guestName, ...rest } = rsvpInput();
+    const partial: Record<string, unknown> = Object.create({ guestName });
+    Object.assign(partial, rest);
+    expect(valid(partial)).toBe(false);
+  });
+
+  it("accepts a valid input without mutating it", () => {
+    const input = deepFreeze(rsvpInput({ message: "  giữ nguyên  ", guestName: "  Anh Hiếu  " }));
+    const before = structuredClone(input);
+    expect(valid(input, UNPERSONALIZED)).toBe(true);
+    expect(input).toEqual(before);
+    expect(input.message).toBe("  giữ nguyên  ");
+    expect(input.guestName).toBe("  Anh Hiếu  ");
+  });
+});
