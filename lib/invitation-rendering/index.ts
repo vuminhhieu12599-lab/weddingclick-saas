@@ -43,3 +43,10 @@ export {
   type RsvpSubmitResultStatusV1,
   type RsvpSubmitResultV1,
 } from "./rsvp-capability";
+export { RendererBindingInvariantError } from "./renderer-binding-errors";
+export {
+  createInvitationRendererBindingRegistry,
+  resolveInvitationRendererComponent,
+  type InvitationRendererBindingRegistryV1,
+  type RendererBindingEntryV1,
+} from "./renderer-binding-registry";
