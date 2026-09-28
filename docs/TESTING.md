@@ -315,7 +315,7 @@ Test:
 - audio behavior;
 - deleted draft media removed safely;
 - published version media remains available;
-- missing/broken media fails gracefully;
+- missing/broken media fails gracefully: a referenced item whose URL cannot be resolved stays in the ViewModel as `UNAVAILABLE` (same gallery order and count), is never dropped, substituted or faked, and does not block the ViewModel (`docs/DECISIONS.md` RF-03 clarification M6–M12);
 - template change reuses Project media.
 
 ---

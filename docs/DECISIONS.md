@@ -527,8 +527,10 @@ Payload rules:
 
 **RF12. Payload vs `InvitationViewModel`.** The **snapshot payload** is the stable canonical rendering snapshot, and it is what gets persisted. The **`InvitationViewModel`** is a render-time object derived from payload + guest overlay + resolved media URLs + runtime capabilities. It may contain normalized primary/secondary ordering, explicit side roles, precomputed deterministic display fields (the ceremony lunar line is taken directly from the resolved ceremony event's `lunarDateDisplay`, never calculated), the guest display-name overlay, resolved media URLs, renderer-friendly section state, and RSVP callback/capability metadata. **The ViewModel is never persisted as the snapshot.**
 
+> **Forward note (RF-03 clarification, 2026-09-28):** the list above is the *eventual* scope of the render-time object across RF-03 → RF-05, not RF-03's output. The RF-03 ViewModel is defined only by "RF-03 InvitationViewModel / Media Resolution Contract Clarification" below: it carries no RSVP callback/capability metadata, no generic runtime-capabilities object, no formatted date/weekday/countdown fields, and no effective section visibility.
+
 **RF13. Media boundary.**
-- **URLs.** The payload stores media references only. Signed or private display URLs are resolved per request, while the ViewModel is built, by an **injected media resolver**. Templates never query Supabase, sign URLs, or know storage internals. They receive usable display URLs from the ViewModel.
+- **URLs.** The payload stores media references only. Signed or private display URLs are resolved per request, while the ViewModel is built, by an **injected media resolver**. Templates never query Supabase, sign URLs, or know storage internals. They receive usable display URLs from the ViewModel. The resolver boundary, its result states, and unavailable-media behavior are defined by the RF-03 clarification below (M1–M13).
 - **`QR_COMMON`.** COMMON bank/gift data is never fabricated. Groom and bride gift data comes from the canonical per-side `wedding_details` fields, including `groom_bank_qr_media_id`/`bride_bank_qr_media_id`. `qr.commonMediaId` is filled only through a defined canonical reference. None exists today (`wedding_details` has no common-QR column), and the builder must not infer one from `project_media` rows by `media_type` alone, so it is **absent** in payload V1. The COMMON gift UI uses the existing groom/bride sides, never an invented third account.
 - **Dimensions.** `project_media` width/height may be null. The foundation never assumes dimensions exist. Orientation-sensitive logic uses a deterministic neutral fallback: no crash, no fabricated dimensions. Orientation metadata enrichment is a later enhancement.
 
@@ -652,7 +654,7 @@ Gift/QR data from a non-operational side never counts. No COMMON gift owner exis
 - `BRIDE`: may include `brideMediaId` only; `groomMediaId` must be absent.
 - `commonMediaId` is **absent** in payload v1, unless a future explicit canonical persisted common-QR pointer is introduced (RF13). A `project_media` row with `media_type = 'QR_COMMON'` is not enough to establish ownership. Common-QR ownership is never inferred or fabricated.
 
-**S10. `design.sectionSettings` boundary.** `design.sectionSettings` is copied into the payload unchanged, per the existing Task 028 JSON contract (`docs/API_CONTRACT.md` §13, `docs/TEMPLATE_SYSTEM.md` §6). RF-02 **must not** apply `sectionSettings` to the `sections` booleans. So `sections` = canonical content availability, and `design.sectionSettings` = persisted design/staff configuration. The final effective renderer section visibility is **not** decided in RF-02. It is resolved later, only once the renderer/manifest capability boundary exists (RF-03+/RF-04).
+**S10. `design.sectionSettings` boundary.** `design.sectionSettings` is copied into the payload unchanged, per the existing Task 028 JSON contract (`docs/API_CONTRACT.md` §13, `docs/TEMPLATE_SYSTEM.md` §6). RF-02 **must not** apply `sectionSettings` to the `sections` booleans. So `sections` = canonical content availability, and `design.sectionSettings` = persisted design/staff configuration. The final effective renderer section visibility is **not** decided in RF-02. It is resolved later, only once the renderer/manifest capability boundary exists (RF-03+/RF-04). RF-03 itself does not compute it; effective visibility is RF-04 (RF-03 clarification V6).
 
 **S11. Manifest capability boundary.** RF-02 does not depend on the unfrozen conceptual manifest `sectionCapabilities` (`docs/TEMPLATE_SYSTEM.md` §6) or any equivalent renderer-manifest section-support vocabulary. Manifest/renderer compatibility stays later foundation work (RF-04). RF-02 must be buildable without the RF-04 registry/manifest implementation.
 
@@ -684,6 +686,90 @@ RF-01 remains the owner of resolver issue semantics. RF-02 never replaces a reso
 This pipeline order is the entire RF-02 v1 ordering rule. There are no numeric priorities, severity or alphabetic sorting, global issue registry, cross-check deduplication policy, or new issue codes.
 
 **S14. Payload version.** All of the above belongs to `payloadSchemaVersion: 1`. It does not create payload v2. It completes the previously placeholder `sections` contract before any persisted Review/Publish snapshot exists. No migration is required.
+
+## Invitation Rendering Foundation — RF-03 InvitationViewModel / Media Resolution Contract Clarification (FROZEN)
+
+**Status:** docs only, **FROZEN** by Product Owner / Architecture decision (2026-09-28). RF-01 is frozen at `5ee6bd1`, the RF-02 clarification at `9b93b9c`, and the RF-02 implementation at `f2f9ea2`. RF-03 authoring stopped before any code because the frozen docs did not say what happens when a Snapshot media id cannot be resolved to a runtime URL. This section closes that gap and fixes the RF-03 scope. Where RF12/RF13 or `docs/TEMPLATE_SYSTEM.md` §3 / `docs/ARCHITECTURE.md` §8.1 describe the render-time object more broadly, this section governs what RF-03 builds. It does not reopen any RF-00, RF-01 or RF-02 decision. No RF-03 code exists yet. **Task 030 stays blocked** (RF16).
+
+### Architecture
+
+**A1. Two production boundaries.** RF17's "`InvitationViewModel` builder + injected media resolver boundary" is two separate boundaries, not one monolithic async builder:
+
+```text
+Layer A — media resolution boundary (async)
+  in:  SnapshotPayloadV1 media references + injected MediaResolver
+  out: complete set of typed per-media resolution results (M5)
+
+Layer B — pure InvitationViewModel builder (sync)
+  in:  SnapshotPayloadV1 + optional authorized GuestOverlay + complete resolution set from Layer A
+  out: InvitationViewModel
+```
+
+- Layer A may call the injected resolver. It contains no concrete Supabase/storage implementation.
+- Layer B is pure, synchronous TypeScript. It never calls Supabase, signs URLs, fetches, queries a database, calls storage, reads environment variables, or uses browser APIs.
+
+**A2. Concrete adapter ownership.** RF-03 defines only the `MediaResolver` interface/contract. The concrete adapter that talks to Supabase Storage, creates signed URLs and handles storage credentials/environment is **not** part of RF-03. It belongs to later integration work. Templates never sign URLs. The Snapshot never stores resolved URLs (RF11 C). ViewModel URLs are runtime-only.
+
+### Media resolution
+
+**M1. Resolver input and order.** Resolution is driven only by the media ids the Snapshot references, as extracted by the frozen RF-02 extractor (`extractSnapshotMediaRefs`): cover → gallery (payload order) → audio → groom QR → bride QR, first-reference deduplication. Layer A never discovers media by `media_type`, `project_media` scans, storage paths or mutable Project state. Each unique id is resolved **once** per resolution operation. When several ViewModel roles reference the same id, they reuse the same result; the same id is never signed separately per role. The exact interface signature is fixed in the RF-03 implementation within these rules.
+
+**M2. Result states.** Each per-media result is exactly one of two normal states:
+
+| State | Carries |
+|---|---|
+| `RESOLVED` | `mediaId`; `url` (non-empty runtime rendering URL); `width` (number or null); `height` (number or null) |
+| `UNAVAILABLE` | `mediaId` only; no URL is fabricated |
+
+RF-03 v1 has no unavailable-reason taxonomy. A result never exposes storage paths, bucket names, signing metadata, credentials, or internal adapter error objects. Exact TypeScript discriminant names follow repository conventions; the two semantic states are frozen.
+
+**M3. Expected per-media failure → `UNAVAILABLE`.** When an individual item cannot currently produce a usable URL (it cannot be found/resolved, signing cannot produce a usable URL for it, or the adapter determines it is unavailable for rendering), the result is `UNAVAILABLE`. Such a failure never fabricates a URL, never silently disappears, never blocks the whole ViewModel, and is never represented as fake image/audio data.
+
+**M4. Unexpected failure → exception.** A genuinely unexpected infrastructure or programming failure may throw and propagate as a request-level system failure. RF-03 core must not convert every unexpected exception into `UNAVAILABLE`. Concrete adapters return `UNAVAILABLE` for expected media-level failures and reserve thrown exceptions for unexpected ones. No larger error taxonomy is defined in RF-03.
+
+**M5. Complete resolution set.** Before Layer B runs, Layer A produces exactly one result for every unique media id the Snapshot references (M1). Layer B therefore always receives a complete set. A referenced id with **no entry** in the supplied set is a builder/integration **invariant violation**, surfaced as an exception (M4). It is **not** `UNAVAILABLE`, and Layer B never treats a missing entry as unavailability.
+
+**M6. Media slots stay observable.** A media reference in the Snapshot remains observable in the ViewModel even when its URL is unavailable. Every referenced slot/item carries its runtime state (`RESOLVED` with `mediaId`/`url`/`width`/`height`, or `UNAVAILABLE` with `mediaId` and no URL). A referenced item is never dropped because resolution failed. This is the RF-03 meaning of "missing/broken media fails gracefully" (`docs/TESTING.md` §14). The renderer can always distinguish **not referenced** from **referenced but unavailable**.
+
+**M7. Cover.** If the Snapshot has `media.coverMediaId` and its result is `UNAVAILABLE`, ViewModel construction still succeeds, the cover slot is present as `UNAVAILABLE`, no fake URL/image is created, and no other Project media is substituted. If the Snapshot has no `coverMediaId`, the ViewModel has no cover slot (per its optional-field contract). "No Snapshot cover" and "referenced cover currently unavailable" are distinct states.
+
+**M8. Gallery.** The ViewModel gallery has exactly one item per `media.galleryMediaIds` entry, in the same order. An `UNAVAILABLE` item keeps its position and `mediaId`; it is not removed, reordered or replaced. Gallery order and cardinality come from the Snapshot, never from resolver success.
+
+**M9. Audio.** If the Snapshot has `media.audioMediaId` and its result is `UNAVAILABLE`, ViewModel construction succeeds, the audio slot is present as `UNAVAILABLE`, and there is no fake audio URL, no fake playing state, and no substitute `AUDIO` media. With no `audioMediaId` there is no audio slot.
+
+**M10. Groom/bride QR.** If the Snapshot references `media.qr.groomMediaId` or `media.qr.brideMediaId` and the result is `UNAVAILABLE`, ViewModel construction succeeds and that QR slot is present as `UNAVAILABLE`. No QR is fabricated, the opposite side's QR is never substituted, and no `QR_COMMON` fallback exists (RF13, S9). Bank/gift text stays available from Snapshot `gift` data, and Snapshot `gift.<side>.bankQrMediaId` is unchanged. How the renderer visibly communicates an unavailable QR is later work.
+
+**M11. QR single reference.** `media.qr.<side>MediaId` is the canonical Snapshot reference for QR resolution. By RF-02 construction, `gift.<side>.bankQrMediaId` holds the same stable id. RF-03 never resolves the two independently: one media id → one result, and every ViewModel QR/gift representation reuses it. No media-type inference, no `QR_COMMON`.
+
+**M12. No media issue vocabulary.** RF-03 has no normal builder issue codes for expected unavailable media (for example `MEDIA_RESOLUTION_FAILED`, `COVER_MISSING`, `GALLERY_ITEM_MISSING`, `AUDIO_MISSING`, `QR_MISSING`). Unavailable media is represented directly in the typed ViewModel slots. It is not a Snapshot validation failure and never makes ViewModel construction `BLOCKED`. Unexpected system/invariant failures remain exceptions outside this normal state (M4, M5).
+
+**M13. Dimensions.** `width`/`height` may be null (RF13). Null dimensions do not make media `UNAVAILABLE`: a `RESOLVED` item may have a URL with `width = null` and `height = null`. RF-03 never fabricates dimensions. Any neutral, deterministic orientation/layout fallback belongs only where a later renderer/shared-presentation contract needs it.
+
+### ViewModel scope
+
+**V1. Guest overlay.** The RF-03 `GuestOverlay` is runtime-only personalization with exactly one field: `displayName`. Its optional/null semantics follow the existing guest contract: the overlay is absent when no personalized guest has been authorized (non-personalized invitation); when present, `displayName` is the authorized guest's free-form `guests.display_name` (NOT NULL, 1–200 characters, `docs/PHYSICAL_DATABASE_PLAN.md` §2.19), passed through as given. RF-03 does not resolve guest identity, never accepts `?guest=` or any display name as identity, and only receives an already-authorized overlay. Guest data never enters `SnapshotPayloadV1` (RF11 D). No other guest field is added in RF-03.
+
+**V2. RSVP → RF-05.** RF-03 contains no RSVP capability placeholder: no `canRsvp`, `submitRsvp`, callbacks, endpoint, mutable RSVP state, or runtime RSVP status. Canonical statuses remain `ATTENDING | NOT_ATTENDING` (RF15). The interactive RSVP capability/UI boundary belongs to RF-05, and RF-03 does not anticipate its shape.
+
+**V3. No generic runtime capabilities.** RF12's "may carry runtime capabilities" does not create an RF-03 field. RF-03 adds no generic capabilities object and no empty placeholders. Capabilities are introduced only by the checkpoint that owns them.
+
+**V4. Temporal data.** RF-03 carries the canonical temporal data already in the Snapshot (`startsAt`, `timezone`, `lunarDateDisplay`). It does not derive or freeze weekday text, locale-formatted date labels, humanized time strings, countdown strings, "days until" values, or calendar download data. No admin-only date formatter may be reused for production invitation rendering. Shared production presentation/date derivation is frozen in a later shared-presentation/client-capability checkpoint before renderer certification. This is not an RF-03 blocker.
+
+**V5. No implicit current time.** ViewModel construction never calls `Date.now()`, `new Date()` for the current time, `performance.now()`, or otherwise depends on the current runtime time. Countdown/current-time behavior later uses an explicit capability/input boundary.
+
+**V6. `sections` and effective visibility.** Snapshot `sections` keeps its RF-02 meaning: canonical content availability (S2). RF-03 may expose/copy it but never combines it with `design.sectionSettings`, manifest `sectionCapabilities`, or renderer support to compute effective visibility. Effective section visibility is RF-04 work. An `UNAVAILABLE` media result never rewrites `sections.gallery`, `sections.music` or `sections.gift`: canonical content availability and runtime media availability are separate. Rendering behavior when content is available but its media is `UNAVAILABLE` is later renderer/shared-presentation work.
+
+**V7. Design.** RF-03 consumes Snapshot `design` only. It never reloads the mutable `ProjectDesignRecord`, applies manifest capabilities, or turns `sectionSettings` into effective visibility.
+
+**V8. Template identity.** RF-03 may carry `templateVersionId` and `rendererKey` from the Snapshot. It never queries the template catalog, selects a latest version, falls back, resolves a renderer component, or inspects a registry. Fail-closed renderer lookup/compatibility is RF-04.
+
+**V9. Snapshot-only canonical source.** The ViewModel derives rendering content only from `SnapshotPayloadV1`. It is never reconstructed from `WeddingDetailsRecord`, `ProjectEventRecord`, `ProjectMediaRecord` or `ProjectDesignRecord`. The only runtime inputs are the ones RF-03 owns: the authorized guest `displayName` (V1) and the typed media results (M2).
+
+**V10. No runtime-input leaks.** The ViewModel explicitly projects only the allowed fields from the guest overlay and the media results. Unknown adapter/runtime fields never leak into it, for example `storagePath`, `bucket`, `signedAt`, `expiresAt` (unless later explicitly frozen), raw provider errors, credential metadata, or internal resolver metadata.
+
+**V11. Determinism.** For the same Snapshot, guest overlay and complete resolution set, Layer B produces the same semantic result: no randomness, no implicit current time, no locale-dependent sorting, no object-identity decisions.
+
+**V12. No renderer fallback UI here.** This clarification freezes data/runtime states only. Placeholder image design, "image unavailable" labels, QR warning copy, gallery skeletons and audio error UI are later renderer/shared-presentation decisions.
 
 ## Draft / Review / Publish
 

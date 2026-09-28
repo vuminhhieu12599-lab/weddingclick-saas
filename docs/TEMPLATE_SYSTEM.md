@@ -78,6 +78,8 @@ InvitationViewModel
 
 Exact TypeScript types will be defined centrally during implementation.
 
+This conceptual tree is the eventual render-time shape, not the RF-03 output. The RF-03 ViewModel has no `rsvpCapability` (RF-05), no generic runtime-capabilities object, and no derived weekday/formatted-date/countdown fields (a later shared-presentation checkpoint). Its media slots (cover, gallery, audio, groom/bride QR) each carry a `RESOLVED` or `UNAVAILABLE` runtime state (`docs/DECISIONS.md` "RF-03 InvitationViewModel / Media Resolution Contract Clarification").
+
 No template may invent a second incompatible view-model shape for the same core information.
 
 ### Snapshot payload vs InvitationViewModel (RF-00, frozen)
@@ -89,14 +91,15 @@ Canonical Project data
   -> Wedding Domain Resolver
   -> Snapshot payload (payloadSchemaVersion: 1)    persisted later in invitation_versions.payload
   -> InvitationViewModel                           render-time only, never persisted
-       = payload + guest overlay + resolved media URLs + runtime capabilities
+       = payload + guest overlay + resolved media results (RF-03)
+         + runtime capabilities (later checkpoints, e.g. RSVP in RF-05; none in RF-03)
   -> Template Renderer
 ```
 
 - The **snapshot payload** holds only stable canonical values: explicit side roles, event instant plus timezone, and `project_media` ids. It never holds signed or expiring URLs, guest identity or personalization, RSVP state, or `wedding_details.additional_note`.
 - Each payload event carries its own optional `lunarDateDisplay`. `ceremony.lunarDateDisplay` is only a derived copy from the resolved ceremony event.
 - Payload `sections` is exactly `{ invitationMessage, loveStory, gallery, music, gift }`, each a boolean meaning **canonical content availability** after variant filtering. It is not renderer visibility or template support. `design.sectionSettings` is copied unchanged and is not applied to `sections`. Final effective section visibility is decided later, at the renderer/manifest boundary. Gift and QR data follow `operationalSides`, and `qr.commonMediaId` is absent in v1 (`docs/DECISIONS.md` "RF-02 Snapshot Sections Contract Clarification").
-- The **InvitationViewModel** adds precomputed deterministic display fields (the ceremony lunar line comes straight from the ceremony event's text, with no lunar calculation), primary/secondary ordering, the guest display-name overlay, display URLs from an injected media resolver, section state, and RSVP capability metadata.
+- The **InvitationViewModel** adds precomputed deterministic display fields (the ceremony lunar line comes straight from the ceremony event's text, with no lunar calculation), primary/secondary ordering, the guest display-name overlay, display URLs from an injected media resolver, section state, and RSVP capability metadata. RF-03 delivers only part of this: an async media resolution boundary (injected `MediaResolver`, no concrete storage adapter) plus a pure synchronous builder over Snapshot + optional guest `displayName` overlay + the complete per-media result set. A referenced media item whose URL cannot be resolved stays in the ViewModel as `UNAVAILABLE`; it is never dropped, substituted or faked, and it never blocks the ViewModel. RF-03 copies `sections` as canonical content availability and does not compute effective visibility (RF-04). RSVP capability metadata is RF-05. See `docs/DECISIONS.md` "RF-03 InvitationViewModel / Media Resolution Contract Clarification".
 - Templates consume only the ViewModel.
 
 ---

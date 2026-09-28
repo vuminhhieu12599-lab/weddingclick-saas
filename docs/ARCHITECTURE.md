@@ -239,6 +239,8 @@ template metadata
 
 Templates must not understand raw Supabase table shape.
 
+For production invitation rendering, the builder works from the snapshot payload, not live Project state, and the list above is the eventual render-time scope. The RF-03 checkpoint splits it into an async media resolution boundary (injected resolver, no concrete storage adapter) and a pure synchronous ViewModel builder. RF-03 output carries canonical temporal data only (no formatted dates or weekday), no RSVP capability metadata (RF-05), and keeps unresolvable media as explicit `UNAVAILABLE` slots. See `docs/DECISIONS.md` "RF-03 InvitationViewModel / Media Resolution Contract Clarification".
+
 ### 8.2 Preview
 
 Preview uses the current mutable draft state through the same domain/view-model logic but is not public production output.
