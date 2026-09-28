@@ -78,7 +78,7 @@ InvitationViewModel
 
 Exact TypeScript types will be defined centrally during implementation.
 
-This conceptual tree is the eventual render-time shape, not the RF-03 output. The RF-03 ViewModel has no `rsvpCapability` (RF-05), no generic runtime-capabilities object, and no derived weekday/formatted-date/countdown fields (a later shared-presentation checkpoint). Its media slots (cover, gallery, audio, groom/bride QR) each carry a `RESOLVED` or `UNAVAILABLE` runtime state (`docs/DECISIONS.md` "RF-03 InvitationViewModel / Media Resolution Contract Clarification").
+This conceptual tree is the eventual render-time shape, not the RF-03 output. The RF-03 ViewModel has no `rsvpCapability`, no generic runtime-capabilities object, and no derived weekday/formatted-date/countdown fields. RF-05 does not add them to the ViewModel: RSVP and other runtime capabilities are a separate renderer prop (`capabilities`), and weekday/date/time, countdown and calendar values come from RF-05 shared pure derivations (`docs/DECISIONS.md` "RF-05 Shared Renderer Boundary / Minimum Shared Client Capabilities Contract Clarification" K6, K14, K27–K34). Its media slots (cover, gallery, audio, groom/bride QR) each carry a `RESOLVED` or `UNAVAILABLE` runtime state (`docs/DECISIONS.md` "RF-03 InvitationViewModel / Media Resolution Contract Clarification").
 
 No template may invent a second incompatible view-model shape for the same core information.
 
@@ -92,15 +92,15 @@ Canonical Project data
   -> Snapshot payload (payloadSchemaVersion: 1)    persisted later in invitation_versions.payload
   -> InvitationViewModel                           render-time only, never persisted
        = payload + guest overlay + resolved media results (RF-03)
-         + runtime capabilities (later checkpoints, e.g. RSVP in RF-05; none in RF-03)
-  -> Template Renderer
+  -> RF-04 compatibility selection                  effective sections
+  -> Template Renderer                              RF-05 props: { viewModel, sections, capabilities }
 ```
 
 - The **snapshot payload** holds only stable canonical values: explicit side roles, event instant plus timezone, and `project_media` ids. It never holds signed or expiring URLs, guest identity or personalization, RSVP state, or `wedding_details.additional_note`.
 - Each payload event carries its own optional `lunarDateDisplay`. `ceremony.lunarDateDisplay` is only a derived copy from the resolved ceremony event.
 - Payload `sections` is exactly `{ invitationMessage, loveStory, gallery, music, gift }`, each a boolean meaning **canonical content availability** after variant filtering. It is not renderer visibility or template support. `design.sectionSettings` is copied unchanged and is not applied to `sections`. Final effective section visibility is decided later, at the renderer/manifest boundary. Gift and QR data follow `operationalSides`, and `qr.commonMediaId` is absent in v1 (`docs/DECISIONS.md` "RF-02 Snapshot Sections Contract Clarification").
-- The **InvitationViewModel** adds precomputed deterministic display fields (the ceremony lunar line comes straight from the ceremony event's text, with no lunar calculation), primary/secondary ordering, the guest display-name overlay, display URLs from an injected media resolver, section state, and RSVP capability metadata. RF-03 delivers only part of this: an async media resolution boundary (injected `MediaResolver`, no concrete storage adapter) plus a pure synchronous builder over Snapshot + optional guest `displayName` overlay + the complete per-media result set. A referenced media item whose URL cannot be resolved stays in the ViewModel as `UNAVAILABLE`; it is never dropped, substituted or faked, and it never blocks the ViewModel. RF-03 copies `sections` as canonical content availability and does not compute effective visibility (RF-04, which returns it in a separate selection context without changing the ViewModel; `docs/DECISIONS.md` RF-04 clarification R16–R17). RSVP capability metadata is RF-05. See `docs/DECISIONS.md` "RF-03 InvitationViewModel / Media Resolution Contract Clarification".
-- Templates consume only the ViewModel.
+- The **InvitationViewModel** adds precomputed deterministic display fields (the ceremony lunar line comes straight from the ceremony event's text, with no lunar calculation), primary/secondary ordering, the guest display-name overlay, display URLs from an injected media resolver, section state, and RSVP capability metadata (conceptual render-time scope; after RF-04/RF-05, section state and capabilities are separate renderer props, not ViewModel fields). RF-03 delivers only part of this: an async media resolution boundary (injected `MediaResolver`, no concrete storage adapter) plus a pure synchronous builder over Snapshot + optional guest `displayName` overlay + the complete per-media result set. A referenced media item whose URL cannot be resolved stays in the ViewModel as `UNAVAILABLE`; it is never dropped, substituted or faked, and it never blocks the ViewModel. RF-03 copies `sections` as canonical content availability and does not compute effective visibility (RF-04, which returns it in a separate selection context without changing the ViewModel; `docs/DECISIONS.md` RF-04 clarification R16–R17). RSVP capability metadata is not a ViewModel field: RF-05 passes it in the separate closed `capabilities` prop (`rsvp?`, `clipboard?`, `music?`, `clock?`). See `docs/DECISIONS.md` "RF-03 InvitationViewModel / Media Resolution Contract Clarification" and the RF-05 clarification (K6, K14).
+- Templates consume only the RF-05 renderer props: the ViewModel, the RF-04 effective `sections` (the only authoritative section visibility), and the RF-05 `capabilities`. They never receive the Snapshot, the compatibility manifest, a registry or any token (RF-05 clarification K6–K8).
 
 ---
 
@@ -142,7 +142,7 @@ The frozen production rules for this resolver are in `docs/DECISIONS.md` RF2–R
 
 All templates must be discoverable through one central registry.
 
-The eventual production registry maps stable renderer keys to implementations and manifests. RF-04 builds only its compatibility-manifest layer: `rendererKey` → `RendererCompatibilityManifestV1`, with no renderer implementations and no production renderer registered; implementation binding follows in RF-05/RF-06 (`docs/DECISIONS.md` "RF-04 Registry / Compatibility / Effective Visibility Contract Clarification" R12–R15).
+The eventual production registry maps stable renderer keys to implementations and manifests. RF-04 builds only its compatibility-manifest layer: `rendererKey` → `RendererCompatibilityManifestV1`, with no renderer implementations and no production renderer registered; implementation binding follows: RF-05 owns the generic binding machinery (`{ compatibilityManifest, component }` entries whose key is only `compatibilityManifest.rendererKey`, composing this registry, fail-closed, no fallback), and RF-06 supplies the first real binding (`docs/DECISIONS.md` "RF-04 Registry / Compatibility / Effective Visibility Contract Clarification" R12–R15; RF-05 clarification K9–K13). A renderer is a React component type (`InvitationRendererComponentV1`), not a `render()` function (RF-05 clarification K4).
 
 Example conceptual keys (examples only; RF-04 freezes no production key, and the first real key is frozen in RF-06):
 
@@ -284,6 +284,8 @@ RomanticMinimalHero
 A template may create unique Hero, Gallery, Couple, Event, Footer, etc. visual sections as needed.
 
 Do not force every template into the same DOM/layout structure simply for reuse.
+
+RF-05 owns the shared contracts for the behavior candidates above that the Foundation needs: pure date/time/weekday presentation, pure countdown derivation, the pure ceremony month grid, and the RSVP/clipboard/music/clock capability types. Concrete browser adapters (clipboard, audio, timers) are later integration; templates never call `navigator`/`Audio`/`Date.now` directly (`docs/DECISIONS.md` "RF-05 Shared Renderer Boundary / Minimum Shared Client Capabilities Contract Clarification" K27–K35).
 
 ---
 
@@ -464,7 +466,7 @@ Handle:
 
 No template should show a fake music icon that does nothing.
 
-With no `AUDIO` media, no music control is shown. A fake "playing" state without real playback blocks certification (`docs/DECISIONS.md` RF15).
+With no `AUDIO` media, no music control is shown. A fake "playing" state without real playback blocks certification (`docs/DECISIONS.md` RF15). The renderer receives the optional RF-05 `capabilities.music` (`status` PAUSED/PLAYING/BLOCKED/ERROR, `play()`, `pause()`), present only when the audio slot is `RESOLVED`; no autoplay, loop on, no volume/mute control in v1 (RF-05 clarification K23–K25).
 
 ---
 
@@ -479,6 +481,8 @@ Calendar must handle real month length/leap-year rules through shared utilities.
 If no valid target event exists, countdown/calendar should fail safely and validation should warn/block as appropriate.
 
 The countdown target and calendar emphasis are the resolved ceremony event (`docs/DECISIONS.md` RF2). Its absence is the BLOCKING `REQUIRED_CEREMONY_EVENT_MISSING`.
+
+Countdown, date/time/weekday presentation (`vi-VN`, event timezone) and the Monday-first 42-cell ceremony month grid are RF-05 shared pure derivations; templates never derive them independently. A live countdown needs the explicit RF-05 `capabilities.clock` (`nowEpochMs`); without it, no current time is fabricated. There is no ICS/Google Calendar integration in the Foundation (RF-05 clarification K26–K34).
 
 ---
 
@@ -513,11 +517,11 @@ RSVP UI must support:
 - guest name when not personalized;
 - optional message.
 
-Persisted attendance values are only `ATTENDING`/`NOT_ATTENDING` (no `MAYBE`). The renderer receives a submit capability and never owns persistence. Previews and harnesses never fake a persisted success (`docs/DECISIONS.md` RF15).
+Persisted attendance values are only `ATTENDING`/`NOT_ATTENDING` (no `MAYBE`). The renderer receives a submit capability and never owns persistence. Previews and harnesses never fake a persisted success (`docs/DECISIONS.md` RF15). Interactive RSVP UI is shown only when the RF-05 `capabilities.rsvp` is present; its `submit` resolves `SUCCESS`/`INVALID`/`UNAVAILABLE`/`FAILED`, and success UI follows only `SUCCESS` (RF-05 clarification K15–K20).
 
 ## 20a. Clipboard
 
-Copy actions (for example, bank account numbers) use one shared capability. It reports success only after the browser copy has actually succeeded. A failure is never presented as success (`docs/DECISIONS.md` RF15).
+Copy actions (for example, bank account numbers) use one shared capability. It reports success only after the browser copy has actually succeeded. A failure is never presented as success (`docs/DECISIONS.md` RF15). The capability is the optional RF-05 `capabilities.clipboard` (`copyText` → `SUCCESS`/`UNAVAILABLE`/`FAILED`); templates never call `navigator.clipboard` and there is no `execCommand` fallback (RF-05 clarification K21–K22).
 
 ---
 

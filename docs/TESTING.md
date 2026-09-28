@@ -41,6 +41,7 @@ For deterministic domain logic such as:
 - RSVP normalization/validation;
 - InvitationViewModel building;
 - renderer compatibility selection and effective section visibility (RF-04, typed fixtures only: exact-key lookup, schema/variant membership, duplicate-key and malformed-manifest failures, fail-fast order, the R9 formula for absent/`true`/`false`/invalid settings, `UNAVAILABLE` media not affecting visibility; `docs/DECISIONS.md` RF-04 clarification);
+- shared renderer boundary and minimum client capabilities (RF-05, Node/Vitest without jsdom, typed fixtures only: binding lookup/duplicate/missing-binding/no-fallback and RF-04 composition, exact renderer props, RSVP/clipboard/music result semantics, explicit-epoch countdown, `vi-VN` event-timezone date/time, Monday-first 42-cell calendar; `docs/DECISIONS.md` RF-05 clarification K44);
 - token helper behavior that can be safely unit-tested.
 
 ### Integration tests

@@ -239,7 +239,7 @@ template metadata
 
 Templates must not understand raw Supabase table shape.
 
-For production invitation rendering, the builder works from the snapshot payload, not live Project state, and the list above is the eventual render-time scope. The RF-03 checkpoint splits it into an async media resolution boundary (injected resolver, no concrete storage adapter) and a pure synchronous ViewModel builder. RF-03 output carries canonical temporal data only (no formatted dates or weekday), no RSVP capability metadata (RF-05), and keeps unresolvable media as explicit `UNAVAILABLE` slots. See `docs/DECISIONS.md` "RF-03 InvitationViewModel / Media Resolution Contract Clarification".
+For production invitation rendering, the builder works from the snapshot payload, not live Project state, and the list above is the eventual render-time scope. The RF-03 checkpoint splits it into an async media resolution boundary (injected resolver, no concrete storage adapter) and a pure synchronous ViewModel builder. RF-03 output carries canonical temporal data only (no formatted dates or weekday), no RSVP capability metadata, and keeps unresolvable media as explicit `UNAVAILABLE` slots. See `docs/DECISIONS.md` "RF-03 InvitationViewModel / Media Resolution Contract Clarification". RF-05 leaves the ViewModel unchanged: the renderer component receives `{ viewModel, sections, capabilities }`, where `sections` is the RF-04 effective visibility and `capabilities` is a closed object (`rsvp?`, `clipboard?`, `music?`, `clock?`); "dates already formatted through approved utilities" means RF-05 shared pure date/countdown/calendar derivations used by the renderer, not ViewModel fields (`docs/DECISIONS.md` RF-05 clarification K6, K14, K27–K34).
 
 ### 8.2 Preview
 
@@ -297,7 +297,7 @@ wedding.vietnamese-heritage.v1
 wedding.romantic-minimal.v1
 ```
 
-This describes the eventual production registry. RF-04 builds only the compatibility-manifest layer under it (key → `RendererCompatibilityManifestV1`, no implementations, no production keys); implementation binding and the first real key come later (RF-05/RF-06). See `docs/DECISIONS.md` "RF-04 Registry / Compatibility / Effective Visibility Contract Clarification".
+This describes the eventual production registry. RF-04 builds only the compatibility-manifest layer under it (key → `RendererCompatibilityManifestV1`, no implementations, no production keys); RF-05 owns the generic implementation-binding machinery (composing this registry; binding key derived only from `compatibilityManifest.rendererKey`; no fallback), and RF-06 supplies the first real binding and key (`docs/DECISIONS.md` RF-05 clarification K9–K13). See `docs/DECISIONS.md` "RF-04 Registry / Compatibility / Effective Visibility Contract Clarification".
 
 Once a renderer version is used for production, do not alter its visual/business contract in place. Create a new version.
 
@@ -337,6 +337,8 @@ One shared date utility/domain layer should derive:
 - calendar positioning.
 
 Do not duplicate date parsing/formatting in templates.
+
+For invitation rendering, this shared layer is frozen by `docs/DECISIONS.md` RF-05 clarification K26–K34: pure `vi-VN` date/time/weekday presentation in the event's own timezone, pure countdown derived from the resolved ceremony `startsAt` and an explicit `nowEpochMs` clock input (never `Date.now`), and a pure Monday-first 42-cell ceremony month grid.
 
 ---
 

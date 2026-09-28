@@ -481,7 +481,7 @@ Implementation: `app/internal/prototypes/invitation/{layout,page}.tsx`, `prototy
 
 **RF10. Staff preview scope.**
 - The core foundation does **not** need a new staff preview API for RF-01 through RF-06 to proceed.
-- RF-01 to RF-05 are pure and unit-testable.
+- RF-01 to RF-05 are pure and unit-testable. For RF-05 this means a deterministic, unit-testable core that may import React types only and never uses browser globals, current time, network or database (RF-05 clarification K3).
 - RF-06 may use a fixture-driven internal rendering harness for implementation QA.
 - A production staff preview route/API is a **separate, later checkpoint**, needed before operational staff preview. It is not Task 030, and no preview API is added in RF-00 or RF-01.
 - Any future staff preview uses authenticated STAFF/ADMIN RLS (Path A). **`service_role` is never permitted for staff preview.**
@@ -528,6 +528,8 @@ Payload rules:
 **RF12. Payload vs `InvitationViewModel`.** The **snapshot payload** is the stable canonical rendering snapshot, and it is what gets persisted. The **`InvitationViewModel`** is a render-time object derived from payload + guest overlay + resolved media URLs + runtime capabilities. It may contain normalized primary/secondary ordering, explicit side roles, precomputed deterministic display fields (the ceremony lunar line is taken directly from the resolved ceremony event's `lunarDateDisplay`, never calculated), the guest display-name overlay, resolved media URLs, renderer-friendly section state, and RSVP callback/capability metadata. **The ViewModel is never persisted as the snapshot.**
 
 > **Forward note (RF-03 clarification, 2026-09-28):** the list above is the *eventual* scope of the render-time object across RF-03 → RF-05, not RF-03's output. The RF-03 ViewModel is defined only by "RF-03 InvitationViewModel / Media Resolution Contract Clarification" below: it carries no RSVP callback/capability metadata, no generic runtime-capabilities object, no formatted date/weekday/countdown fields, and no effective section visibility.
+>
+> **Forward note (RF-05 clarification, 2026-09-28):** RF-05 does not add these to the ViewModel either. The renderer receives the unchanged ViewModel plus two sibling props: RF-04 effective `sections` and the closed RF-05 `capabilities` object (RSVP, clipboard, music, clock). Formatted date/weekday/time, countdown and the calendar month grid are RF-05 shared pure derivations, not ViewModel fields (RF-05 clarification K6, K14, K27–K34).
 
 **RF13. Media boundary.**
 - **URLs.** The payload stores media references only. Signed or private display URLs are resolved per request, while the ViewModel is built, by an **injected media resolver**. Templates never query Supabase, sign URLs, or know storage internals. They receive usable display URLs from the ViewModel. The resolver boundary, its result states, and unavailable-media behavior are defined by the RF-03 clarification below (M1–M13).
@@ -538,7 +540,7 @@ Payload rules:
 - **Fonts.** Approving a prototype visually does **not** certify its font imports for production. RF-06 either maps the design onto approved production Font Library entries that closely preserve the approved direction, or stops for an explicit font-library decision before any unapproved font enters a production renderer. RF-00 does not expand the Font Library.
 - **Renderer code.** A versioned renderer directory (e.g. `templates/wedding/<family>/v1/`) is **immutable once that version is certified or released**. Visual or behavioral changes, including changes to fixed template copy (RF7), go into `v2/` or another new version. A static registry/regression test that enforces known renderer keys may be added in RF-04+; because RF-04 registers no production key (RF-04 clarification R15), such enforcement can only cover real keys from RF-06 onward. RF-00 adds no enforcement code.
 
-**RF15. Shared client capability boundaries.**
+**RF15. Shared client capability boundaries.** (Refined, not reopened, by the RF-05 clarification K15–K25.)
 - **RSVP.** The prototype's three attendance options are **not** the persistence contract. Persisted attendance stays `RsvpAttendanceStatus` (`ATTENDING | NOT_ATTENDING`), with party size per `docs/PHYSICAL_DATABASE_PLAN.md` §2.20 (`ATTENDING` 1–20, `NOT_ATTENDING` 0). No `MAYBE` status is added. The RSVP UI does not own persistence: the renderer receives a submit capability/callback. Previews and harnesses never fake a successful persisted RSVP. Actual persistence is still Task 033.
 - **Music.** `AUDIO` media is the canonical input. With no audio, no music control is shown. A fake "playing" state without real playback is not acceptable for a certified template. Real shared playback is required before any template that claims music support is certified, but it does not block RF-01 to RF-04.
 - **Clipboard.** Success is shown only after the browser copy operation has actually succeeded. A failure is never swallowed and then presented as success. The shared production capability must fix the prototype's known false-positive path.
@@ -587,7 +589,7 @@ Revised by the RF-00 contract recovery. The corrected design **does** require a 
 
 No RF-07 is a mandatory foundation requirement. Staff preview (RF10), catalog seeding (RF9), and the Vietnamese Heritage/Romantic Minimal integrations are separate follow-up checkpoints. RF IDs, including `RF-L` IDs, remain checkpoint IDs and never renumber roadmap tasks.
 
-**Order.** RF-L01 → RF-L02 → RF-L03 → RF-01 → … → RF-06. RF-01 domain event types must mirror the extended `ProjectEventRecord` delivered by RF-L03. RF-01 through RF-05 remain pure TypeScript with typed fixtures and make no database contact (RF9).
+**Order.** RF-L01 → RF-L02 → RF-L03 → RF-01 → … → RF-06. RF-01 domain event types must mirror the extended `ProjectEventRecord` delivered by RF-L03. RF-01 through RF-05 remain pure TypeScript with typed fixtures and make no database contact (RF9). RF-01 through RF-04 are framework-free; RF-05 may import React types only to describe the renderer component contract, with a core that uses no browser globals or current time (RF-05 clarification K3).
 
 **RF-L01 scope, from the current write path.** `project_events` has no direct authenticated writes (migration `0022` revoked them). Create and update go only through the `SECURITY DEFINER` business actions `public.create_project_event(...)` / `public.update_project_event(...)`; delete is `public.delete_project_event(uuid, uuid)`. The RF-L01 migration must therefore:
 - add nullable `project_events.lunar_date_display TEXT`;
@@ -914,6 +916,314 @@ Malformed registry/manifest state (R13, R14) and Snapshot/ViewModel inconsistenc
 **R25. Task 029 boundary.** RF-04 never imports from `app/internal/prototypes` (including `GreenIvoryEditorialPrototype` and legacy elegant-editorial directions). Task 029 remains visual source truth only.
 
 **R26. Immutability and determinism.** Selection never mutates the Snapshot, ViewModel, registry, compatibility manifest, `sectionSettings` or `sectionCapabilities`; its output has safe ownership consistent with repository conventions. The same Snapshot, ViewModel and registry always yield the same semantic selection context: no randomness, current time, locale-dependent sorting, object-identity selection or insertion-order fallback.
+
+## Invitation Rendering Foundation — RF-05 Shared Renderer Boundary / Minimum Shared Client Capabilities Contract Clarification (FROZEN)
+
+**Status:** docs only, **FROZEN** by Product Owner / Architecture decision (2026-09-28). RF-01 is frozen at `5ee6bd1`, the RF-02 implementation at `f2f9ea2`, the RF-03 implementation at `260a03f`, the RF-04 clarification at `c44000a`, and the RF-04 implementation at `fe8b400`. RF-05 contract discovery stopped (BLOCKED) before any code because the docs did not define the callable renderer interface, implementation binding, server/client boundary, renderer input shape, capability shape, RSVP/clipboard/music semantics, clock/countdown ownership, shared date/calendar ownership, or a failure taxonomy. This section closes those gaps and governs what RF-05 builds. Where RF10, RF12, RF15, RF16, RF17, the RF-03 clarification (V2–V5), the RF-04 clarification (R2, R12), `docs/TEMPLATE_SYSTEM.md` §3/§5/§8/§17/§18/§20/§20a or `docs/ARCHITECTURE.md` §8.1/§10/§12 describe capabilities, renderer binding or date derivation more broadly or conceptually, this section governs. It does not reopen any RF-00 through RF-04 decision, does not change the RF-03 `InvitationViewModel`, and does not change the RF-04 `RendererSelectionContextV1`. No RF-05 code exists yet. **RF-06 has not started. Task 030 stays blocked** (RF16).
+
+### Ownership
+
+**K1. RF-05 owns exactly:**
+- A. the shared React renderer interface **contract** (K4);
+- B. the generic renderer implementation-binding registry **contract and machinery** (K9–K13);
+- C. the renderer-facing props contract (K6–K8);
+- D. the closed minimum renderer capability contract (K14);
+- E. the RSVP renderer/action capability contract, interface only, no persistence (K15–K20);
+- F. the clipboard capability contract (K21–K22);
+- G. the music capability contract (K23–K25);
+- H. the explicit clock capability contract (K26);
+- I. shared **pure** countdown derivation semantics (K27–K29);
+- J. shared **pure** date/time/weekday presentation semantics (K30–K32);
+- K. shared **pure** calendar-month-grid derivation semantics (K33–K34);
+- L. the RF-05 binding/capability failure taxonomy (K12, K36).
+
+**K2. RF-05 does not own:** any real production renderer implementation; any real production `rendererKey`; the full production renderer manifest; Elegant Editorial v1; catalog seeding; the RSVP endpoint/persistence (Task 033 / later integration); raw guest/access tokens; Supabase/`service_role`; the media URL signing/storage resolver; Review/Publish orchestration; public route/access-link resolution; the staff-preview route; ICS export; Google Calendar integration; browser-global adapters wired directly to `navigator`/`window`/`Audio`/timers; the application-level React error boundary. **RF-06** owns the first real renderer integration. Later application/integration code owns concrete browser and server adapters.
+
+### Core purity
+
+**K3. "Pure / unit-testable" interpretation.** This supersedes, for RF-05, the wording "RF-01 to RF-05 are pure and unit-testable" (RF10) and "RF-01 through RF-05 remain pure TypeScript" (RF17 "Order"):
+- RF-01 through RF-04 remain framework-free pure TypeScript.
+- The RF-05 **core** remains deterministic and unit-testable without a database, network or browser globals.
+- RF-05 may import React **types only**, to describe the renderer component contract (K4). It renders nothing itself.
+- RF-05 core never calls `window`, `document`, `navigator`, `Audio`/`HTMLAudioElement`, `Date.now()` (or `new Date()` for the current time, or `performance.now()`), timers, `fetch`, Supabase, or `service_role`.
+- Browser/server behavior is supplied later through injected capabilities/adapters (K35).
+- No RF-05 core module requires `"use client"` merely to define the contract.
+
+This supersedes any wording that would require RF-05 itself to perform browser side effects.
+
+### Renderer contract
+
+**K4. Callable renderer = component type.** The shared renderer contract is a React component type, semantically:
+
+```text
+InvitationRendererComponentV1 = React.ComponentType<InvitationRendererPropsV1>
+```
+
+RF-05 does **not** define the renderer as a `render()` function, an `(input) => ReactNode` function, a server-component-only API, or a JSX-returning registry function. RF-05 freezes the component **type**; the first real component is RF-06.
+
+**K5. Client-compatible renderer boundary.**
+- Production invitation renderer components must be **client-compatible**, because their props may contain action capabilities/callbacks (K14).
+- They may still be server-pre-rendered through Next's normal Client Component behavior. RF-05 does not require the entire public page to be fully client-rendered.
+- Browser-dependent capability objects are created on the **client side** of the React boundary.
+- Non-serializable callback capabilities are never passed across a Server Component → Client Component serialization boundary.
+- Canonical data construction, Snapshot/ViewModel creation (RF-02/RF-03) and RF-04 compatibility selection stay framework-neutral and may run before that client boundary.
+- Renderer implementations never call a database or `service_role` directly.
+
+**K6. Renderer props — exact shape.** Semantically:
+
+```text
+InvitationRendererPropsV1 {
+  viewModel      // the frozen RF-03 InvitationViewModel, unchanged
+  sections       // the frozen RF-04 effective sections (RendererEffectiveSections, the
+                 //   effectiveSections value of RendererSelectionContextV1):
+                 //   exactly { invitationMessage, loveStory, gallery, music, gift }: boolean
+  capabilities   // InvitationRendererCapabilitiesV1 (K14)
+}
+```
+
+Exactly these three semantic inputs. The renderer never receives `SnapshotPayloadV1`, `RendererSelectionContextV1` as a whole, the compatibility manifest, the RF-04 registry, the binding registry, the DB `template_versions.manifest`, `rendererKey` as a separate behavioral prop, or any raw guest token/access token.
+
+**K7. Effective sections are authoritative.** Props `sections` are the **only** authoritative section-visibility result. Renderer implementations never re-derive visibility from `viewModel.sections`, `viewModel.design.sectionSettings`, the compatibility manifest, or media availability (RF-04 R11 still applies: an `UNAVAILABLE` media result does not hide a section). A renderer may use non-visibility design settings for renderer-specific presentation, but `viewModel.design.sectionSettings` never overrides props `sections`.
+
+**K8. The compatibility manifest is not renderer input.** It is used only by compatibility/binding infrastructure. Renderer implementations never inspect `supportedPayloadSchemaVersions`, `supportedVariants` or `sectionCapabilities`; those checks already happened upstream (RF-04).
+
+### Implementation-binding registry
+
+**K9. Binding entry.** Semantically:
+
+```text
+RendererBindingEntryV1 {
+  compatibilityManifest   // the frozen RF-04 RendererCompatibilityManifestV1
+  component               // InvitationRendererComponentV1
+}
+```
+
+There is **no** separate external `rendererKey` field. The binding key is derived **only** from `compatibilityManifest.rendererKey`, so "lookup key ≠ `manifest.rendererKey`" cannot be represented by a valid RF-05 binding entry.
+
+**K10. Composition with RF-04.** The RF-05 binding registry **composes** the RF-04 compatibility registry; it does not duplicate or replace it. The RF-05 factory:
+- accepts an explicit list of binding entries;
+- projects/validates each entry's `compatibilityManifest` with the frozen RF-04 manifest rules (R3, R14);
+- creates and owns the RF-04 `RendererCompatibilityRegistry` built from exactly those manifests (used for RF-04 selection, R16–R19);
+- owns an exact `rendererKey` → component mapping over exactly the same keys.
+
+RF-05 defines no real production entry. RF-06 supplies the first real binding entry.
+
+**K11. Fail-closed rules.**
+- A duplicate `rendererKey` among the entries is an invariant error: never first-write-wins or last-write-wins.
+- Lookup is exact-key only.
+- No latest/default/fallback renderer, no filesystem discovery, no module scan, no database lookup, no environment discovery, no alias/remapped key.
+- A factory-created binding registry can never contain a compatibility manifest without a component, or a component without a compatibility manifest.
+
+**K12. Binding error family.** RF-05 adds a distinct invariant error family, semantically `RendererBindingInvariantError` (exact identifier follows the existing `…InvariantError` convention), used for: a malformed binding entry (not an object, missing `compatibilityManifest`, missing or non-component `component`); a duplicate binding key; a missing component for an otherwise selected renderer (K13); any impossible registry state; a runtime-corrupted binding registry. Validation of the manifest's own contents is RF-04's (R14): the RF-04 `RendererSelectionInvariantError` raised by that projection propagates unchanged. Normal RF-04 `RendererSelectionError` and `RendererSelectionInvariantError` failures from compatibility/selection also propagate **unchanged**. RF-05 never wraps, re-codes or converts RF-04 errors, and never turns them into product issue arrays.
+
+**K13. Missing implementation binding.** For a valid factory-created registry, a selected compatibility key without a component binding is structurally impossible. For a hand-built or runtime-corrupted registry, a selected key with no component throws `RendererBindingInvariantError`. There is never a renderer fallback.
+
+### Capabilities
+
+**K14. Closed capability object.** `InvitationRendererCapabilitiesV1` is a **closed** object with exactly these optional named members:
+
+```text
+InvitationRendererCapabilitiesV1 {
+  rsvp?:      RsvpCapabilityV1        // K15
+  clipboard?: ClipboardCapabilityV1   // K21
+  music?:     MusicCapabilityV1       // K23
+  clock?:     ClockCapabilityV1       // K26
+}
+```
+
+No generic `Record<string, unknown>`, no arbitrary capability bag, no other member. The capabilities object itself is **always** provided (it may be empty). A present member means that runtime capability is available; an absent member means it is unavailable. Absence is **never** interpreted as success.
+
+### RSVP capability
+
+**K15. Contract.** RF-05 owns the renderer/action contract only; persistence stays Task 033 / later integration. Semantically:
+
+```text
+RsvpCapabilityV1 {
+  submit(input: RsvpSubmitInputV1): Promise<RsvpSubmitResultV1>
+}
+
+RsvpSubmitInputV1 {
+  attendance: RsvpAttendanceStatus   // lib/domain/rsvp-attendance.ts: ATTENDING | NOT_ATTENDING
+  partySize:  number
+  message:    string | null
+  guestName:  string | null
+}
+```
+
+Exactly these four input fields. `attendance` uses the canonical `RsvpAttendanceStatus`; there is no `MAYBE` (RF15). `message` and `guestName` are `string | null`; there is no `undefined`-based semantic distinction.
+
+**K16. Input rules.**
+- `ATTENDING`: `partySize` is an integer 1–20. `NOT_ATTENDING`: `partySize` is exactly 0 (`docs/PHYSICAL_DATABASE_PLAN.md` §2.20).
+- `message`: `null`, or a string of at most 500 characters (§2.20 `CHECK`).
+- `guestName`: when `viewModel.guest` exists (personalized), it may be `null`. When `viewModel.guest` is absent (non-personalized), it must be a non-null string that is non-blank after `trim()`, per the existing canonical rule that a non-personalized RSVP carries a manually entered name (§2.20 `guest_display_name_snapshot`). RF-05 adds no other length or format rule. `guestName` is never identity or authorization (K20).
+- A renderer may prevalidate for UX. The capability implementation is authoritative and must validate again.
+
+**K17. Result contract.** `RsvpSubmitResultV1` is a discriminated union over exactly four outcomes (exact discriminant naming follows repository conventions):
+
+| Outcome | Meaning |
+|---|---|
+| `SUCCESS` | persistence/action really succeeded |
+| `INVALID` | input rejected by canonical validation |
+| `UNAVAILABLE` | submission cannot currently be performed |
+| `FAILED` | submission was attempted but did not succeed |
+
+RF-05 v1 freezes no extra payload on any outcome; none ever carries a token, guest identity or raw error object. Expected business/runtime failures **resolve** to `INVALID`/`UNAVAILABLE`/`FAILED`. Unexpected programming/infrastructure faults may reject/throw. Nothing ever resolves a fake `SUCCESS`.
+
+**K18. RSVP UI state ownership.**
+- Pending state is renderer/shared-UI local state.
+- Success UI is shown **only** after a resolved `SUCCESS`. `INVALID`, `UNAVAILABLE` and `FAILED` are never shown as success.
+- A rejected promise (unexpected fault) is handled as failure, never as success.
+- The capability object does not persist UI pending/error state, and does not share it between templates.
+- No current-RSVP prefill in v1: RF-05 introduces no "current RSVP response" field.
+
+**K19. RSVP presence / visibility.** RSVP is **not** one of the five RF-04 effective-section keys, and RF-05 introduces no RSVP visibility setting.
+- `capabilities.rsvp` presence is the v1 gate for interactive RSVP UI.
+- When `rsvp` is absent, the renderer must not present an interactive/submittable RSVP form. It may omit the RSVP block entirely.
+- A future preview harness may supply an explicit non-persisting RSVP capability that returns `UNAVAILABLE`, to exercise RSVP UI.
+- Preview/review never supplies a capability that fakes `SUCCESS` (RF15).
+
+**K20. RSVP security boundary.** Renderer props and RSVP capability input/output never carry an access-link token, a guest token, a raw guest id used for authorization, `service_role` credentials, or a `?guest=` identity. Guest authorization is encapsulated upstream by the later server/public integration (the capability implementation is already bound to the authorized context). The RF-03 `GuestOverlay` stays `displayName` only (V1).
+
+### Clipboard capability
+
+**K21. Contract.** Semantically:
+
+```text
+ClipboardCapabilityV1 {
+  copyText(text: string): Promise<ClipboardCopyResultV1>
+}
+```
+
+`ClipboardCopyResultV1` resolves to exactly one of `SUCCESS`, `UNAVAILABLE`, `FAILED`. `SUCCESS` means the copy operation actually succeeded; there is no false-positive success. Unexpected faults may reject; a rejection is never success.
+
+**K22. Clipboard UI semantics.**
+- "Copied" UI is shown only after `SUCCESS`. `UNAVAILABLE` and `FAILED` never produce success UI.
+- Copied/timed UI state is renderer/shared-UI local presentation state.
+- Renderer code never calls `navigator.clipboard` directly.
+- There is no legacy `document.execCommand` fallback in v1.
+- RF-05 freezes the contract only; concrete browser adapter wiring is later integration (K35).
+
+### Music capability
+
+**K23. Contract.** Semantically:
+
+```text
+MusicCapabilityV1 {
+  status: MusicPlaybackStatusV1   // PAUSED | PLAYING | BLOCKED | ERROR
+  play():  Promise<void>
+  pause(): Promise<void>
+}
+```
+
+- **Status is authoritative.** `status` is the provider-supplied current state and is the **only** authoritative playback state. A change (`PAUSED`/`PLAYING`/`BLOCKED`/`ERROR`) is delivered to the renderer as a new/updated `MusicCapabilityV1` value on a normal React rerender (the same pattern as the clock, K26). Renderer-local optimistic playback state is never authoritative.
+- **Promise = command completion only.** The Promise returned by `play()`/`pause()` means only that the command has completed. It resolves to no value: there is no music result union, no boolean success result, and no returned status. Resolution never means `PLAYING` (for `play()`) or `PAUSED` (for `pause()`). Renderer code never derives playback state from whether `play()`/`pause()` was called, resolved or rejected; it shows playing only when the latest `status === PLAYING`. There is no fake `PLAYING` state.
+- **Expected outcomes never reject.** Expected playback outcomes (K25) are reflected only through the current/subsequent `status` value, and the command Promise resolves.
+- **Unexpected faults may reject.** An unexpected programming/infrastructure fault may reject the Promise returned by `play()`/`pause()`. This rejection path is distinct from the expected `BLOCKED`/`ERROR` status outcomes.
+- **Renderer handling of rejection.** Renderer/shared presentation code that invokes `play()`/`pause()` must handle Promise rejection. On an unexpected rejection it must not show `PLAYING` merely because `play()` was requested, must not show `PAUSED` merely because `pause()` was requested, must not treat the action as success, must not leave an unhandled Promise rejection, and continues to treat the latest capability `status` as authoritative. It does not replace the authoritative status with renderer-local state. RF-05 never converts a rejected event-handler command into a renderer/component render exception, and defines no fallback renderer.
+
+**K24. Availability.** `capabilities.music` is present **only** when `viewModel.media.audio` exists and is `RESOLVED` (RF-03 M9). If there is no audio slot, or the audio slot is `UNAVAILABLE`, `capabilities.music` is absent and the renderer shows no operational music control. Playback is never fabricated.
+
+**K25. Action semantics.**
+- One logical invitation-audio instance per rendered invitation.
+- No autoplay: the initial status is `PAUSED`, and `play()` is initiated only from an explicit user interaction.
+- `play()`: successful real playback → `PLAYING`; a browser/user-agent policy that prevents playback → `BLOCKED`; another expected playback failure → `ERROR`. A rejected/blocked play never becomes `PLAYING`.
+- `pause()`: successful pause → `PAUSED`; an expected operational pause failure, if one can occur in an adapter → `ERROR`.
+- These expected outcomes are status values only, never Promise rejection (K23). The concrete browser adapter translates real browser behavior into these statuses.
+- Retry: a later explicit user gesture may call `play()` again when the status is `BLOCKED` or `ERROR`. There is no automatic, background or autoplay retry. `status` stays authoritative.
+- Loop is ON in v1.
+- No renderer-exposed volume control and no renderer-exposed mute control in v1.
+- The concrete `Audio`/browser adapter is later integration. RF-05 core never instantiates `HTMLAudioElement`.
+
+### Clock and countdown
+
+**K26. Clock capability.** Semantically `ClockCapabilityV1 { nowEpochMs: number }`: an explicit runtime input of epoch milliseconds. No `Date` object, no `Date.now()`, no implicit clock function, no ambient current time. A later client clock adapter refreshes the value.
+
+**K27. Countdown ownership and target.** RF-05 owns a shared **pure** countdown derivation. The only target is the resolved ceremony event's canonical `startsAt` from the ViewModel (`viewModel.ceremony.startsAt`, RF2). No template may choose another target. The derivation receives an explicit `nowEpochMs` (from `capabilities.clock`); it never reads the current time itself. A non-finite `nowEpochMs` or unparseable `startsAt` is a programming/invariant failure and throws; it never produces a fabricated countdown.
+
+**K28. Countdown result.** Semantically `{ days, hours, minutes, seconds, hasPassed }`. All numeric parts are non-negative integers.
+- Before the target (`nowEpochMs < target`): the remaining duration is split into whole days (fixed 24-hour periods), hours (0–23), minutes (0–59) and seconds (0–59), each truncated toward zero; `hasPassed = false`. The duration is absolute, so the event timezone does not affect it.
+- At or after the target (`nowEpochMs >= target`): `days = hours = minutes = seconds = 0` and `hasPassed = true`.
+- Refresh cadence is **1 second**. The cadence belongs to the later clock adapter/provider, never to the pure derivation.
+
+**K29. Countdown presence.** A renderer may render a live countdown only when `capabilities.clock` is present. When it is absent, the renderer never fabricates a current time and may omit the live countdown. There is no neutral/fake clock.
+
+### Date/time presentation
+
+**K30. Ownership.** RF-05 owns shared **pure** date/time/weekday presentation derivation for an event's canonical `startsAt` + `timezone` (the ceremony or any ViewModel event entry). Templates never parse or format canonical event timestamps independently. Locale is `vi-VN`; the timezone is the event's own canonical IANA timezone. The ambient machine timezone is never used, and the admin-only date formatter is never reused (RF-03 V4).
+
+**K31. Presentation semantics (v1).** For an event, all derived in the event timezone from the same canonical instant:
+
+| Output | Convention |
+|---|---|
+| weekday | full Vietnamese weekday label |
+| day | 2 digits (`DD`) |
+| month | 2 digits (`MM`) |
+| year | 4 digits (`YYYY`) |
+| time | 24-hour `HH:mm` |
+
+The full weekday labels are the fixed v1 set `Thứ Hai`, `Thứ Ba`, `Thứ Tư`, `Thứ Năm`, `Thứ Sáu`, `Thứ Bảy`, `Chủ Nhật` (Monday → Sunday), with ASCII digits for all numeric parts. Output must be identical on server and client regardless of the runtime's ICU data. RF-05 does not freeze template typography or layout around these values (a template may, for example, uppercase them in CSS).
+
+**K32. Lunar presentation unchanged.** `event.lunarDateDisplay` stays manually authored presentation text (RF6). RF-05 never calculates, parses, normalizes, reformats or backfills it. If present, it is passed/displayed unchanged; if absent (null), the lunar line is omitted. The legacy `wedding_details.lunar_date_display` stays forbidden.
+
+### Calendar month grid
+
+**K33. Shared month grid (v1).** RF-05 owns a shared **pure** month-grid derivation for the resolved ceremony event only:
+- the calendar month is the month containing the resolved ceremony's `startsAt` in the ceremony `timezone`;
+- weeks start Monday; columns are Monday → Sunday;
+- exactly 6 rows / 42 cells, in row-major order; the first cell is the Monday on or before the 1st of the ceremony month;
+- cells outside the ceremony month are included, and each cell states whether it is in the ceremony month;
+- real month lengths and leap years are used (no hard-coded month lengths);
+- the ceremony-date cell is explicitly marked, and exactly one cell is marked.
+
+Templates may style the grid differently but never derive another month/date independently. Column header wording is template presentation; the column order is fixed.
+
+**K34. No add-to-calendar in the Foundation.** "Calendar" in RF-05 means the visual ceremony month grid only. RF-05 does not implement or contract ICS download, Google Calendar URLs, Apple Calendar integration, or device calendar APIs. Those stay outside the current Foundation unless a later checkpoint explicitly adds them.
+
+### Adapters, failures and boundaries
+
+**K35. Capability adapter ownership.** RF-05 owns capability **types**, expected-result semantics, pure derivations and the renderer/binding contracts. RF-05 core never implements browser-global adapters (`navigator.clipboard`, `HTMLAudioElement`/`Audio`, `window` timers, `Date.now`). Later client integration supplies those capabilities. Any reusable browser adapter added in a later checkpoint must conform exactly to these RF-05 contracts.
+
+**K36. Failure taxonomy.**
+
+| Class | Failure | Handling |
+|---|---|---|
+| A | RF-04 compatibility/selection failure | RF-04 typed errors (`RendererSelectionError`, `RendererSelectionInvariantError`) propagate unchanged |
+| B | RF-05 binding invariant failure | `RendererBindingInvariantError` (K12) |
+| C | expected capability operation failure | that capability's frozen expected-failure channel: RSVP → resolved typed result (K17); clipboard → resolved typed result (K21); music → `status` value `BLOCKED` or `ERROR` while the `play()`/`pause()` Promise resolves (K23, K25) |
+| D | unexpected capability programming/infrastructure failure | reject/throw according to the capability contract; for music `play()`/`pause()`, Promise rejection is allowed (K23) |
+| E | renderer component render exception | **not** caught or converted by RF-05; propagates to the application-level React/Next error boundary |
+
+RF-05 defines no template-level fallback renderer.
+
+**K37. Full manifest boundary.** RF-05 does not define the full production renderer manifest; RF-06 owns it. RF-06's full manifest incorporates the exact RF-04 compatibility fields, and RF-06 **projects** the four `RendererCompatibilityManifestV1` fields before registration. A full manifest object with extra fields is never passed directly to RF-04/RF-05 compatibility registration.
+
+**K38. RF-06 handoff.** After RF-05, RF-06 must provide: 1. the first production `rendererKey`; 2. the full production renderer manifest; 3. its projection to `RendererCompatibilityManifestV1`; 4. an `InvitationRendererComponentV1` implementation; 5. one RF-05 binding entry; 6. production/client capability adapter wiring; 7. the approved font mapping (RF14); 8. a renderer fixture harness (RF10); 9. renderer-specific visual/behavior tests; 10. honest `UNAVAILABLE` media presentation (RF-03 V12). RF-06 still owns Elegant Editorial v1 (RF-04 R24).
+
+**K39. No production key in RF-05.** RF-05 freezes no real production `rendererKey`, including `wedding.elegant-editorial.v1`. Conceptual examples stay examples only.
+
+**K40. Review/Publish boundary.** RF-05 owns no Review/Publish orchestration. It persists no rendering state, aggregates no publish issue arrays, and never converts renderer errors into Task 030 blocking codes; that mapping stays later work (RF-04 R21).
+
+**K41. Media resolver/signing boundary.** RF-05 does not own the concrete media resolver/signing adapter. The RF-03 injected media-resolution architecture (A1–A2, M1–M13) is unchanged; concrete Supabase/storage integration stays later.
+
+**K42. Staff preview / public route boundary.** RF-05 does not own the staff preview route, the public rendering route, the access-link resolver, or the guest-token resolver. It defines only reusable renderer/runtime contracts.
+
+**K43. Task 029 boundary.** Task 029 stays visual source truth only. RF-05 never imports or uses prototype hooks/helpers (`app/internal/prototypes`) as production contracts. These prototype behaviors stay rejected: false clipboard success, fake music playing, `MAYBE` RSVP, fake RSVP persistence, and implicit `new Date()` current time.
+
+### Testing contract
+
+**K44. Future RF-05 tests.** RF-05 implementation tests must run in the existing Node/Vitest environment, without adding jsdom merely to test the core contracts. No production renderer is required: typed fixtures and fixture components suffice. At minimum:
+- **Binding:** exact component lookup; duplicate binding key; missing-binding invariant; no fallback; composition with the RF-04 compatibility registry.
+- **Props:** exact renderer props contract; effective sections are authoritative; the compatibility manifest is not exposed.
+- **RSVP:** canonical input validation contract; `SUCCESS`/`INVALID`/`UNAVAILABLE`/`FAILED` semantics; no token/identity fields; no `MAYBE`; no fake success.
+- **Clipboard:** success only after operation success; `UNAVAILABLE`/`FAILED` never success.
+- **Music:** `PAUSED`/`PLAYING`/`BLOCKED`/`ERROR`; rejected play never `PLAYING`; absent when audio is missing/unavailable; no autoplay.
+- **Clock/countdown:** explicit epoch input; pre-target result; exact target; post-target zero state; no `Date.now`.
+- **Date/time:** `vi-VN`; explicit timezone; no machine-timezone dependency.
+- **Calendar:** Monday-first; 42 cells; correct month; exactly one ceremony emphasis.
+
+### Superseded / scoped wording
+
+**K45.** For RF-05 this section scopes or supersedes: RF10 "RF-01 to RF-05 are pure and unit-testable" and RF17 "Order" "RF-01 through RF-05 remain pure TypeScript" (both read per K3); RF12's list including "runtime capabilities" and "RSVP callback/capability metadata" in the ViewModel (capabilities are a separate renderer prop, K6/K14; the ViewModel is unchanged); RF-03 V4's "later shared-presentation/client-capability checkpoint" (that checkpoint is RF-05, K27–K34); `docs/TEMPLATE_SYSTEM.md` §5 and `docs/ARCHITECTURE.md` §10 "RF-05/RF-06" binding wording (RF-05 owns the generic machinery, RF-06 supplies the first real binding, K9–K10). RF15 is refined, not reopened, by K15–K25.
 
 ## Draft / Review / Publish
 
