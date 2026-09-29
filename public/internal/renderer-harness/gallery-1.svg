@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <title>Renderer harness fixture image: HARNESS GALLERY 1 (fictional, not customer media)</title>
+  <rect width="1200" height="800" fill="#8a9a7c"/>
+  <circle cx="360" cy="240" r="200" fill="#faf7ef" opacity="0.35"/>
+  <ellipse cx="840" cy="560" rx="400" ry="160" fill="#faf7ef" opacity="0.25"/>
+  <path d="M0 640 C 400 480, 800 720, 1200 600 L 1200 800 L 0 800 Z" fill="#faf7ef" opacity="0.45"/>
+  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="75" fill="#fdfcf9">HARNESS GALLERY 1</text>
+</svg>
