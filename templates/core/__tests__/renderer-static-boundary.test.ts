@@ -225,6 +225,25 @@ describe("RF-06A files", () => {
   });
 });
 
+/**
+ * RF-06C client-runtime files (docs/DECISIONS.md "RF-06-0 …" P24, P25,
+ * P30, P34–P36). Declared before the first describe that reads them at
+ * collection time; the RF-06C rules themselves are at the end of the file.
+ */
+const RF06C_DIR = "templates/core/client";
+const RF06C_CLIPBOARD_MODULE = `${RF06C_DIR}/clipboard-capability.ts`;
+const RF06C_MUSIC_MODULE = `${RF06C_DIR}/music-capability.ts`;
+const RF06C_CLOCK_MODULE = `${RF06C_DIR}/clock-capability.ts`;
+const RF06C_RUNTIME_MODULE = `${RF06C_DIR}/runtime-capabilities.ts`;
+const RF06C_HOST_CORE_MODULE = `${RF06C_DIR}/invitation-renderer-host-core.tsx`;
+const RF06C_FILES = [
+  RF06C_CLIPBOARD_MODULE,
+  RF06C_MUSIC_MODULE,
+  RF06C_CLOCK_MODULE,
+  RF06C_RUNTIME_MODULE,
+  RF06C_HOST_CORE_MODULE,
+] as const;
+
 describe("templates/** production tree (P39)", () => {
   const sources = listSources(TEMPLATES_ROOT);
 
@@ -242,8 +261,9 @@ describe("templates/** production tree (P39)", () => {
 
   // RF-06B extension: the tree is exactly the RF-06A files plus the explicit
   // RF-06B files; React, CSS and the provenance note exist only there.
-  it("templates/** contains exactly the RF-06A and RF-06B files", () => {
-    expect([...sources].sort()).toStrictEqual([...RF06A_FILES, ...RF06B_TEMPLATE_FILES].sort());
+  // RF-06C extension: plus exactly the RF-06C client-runtime files.
+  it("templates/** contains exactly the RF-06A, RF-06B and RF-06C files", () => {
+    expect([...sources].sort()).toStrictEqual([...RF06A_FILES, ...RF06B_TEMPLATE_FILES, ...RF06C_FILES].sort());
   });
 
   /** P39 universal rules; RF-06C adds its named adapter exceptions explicitly. */
@@ -261,9 +281,24 @@ describe("templates/** production tree (P39)", () => {
     /fonts\.(googleapis|gstatic)\.com/,
   ];
 
+  /**
+   * RF-06C: the only named P39 adapter exceptions, one least-privilege
+   * module per browser global. No other file, and no directory-wide rule.
+   */
+  const UNIVERSAL_EXCEPTIONS: ReadonlyMap<RegExp, string> = new Map([
+    [UNIVERSAL_FORBIDDEN[5] as RegExp, RF06C_CLIPBOARD_MODULE],
+    [UNIVERSAL_FORBIDDEN[6] as RegExp, RF06C_MUSIC_MODULE],
+    [UNIVERSAL_FORBIDDEN[7] as RegExp, RF06C_CLOCK_MODULE],
+  ]);
+
+  it("the RF-06C exceptions cover exactly navigator, Audio and Date.now", () => {
+    expect([...UNIVERSAL_EXCEPTIONS.keys()].map(String)).toStrictEqual(["/\\bnavigator\\b/", "/\\bAudio\\b/", "/Date\\.now/"]);
+  });
+
   it.each(sources)("%s obeys the universal templates/** rules", (file) => {
     const code = stripComments(readRepoFile(file));
     for (const pattern of UNIVERSAL_FORBIDDEN) {
+      if (UNIVERSAL_EXCEPTIONS.get(pattern) === file) continue;
       expect(pattern.test(code), `${file}: ${String(pattern)}`).toBe(false);
     }
   });
@@ -323,12 +358,11 @@ const RF06B_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06B_CODE_FILES)[number], 
     "templates/core/production-renderer-manifests",
     "templates/core/renderer-manifest",
   ],
+  // RF-06C: the host now delegates resolution and capability construction to the internal client core.
   "templates/core/invitation-renderer-host.tsx": [
     `${LIB}/invitation-view-model-types`,
-    `${LIB}/renderer-binding-registry`,
-    `${LIB}/renderer-capabilities`,
     `${LIB}/renderer-selection`,
-    "templates/core/production-renderer-bindings",
+    "templates/core/client/invitation-renderer-host-core",
   ],
   [`${V1}/elegant-editorial-v1.tsx`]: [
     `${LIB}/ceremony-month-grid`,
@@ -445,6 +479,10 @@ const RF06B_FORBIDDEN: readonly [string, RegExp][] = [
   ["external font URL", /fonts\.(googleapis|gstatic)\.com/],
   ["review frame width", /--frame-width/],
   ["RF-06C/D capability or interaction", /\bonClick\b|<button|<form|<input|<dialog|role="dialog"|copyText|\.play\(|nowEpochMs/],
+  // RF-06C safe follow-up hardening (RF-06B independent review).
+  ["Date.parse / Date.UTC", /Date\.parse|Date\.UTC/],
+  ["form events (RF-06D)", /\bonSubmit\b|\bonChange\b/],
+  ["select / textarea (RF-06D)", /<select|<textarea/],
 ];
 
 /** The only RF-06B module allowed to touch next/font. */
@@ -459,11 +497,11 @@ function codeOf(file: string): string {
 }
 
 describe("RF-06B template files", () => {
-  it("every listed file exists; .tsx and CSS live only in the RF-06B renderer/host scope", () => {
+  it("every listed file exists; .tsx and CSS live only in the RF-06B renderer/host scope (plus the RF-06C host core)", () => {
     for (const file of RF06B_TEMPLATE_FILES) expect(() => readRepoFile(file), file).not.toThrow();
     const sources = listSources(TEMPLATES_ROOT);
     for (const file of sources.filter((source) => /\.(tsx|css)$/.test(source))) {
-      expect([HOST_MODULE, RF06B_CSS_FILE, ...RF06B_RENDERER_FILES], file).toContain(file);
+      expect([HOST_MODULE, RF06C_HOST_CORE_MODULE, RF06B_CSS_FILE, ...RF06B_RENDERER_FILES], file).toContain(file);
     }
     expect(sources.filter((source) => source.endsWith(".css"))).toStrictEqual([RF06B_CSS_FILE]);
   });
@@ -529,11 +567,14 @@ describe("RF-06B template files", () => {
     expect(code).not.toMatch(/\bdefault\b|fallback|latest|alias/i);
   });
 
-  it("the host passes exactly the empty closed capability object and takes no capability input", () => {
+  // RF-06C replacement of the RF-06B "empty capabilities" assertion: the host
+  // forwards exactly its three serializable props to the client core.
+  it("the host forwards exactly its three props to the client core and takes no capability input", () => {
     const code = codeOf(HOST_MODULE);
-    expect(code).toContain("export const EMPTY_CAPABILITIES: InvitationRendererCapabilitiesV1 = Object.freeze({});");
-    expect(code).toMatch(/<Renderer viewModel=\{viewModel\} sections=\{sections\} capabilities=\{EMPTY_CAPABILITIES\} \/>/);
-    expect(code).not.toMatch(/\btry\b|\bcatch\b|capabilityOverrides|harnessCapabilities/);
+    expect(code).toMatch(
+      /return <InvitationRendererHostCore rendererKey=\{rendererKey\} viewModel=\{viewModel\} sections=\{sections\} \/>;/,
+    );
+    expect(code).not.toMatch(/\btry\b|\bcatch\b|capabilityOverrides|harnessCapabilities|capabilities|rsvp/i);
     const props = /interface InvitationRendererHostProps \{([\s\S]*?)\}/.exec(code)?.[1] ?? "";
     expect([...props.matchAll(/readonly (\w+):/g)].map((match) => match[1])).toStrictEqual([
       "rendererKey",
@@ -629,7 +670,13 @@ const HARNESS_FILES = [HARNESS_GATE, HARNESS_PAGE, HARNESS_WRAPPER, HARNESS_SCEN
 const HARNESS_ALLOWED_IMPORTS: Readonly<Record<(typeof HARNESS_FILES)[number], readonly string[]>> = {
   [HARNESS_GATE]: ["next", "next/navigation"],
   [HARNESS_PAGE]: ["next/link", "next/navigation", `${HARNESS_ROOT}/harness-scenarios`, `${HARNESS_ROOT}/renderer-harness-client`],
-  [HARNESS_WRAPPER]: [`${LIB}/invitation-view-model-types`, `${LIB}/renderer-selection`, "templates/core/invitation-renderer-host"],
+  // RF-06C: the wrapper renders the host core so it can pass its RSVP capability client-to-client (P25, P30).
+  [HARNESS_WRAPPER]: [
+    `${LIB}/invitation-view-model-types`,
+    `${LIB}/renderer-selection`,
+    `${LIB}/rsvp-capability`,
+    "templates/core/client/invitation-renderer-host-core",
+  ],
   [HARNESS_SCENARIOS]: [
     `${LIB}/invitation-view-model-types`,
     `${LIB}/renderer-selection`,
@@ -681,15 +728,30 @@ describe("internal renderer harness boundary", () => {
     });
     expect(clientImports).toStrictEqual([`${HARNESS_ROOT}/renderer-harness-client`]);
     expect(pageImports).not.toContain("templates/core/invitation-renderer-host");
+    for (const modulePath of pageImports) expect(modulePath).not.toMatch(/templates\/core\/client|capabilit/);
     expect(/["']use client["']/.test(readRepoFile(HARNESS_PAGE))).toBe(false);
     expect(/["']use client["']/.test(readRepoFile(HARNESS_SCENARIOS))).toBe(false);
     expect(readRepoFile(HARNESS_WRAPPER).startsWith('"use client";\n')).toBe(true);
   });
 
-  it("the wrapper constructs no capability or callback in RF-06B", () => {
+  // RF-06C replacement of the RF-06B "no capability" assertion (P25, P30, P33).
+  it("the wrapper constructs only the harness RSVP UNAVAILABLE capability and passes only it to the host core", () => {
     const code = codeOf(HARNESS_WRAPPER);
-    expect(code).not.toMatch(/capabilit|rsvp|clipboard|music|clock|useState|useEffect/i);
-    expect(code).toMatch(/<InvitationRendererHost rendererKey=\{rendererKey\} viewModel=\{viewModel\} sections=\{sections\} \/>/);
+    expect(code).toMatch(/const HARNESS_RSVP_UNAVAILABLE_RESULT: RsvpSubmitResultV1 = Object\.freeze\(\{ status: "UNAVAILABLE" \}\);/);
+    expect(code).toMatch(/const HARNESS_RSVP_UNAVAILABLE: RsvpCapabilityV1 = Object\.freeze\(\{/);
+    expect(code.match(/status: "\w+"/g)).toStrictEqual(['status: "UNAVAILABLE"']);
+    expect(code).not.toMatch(/SUCCESS|INVALID|FAILED/);
+    expect(code).not.toMatch(/clipboard|music|clock|capabilities|capabilityOverrides|useState|useEffect/i);
+    expect(code).toMatch(
+      /<InvitationRendererHostCore\s+rendererKey=\{rendererKey\}\s+viewModel=\{viewModel\}\s+sections=\{sections\}\s+rsvp=\{HARNESS_RSVP_UNAVAILABLE\}\s+\/>/,
+    );
+  });
+
+  it("the server page and scenario module construct and import no capability or callback", () => {
+    for (const file of [HARNESS_PAGE, HARNESS_SCENARIOS, HARNESS_GATE]) {
+      // `music: false` is a serializable section setting in the scenario data, not a capability.
+      expect(codeOf(file), file).not.toMatch(/rsvp|capabilit|submit|clipboard|clock|\.play\(|\.pause\(/i);
+    }
   });
 
   it("the query string only selects a scenario; it is never guest identity", () => {
@@ -777,8 +839,15 @@ function clientGraph(entry: string): { files: string[]; external: string[] } {
 describe("client import graph from the host (P26, P45)", () => {
   const graph = clientGraph(HOST_MODULE);
 
+  // RF-06C: the capability hooks bring `react` into the value graph, so the
+  // description (which previously named react while asserting only
+  // next/font/google) is now exact.
   it("reaches only react, next/font/google and repository modules", () => {
-    expect(graph.external).toStrictEqual(["next/font/google"]);
+    expect(graph.external).toStrictEqual(["next/font/google", "react"]);
+  });
+
+  it("reaches exactly the RF-06C client-runtime modules, and adapters only through them", () => {
+    expect(graph.files.filter((file) => file.startsWith("templates/core/client/"))).toStrictEqual([...RF06C_FILES].sort());
   });
 
   /** P37/P45: pure modules under a server path, recorded debt; nothing else under lib/server may be reached. */
@@ -806,4 +875,220 @@ describe("client import graph from the host (P26, P45)", () => {
       }
     },
   );
+});
+
+// ===========================================================================
+// RF-06C extension (docs/DECISIONS.md "RF-06-0 …" P24, P25, P30, P34–P36,
+// P39). Everything above keeps its RF-06A/RF-06B protections; RF-06C adds
+// its files here with one least-privilege exception per browser global.
+// ===========================================================================
+
+const RF06C_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06C_FILES)[number], readonly string[]>> = {
+  [RF06C_CLIPBOARD_MODULE]: [`${LIB}/renderer-capabilities`],
+  [RF06C_MUSIC_MODULE]: [`${LIB}/invitation-view-model-types`, `${LIB}/renderer-capabilities`],
+  [RF06C_CLOCK_MODULE]: [],
+  [RF06C_RUNTIME_MODULE]: [
+    "react",
+    `${LIB}/invitation-view-model-types`,
+    `${LIB}/renderer-capabilities`,
+    `${LIB}/renderer-selection`,
+    `${LIB}/rsvp-capability`,
+    RF06C_CLIPBOARD_MODULE.replace(/\.ts$/, ""),
+    RF06C_CLOCK_MODULE.replace(/\.ts$/, ""),
+    RF06C_MUSIC_MODULE.replace(/\.ts$/, ""),
+  ],
+  [RF06C_HOST_CORE_MODULE]: [
+    `${LIB}/invitation-view-model-types`,
+    `${LIB}/renderer-binding-registry`,
+    `${LIB}/renderer-selection`,
+    `${LIB}/rsvp-capability`,
+    "templates/core/production-renderer-bindings",
+    RF06C_RUNTIME_MODULE.replace(/\.ts$/, ""),
+  ],
+};
+
+/** Forbidden in every RF-06C file (comments stripped). */
+const RF06C_FORBIDDEN: readonly [string, RegExp][] = [
+  ["prototype", /app\/internal\/prototypes|public\/prototypes|_directions|GreenIvoryEditorialPrototype/],
+  ["Supabase", /supabase/i],
+  ["service_role", /service_role/],
+  ["lib/server import", /lib\/server|\.\.\/server\//],
+  ["DB client", /createClient|\bpg\b|postgres/i],
+  ["process.env", /process\.env/],
+  ["secret", /SECRET|API_KEY/],
+  ["network", /\bfetch\b|XMLHttpRequest|sendBeacon|WebSocket|EventSource/],
+  ["persistence", /localStorage|sessionStorage|indexedDB|\bcookie|caches\./i],
+  ["window", /\bwindow\b/],
+  ["document", /\bdocument\b/],
+  ["execCommand", /execCommand/],
+  ["Date construction/parsing", /\bnew Date\b|\bDate\(|Date\.parse|Date\.UTC/],
+  ["Intl / locale formatting", /\bIntl\b|toLocale/],
+  ["Date getters", /get(UTC)?(Day|Date|Month|FullYear|Hours)\b/],
+  ["performance.now", /performance\.now/],
+  ["randomness", /Math\.random|randomUUID|getRandomValues/],
+  ["other timers", /setTimeout|requestAnimationFrame|requestIdleCallback/],
+  ["observers / media queries (RF-06D)", /IntersectionObserver|matchMedia/],
+  ["dynamic import / require / import.meta", /\bimport\s*\(|\brequire\s*\(|import\.meta/],
+  ["filesystem", /["']node:|["']fs["']|readdir|readFile/],
+  ["use server", /["']use server["']/],
+  ["MAYBE attendance", /\bMAYBE\b/],
+  ["external font URL", /fonts\.(googleapis|gstatic)\.com/],
+  ["next import", /from\s+["']next(\/[^"']*)?["']/],
+  ["renderer component import", /elegant-editorial/],
+  ["harness import", /renderer-harness/],
+  ["interaction UI (RF-06D)", /\bonClick\b|\bonSubmit\b|\bonChange\b|<button|<form|<input|<select|<textarea|<dialog|role="dialog"|<audio/],
+  ["dangerouslySetInnerHTML", /dangerouslySetInnerHTML/],
+  ["framer-motion", /framer-motion|\bmotion\./],
+  ["autoplay / volume / mute / seek", /autoplay|\.volume|\.muted|currentTime|fastSeek|playbackRate/i],
+  ["RSVP construction", /\bsubmit\s*[:(]|RSVP_SUBMIT|isValidRsvpSubmitInputV1/],
+  ["generic capability bag / overrides", /capabilityOverrides|harnessCapabilities|Record<string,\s*unknown>/],
+];
+
+/**
+ * One least-privilege owner per browser primitive (P39): each browser
+ * pattern is allowed in exactly the listed RF-06C module(s), and nowhere in
+ * RF-06A/RF-06B code either. Wiring patterns are checked within RF-06C only.
+ */
+const RF06C_BROWSER_PRIVILEGE: readonly [string, RegExp, readonly string[]][] = [
+  ["navigator", /\bnavigator\b/, [RF06C_CLIPBOARD_MODULE]],
+  ["Audio", /\bAudio\b|HTMLAudioElement/, [RF06C_MUSIC_MODULE]],
+  ["Date.now", /Date\.now/, [RF06C_CLOCK_MODULE]],
+  ["setInterval / clearInterval", /\b(set|clear)Interval\b/, [RF06C_CLOCK_MODULE]],
+  [
+    "React hooks",
+    /\buse(State|Effect|LayoutEffect|InsertionEffect|Ref|Memo|Callback|Reducer|SyncExternalStore|Context|Transition|Optimistic|ActionState)\b/,
+    [RF06C_RUNTIME_MODULE],
+  ],
+];
+
+const RF06C_WIRING_PRIVILEGE: readonly [string, RegExp, readonly string[]][] = [
+  ["react import", /from\s+["']react["']/, [RF06C_RUNTIME_MODULE]],
+  ["component resolution", /resolveInvitationRendererComponent|PRODUCTION_RENDERER_BINDING_REGISTRY/, [RF06C_HOST_CORE_MODULE]],
+  ["capability composition", /composeRendererCapabilities|useInvitationRendererCapabilities/, [RF06C_RUNTIME_MODULE, RF06C_HOST_CORE_MODULE]],
+  ["SUCCESS literal", /["']SUCCESS["']/, [RF06C_CLIPBOARD_MODULE]],
+];
+
+function nonTestSources(dir: string): string[] {
+  return readdirSync(join(REPO_ROOT, dir), { withFileTypes: true }).flatMap((entry) => {
+    if (entry.isDirectory()) return entry.name === "__tests__" || entry.name === "node_modules" ? [] : nonTestSources(`${dir}/${entry.name}`);
+    return /\.(ts|tsx)$/.test(entry.name) ? [`${dir}/${entry.name}`] : [];
+  });
+}
+
+function resolvedImportsOf(file: string): string[] {
+  return importsOf(readRepoFile(file)).map((statement) => resolveSpecifier(file, statement.specifier));
+}
+
+describe("RF-06C client-runtime files", () => {
+  it("every listed file exists and is neither a client nor a server boundary", () => {
+    for (const file of RF06C_FILES) {
+      const code = codeOf(file);
+      expect(/["']use client["']/.test(code), file).toBe(false);
+      expect(/["']use server["']/.test(code), file).toBe(false);
+    }
+  });
+
+  it.each(RF06C_FILES)("%s imports only its exact allowlist", (file) => {
+    expect([...resolvedImportsOf(file)].sort(), file).toStrictEqual([...RF06C_ALLOWED_IMPORTS[file]].sort());
+  });
+
+  it.each(RF06C_FILES)("%s contains no forbidden data, network, persistence, date, UI or RSVP code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of RF06C_FORBIDDEN) {
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+  });
+
+  it.each(RF06C_BROWSER_PRIVILEGE)("browser: %s appears only in its owning RF-06C module", (_label, pattern, owners) => {
+    for (const file of RF06C_FILES) {
+      expect(pattern.test(codeOf(file)), file).toBe(owners.includes(file));
+    }
+    for (const file of [...RF06A_FILES, ...RF06B_CODE_FILES]) {
+      expect(pattern.test(codeOf(file)), file).toBe(false);
+    }
+  });
+
+  it.each(RF06C_WIRING_PRIVILEGE)("wiring: %s appears only in its owning RF-06C module", (_label, pattern, owners) => {
+    for (const file of RF06C_FILES) {
+      expect(pattern.test(codeOf(file)), file).toBe(owners.includes(file));
+    }
+  });
+
+  it("browser primitives are referenced only inside functions, never evaluated at module load", () => {
+    expect(codeOf(RF06C_MUSIC_MODULE)).toMatch(/export const createBrowserAudio: MusicAudioFactoryV1 = \(\) => new Audio\(\);/);
+    expect(codeOf(RF06C_MUSIC_MODULE).match(/\bAudio\b/g)).toHaveLength(1);
+    expect(codeOf(RF06C_CLOCK_MODULE)).toMatch(/now: \(\) => Date\.now\(\),/);
+    expect(codeOf(RF06C_CLOCK_MODULE).match(/Date\.now/g)).toHaveLength(1);
+    expect(codeOf(RF06C_CLOCK_MODULE).match(/\bsetInterval\(callback, delayMs\)/g)).toHaveLength(1);
+    expect(codeOf(RF06C_CLIPBOARD_MODULE).match(/\bnavigator\b/g)).toStrictEqual(["navigator", "navigator"]);
+    expect(codeOf(RF06C_CLIPBOARD_MODULE)).toMatch(/if \(typeof navigator === "undefined"\) return undefined;/);
+  });
+
+  it("the closed capability object is built by explicit per-key selection only", () => {
+    const code = codeOf(RF06C_RUNTIME_MODULE);
+    for (const key of ["rsvp", "clipboard", "music", "clock"]) {
+      expect(code).toContain(`if (parts.${key} !== undefined) capabilities.${key} = parts.${key};`);
+    }
+    expect(code).not.toMatch(/\.\.\.|Object\.assign|Object\.entries|Object\.keys|Object\.fromEntries/);
+  });
+
+  it("the host core accepts exactly the three serializable props plus the client-to-client rsvp", () => {
+    const code = codeOf(RF06C_HOST_CORE_MODULE);
+    const props = /interface InvitationRendererHostCoreProps \{([\s\S]*?)\}/.exec(code)?.[1] ?? "";
+    expect([...props.matchAll(/readonly (\w+)\??:/g)].map((match) => match[1])).toStrictEqual([
+      "rendererKey",
+      "viewModel",
+      "sections",
+      "rsvp",
+    ]);
+    expect(code).toMatch(/readonly rsvp\?: RsvpCapabilityV1;/);
+    expect(code).toMatch(/<Renderer viewModel=\{viewModel\} sections=\{sections\} capabilities=\{capabilities\} \/>/);
+    expect(code).not.toMatch(/\btry\b|\bcatch\b|ErrorBoundary|fallback/);
+  });
+});
+
+describe("RF-06C boundaries across the repository", () => {
+  const appSources = nonTestSources("app");
+  const productionSources = [...nonTestSources("templates"), ...nonTestSources("lib"), ...appSources];
+
+  it("only the production host and the harness wrapper render the host core", () => {
+    const importers = productionSources.filter((file) =>
+      resolvedImportsOf(file).includes(RF06C_HOST_CORE_MODULE.replace(/\.tsx$/, "")),
+    );
+    expect(importers.sort()).toStrictEqual([HARNESS_WRAPPER, HOST_MODULE].sort());
+    for (const importer of importers) expect(readRepoFile(importer).startsWith('"use client";\n'), importer).toBe(true);
+  });
+
+  it("only the host core imports the runtime composition, and only the runtime composition imports adapters", () => {
+    const importersOf = (module: string) =>
+      productionSources.filter((file) => resolvedImportsOf(file).includes(module.replace(/\.tsx?$/, "")));
+    expect(importersOf(RF06C_RUNTIME_MODULE)).toStrictEqual([RF06C_HOST_CORE_MODULE]);
+    for (const adapter of [RF06C_CLIPBOARD_MODULE, RF06C_MUSIC_MODULE, RF06C_CLOCK_MODULE]) {
+      expect(importersOf(adapter), adapter).toStrictEqual([RF06C_RUNTIME_MODULE]);
+    }
+  });
+
+  it("no Server Component under app/** imports the host core, runtime capabilities or an adapter", () => {
+    for (const file of appSources) {
+      if (/^["']use client["']/.test(readRepoFile(file))) continue;
+      for (const modulePath of resolvedImportsOf(file)) {
+        expect(modulePath, file).not.toMatch(/templates\/core\/client\//);
+      }
+    }
+  });
+
+  it("an RSVP capability is constructed only in the harness client wrapper", () => {
+    for (const file of productionSources) {
+      const constructs = /:\s*RsvpCapabilityV1\s*=/.test(codeOf(file));
+      expect(constructs, file).toBe(file === HARNESS_WRAPPER);
+    }
+  });
+
+  it("no server-safe registry, manifest or fixture module reaches an RF-06C module", () => {
+    for (const file of [...RF06A_FILES, BINDINGS_MODULE]) {
+      for (const modulePath of resolvedImportsOf(file)) {
+        expect(modulePath, file).not.toMatch(/templates\/core\/client\/|invitation-renderer-host/);
+      }
+    }
+  });
 });
