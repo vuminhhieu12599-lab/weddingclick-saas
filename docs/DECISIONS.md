@@ -1225,6 +1225,338 @@ RF-05 defines no template-level fallback renderer.
 
 **K45.** For RF-05 this section scopes or supersedes: RF10 "RF-01 to RF-05 are pure and unit-testable" and RF17 "Order" "RF-01 through RF-05 remain pure TypeScript" (both read per K3); RF12's list including "runtime capabilities" and "RSVP callback/capability metadata" in the ViewModel (capabilities are a separate renderer prop, K6/K14; the ViewModel is unchanged); RF-03 V4's "later shared-presentation/client-capability checkpoint" (that checkpoint is RF-05, K27–K34); `docs/TEMPLATE_SYSTEM.md` §5 and `docs/ARCHITECTURE.md` §10 "RF-05/RF-06" binding wording (RF-05 owns the generic machinery, RF-06 supplies the first real binding, K9–K10). RF15 is refined, not reopened, by K15–K25.
 
+## Invitation Rendering Foundation — RF-06-0 First Production Renderer Contract Clarification
+
+**Status:** docs only. Authored for independent review; **not yet frozen**. RF-01 is frozen at `5ee6bd1`, RF-02 at `f2f9ea2`, RF-03 at `260a03f`, RF-04 at `fe8b400`, and RF-05 is complete and frozen at `fc94b30` (RF-05D PASS). RF-06 discovery and planning passed, but the frozen docs left the first production renderer's identity, full manifest, font and asset policy, content adaptations, server/client composition and checkpoint process open. This section is the **single authoritative RF-06 contract**. Where RF9, RF10, RF14, RF15, RF16, the RF-04 clarification (R3, R12, R15, R23–R25), the RF-05 clarification (K5, K19, K35, K37–K39), `docs/TEMPLATE_SYSTEM.md` §5–§7 or `docs/ARCHITECTURE.md` §10 describe these more broadly or conceptually, this section governs RF-06. It does not reopen any RF-00 through RF-05 decision, and it does not change the RF-02 Snapshot, the RF-03 `InvitationViewModel`, the RF-04 `RendererSelectionContextV1` or any RF-05 contract. No RF-06 code exists yet. **RF-06A has not started. Task 030 stays blocked** (RF16).
+
+**Product Owner sign-off (2026-09-29).** Approved: the P16 design keys (`green-ivory`, `editorial-classic`, `STANDARD`); the P3 font families (Great Vibes, Source Serif 4, Inter via `next/font`), with Vietnamese glyph and licence QA still required before any certification claim; and personalized RSVP without a name input, submitting `guestName: null` (P31). Not approved: a music-unavailable indicator. It is replaced by the P35 degraded-state rule (no capability, no control, no indicator). No Product Owner choice in this section remains open.
+
+### Product goal and source of truth
+
+**P1. Goal.** RF-06 delivers the first production invitation renderer, **Elegant Editorial v1**, and with it RF16 item 16 ("at least one production renderer integration that proves the architecture").
+
+**P2. Task 029 is visual reference only.** The UI label "Elegant Editorial" in the Task 029 prototype renders `GreenIvoryEditorialPrototype` (`app/internal/prototypes/invitation/_directions/green-ivory-editorial/`). That component is the approved **visual** reference. `_directions/elegant-editorial/` is legacy, unimported and dead; it is not a reference at all. The production renderer is implemented independently against the frozen RF-01 to RF-05 contracts. No production module (`templates/**`, `lib/**`, and every production composition or route) may import `app/internal/prototypes/**`. No prototype path, hook, helper, data file or CSS module is production authority (RF-04 R25, RF-05 K43).
+
+### D1 — Fonts
+
+**P3. Production font set (explicit font-library decision per RF14; Product Owner APPROVED 2026-09-29, certification still pending).** Elegant Editorial v1 uses exactly three families, each loaded through `next/font/google` (self-hosted by the Next build):
+
+| Role | Family | Maximum permitted weights / styles | Subsets |
+|---|---|---|---|
+| script / accent | **Great Vibes** | 400 normal | `latin`, `vietnamese` |
+| editorial serif | **Source Serif 4** | 400, 600; normal and italic | `latin`, `vietnamese` |
+| label / UI sans | **Inter** | 400, 500, 600; normal | `latin`, `vietnamese` |
+
+- **Verified support.** The installed Next.js 16.3.0 font catalog (`node_modules/next/dist/compiled/@next/font/dist/google/font-data.json`) lists all three families with a `vietnamese` subset: Great Vibes (weight 400, normal), Source Serif 4 (200–900 plus variable, normal/italic) and Inter (100–900 plus variable, normal/italic). The recommended defaults were therefore kept. No substitute was needed.
+- **Licence basis.** All three are distributed through Google Fonts under the **SIL Open Font License 1.1**, which allows web embedding and commercial use. The OFL basis is recorded here. RF-06B records the upstream licence reference for each family in its checkpoint report.
+- **Loading.** Only `next/font` is used. No runtime CSS `@import`, no `<link>` to an external font CDN, no committed font files, and no font catalog loaded globally. The fonts load only in the renderer graph (CLAUDE.md §19). RF-06B loads only the weights/styles its CSS actually uses, within the table's maximum. The table is a ceiling, not a list to load.
+- **Isolation from global fonts.** `app/globals.css` currently `@import`s Dancing Script and Playfair Display from Google Fonts at runtime. That is technical debt (P45). It is **not** part of the Elegant Editorial font contract. The renderer's `font-family` declarations reference only its own `next/font` families plus generic fallbacks, and never those globally imported families.
+- **Certification.** Vietnamese glyph QA (`docs/TYPOGRAPHY_AND_MOTION.md` §3, §8) is performed in RF-06E. Nothing claims these fonts are "certified" for WeddingClick until those checks pass. A glyph or subset defect found in RF-06E is an RF-06B defect, handled by P44.
+
+### D2 — Decor asset provenance
+
+**P4. Prototype assets are art-direction references.** The Task 029 decor files under `public/prototypes/invitation/decor/` (envelope body/flap/seal, calendar flowers, floral divider strip) are **not** production-certified because they exist or because they were approved visually. Their provenance and production-use rights are not documented today.
+
+**P5. Rule for RF-06B.** A prototype-derived asset may enter production only if its provenance **and** right to production use are explicitly confirmed and recorded before RF-06B is frozen. Otherwise RF-06B uses newly created, WeddingClick-owned replacement artwork, or another asset whose production rights are documented. Every production asset has a provenance record (source, author/owner, rights basis) in the RF-06B report and in a provenance note inside `templates/wedding/elegant-editorial/v1/` (never under `public/`).
+
+**P6. Location and weight.** Production assets live only under the immutable path `public/renderers/wedding/elegant-editorial/v1/`. No production renderer module references `public/prototypes/**`. Assets are optimized for their actual display size: vector (SVG) where the artwork allows, otherwise raster at no more than 2× its largest rendered CSS size inside the ≈480 px column (P12), in a web-efficient format. RF-06B reports each file's size and the total. A total decor payload above about 1 MB needs explicit justification in that report. The roughly 10–11 MB of prototype PNGs that Elegant Editorial references today is technical debt and a reference point only (P45). It is never a production payload.
+
+### D3 — Content and visual adaptations
+
+**P7. Canonical data wins over prototype fiction.** Wherever the prototype shows content that has no canonical ViewModel source, v1 either maps it to the canonical field or removes it. It never invents data, demo media or placeholder text presented as customer content (RF7, RF11 G, RF-03 V12). Only the renderer props are read (RF-05 K6): `viewModel`, `sections` and `capabilities`.
+
+| Area | Elegant Editorial v1 behavior |
+|---|---|
+| Hero | Uses `viewModel.media.cover` when `RESOLVED`. When the cover is absent **or** `UNAVAILABLE`, it shows an honest typographic hero (names, ceremony title, date) with no image. No hard-coded location (the prototype's "Đà Nẵng" is removed) and no substitute media. |
+| Opening card / envelope | May reuse the same resolved cover. No second media role is invented. |
+| Portraits | No `groomPortrait`/`bridePortrait` role exists in v1 (RF7). Production uses a typographic couple block. No fake/demo portraits. |
+| Editorial image cluster | Removed from v1 (no canonical media roles). |
+| Love story | Text-only, from `viewModel.content.loveStory`, rendered as text (line breaks preserved; never interpreted as HTML). No background media is invented. Shown only when `sections.loveStory`. |
+| Gallery | `viewModel.media.gallery` in canonical order, shown only when `sections.gallery`. An `UNAVAILABLE` item keeps its position as a neutral, non-interactive tile carrying fixed template copy saying the image is unavailable. It is never opened in the lightbox, removed, reordered or replaced (RF-03 M8, RF-04 R11). |
+| Timeline | Removed from v1 (no frozen canonical field; RF7). |
+| `threePhoto` | Removed from v1. |
+| `dressCode` | Removed from v1 (RF7). |
+| Invitation message | `viewModel.content.invitationMessage` rendered verbatim as text, only when `sections.invitationMessage`. No token substitution, no templating, no HTML. |
+| `additional_note` | Never rendered; it is not in the Snapshot or the ViewModel (RF8). |
+| Families | `viewModel.families.primary` then `.secondary` (RF4 display order, both shown). Only canonical fields are shown, and a null line is omitted. The side label ("Nhà Trai" / "Nhà Gái", fixed copy) is chosen by the family's explicit `side`, never by position (RF5). No invented address or content. |
+| Ceremony | Title is `viewModel.ceremony.title` verbatim (RF3). Date, weekday and time come only from the RF-05C presentation derivation of `ceremony.startsAt` + `ceremony.timezone`. |
+| Events | `viewModel.events` in the given order (RF2). Each shows canonical `title`/`venueName`/`address`, and date/time from RF-05C. A map CTA appears only when that event's `mapUrl` exists. No lunar text on non-ceremony events (RF6). |
+| Guest line | Personalized: `viewModel.guest.displayName`, shown as presentation text only, never identity or authorization (RF-03 V1, RF-05 K20). Unpersonalized: fixed template copy. |
+| RSVP | Attendance choices are `ATTENDING` and `NOT_ATTENDING` only; there is no `MAYBE` (RF15). Governed by P31–P33. |
+| Lunar | `viewModel.ceremony.lunarDateDisplay` is shown verbatim, or the lunar line is omitted when it is null or empty (RF6, K32). A fixed label such as "Tức ngày" is allowed only as **separate** template copy placed beside it. The label never parses, alters, concatenates into or replaces the canonical string. |
+| Calendar | The RF-05C Monday-first 42-cell month grid is authoritative (K33). Column headers are fixed template copy in Monday → Sunday order. The renderer never computes its own month, weekday or day count. |
+| Countdown | RF-05C `deriveCeremonyCountdownV1` over `capabilities.clock` only (K27–K29). No countdown is shown without a clock. A passed ceremony shows fixed copy, never negative values. |
+| Gift | Shown only when `sections.gift`. Lists only the sides present in `viewModel.gift`, in `operationalSides` order. It never fabricates a side, a common account or `QR_COMMON` (RF13, S8–S9). Each side shows its non-blank canonical bank text, and its QR from `viewModel.media.qr.<side>`. An `UNAVAILABLE` QR keeps the bank text visible and shows fixed copy saying the QR is unavailable (RF-03 M10). The gift entry point never opens an empty dialog: by RF-02 S7/S8 every present side has bank text or a QR reference, and RF-06 tests assert that no rendered dialog is empty. Copy-to-clipboard follows P34. |
+| Music | Governed by P35. A music control renders only when `sections.music` is true **and** `capabilities.music` is present (audio `RESOLVED`). When the audio slot is absent or `UNAVAILABLE`, nothing music-related renders: no control, no disabled button, no broken-music icon, no "music unavailable" text, no placeholder (K24). |
+| Media (all) | No fake URL, no demo substitute, no storage lookup, no signing, no `project_media` discovery inside the renderer (RF13, RF-03 A2). |
+
+**P8. Section visibility.** Props `sections` are the only visibility authority for the five optional sections (K7). The renderer never re-derives visibility from `viewModel.sections`, `design.sectionSettings`, the manifest or media availability. Non-optional blocks (hero, couple, families, ceremony, events, calendar) always render from canonical data. For music, the absence of any music UI when `capabilities.music` is absent is the P35 degraded state required by K24, not a re-derivation of visibility.
+
+**P9. Design keys.** Elegant Editorial v1 declares exactly one palette, one font preset and one effect preset (P16). The v1 renderer therefore does not branch on `design.paletteKey`, `fontPresetKey` or `effectPresetKey`, and does not read `design.designSettings` (v1 declares no design settings). Reduced motion is honored regardless of the effect preset (P13).
+
+**P10. Fixed template copy.** Section headings, the default unpersonalized guest salutation, unavailable-media copy, gift intro, countdown "passed" copy, calendar column headers and closing copy are fixed template-owned Vietnamese copy. They are part of the immutable v1 renderer (RF7, RF14). RF-06B authors them and they are reviewed with RF-06B. They are never persisted customer content.
+
+### D4 — Responsive / desktop
+
+**P11. Mobile-first baseline.** Primary design targets are 360 / 390 / 430 px (CLAUDE.md §21). There is no dependency on the prototype `--frame-width` review frame: sizing uses renderer-owned CSS (CSS Modules scoped under the renderer root), and the renderer root sets its own box-sizing, typography and colors instead of relying on global Tailwind preflight (P45). Layouts do not assume `100vh`; `dvh` (with a safe fallback) may be used where appropriate. There is no horizontal page scroll at any supported width.
+
+**P12. Desktop composition (RF-06 production adaptation).** At ≥ 768 px the invitation becomes a centered editorial column of about 480 px on a renderer-owned decorative/background surface. The content column never stretches past that width at wide desktop sizes. This is an RF-06 adaptation, not a claim that Task 029 designed desktop.
+
+**P13. Dialogs and motion.** The gift dialog is a bottom-sheet-like panel on mobile and a centered modal/panel at ≥ 768 px. Every dialog is keyboard-accessible (focus moves in, Escape closes, focus returns), has an accessible name, and never traps the user. The envelope/opening interaction and reveals never block content permanently. They are skippable, work without audio, and under `prefers-reduced-motion: reduce` they show content immediately without large movement or continuous decorative loops (`docs/TYPOGRAPHY_AND_MOTION.md` §12–§15). RF-06 installs no new package (CLAUDE.md §24). Using an already-installed dependency for motion must be justified in the RF-06D report; plain CSS/`IntersectionObserver` is preferred.
+
+### D5 — Production identity
+
+**P14. Frozen identity.**
+
+| Field | Value | Catalog column it will seed (RF9, later) |
+|---|---|---|
+| event type | `WEDDING` (`EventType`, `lib/domain/event-type.ts`) | `templates.event_type` |
+| template code | `elegant-editorial` | `templates.code` |
+| version number | `1` | `template_versions.version_number` |
+| display name | `Elegant Editorial` | `templates.name` (seed value) |
+| renderer key | **`wedding.elegant-editorial.v1`** | `template_versions.renderer_key` |
+
+The key is composed from identity by P18. It is **not** derived from `GreenIvoryEditorialPrototype`, the runtime UI label or the legacy directory (R24). Any future incompatible visual or behavioral change becomes `wedding.elegant-editorial.v2` (a new directory, manifest, binding and catalog version). After the RF-06 final freeze (P22), v1 is never mutated. This supersedes, for this one key, R4/R15/K39 "no production key is frozen": `wedding.elegant-editorial.v1` is now the first real production `rendererKey`. Examples in other docs remain examples.
+
+### Full production manifest
+
+**P15. `RendererProductionManifestV1` — exact closed shape.** Derived from the existing catalog model (`templates.code`/`event_type`/`name`, `template_versions.version_number`/`renderer_key`/`manifest`), the frozen RF-04 `RendererCompatibilityManifestV1` and the frozen Task 028 `TemplateDesignManifestV1`:
+
+```text
+RendererProductionManifestV1 {
+  readonly identity: {
+    readonly eventType:     EventType          // canonical, lib/domain/event-type.ts
+    readonly templateCode:  string             // P18 format
+    readonly versionNumber: number             // positive safe integer
+    readonly displayName:   string             // catalog seed name
+  }
+  readonly compatibility: RendererCompatibilityManifestV1   // RF-04 R3, reused unchanged
+  readonly design:        TemplateDesignManifestV1          // Task 028, reused unchanged
+}
+```
+
+- Exactly three top-level members and exactly four `identity` members. No others.
+- **`rendererKey` exists only once**, as `compatibility.rendererKey`. It is not duplicated in `identity`, because it is fully determined by identity (P18) and a second copy could disagree.
+- `compatibility` is exactly the RF-04 projection input (K37). It is the only part given to RF-04/RF-05 registration, after projection by `projectCompatibilityManifest`.
+- `design` is exactly the Task 028 subset that the later catalog seed writes into `template_versions.manifest` (P19).
+- It contains **no** component, function, React type, runtime capability, database row or id (no `templates.id`, no `template_versions.id`), signed URL, storage path, asset list, mutable project data, `is_active`/`retired_at`/`sort_order`/`description`/`preview_media_path` (mutable catalog presentation, not renderer identity), or `supportedFeatures`.
+- The type name carries the version, so there is no separate manifest schema-version field. A future incompatible full-manifest shape is `RendererProductionManifestV2`.
+- Readonly semantics: registries hold validated, deeply frozen, registry-owned copies. Later mutation of a caller's object cannot change registry behavior (same discipline as RF-04 R13/R26).
+
+**P16. Elegant Editorial v1 manifest values (exact; design keys Product Owner APPROVED 2026-09-29).**
+
+```text
+identity: { eventType: "WEDDING", templateCode: "elegant-editorial",
+            versionNumber: 1, displayName: "Elegant Editorial" }
+compatibility: {
+  rendererKey: "wedding.elegant-editorial.v1",
+  supportedPayloadSchemaVersions: [1],
+  supportedVariants: ["COMMON", "GROOM", "BRIDE"],
+  sectionCapabilities: { invitationMessage: true, loveStory: true, gallery: true,
+                         music: true, gift: true }
+}
+design: {
+  schemaVersion: 1,
+  palettes: ["green-ivory"],
+  fontPresets: ["editorial-classic"],        // = the P3 family set
+  effectPresets: ["STANDARD"],
+  sectionSettingsSchema: {
+    invitationMessage: { type: "boolean" }, loveStory: { type: "boolean" },
+    gallery: { type: "boolean" }, music: { type: "boolean" }, gift: { type: "boolean" }
+  },
+  designSettingsSchema: {}
+}
+```
+
+`sectionCapabilities` is all `true` because every one of the five sections is rendered by v1 (P7), including love story (text-only) and music (P35). `supportedVariants` uses the canonical `INVITATION_VARIANTS` order.
+
+**P17. Placement.** The v1 manifest constant lives in `templates/wedding/elegant-editorial/v1/` in a module with no React import, no `"use client"`, no browser globals and no `lib/server/**` import, so both compositions (P27) can import it. The `RendererProductionManifestV1` type, its validator/projection and its error class live in `templates/core/`. None of them may be added to the RF-04/RF-05 files that the frozen static-boundary tests scan (`renderer-compatibility-manifest.ts`, `renderer-registry.ts`, `renderer-selection*.ts`, the RF-05A/B/C files). Those files must stay free of production keys and `TemplateDesignManifestV1`, and RF-06 must not weaken those tests. Exact file names follow repository conventions.
+
+### Full-manifest invariants
+
+**P18. Key composition.** `compatibility.rendererKey === RENDERER_KEY_EVENT_SEGMENT[identity.eventType] + "." + identity.templateCode + ".v" + identity.versionNumber`, where `RENDERER_KEY_EVENT_SEGMENT` is an exhaustive closed map over `EventType` (today `{ WEDDING: "wedding" }`). It is not a generic lower-casing, so adding an event type forces an explicit decision. `templateCode` matches `^[a-z0-9]+(-[a-z0-9]+)*$` (lower-case kebab, no dots), so composition is injective. `versionNumber` is a JavaScript safe integer `> 0` (mirroring the `template_versions` `CHECK`) printed in plain decimal. `displayName` is a non-empty string equal to its own `trim()`.
+
+**P19. Validation (fail-fast order).** `validateRendererProductionManifest(value)` (exact name per convention) treats the static type as untrusted and checks, in order:
+1. `value` is a plain object with exactly the own keys `identity`, `compatibility`, `design`;
+2. `identity` is a plain object with exactly its four own keys, each valid per P18 (`eventType` ∈ `EVENT_TYPES`);
+3. `compatibility` passes the frozen RF-04 `projectCompatibilityManifest` (R3, R14). An RF-04 `RendererSelectionInvariantError` from this step propagates **unchanged**;
+4. the projected `rendererKey` equals the P18 composition;
+5. `design` passes the frozen Task 028 `validateTemplateDesignManifest`, **and** no key or string value in `design` is changed by that validator's trim normalization (a code-owned manifest never relies on normalization; an absent optional `enumValues` is not a difference). `palettes`, `fontPresets` and `effectPresets` are each non-empty, because `project_design` requires a non-empty key for each;
+6. `design.sectionSettingsSchema`: every key is one of the five RF-04 section keys (`RENDERER_SECTION_KEYS`); every spec is exactly `{ type: "boolean" }` with no `enumValues`; and its key set equals exactly `{ k | compatibility.sectionCapabilities[k] === true }`. Staff can toggle exactly the sections the renderer supports, never an unsupported one or a non-section key (R8–R10).
+
+It returns a fresh validated projection. Nothing is coerced, normalized, deduplicated or repaired. The "compatibility is the RF-04 input" and "design is a valid Task 028 manifest" invariants are steps 3 and 5.
+
+**P20. Error family.** RF-06A adds **`RendererProductionManifestInvariantError`** (existing `…InvariantError` convention) for every RF-06-only full-manifest failure: steps 1, 2, 4, 5 and 6 of P19, a duplicate `rendererKey` in a production composition (P27), and any runtime-corrupted production registry state. A Task 028 validator failure in step 5 is rethrown as this error with a fixed static message, never echoing manifest content (`docs/SECURITY.md`). RF-04 errors (`RendererSelectionInvariantError`, `RendererSelectionError`) and RF-05 `RendererBindingInvariantError` propagate unchanged and are never wrapped or re-coded (K12, K36). Malformed full manifests always fail closed. There is no discovery from the filesystem, database or environment, and no fallback.
+
+**P21. Elegant Editorial exact-value tests.** RF-06A tests assert the P16 values exactly: key `wedding.elegant-editorial.v1`; event type `WEDDING`; code `elegant-editorial`; version `1`; payload schema versions exactly `[1]`; variants exactly `COMMON`, `GROOM`, `BRIDE`; `sectionCapabilities` exactly as in P16; `sectionSettingsSchema` exactly the five boolean specs. RF-06B tests assert that the renderer actually renders each section declared capable (P7). Negative tests cover each P19 step, the duplicate key, and RF-04 error pass-through.
+
+### Immutable directory strategy
+
+**P22. Layout.**
+
+```text
+templates/
+  core/                                 shared production infrastructure (manifest type/validator,
+                                        production compositions, client host, capability adapters)
+  shared/                               shared presentation/motion primitives (template-agnostic)
+  wedding/elegant-editorial/v1/         Elegant Editorial v1 renderer, manifest constant, CSS, copy
+public/renderers/wedding/elegant-editorial/v1/   Elegant Editorial v1 production assets only
+```
+
+After the RF-06F PASS freeze, `templates/wedding/elegant-editorial/v1/` and `public/renderers/wedding/elegant-editorial/v1/` are **immutable**. Any visual, copy or behavioral change requires v2 (RF14). This is stricter than RF14's "once certified or released": the freeze applies at RF-06F even though no catalog row exists yet. `templates/core/` and `templates/shared/` may evolve later, but only without changing certified v1 output or semantics. Such changes are regression-sensitive and are tested against every active renderer version (CLAUDE.md §28; `docs/TYPOGRAPHY_AND_MOTION.md` §17).
+
+### Server / client boundary
+
+**P23. Server-safe side.** The server-side composition (a harness page now; staff preview and public routes later, which are not RF-06):
+- builds or receives the Snapshot (RF-02);
+- resolves media through an injected `MediaResolver` (RF-03 Layer A);
+- builds the `InvitationViewModel` (RF-03 Layer B);
+- runs `selectRendererCompatibility` (RF-04) against the **server-safe production compatibility registry** (P27 A);
+- imports only server-safe production manifest/compatibility modules plus **exactly one** client entry. A **production** composition's client entry is the host (P24). The internal harness's client entry is instead its single harness client wrapper (P25), which then renders the host; the harness Server Component does not also import the host as a parallel client entry. No server composition imports the client binding registry, renderer components or capability adapters;
+- passes across the RSC boundary **only** serializable data: `rendererKey` (string), `viewModel` (plain JSON data with runtime URLs), and `sections` (the five booleans from `RendererSelectionContextV1.effectiveSections`).
+
+**P24. Client side: `invitation-renderer-host.tsx`.** A `"use client"` module in `templates/core/`. It is the only client entry a **production** composition imports; in the internal harness it is rendered by the harness client wrapper (P25) instead. It:
+- is the client boundary;
+- creates the runtime capabilities inside the client graph (P30, P34–P36);
+- resolves the component with the RF-05B `resolveInvitationRendererComponent` over the **client binding registry** (P27 B), fail-closed, with no fallback;
+- renders `<Component viewModel={viewModel} sections={sections} capabilities={capabilities} />`, which is exactly the RF-05 K6 props.
+
+**P25. No callback crosses Server → Client.** No capability object or callback (`RsvpCapabilityV1`, `ClipboardCapabilityV1`, `MusicCapabilityV1`, `ClockCapabilityV1`) is ever serialized from a Server Component to a Client Component, and no API is frozen in which a Server Component passes one as a prop. A client-graph caller may give the host an already-constructed RSVP capability through a client-to-client prop (P30); a Server Component never does.
+
+Compositions:
+
+```text
+PRODUCTION:  Server Component ──(rendererKey, viewModel, sections)──> InvitationRendererHost (client) ──> renderer
+HARNESS:     Harness Server Component ──(serializable fixture/render data only)──> HarnessClientWrapper (client)
+                 ──(client-to-client: data + harness RSVP UNAVAILABLE capability)──> InvitationRendererHost (client) ──> renderer
+```
+
+The **harness client wrapper** exists only in the internal harness (P38). It is exactly one `"use client"` module owned by the harness route, outside `templates/**`. It receives only serializable fixture/render data from the harness Server Component, constructs the harness-only RSVP `UNAVAILABLE` capability (and any other deterministic harness capability inputs) inside the client graph, and renders the host, passing those inputs client-to-client. It is not production-authoritative: no production composition, `templates/**` or `lib/**` module imports it, and it introduces no second production architecture.
+
+**P26. Root renderer client compatibility.** `ElegantEditorialV1` is client-compatible and may be rooted in the client graph under the host. Its section components join the client graph transitively. The invitation **page** does not become client-only: the server composition stays a Server Component and the host is server-pre-rendered by normal Client Component behavior (K5). No production renderer or host module queries Supabase, a database, storage or project/draft state, or reads `process.env`.
+
+### Production registries
+
+**P27. Two compositions from one manifest source.** One ordered, explicit list of production manifest constants (today exactly the Elegant Editorial v1 constant) feeds both:
+- **A. Server-safe production manifest/compatibility registry** (`templates/core/`, no React or client code): validates each full manifest (P19), rejects duplicate keys (P20), and builds the RF-04 `RendererCompatibilityRegistry` from the projected compatibility manifests. It may offer exact-key lookup of the validated full manifest. RF-06A.
+- **B. Client-graph RF-05 binding registry** (`templates/core/`, client graph): validates the same manifests (P19), and builds `createInvitationRendererBindingRegistry` from `{ compatibilityManifest: <projected>, component: ElegantEditorialV1 }` entries. RF-06B.
+
+Both expose the **same** renderer key set. RF-06A/B tests assert exact key-set equality (for example through a readonly key list derived from the shared manifest list, never hand-typed, and without adding enumeration to frozen RF-04/RF-05 modules). There is no discovery, fallback, default, "latest" lookup, alias, or environment/database influence.
+
+**P28. RF-04/RF-05 modules unchanged.** RF-06 composes the frozen RF-04/RF-05 machinery. It does not modify `lib/invitation-rendering/` contracts. If RF-06 finds that a frozen contract is insufficient, it stops and reports BLOCKED instead of patching around it.
+
+### RSVP ownership
+
+**P29. Not in RF-06.** RF-06 does **not** implement persistent RSVP submission. Task 033 owns guest-token resolution, RSVP submit/read, persistence and authorization.
+
+**P30. Behavior before Task 033.**
+- The production host supplies **no** `rsvp` capability. With `capabilities.rsvp` absent, Elegant Editorial renders no interactive or submittable RSVP form (K19). It may omit the RSVP block or show fixed non-interactive copy. It never shows a fake form.
+- The internal harness (P38) constructs an explicit **`UNAVAILABLE`** RSVP capability in its harness client wrapper (P25) and passes it to the host through a client-to-client prop. The host never constructs a harness capability, and never reads an environment flag to decide whether one exists.
+- Unit tests may use deterministic test doubles for all four K17 outcomes (`SUCCESS`, `INVALID`, `UNAVAILABLE`, `FAILED`) and for rejection. No preview or harness capability ever resolves `SUCCESS` (RF15).
+- Later, Task 033 constructs the real capability **inside the client graph**, using its authorized client/API workflow.
+- No guest token, access token, guest id or `?guest=` value appears in renderer props or renderer UI (K20).
+
+**P31. RSVP UI semantics (RF-06D).** Choices are `ATTENDING` / `NOT_ATTENDING`. Party size is an integer 1–20 for `ATTENDING`; `NOT_ATTENDING` submits 0 with no party-size input. The message is optional, `null` when blank, and at most 500 characters. Personalized (`viewModel.guest` present; Product Owner APPROVED 2026-09-29): no guest-name input is rendered and the capability input sends `guestName: null`. `viewModel.guest.displayName` stays presentation-only and is never sent as, or used as, identity (K20). Non-personalized: a required name input, non-blank after `trim()` (K16). The renderer prevalidates for UX only.
+
+**P32. RSVP state machine.** Idle → pending → one of success / invalid / unavailable / failed. Success UI appears only after a resolved `SUCCESS`. A rejected promise is shown as failure. Pending prevents duplicate submission. There is no prefill (K18).
+
+**P33. RSVP harness honesty.** With the harness `UNAVAILABLE` capability, submitting shows the honest unavailable state. The harness never displays a success message.
+
+### Capability ownership
+
+**P34. Clipboard (RF-06C).** A concrete browser adapter in `templates/core/` implementing `ClipboardCapabilityV1` over `navigator.clipboard.writeText`. It returns `SUCCESS` only after the write promise resolves; `UNAVAILABLE` when the Clipboard API is absent or unusable (for example an insecure context); `FAILED` when the write rejects. There is no `document.execCommand` fallback (K22). "Copied" UI appears only after `SUCCESS`. When `capabilities.clipboard` is absent, no copy control is shown and the bank text stays selectable.
+
+**P35. Music (RF-06C adapter, RF-06D control).**
+- The host provides `capabilities.music` only when `isMusicCapabilityPermittedV1(viewModel.media.audio)` is true, meaning the audio is `RESOLVED` (K24).
+- **Degraded-state rule (Product Owner decision, 2026-09-29):**
+  - audio `RESOLVED` and `sections.music` true → a music control **may** render, operating only through `capabilities.music`;
+  - audio absent → no capability, no control, no indicator;
+  - audio `UNAVAILABLE` → no capability, no control, no indicator.
+
+  In neither degraded case is a disabled music button, broken-music icon, "music unavailable" text or placeholder control rendered. The honest degraded state is the absence of the feature. It never presents a broken or non-actionable interaction. With `sections.music` false, no music control renders even when the capability is present.
+- There is one audio instance per rendered invitation. Initial status is `PAUSED`, with no autoplay. `play()` runs only from an explicit user gesture, and loop is `true`.
+- A browser autoplay/user-agent policy rejection (`NotAllowedError`) → `BLOCKED`. Any other expected playback failure (media error, decode or network failure) → `ERROR`. Expected `BLOCKED`/`ERROR` outcomes resolve the command promise and never reject it. Unexpected faults may reject (K23, K25).
+- The current `status` stays authoritative: the renderer shows playing only while `status === "PLAYING"`, handles rejection without showing success, and never leaves an unhandled rejection.
+- There is no volume or mute control in v1. A later explicit gesture may retry after `BLOCKED`/`ERROR`, but nothing retries automatically.
+- The adapter creates no `HTMLAudioElement` and touches no browser global during server render. The status is delivered to the renderer by rerendering with an updated capability value.
+
+**P36. Clock (RF-06C).** The host creates `ClockCapabilityV1 { nowEpochMs }` from an explicit client epoch **after mount only**. It is absent during server render and the first client render, so no current time enters SSR output and hydration cannot mismatch. It then refreshes about every 1 second, and the interval is cleared on unmount. The clock is never persisted or shared. RF-05C derivations stay pure; the adapter is the only place that reads the current time.
+
+### Temporal watch items (recorded, not solved here)
+
+**P37.** None of these blocks RF-06-0:
+- `Date.parse` behavior for fractional seconds that are not exactly 3 digits can differ across browsers. RF-06 fixtures use only known canonical timestamp forms. The fractional-timestamp case needs manual iOS Safari QA in RF-06E.
+- ICU/tzdata differences between the server and client runtimes are a hydration risk for recently changed non-Vietnam zones. `Asia/Ho_Chi_Minh` is the primary target, and RF-06E records any mismatch observed.
+- `lib/server/validation/timestamptz.ts` is pure but lives under a server path and is already in the client graph through RF-05C (P45).
+- Invalid temporal data must be validated **before** a real public renderer invocation. RF-05C throws on invalid input (K27). The harness uses only valid fixtures. Upstream validation belongs to Review/Publish/public integration, not RF-06.
+
+### Harness boundary
+
+**P38. Internal development harness.** RF-06 may add an internal, fixture-driven harness route (RF10). It is **not** staff preview, not a public invitation route, and not a Review/Publish flow. It must:
+- return `notFound()` when `process.env.NODE_ENV === "production"` and be `noindex`/`nofollow` (the same gate as the Task 029 prototype route). This check lives in exactly one dedicated **harness server gate module** (the harness route segment's server `layout.tsx`, as in Task 029), which is the only harness module permitted to read `process.env`, and it reads only `process.env.NODE_ENV` (P39);
+- use deterministic, fictional fixtures only, with no real customer data;
+- use no Supabase, database, `service_role` or network;
+- run the real pipeline: fixture canonical records → RF-02 `buildSnapshotPayload` → RF-03 media resolution with a deterministic fixture `MediaResolver` (covering both `RESOLVED` and `UNAVAILABLE`) → RF-03 ViewModel → RF-04 selection → host;
+- cover COMMON/GROOM/BRIDE, personalized/unpersonalized, long and playful guest names, with/without gallery, music and gift, unavailable media, and missing optional content;
+- supply only the `UNAVAILABLE` RSVP capability (P30), never a fake success.
+
+Harness fixture images are fictional and rights-safe. They are harness-owned, and never placed under `public/renderers/**` or referenced by renderer code.
+
+**P39. Tests.** Renderer tests run in the existing Node/Vitest environment. Static markup assertions use `react-dom/server`, and interaction logic (RSVP state machine, dialog state, countdown display state) is factored into pure, unit-testable modules. RF-06 adds no jsdom, Playwright or other package (CLAUDE.md §24). Browser, device, visual and accessibility QA in RF-06E is manual evidence at 360/390/430 px and desktop, including iOS Safari and reduced motion. A static boundary test covers `templates/**` and the harness: no `app/internal/prototypes` import, no `public/prototypes` reference, no Supabase/`service_role`/`process.env`, no `navigator`/`Audio`/`Date.now` outside the named RF-06C adapter modules, no `execCommand`, no `MAYBE`, and no external font URL. **Single `process.env` exception:** the harness server gate module (P38) may read `process.env.NODE_ENV`, and nothing else, solely to return `notFound()` in production. No other environment variable, and no `process.env` access in any other harness module, is permitted. The exception never applies to `templates/**`, renderer components, the host, adapters or capability code, where `process.env` stays forbidden without exception (P26).
+
+### RF-06 vs Task 030
+
+**P40. RF-06 delivers and ends with:** the frozen production key (P14); the full production manifest, validator and projection (P15–P21); the server-safe compatibility registry (P27 A); the client binding registry (P27 B); the client host (P24); Elegant Editorial v1 (P7–P13); the clipboard, music and clock adapters (P34–P36); harness-only RSVP `UNAVAILABLE`/test behavior (P30); the deterministic harness and tests (P38–P39); visual, device and accessibility QA (RF-06E); and final verification (RF-06F).
+
+**P41. RF-06 does not own:** catalog seeding (RF9, a later data-only migration checkpoint, whose rows must equal P14/P16 exactly: `templates.code`/`event_type`/`name`, `template_versions.version_number`/`renderer_key`, and a `manifest` whose Task 028 subset equals `design`); a concrete Supabase `MediaResolver`/signing adapter; the staff preview route/API (RF10); `create_review_version`; review orchestration; publish; public `/i/[slug]`; guest-token resolution; the persistent RSVP endpoint (Task 033); template activation or certification beyond the RF-06 renderer gate (`docs/TEMPLATE_SYSTEM.md` §25; full certification also needs real RSVP and music QA on real data); and other renderer families (Vietnamese Heritage, Romantic Minimal). RF-06F PASS satisfies RF16 item 16. **Task 030 begins only after the RF-06F gate passes** and every other RF16 item is met.
+
+### Checkpoint sequence and process
+
+**P42. Sequence.** Dependencies are strictly `RF-06-0 → A → B → C → D → E → F`.
+
+| Checkpoint | Scope |
+|---|---|
+| RF-06-0 | This docs-only clarification |
+| RF-06A | `RendererProductionManifestV1` type, validator/projection, `RendererProductionManifestInvariantError`, the Elegant Editorial v1 manifest constant, the server-safe production compatibility registry (P27 A), and deterministic pipeline fixtures (Snapshot → media → ViewModel → selection) with tests |
+| RF-06B | Static Elegant Editorial v1 renderer; production binding registry (P27 B) and host rendering with an **empty** capabilities object; internal harness (P38); production-safe fonts (P3) and assets (P4–P6); key-set equality test |
+| RF-06C | Clipboard, music and clock adapters (P34–P36); the harness RSVP `UNAVAILABLE` capability (P30); host capability wiring |
+| RF-06D | Interactive islands: envelope/opening, gift dialog, RSVP UI state machine (P31–P33), music control, live countdown, reveal and reduced motion |
+| RF-06E | QA execution and evidence (P39) plus final documentation synchronization. No production code |
+| RF-06F | Verification-only final gate. No implementation commit |
+
+**P43. Per-checkpoint process.** RF-06-0 and RF-06A–D: author → local checks (lint, typecheck, tests, build) → **true independent review** → commit/push/freeze. RF-06E: QA/docs authoring only → independent review → freeze. RF-06F: verification only, with no implementation commit. No checkpoint absorbs another checkpoint's responsibility.
+
+**P44. Defect handling in RF-06E/F (mandatory; overrides the discovery plan's "QA fixes within RF-06 files").** Once RF-06A/B/C/D has passed independent review and been frozen, neither RF-06E nor RF-06F may modify its production code, even silently. If RF-06E or RF-06F finds a production defect:
+1. RF-06E (or F) reports **BLOCKED**;
+2. the defect is classified to its owning checkpoint: manifest/foundation → A; static renderer, assets, styles, fonts or copy → B; capability adapter or host wiring → C; interaction/motion → D;
+3. a targeted patch is authored under that owning checkpoint;
+4. focused and regression tests are run;
+5. a **true independent** patch review is performed;
+6. the owning checkpoint is committed, pushed and re-frozen;
+7. RF-06E is rerun **from the beginning** (and RF-06F after it).
+
+RF-06E owns only QA execution/evidence, final documentation synchronization and non-code reporting.
+
+### Technical debt (non-blocking)
+
+**P45.** Recorded as follow-up debt. RF-06 isolates the production renderer from each item where required (P3, P6, P11), but no RF-06 checkpoint cleans any of them up:
+- the global external Google Fonts `@import` in `app/globals.css`;
+- global Tailwind preflight dependence outside the renderer scope;
+- `lib/server/validation/timestamptz.ts` (pure) living under `lib/server/`, and likewise the pure Task 028 `validateTemplateDesignManifest` under `lib/server/project-design/`, which RF-06 reuses from `templates/core/` (P19);
+- the legacy, dead `app/internal/prototypes/invitation/_directions/elegant-editorial/` directory (removal still needs explicit approval, CLAUDE.md §32);
+- the large Task 029 prototype PNGs (about 11 MB of Elegant Editorial decor; about 40 MB across all prototype decor);
+- the `server-only` package is not installed, so server-only imports are enforced by static tests rather than by the package.
+
+### Superseded / scoped wording
+
+**P46.** Competing-wording review (2026-09-29). For RF-06 this section:
+- **Concretizes:** RF14 "Fonts" (P3 is the explicit font-library decision); RF9 "rendererKey and manifest frozen in code and docs first" (P14–P16); RF10 harness (P38); RF-04 R3 "RF-06 may freeze a larger full production manifest" and K37/K38 (P15–P19, P27); R24 (P14); and K19 "future preview harness … `UNAVAILABLE`" (P30).
+- **Supersedes, for this key only:** R4/R15/K39 "no production key" (P14).
+- **Tightens:** RF14 "immutable once certified or released" (P22 freezes at RF-06F).
+- **Leaves unchanged:** conceptual examples such as `wedding.elegant-editorial.v1` in `docs/TEMPLATE_SYSTEM.md` §5, `docs/ARCHITECTURE.md` §10, `docs/DATABASE.md` §12–§13 and `docs/PHYSICAL_DATABASE_PLAN.md` §2.10–§2.11; the conceptual manifest word-list in `docs/TEMPLATE_SYSTEM.md` §6; and the `docs/ROADMAP.md` Week 3 "architecture proving template" wording. All of these are compatible with this section.
+
+No real contradiction was found. Other documents are synchronized with this section in RF-06E (P42).
+
 ## Draft / Review / Publish
 
 1. Save is not Publish.
