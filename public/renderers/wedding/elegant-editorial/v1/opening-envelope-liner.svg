@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 150" width="300" height="150">
+  <!-- WeddingClick Elegant Editorial v1: opening envelope liner (inner face
+       of the flap, seen once the flap swings past vertical).
+       Original repository-authored vector artwork; see
+       templates/wedding/elegant-editorial/v1/PROVENANCE.md.
+       Same 300x150 canvas and outline as opening-envelope-flap.svg, hinge at
+       the top edge (y 0). As a backface it is shown mirrored vertically by
+       the flap rotation, so no pre-flip is baked in. -->
+  <defs>
+    <linearGradient id="ee-liner-ivory" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3eee1"/>
+      <stop offset="1" stop-color="#fdfcf9"/>
+    </linearGradient>
+    <linearGradient id="ee-liner-gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d9bf86"/>
+      <stop offset="0.5" stop-color="#b99a5b"/>
+      <stop offset="1" stop-color="#9c7d45"/>
+    </linearGradient>
+    <filter id="ee-liner-paper" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0.35  0 0 0 0 0.3  0 0 0 0 0.2  0 0 0 0.06 0" result="grain"/>
+      <feComposite in="grain" in2="SourceGraphic" operator="in" result="grainIn"/>
+      <feMerge>
+        <feMergeNode in="SourceGraphic"/>
+        <feMergeNode in="grainIn"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Moss border: the flap paper visible around the liner sheet. -->
+  <path fill="#47593f" d="M1 0 L299 0 L164 122 Q150 134 136 122 Z"/>
+
+  <!-- Ivory liner sheet, inset from the flap edges. -->
+  <path filter="url(#ee-liner-paper)" fill="url(#ee-liner-ivory)"
+        d="M13 4 L287 4 L161 117 Q150 126.5 139 117 Z"/>
+
+  <!-- Restrained gold accents: inset rule and a small lozenge near the tip. -->
+  <path fill="none" stroke="url(#ee-liner-gold)" stroke-width="0.8" stroke-linejoin="round"
+        d="M27 9 L273 9 L159 111 Q150 118.5 141 111 Z"/>
+  <path fill="url(#ee-liner-gold)" d="M150 95 L153.5 100 L150 105 L146.5 100 Z"/>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 320" width="240" height="320">
+  <!-- WeddingClick Elegant Editorial v1: rising cover-card frame (3:4).
+       Original repository-authored vector artwork; see
+       templates/wedding/elegant-editorial/v1/PROVENANCE.md.
+       An ivory frame with gold hairlines and a TRANSPARENT photo window
+       (x 7-233, y 7-313). The runtime media.cover image is placed beneath
+       the window by the renderer; no photograph is part of this asset. -->
+  <path fill="#fdfcf9" fill-rule="evenodd"
+        d="M4 0 H236 Q240 0 240 4 V316 Q240 320 236 320 H4 Q0 320 0 316 V4 Q0 0 4 0 Z
+           M9 7 Q7 7 7 9 V311 Q7 313 9 313 H231 Q233 313 233 311 V9 Q233 7 231 7 Z"/>
+  <!-- Outer gold hairline. -->
+  <rect x="0.5" y="0.5" width="239" height="319" rx="3.6" fill="none" stroke="#b99a5b" stroke-opacity="0.55" stroke-width="1"/>
+  <!-- Inner gold hairline around the photo window. -->
+  <rect x="7.5" y="7.5" width="225" height="305" rx="1.6" fill="none" stroke="#b99a5b" stroke-opacity="0.45" stroke-width="1"/>
+</svg>

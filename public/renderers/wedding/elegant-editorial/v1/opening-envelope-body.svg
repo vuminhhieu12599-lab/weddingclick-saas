@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200" width="300" height="200">
+  <!-- WeddingClick Elegant Editorial v1: opening envelope body (pocket).
+       Original repository-authored vector artwork; see
+       templates/wedding/elegant-editorial/v1/PROVENANCE.md.
+       Canvas 300x200 (3:2). Body spans x 11-289, y 13-182; flap hinge line
+       is y 13; pocket opening (where the cover card emerges) is y 45.
+       Outside the drawn shapes the canvas is transparent. -->
+  <defs>
+    <linearGradient id="ee-body-moss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4d5f44"/>
+      <stop offset="0.55" stop-color="#47593f"/>
+      <stop offset="1" stop-color="#3b4b34"/>
+    </linearGradient>
+    <linearGradient id="ee-body-fold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#52654a"/>
+      <stop offset="1" stop-color="#40513a"/>
+    </linearGradient>
+    <linearGradient id="ee-body-ivory" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fdfcf9"/>
+      <stop offset="1" stop-color="#f3eee1"/>
+    </linearGradient>
+    <linearGradient id="ee-body-gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d9bf86"/>
+      <stop offset="0.5" stop-color="#b99a5b"/>
+      <stop offset="1" stop-color="#9c7d45"/>
+    </linearGradient>
+    <filter id="ee-body-paper" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" seed="7" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.09 0" result="grain"/>
+      <feComposite in="grain" in2="SourceGraphic" operator="in" result="grainIn"/>
+      <feMerge>
+        <feMergeNode in="SourceGraphic"/>
+        <feMergeNode in="grainIn"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <g filter="url(#ee-body-paper)">
+    <!-- Moss back and pocket: side posts rise to the hinge line, the pocket
+         opening sits lower between them. -->
+    <path fill="url(#ee-body-moss)" d="M11 13 L29 13 L29 45 L271 45 L271 13 L289 13 L289 182 L11 182 Z"/>
+
+    <!-- Ivory liner frame: two posts and the bottom band (U shape). -->
+    <path fill="url(#ee-body-ivory)" d="M16 15 L27 15 L27 165 L273 165 L273 15 L284 15 L284 177 L16 177 Z"/>
+
+    <!-- Ivory liner corners at the top of each post. -->
+    <path fill="url(#ee-body-ivory)" d="M16 15 L48 46 L24 46 L24 45 L16 45 Z"/>
+    <path fill="url(#ee-body-ivory)" d="M284 15 L252 46 L276 46 L276 45 L284 45 Z"/>
+
+    <!-- Moss side folds tucked beneath the liner corners. -->
+    <path fill="url(#ee-body-fold)" d="M27.6 47 L54 47 L27.6 84 Z"/>
+    <path fill="url(#ee-body-fold)" d="M272.4 47 L246 47 L272.4 84 Z"/>
+  </g>
+
+  <!-- Restrained gold rules. -->
+  <g fill="none" stroke="url(#ee-body-gold)" stroke-linecap="square">
+    <!-- inner frame rule around the pocket -->
+    <path stroke-width="0.9" d="M27.3 46.5 L27.3 165.3 L272.7 165.3 L272.7 46.5"/>
+    <!-- post rules -->
+    <path stroke-width="0.6" d="M24.2 26 L24.2 158"/>
+    <path stroke-width="0.6" d="M275.8 26 L275.8 158"/>
+    <!-- bottom band rule -->
+    <path stroke-width="0.6" d="M33 168.2 L267 168.2"/>
+    <!-- liner corner hypotenuse edges -->
+    <path stroke-width="0.8" d="M16.4 15.4 L47.4 45.7 L27.3 45.7"/>
+    <path stroke-width="0.8" d="M283.6 15.4 L252.6 45.7 L272.7 45.7"/>
+    <!-- bottom corner brackets -->
+    <path stroke-width="0.7" d="M21.5 159 L21.5 171.5 L33 171.5"/>
+    <path stroke-width="0.7" d="M278.5 159 L278.5 171.5 L267 171.5"/>
+    <!-- outer chamfer accents -->
+    <path stroke-width="0.7" d="M12.5 180.5 L17 176"/>
+    <path stroke-width="0.7" d="M287.5 180.5 L283 176"/>
+  </g>
+
+  <!-- Soft inner shade on the pocket, for depth under the rising card. -->
+  <rect x="27.3" y="45" width="245.4" height="6" fill="#2e3c29" opacity="0.18"/>
+</svg>

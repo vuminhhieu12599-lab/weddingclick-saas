@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="52 50 98 98" width="196" height="196">
+  <!-- WeddingClick Elegant Editorial v1: gold wax seal with the 囍 mark.
+       Original repository-authored vector artwork; see
+       templates/wedding/elegant-editorial/v1/PROVENANCE.md.
+       The 囍 mark is repository-authored vector stroke geometry (no font glyph), so it
+       renders identically on every device. Seal centre is (100, 100). -->
+  <defs>
+    <radialGradient id="ee-seal-wax" cx="0.38" cy="0.32" r="0.75">
+      <stop offset="0" stop-color="#f1dca8"/>
+      <stop offset="0.35" stop-color="#d4b575"/>
+      <stop offset="0.75" stop-color="#b99a5b"/>
+      <stop offset="1" stop-color="#8c6f4e"/>
+    </radialGradient>
+    <radialGradient id="ee-seal-disc" cx="0.6" cy="0.65" r="0.8">
+      <stop offset="0" stop-color="#d2b474"/>
+      <stop offset="0.7" stop-color="#c3a466"/>
+      <stop offset="1" stop-color="#a88a52"/>
+    </radialGradient>
+    <linearGradient id="ee-seal-ring-light" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbeec9"/>
+      <stop offset="0.5" stop-color="#d9bf86" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#7a5a24" stop-opacity="0.7"/>
+    </linearGradient>
+    <linearGradient id="ee-seal-ring-dark" x1="1" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#fbeec9" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#7a5a24" stop-opacity="0.8"/>
+    </linearGradient>
+    <filter id="ee-seal-grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="2" seed="5" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0.45  0 0 0 0 0.33  0 0 0 0 0.12  0 0 0 0.1 0" result="grain"/>
+      <feComposite in="grain" in2="SourceGraphic" operator="in" result="grainIn"/>
+      <feMerge>
+        <feMergeNode in="SourceGraphic"/>
+        <feMergeNode in="grainIn"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Organic wax outline. -->
+  <path fill="url(#ee-seal-wax)" filter="url(#ee-seal-grain)" d="M146.3 100.0 L146.8 101.6 L147.2 103.3 L147.3 105.0 L147.1 106.6 L146.7 108.2 L146.0 109.8 L145.0 111.2 L143.9 112.6 L142.7 113.9 L141.4 115.1 L140.1 116.2 L138.9 117.3 L137.7 118.4 L136.7 119.5 L135.8 120.7 L135.0 121.9 L134.3 123.1 L133.6 124.4 L133.0 125.8 L132.3 127.1 L131.6 128.5 L130.8 129.8 L130.0 131.1 L129.1 132.3 L128.1 133.5 L127.1 134.6 L126.0 135.7 L124.8 136.8 L123.6 137.7 L122.3 138.7 L121.0 139.5 L119.6 140.2 L118.2 140.8 L116.7 141.3 L115.2 141.7 L113.6 141.8 L112.0 141.9 L110.4 141.8 L108.9 141.7 L107.3 141.6 L105.8 141.4 L104.3 141.4 L102.9 141.4 L101.5 141.6 L100.0 141.9 L98.5 142.4 L97.0 143.0 L95.4 143.7 L93.8 144.3 L92.1 144.9 L90.4 145.3 L88.6 145.6 L86.9 145.6 L85.3 145.4 L83.7 144.8 L82.2 144.1 L80.8 143.1 L79.5 142.0 L78.4 140.7 L77.3 139.4 L76.2 138.0 L75.2 136.7 L74.3 135.4 L73.3 134.2 L72.3 133.0 L71.3 131.9 L70.3 130.8 L69.3 129.7 L68.2 128.6 L67.2 127.5 L66.2 126.4 L65.2 125.3 L64.2 124.1 L63.3 122.9 L62.3 121.8 L61.4 120.5 L60.4 119.3 L59.5 118.0 L58.6 116.7 L57.8 115.4 L57.1 113.9 L56.5 112.5 L56.1 110.9 L55.9 109.4 L55.9 107.8 L56.1 106.2 L56.5 104.6 L57.0 103.0 L57.6 101.5 L58.3 100.0 L58.9 98.6 L59.4 97.2 L59.8 95.8 L60.0 94.4 L60.0 93.0 L59.9 91.5 L59.7 89.9 L59.3 88.3 L59.0 86.7 L58.7 85.0 L58.5 83.2 L58.5 81.5 L58.6 79.8 L59.0 78.2 L59.6 76.7 L60.4 75.3 L61.4 73.9 L62.4 72.7 L63.6 71.6 L64.9 70.6 L66.2 69.6 L67.5 68.7 L68.9 67.8 L70.2 66.9 L71.5 66.1 L72.9 65.3 L74.2 64.5 L75.6 63.8 L76.9 63.1 L78.3 62.4 L79.7 61.8 L81.0 61.1 L82.4 60.4 L83.7 59.7 L85.1 59.0 L86.4 58.2 L87.8 57.3 L89.1 56.5 L90.6 55.6 L92.0 54.9 L93.6 54.3 L95.1 53.8 L96.8 53.6 L98.4 53.7 L100.0 53.9 L101.6 54.5 L103.1 55.2 L104.6 56.1 L106.0 57.2 L107.4 58.2 L108.7 59.3 L109.9 60.2 L111.2 61.0 L112.5 61.7 L113.8 62.2 L115.2 62.5 L116.6 62.7 L118.1 62.9 L119.7 63.0 L121.3 63.2 L122.9 63.4 L124.5 63.7 L126.0 64.2 L127.5 64.8 L128.9 65.6 L130.2 66.5 L131.4 67.5 L132.6 68.6 L133.6 69.7 L134.6 70.9 L135.6 72.2 L136.4 73.5 L137.2 74.9 L137.9 76.3 L138.5 77.8 L139.1 79.2 L139.5 80.7 L139.9 82.2 L140.2 83.8 L140.5 85.3 L140.8 86.7 L141.1 88.2 L141.5 89.7 L142.0 91.1 L142.6 92.5 L143.3 93.9 L144.0 95.4 L144.8 96.9 L145.6 98.4 Z"/>
+
+  <!-- Raised double ring and recessed centre disc. -->
+  <circle cx="100" cy="100" r="33" fill="none" stroke="url(#ee-seal-ring-light)" stroke-width="2.6"/>
+  <circle cx="100" cy="100" r="30.2" fill="none" stroke="url(#ee-seal-ring-dark)" stroke-width="1"/>
+  <circle cx="100" cy="100" r="29.2" fill="url(#ee-seal-disc)" filter="url(#ee-seal-grain)"/>
+
+  <!-- 囍 engraved into the disc: a light lower edge, then the dark cut. -->
+  <g transform="translate(83 82.6) scale(0.34)" fill="none" stroke-width="6.5" stroke-linecap="square" stroke-linejoin="miter">
+    <g stroke="#fbeec9" stroke-opacity="0.6" transform="translate(0 2.4)">
+      <path d="M8 8 H42 M25 2 V22 M12 20 H38 M15 47 L19 53 M35 47 L31 53 M58 8 H92 M75 2 V22 M62 20 H88 M85 47 L81 53 M65 47 L69 53 M4 59 H96"/>
+      <rect x="11" y="28" width="28" height="12"/>
+      <rect x="11" y="66" width="28" height="26"/>
+      <rect x="61" y="28" width="28" height="12"/>
+      <rect x="61" y="66" width="28" height="26"/>
+    </g>
+    <g stroke="#7a5a24">
+      <path d="M8 8 H42 M25 2 V22 M12 20 H38 M15 47 L19 53 M35 47 L31 53 M58 8 H92 M75 2 V22 M62 20 H88 M85 47 L81 53 M65 47 L69 53 M4 59 H96"/>
+      <rect x="11" y="28" width="28" height="12"/>
+      <rect x="11" y="66" width="28" height="26"/>
+      <rect x="61" y="28" width="28" height="12"/>
+      <rect x="61" y="66" width="28" height="26"/>
+    </g>
+  </g>
+
+  <!-- Specular highlight on the upper-left wax rim. -->
+  <path d="M68 78 Q78 62 98 58" fill="none" stroke="#fff6dc" stroke-opacity="0.55" stroke-width="2.2" stroke-linecap="round"/>
+</svg>

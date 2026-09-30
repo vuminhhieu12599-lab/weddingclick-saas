@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="16" height="16">
+  <!-- WeddingClick Elegant Editorial v1: four-point sparkle ornament (the
+       Task029 "✦" separator role). Original repository-authored vector
+       geometry; see templates/wedding/elegant-editorial/v1/PROVENANCE.md.
+       Default fill is the palette gold #b99a5b; the shape is a single solid
+       path, so it can also be used as a CSS mask and tinted by CSS. -->
+  <path fill="#b99a5b" d="M50 2 C53 36 64 47 98 50 C64 53 53 64 50 98 C47 64 36 53 2 50 C36 47 47 36 50 2 Z"/>
+</svg>

@@ -742,8 +742,102 @@ describe("RF-06B renderer CSS", () => {
 });
 
 describe("RF-06B decor and provenance (P4–P6)", () => {
-  it("no production asset directory exists: v1 decor is original inline SVG", () => {
-    expect(() => readdirSync(join(REPO_ROOT, "public", "renderers"))).toThrow();
+  // Design Baseline A1 decor set (docs/DECISIONS.md, B9 step 4): SVG and
+  // WebP files recorded in PROVENANCE.md, not yet referenced by the renderer.
+  const DECOR_DIR = "public/renderers/wedding/elegant-editorial/v1";
+  const DECOR_SVG_FILES = [
+    "calendar-heart.svg",
+    "opening-cover-card-frame.svg",
+    "opening-envelope-body.svg",
+    "opening-envelope-flap.svg",
+    "opening-envelope-liner.svg",
+    "opening-seal-double-happiness.svg",
+    "ornament-fleuron.svg",
+    "ornament-sparkle.svg",
+  ] as const;
+  /** P6: raster pixels at no more than 2x the largest Task029 rendered CSS size. */
+  const DECOR_RASTER_MAX_PIXELS: ReadonlyMap<string, readonly [number, number]> = new Map([
+    ["calendar-botanical-bottom-right.webp", [256, 256]],
+    ["calendar-botanical-top-left.webp", [256, 256]],
+    ["couple-floral-divider.webp", [600, 200]],
+  ]);
+  const decorFiles = (): string[] => readdirSync(join(REPO_ROOT, DECOR_DIR)).sort();
+  const readDecorBytes = (file: string): Buffer => readFileSync(join(REPO_ROOT, DECOR_DIR, file));
+
+  /** RIFF chunk ids plus the VP8X flags and canvas size of a WebP file. */
+  function webpChunks(bytes: Buffer): { ids: string[]; flags: number; width: number; height: number } {
+    expect(bytes.toString("latin1", 0, 4)).toBe("RIFF");
+    expect(bytes.toString("latin1", 8, 12)).toBe("WEBP");
+    const ids: string[] = [];
+    let flags = 0;
+    let width = 0;
+    let height = 0;
+    for (let offset = 12; offset + 8 <= bytes.length; ) {
+      const id = bytes.toString("latin1", offset, offset + 4);
+      const size = bytes.readUInt32LE(offset + 4);
+      ids.push(id);
+      if (id === "VP8X") {
+        flags = bytes.readUInt8(offset + 8);
+        width = bytes.readUIntLE(offset + 12, 3) + 1;
+        height = bytes.readUIntLE(offset + 15, 3) + 1;
+      }
+      offset += 8 + size + (size % 2);
+    }
+    return { ids, flags, width, height };
+  }
+
+  it("the production asset path holds exactly the recorded decor set", () => {
+    expect(readdirSync(join(REPO_ROOT, "public", "renderers"))).toEqual(["wedding"]);
+    expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding"))).toEqual(["elegant-editorial"]);
+    expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding", "elegant-editorial"))).toEqual(["v1"]);
+    expect(decorFiles()).toEqual([...DECOR_SVG_FILES, ...DECOR_RASTER_MAX_PIXELS.keys()].sort());
+  });
+
+  it("every file on disk in the decor directory has a provenance row and no prototype-pixel derivation", () => {
+    const note = readRepoFile(RF06B_PROVENANCE_FILE);
+    expect(note.match(/Derived from Task 029 prototype pixels:\*\* \*\*NO\.\*\*/g)).toHaveLength(2);
+    for (const file of decorFiles()) {
+      expect(note, file).toMatch(new RegExp(`^\\| \`${file.replace(/[.]/g, "\\.")}\` \\|`, "m"));
+    }
+  });
+
+  it("decor SVGs are static and self-contained", () => {
+    for (const file of DECOR_SVG_FILES) {
+      const svg = readRepoFile(`${DECOR_DIR}/${file}`);
+      expect(svg.startsWith("<svg xmlns=\"http://www.w3.org/2000/svg\""), file).toBe(true);
+      for (const forbidden of [
+        /<script/i,
+        /<foreignObject/i,
+        /<image/i,
+        /<style/i,
+        /@import|@font-face/i,
+        /\son[a-z]+\s*=/i,
+        /(xlink:)?href\s*=/i,
+        /data:/i,
+        /url\((?!#)/i,
+        /https?:\/\/(?!www\.w3\.org\/2000\/svg")/i,
+        /prototypes/i,
+      ]) {
+        expect(forbidden.test(svg), `${file}: ${String(forbidden)}`).toBe(false);
+      }
+    }
+  });
+
+  it("decor rasters are WebP with alpha, no metadata chunks, within the P6 2x size", () => {
+    for (const [file, [maxWidth, maxHeight]] of DECOR_RASTER_MAX_PIXELS) {
+      const { ids, flags, width, height } = webpChunks(readDecorBytes(file));
+      expect(ids[0], file).toBe("VP8X");
+      expect(flags & 0x10, `${file}: alpha flag`).toBe(0x10);
+      expect(flags & (0x20 | 0x08 | 0x04 | 0x02), `${file}: ICC/EXIF/XMP/animation flags`).toBe(0);
+      expect(ids.filter((id) => !["VP8X", "ALPH", "VP8 ", "VP8L"].includes(id)), file).toEqual([]);
+      expect(width, file).toBeLessThanOrEqual(maxWidth);
+      expect(height, file).toBeLessThanOrEqual(maxHeight);
+    }
+  });
+
+  it("the decor payload stays inside the P6 budget (about 1 MB total)", () => {
+    const total = decorFiles().reduce((sum, file) => sum + readDecorBytes(file).length, 0);
+    expect(total).toBeLessThan(1_000_000);
   });
 
   it("the provenance note lives in the v1 template directory and records source, owner and rights basis", () => {
