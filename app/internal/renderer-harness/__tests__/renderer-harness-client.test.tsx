@@ -59,7 +59,10 @@ describe("RendererHarnessClient RSVP capability", () => {
   it.each(HARNESS_SCENARIO_IDS)("%s: the renderer receives exactly { rsvp } during server render", async (id) => {
     const capabilities = await harnessCapabilities(id);
     // Harness audio is UNAVAILABLE and the clock/clipboard appear only after mount.
-    expect(Reflect.ownKeys(capabilities)).toStrictEqual(["rsvp"]);
+    // RF-06D: music-resolved alone opts into the local harness tone, so the
+    // RF-06C host adds its PAUSED music capability there (P35, P38).
+    expect(Reflect.ownKeys(capabilities)).toStrictEqual(id === "music-resolved" ? ["rsvp", "music"] : ["rsvp"]);
+    if (id === "music-resolved") expect(capabilities.music?.status).toBe("PAUSED");
     expect(Object.isFrozen(capabilities)).toBe(true);
   });
 

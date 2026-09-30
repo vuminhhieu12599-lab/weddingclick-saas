@@ -27,8 +27,15 @@ const { ElegantEditorialV1 } = await import("../../wedding/elegant-editorial/v1/
 
 const REPO_ROOT = join(__dirname, "..", "..", "..");
 
-/** The RF-06B static renderer ignores capabilities, so this is its exact markup reference. */
-const NO_CAPABILITIES = Object.freeze({});
+/**
+ * RF-06D replacement of the RF-06B "capabilities ignored" reference: during
+ * server render the host supplies exactly a `PAUSED` music capability for a
+ * `RESOLVED` audio slot (RF-06C) and nothing else (no clock, no clipboard,
+ * no RSVP), so this is the exact direct-render markup reference.
+ */
+const SERVER_RENDER_CAPABILITIES = Object.freeze({
+  music: Object.freeze({ status: "PAUSED" as const, play: async () => {}, pause: async () => {} }),
+});
 
 let fetchSpy: ReturnType<typeof vi.fn>;
 
@@ -43,7 +50,7 @@ afterEach(() => {
 });
 
 describe("InvitationRendererHost", () => {
-  it.each(INVITATION_VARIANTS)("%s: renders exactly the RF-06B renderer markup (capabilities do not change output)", async (variant) => {
+  it.each(INVITATION_VARIANTS)("%s: renders exactly the renderer markup for its server-render capabilities", async (variant) => {
     const { viewModel, selection } = await buildRendererFixture({ variant, guest: FIXTURE_GUESTS.NORMAL });
     const viaHost = renderToStaticMarkup(
       <InvitationRendererHost
@@ -53,11 +60,17 @@ describe("InvitationRendererHost", () => {
       />,
     );
     const direct = renderToStaticMarkup(
-      <ElegantEditorialV1 viewModel={viewModel} sections={selection.effectiveSections} capabilities={NO_CAPABILITIES} />,
+      <ElegantEditorialV1
+        viewModel={viewModel}
+        sections={selection.effectiveSections}
+        capabilities={SERVER_RENDER_CAPABILITIES}
+      />,
     );
     expect(viaHost).toBe(direct);
     expect(viaHost).toContain('data-renderer="elegant-editorial-v1"');
-    expect(viaHost).not.toMatch(/<button|<audio|<form|<input/);
+    // RF-06D: buttons now exist (opening, gift dialog, music toggle), but the
+    // production host never renders an audio element or an RSVP form (P30).
+    expect(viaHost).not.toMatch(/<audio|<form|<input|<select|<textarea/);
   });
 
   it("renders the internal core with exactly the three serializable props and no RSVP", async () => {

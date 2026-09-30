@@ -49,6 +49,7 @@ describe("scenario set", () => {
       "qr-unavailable",
       "lunar-null",
       "sections-minimal",
+      "music-resolved",
     ]);
     expect(DEFAULT_HARNESS_SCENARIO_ID).toBe("common-full");
   });
@@ -88,7 +89,7 @@ describe("scenario content", () => {
     expect((await data("groom")).viewModel.guest).toBeUndefined();
   });
 
-  it("media states match each scenario; audio is UNAVAILABLE (no harness audio in RF-06B)", async () => {
+  it("media states match each scenario; audio is UNAVAILABLE outside music-resolved", async () => {
     const full = await data("common-full");
     expect(full.viewModel.media.cover).toMatchObject({ status: "RESOLVED", url: `${HARNESS_MEDIA_BASE_PATH}cover.svg` });
     expect(full.viewModel.media.audio).toStrictEqual({ status: "UNAVAILABLE", mediaId: FIXTURE_MEDIA_IDS.AUDIO });
@@ -101,6 +102,22 @@ describe("scenario content", () => {
     const qr = (await data("qr-unavailable")).viewModel.media.qr;
     expect(qr.groom?.status).toBe("UNAVAILABLE");
     expect(qr.bride?.status).toBe("RESOLVED");
+    // RF-06D: only music-resolved opts into the local harness tone.
+    for (const id of HARNESS_SCENARIO_IDS) {
+      const audio = (await data(id)).viewModel.media.audio;
+      if (id === "music-resolved") {
+        expect(audio).toStrictEqual({
+          status: "RESOLVED",
+          mediaId: FIXTURE_MEDIA_IDS.AUDIO,
+          url: `${HARNESS_MEDIA_BASE_PATH}audio-tone.wav`,
+          width: null,
+          height: null,
+        });
+      } else {
+        expect(audio, id).toStrictEqual({ status: "UNAVAILABLE", mediaId: FIXTURE_MEDIA_IDS.AUDIO });
+      }
+    }
+    expect((await data("music-resolved")).sections.music).toBe(true);
   });
 
   it("lunar-null has no lunar text; sections-minimal turns every optional section off", async () => {
@@ -135,7 +152,7 @@ describe("harness media resolver", () => {
     }
   });
 
-  it("listed ids and audio are UNAVAILABLE; unknown ids are fixture bugs", async () => {
+  it("listed ids and (by default) audio are UNAVAILABLE; unknown ids are fixture bugs", async () => {
     const resolver = createHarnessMediaResolver([FIXTURE_MEDIA_IDS.COVER]);
     expect(await resolver.resolveMedia(FIXTURE_MEDIA_IDS.COVER)).toStrictEqual({
       status: "UNAVAILABLE",
@@ -144,10 +161,37 @@ describe("harness media resolver", () => {
     expect((await resolver.resolveMedia(FIXTURE_MEDIA_IDS.AUDIO)).status).toBe("UNAVAILABLE");
     await expect(resolver.resolveMedia("00000000-0000-4000-8000-00000000ffff")).rejects.toThrow();
   });
+
+  it("RF-06D: resolveAudio maps the fixture audio to the local harness tone only", async () => {
+    const result = await createHarnessMediaResolver([], { resolveAudio: true }).resolveMedia(FIXTURE_MEDIA_IDS.AUDIO);
+    expect(result).toStrictEqual({
+      status: "RESOLVED",
+      mediaId: FIXTURE_MEDIA_IDS.AUDIO,
+      url: `${HARNESS_MEDIA_BASE_PATH}audio-tone.wav`,
+      width: null,
+      height: null,
+    });
+    if (result.status !== "RESOLVED") return;
+    expect(result.url).not.toMatch(/renderers|prototypes|:\/\//);
+    expect(existsSync(join(REPO_ROOT, "public", result.url))).toBe(true);
+    // An explicit unavailable listing still wins over the opt-in.
+    const listed = createHarnessMediaResolver([FIXTURE_MEDIA_IDS.AUDIO], { resolveAudio: true });
+    expect((await listed.resolveMedia(FIXTURE_MEDIA_IDS.AUDIO)).status).toBe("UNAVAILABLE");
+    expect((await createHarnessMediaResolver([], { resolveAudio: false }).resolveMedia(FIXTURE_MEDIA_IDS.AUDIO)).status).toBe(
+      "UNAVAILABLE",
+    );
+  });
 });
 
 describe("harness fixture images", () => {
-  const files = readdirSync(PUBLIC_HARNESS_DIR).sort();
+  // RF-06D: the directory also holds the harness audio tone (harness-audio-fixture.test.ts).
+  const files = readdirSync(PUBLIC_HARNESS_DIR)
+    .filter((file) => file.endsWith(".svg"))
+    .sort();
+
+  it("the directory is exactly the six fictional SVGs plus the RF-06D harness tone", () => {
+    expect(readdirSync(PUBLIC_HARNESS_DIR).sort()).toStrictEqual([...files, "audio-tone.wav"].sort());
+  });
 
   it("are exactly the six fictional SVGs", () => {
     expect(files).toStrictEqual([

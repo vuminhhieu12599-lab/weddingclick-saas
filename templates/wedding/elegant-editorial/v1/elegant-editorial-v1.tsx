@@ -4,6 +4,9 @@ import type { InvitationRendererPropsV1 } from "../../../../lib/invitation-rende
 import { ELEGANT_EDITORIAL_V1_COPY } from "./copy";
 import styles from "./elegant-editorial-v1.module.css";
 import { ELEGANT_EDITORIAL_V1_FONT_VARIABLES_CLASS_NAME } from "./fonts";
+import { Countdown } from "./interactive/countdown";
+import { MusicControl } from "./interactive/music-control";
+import { Rsvp } from "./interactive/rsvp";
 import { ELEGANT_EDITORIAL_V1_PALETTE_STYLE } from "./palette";
 import { Calendar } from "./sections/calendar";
 import { Ceremony } from "./sections/ceremony";
@@ -31,13 +34,20 @@ import { OpeningCover } from "./sections/opening-cover";
  * and computes no date, weekday, calendar or lunar value itself: every
  * temporal part comes from the RF-05C derivations.
  *
- * Client-compatible (rendered under the client host) but pure: no hooks,
- * no state, no effects. RF-06B renders no capability-driven UI, so
- * `capabilities` is intentionally not read yet: no RSVP block (K19/P30),
- * no music control or indicator (P35), no countdown (K27), no copy control
- * (P34). Those arrive in RF-06C/D.
+ * Client-compatible (rendered under the client host). The root and its
+ * static sections stay pure: no hooks, no state, no effects. RF-06D adds
+ * the interactive islands under `interactive/`, and this root is the only
+ * place that reads `capabilities`, solely to gate them (absent never means
+ * success):
+ *
+ * - opening envelope and gift dialog: always, from canonical data only;
+ * - countdown: only while `capabilities.clock` is present (K29);
+ * - music control: only when `sections.music` **and** `capabilities.music`
+ *   are present; otherwise nothing music-related at all (P35);
+ * - copy control: only with `capabilities.clipboard` (P34);
+ * - RSVP: only with `capabilities.rsvp` (K19, P30); production supplies none.
  */
-export function ElegantEditorialV1({ viewModel, sections }: InvitationRendererPropsV1) {
+export function ElegantEditorialV1({ viewModel, sections, capabilities }: InvitationRendererPropsV1) {
   const { people, families, ceremony, events, content, gift, media, operationalSides } = viewModel;
   const ceremonyDate = deriveEventDateTimePresentationV1(ceremony);
   const monthGrid = deriveCeremonyMonthGridV1(viewModel);
@@ -63,12 +73,19 @@ export function ElegantEditorialV1({ viewModel, sections }: InvitationRendererPr
         <Families families={families} />
         <Ceremony ceremony={ceremony} ceremonyDate={ceremonyDate} />
         <Calendar grid={monthGrid} />
+        {capabilities.clock !== undefined ? <Countdown ceremony={ceremony} clock={capabilities.clock} /> : null}
         <Events events={events} />
         {loveStory !== null ? <LoveStory story={loveStory} /> : null}
-        {sections.gift ? <Gift operationalSides={operationalSides} gift={gift} qr={media.qr} /> : null}
+        {sections.gift ? (
+          <Gift operationalSides={operationalSides} gift={gift} qr={media.qr} clipboard={capabilities.clipboard} />
+        ) : null}
         {sections.gallery ? <Gallery gallery={media.gallery} coupleText={coupleText} /> : null}
+        {capabilities.rsvp !== undefined ? (
+          <Rsvp rsvp={capabilities.rsvp} personalized={viewModel.guest !== undefined} />
+        ) : null}
         <Closing people={people} ceremonyDate={ceremonyDate} />
       </main>
+      {sections.music && capabilities.music !== undefined ? <MusicControl music={capabilities.music} /> : null}
     </div>
   );
 }

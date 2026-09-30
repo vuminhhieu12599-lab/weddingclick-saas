@@ -119,7 +119,9 @@ describe("root structure and props", () => {
     expect(html.indexOf("<h3")).toBeGreaterThan(html.indexOf("<h2"));
   });
 
-  it("does not read or depend on the capabilities object (identical output for EMPTY and a frozen empty copy)", async () => {
+  // RF-06D: the root now reads capabilities to gate its islands; two empty
+  // capability objects still render identically (absence never means success).
+  it("renders identical markup for EMPTY and a frozen empty copy", async () => {
     const { viewModel, selection } = await buildRendererFixture({ variant: "BRIDE" });
     const a = renderToStaticMarkup(
       <ElegantEditorialV1 viewModel={viewModel} sections={selection.effectiveSections} capabilities={EMPTY} />,
@@ -524,9 +526,16 @@ describe("gift and QR", () => {
     expect(html).not.toContain("ee-gift-heading");
   });
 
-  it("static only: no dialog, button or copy control", async () => {
+  // RF-06D replacement of the RF-06B "static only" assertion: the sides now
+  // live in the RF-06D gift dialog; without a clipboard capability there is
+  // still no copy control (interactive tests cover the dialog and copy UI).
+  it("without a clipboard capability: one dialog entry point, one closed dialog, no copy control", async () => {
     const { html } = await renderFixture({ variant: "COMMON" });
-    expect(html).not.toMatch(/<button|role="dialog"|<dialog|Sao chép|Đã sao chép/);
+    const gift = block(html, 'aria-labelledby="ee-gift-heading"');
+    expect(count(gift, "<dialog")).toBe(1);
+    expect(gift).not.toMatch(/<dialog[^>]*\sopen/);
+    expect(count(gift, "<button")).toBe(2);
+    expect(html).not.toMatch(/Sao chép|Đã sao chép/);
   });
 });
 
@@ -546,13 +555,20 @@ describe("event map links", () => {
   });
 });
 
-describe("no capability-driven UI in RF-06B", () => {
+// RF-06D replacement: with an EMPTY capabilities object the renderer still
+// shows no capability-driven UI. The only interactive elements are the
+// capability-independent RF-06D opening controls (2) and gift dialog entry
+// and close buttons (2).
+describe("no capability-driven UI without capabilities", () => {
   it.each(INVITATION_VARIANTS)("%s: no RSVP, music, countdown, clipboard or interactive control", async (variant) => {
     const { html, sections, viewModel } = await renderFixture({ variant, guest: FIXTURE_GUESTS.NORMAL });
     expect(sections.music).toBe(true);
     expect(viewModel.media.audio?.status).toBe("RESOLVED");
-    expect(html).not.toMatch(/<(button|form|input|select|textarea|audio|video|dialog)\b/);
-    expect(html).not.toMatch(/tabindex|onclick|role="button"/i);
+    expect(html).not.toMatch(/<(form|input|select|textarea|audio|video)\b/);
+    expect(count(html, "<button")).toBe(4);
+    expect(count(html, "<dialog")).toBe(1);
+    expect(html).not.toMatch(/onclick|role="button"/i);
+    expect(html.match(/tabindex="[^"]*"/g)).toStrictEqual(['tabindex="-1"']);
     expect(html).not.toMatch(/RSVP|Xác nhận tham dự|nhạc|music|Đếm ngược|countdown|Sao chép/i);
   });
 
@@ -568,12 +584,19 @@ describe("no capability-driven UI in RF-06B", () => {
     expect(html).not.toMatch(/nhạc|music|<audio/i);
   });
 
-  it("the only anchors are map links; no fake interactive envelope", async () => {
+  // RF-06D replacement: the envelope stays decorative artwork; the opening
+  // controls are the two real RF-06D buttons, never the artwork itself.
+  it("the only anchors are map links; the envelope is artwork, the opening controls are real buttons", async () => {
     const { html } = await renderFixture({ variant: "COMMON" });
     expect(count(html, "<a ")).toBe(count(html, COPY.events.mapLink));
     const opening = block(html, "<header");
     expect(opening).toMatch(/<svg[^>]*aria-hidden="true"/);
-    expect(opening).not.toMatch(/Chạm|Mở thiệp|<a |<button/);
+    expect(opening).not.toMatch(/Chạm|<a /);
+    expect(opening).not.toMatch(/<svg[^>]*(tabindex|role="button")/);
+    expect([...opening.matchAll(/<button type="button"[^>]*>([^<]*)<\/button>/g)].map((match) => match[1])).toStrictEqual([
+      COPY.opening.open,
+      COPY.opening.skip,
+    ]);
   });
 });
 

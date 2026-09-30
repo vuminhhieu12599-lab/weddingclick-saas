@@ -30,8 +30,15 @@ import {
  * RF-06A fixture names.
  */
 
-/** Harness-owned fictional fixture images (never under `public/renderers/**`). */
+/** Harness-owned fictional fixture media (never under `public/renderers/**`). */
 export const HARNESS_MEDIA_BASE_PATH = "/internal/renderer-harness/";
+
+/**
+ * RF-06D: the harness-only audio fixture, a short quiet tone generated in
+ * this repository (see harness-audio-provenance.md). Served only when a
+ * scenario opts in with `resolveAudio`.
+ */
+export const HARNESS_AUDIO_FILE = "audio-tone.wav";
 
 const HARNESS_MEDIA_FILES: Readonly<Record<string, string>> = Object.freeze({
   [FIXTURE_MEDIA_IDS.COVER]: "cover.svg",
@@ -46,18 +53,38 @@ function hasOwn(record: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(record, key);
 }
 
+export interface HarnessMediaResolverOptions {
+  /** RF-06D: resolve the fixture audio to the local harness tone instead of `UNAVAILABLE`. */
+  readonly resolveAudio?: boolean;
+}
+
 /**
  * Deterministic harness `MediaResolver` over the RF-03 contract. Fixture
- * images resolve to local harness paths; ids listed as unavailable, and the
- * fixture audio (RF-06C owns harness audio), resolve `UNAVAILABLE`. An id
- * outside the fixture set is a fixture bug and throws.
+ * images resolve to local harness paths; ids listed as unavailable resolve
+ * `UNAVAILABLE`. The fixture audio resolves `UNAVAILABLE` unless the
+ * scenario opts in with `resolveAudio`, in which case it resolves to the
+ * local harness tone (RF-06D). An id outside the fixture set is a fixture
+ * bug and throws.
  */
-export function createHarnessMediaResolver(unavailableMediaIds: readonly string[] = []): MediaResolver {
-  const unavailable = new Set<string>([...unavailableMediaIds, FIXTURE_MEDIA_IDS.AUDIO]);
+export function createHarnessMediaResolver(
+  unavailableMediaIds: readonly string[] = [],
+  options: HarnessMediaResolverOptions = {},
+): MediaResolver {
+  const unavailable = new Set<string>(unavailableMediaIds);
+  const resolveAudio = options.resolveAudio === true;
   return Object.freeze({
     async resolveMedia(mediaId: string): Promise<MediaResolution> {
-      if (unavailable.has(mediaId)) {
+      if (unavailable.has(mediaId) || (mediaId === FIXTURE_MEDIA_IDS.AUDIO && !resolveAudio)) {
         return { status: "UNAVAILABLE", mediaId };
+      }
+      if (mediaId === FIXTURE_MEDIA_IDS.AUDIO) {
+        return {
+          status: "RESOLVED",
+          mediaId,
+          url: `${HARNESS_MEDIA_BASE_PATH}${HARNESS_AUDIO_FILE}`,
+          width: null,
+          height: null,
+        };
       }
       if (!hasOwn(HARNESS_MEDIA_FILES, mediaId)) {
         throw new Error("Renderer harness fixture media id has no harness image");
@@ -79,6 +106,7 @@ interface HarnessScenarioDefinition {
   readonly source: RendererFixtureSourceOptions;
   readonly guest?: GuestOverlay;
   readonly unavailableMediaIds?: readonly string[];
+  readonly resolveAudio?: boolean;
 }
 
 const ALL_SECTIONS_OFF: Record<string, SnapshotDesignSettingValue> = Object.freeze({
@@ -114,6 +142,11 @@ export const HARNESS_SCENARIOS = Object.freeze({
     label: "Tắt mọi mục tuỳ chọn",
     source: { variant: "COMMON", sectionSettings: ALL_SECTIONS_OFF },
   },
+  "music-resolved": {
+    label: "Nhạc nền khả dụng (âm thử)",
+    source: { variant: "GROOM" },
+    resolveAudio: true,
+  },
 } as const satisfies Record<string, HarnessScenarioDefinition>);
 
 export type HarnessScenarioId = keyof typeof HARNESS_SCENARIOS;
@@ -136,7 +169,9 @@ export interface HarnessRenderData {
 export async function buildHarnessRenderData(id: HarnessScenarioId): Promise<HarnessRenderData> {
   const scenario: HarnessScenarioDefinition = HARNESS_SCENARIOS[id];
   const fixture = await runRendererFixturePipeline(buildRendererFixtureSourceInput(scenario.source), {
-    resolver: createHarnessMediaResolver(scenario.unavailableMediaIds),
+    resolver: createHarnessMediaResolver(scenario.unavailableMediaIds, {
+      resolveAudio: scenario.resolveAudio === true,
+    }),
     ...(scenario.guest === undefined ? {} : { guest: { displayName: scenario.guest.displayName } }),
   });
   return {

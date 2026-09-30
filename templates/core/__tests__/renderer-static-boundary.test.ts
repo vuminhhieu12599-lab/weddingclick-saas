@@ -244,6 +244,32 @@ const RF06C_FILES = [
   RF06C_HOST_CORE_MODULE,
 ] as const;
 
+/**
+ * RF-06D interactive islands (docs/DECISIONS.md "RF-06-0 …" P7, P13,
+ * P30–P35). Declared here for the tree rule; the RF-06D rules themselves are
+ * at the end of the file. Islands hold every hook, control and capability
+ * action; the models are pure TypeScript.
+ */
+const RF06D_DIR = "templates/wedding/elegant-editorial/v1/interactive";
+const RF06D_OPENING = `${RF06D_DIR}/opening-interaction.tsx`;
+const RF06D_COUNTDOWN = `${RF06D_DIR}/countdown.tsx`;
+const RF06D_MUSIC = `${RF06D_DIR}/music-control.tsx`;
+const RF06D_GIFT_DIALOG = `${RF06D_DIR}/gift-dialog.tsx`;
+const RF06D_COPY_BUTTON = `${RF06D_DIR}/copy-account-button.tsx`;
+const RF06D_RSVP = `${RF06D_DIR}/rsvp.tsx`;
+const RF06D_OPENING_STATE = `${RF06D_DIR}/opening-state.ts`;
+const RF06D_RSVP_MODEL = `${RF06D_DIR}/rsvp-model.ts`;
+const RF06D_ISLAND_FILES = [
+  RF06D_OPENING,
+  RF06D_COUNTDOWN,
+  RF06D_MUSIC,
+  RF06D_GIFT_DIALOG,
+  RF06D_COPY_BUTTON,
+  RF06D_RSVP,
+] as const;
+const RF06D_MODEL_FILES = [RF06D_OPENING_STATE, RF06D_RSVP_MODEL] as const;
+const RF06D_FILES = [...RF06D_ISLAND_FILES, ...RF06D_MODEL_FILES] as const;
+
 describe("templates/** production tree (P39)", () => {
   const sources = listSources(TEMPLATES_ROOT);
 
@@ -262,8 +288,11 @@ describe("templates/** production tree (P39)", () => {
   // RF-06B extension: the tree is exactly the RF-06A files plus the explicit
   // RF-06B files; React, CSS and the provenance note exist only there.
   // RF-06C extension: plus exactly the RF-06C client-runtime files.
-  it("templates/** contains exactly the RF-06A, RF-06B and RF-06C files", () => {
-    expect([...sources].sort()).toStrictEqual([...RF06A_FILES, ...RF06B_TEMPLATE_FILES, ...RF06C_FILES].sort());
+  // RF-06D extension: plus exactly the RF-06D islands and pure models.
+  it("templates/** contains exactly the RF-06A, RF-06B, RF-06C and RF-06D files", () => {
+    expect([...sources].sort()).toStrictEqual(
+      [...RF06A_FILES, ...RF06B_TEMPLATE_FILES, ...RF06C_FILES, ...RF06D_FILES].sort(),
+    );
   });
 
   /** P39 universal rules; RF-06C adds its named adapter exceptions explicitly. */
@@ -372,6 +401,10 @@ const RF06B_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06B_CODE_FILES)[number], 
     CSS_MODULE,
     `${V1}/fonts`,
     `${V1}/palette`,
+    // RF-06D: the capability-gated islands the root renders.
+    `${V1}/interactive/countdown`,
+    `${V1}/interactive/music-control`,
+    `${V1}/interactive/rsvp`,
     ...[
       "calendar",
       "ceremony",
@@ -415,6 +448,9 @@ const RF06B_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06B_CODE_FILES)[number], 
     `${LIB}/wedding-domain-types`,
     ...SECTION_COMMON,
     `${V1}/sections/media-image`,
+    // RF-06D: the sides render inside the dialog island, with the copy island.
+    `${V1}/interactive/copy-account-button`,
+    `${V1}/interactive/gift-dialog`,
   ],
   [`${V1}/sections/hero.tsx`]: [
     `${LIB}/event-date-time-presentation`,
@@ -427,12 +463,13 @@ const RF06B_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06B_CODE_FILES)[number], 
   [`${V1}/sections/invitation-message.tsx`]: SECTION_COMMON,
   [`${V1}/sections/love-story.tsx`]: SECTION_COMMON,
   [`${V1}/sections/media-image.tsx`]: [`${LIB}/invitation-view-model-types`],
+  // RF-06D: the envelope artwork moved into the opening island, which imports decor itself.
   [`${V1}/sections/opening-cover.tsx`]: [
     `${LIB}/event-date-time-presentation`,
     `${LIB}/invitation-view-model-types`,
     ...SECTION_COMMON,
     `${V1}/sections/date-text`,
-    `${V1}/sections/decor`,
+    `${V1}/interactive/opening-interaction`,
   ],
 };
 
@@ -497,11 +534,14 @@ function codeOf(file: string): string {
 }
 
 describe("RF-06B template files", () => {
-  it("every listed file exists; .tsx and CSS live only in the RF-06B renderer/host scope (plus the RF-06C host core)", () => {
+  it("every listed file exists; .tsx and CSS live only in the RF-06B renderer/host scope (plus the RF-06C host core and RF-06D islands)", () => {
     for (const file of RF06B_TEMPLATE_FILES) expect(() => readRepoFile(file), file).not.toThrow();
     const sources = listSources(TEMPLATES_ROOT);
     for (const file of sources.filter((source) => /\.(tsx|css)$/.test(source))) {
-      expect([HOST_MODULE, RF06C_HOST_CORE_MODULE, RF06B_CSS_FILE, ...RF06B_RENDERER_FILES], file).toContain(file);
+      expect(
+        [HOST_MODULE, RF06C_HOST_CORE_MODULE, RF06B_CSS_FILE, ...RF06B_RENDERER_FILES, ...RF06D_ISLAND_FILES],
+        file,
+      ).toContain(file);
     }
     expect(sources.filter((source) => source.endsWith(".css"))).toStrictEqual([RF06B_CSS_FILE]);
   });
@@ -583,10 +623,33 @@ describe("RF-06B template files", () => {
     ]);
   });
 
-  it("the renderer root reads only the K6 props and never a manifest prop", () => {
+  // RF-06D replacement: the root now reads `capabilities`, but only to gate
+  // its islands by presence, and still reads nothing but the K6 props.
+  it("the renderer root reads only the K6 props, never a manifest prop, and uses capabilities only as presence gates", () => {
     const code = codeOf(`${V1}/elegant-editorial-v1.tsx`);
-    expect(code).toMatch(/export function ElegantEditorialV1\(\{ viewModel, sections \}: InvitationRendererPropsV1\)/);
-    expect(code).not.toMatch(/manifest|rendererKey|capabilities\./);
+    expect(code).toMatch(
+      /export function ElegantEditorialV1\(\{ viewModel, sections, capabilities \}: InvitationRendererPropsV1\)/,
+    );
+    expect(code).not.toMatch(/manifest|rendererKey/);
+    expect(code.match(/capabilities\.\w+/g)?.sort()).toStrictEqual(
+      [
+        "capabilities.clipboard",
+        "capabilities.clock",
+        "capabilities.clock",
+        "capabilities.music",
+        "capabilities.music",
+        "capabilities.rsvp",
+        "capabilities.rsvp",
+      ].sort(),
+    );
+    expect(code).toContain(
+      "{capabilities.clock !== undefined ? <Countdown ceremony={ceremony} clock={capabilities.clock} /> : null}",
+    );
+    expect(code).toContain(
+      "{sections.music && capabilities.music !== undefined ? <MusicControl music={capabilities.music} /> : null}",
+    );
+    expect(code).toMatch(/\{capabilities\.rsvp !== undefined \? \(\s*<Rsvp rsvp=\{capabilities\.rsvp\} personalized=\{viewModel\.guest !== undefined\} \/>/);
+    expect(code).toMatch(/clipboard=\{capabilities\.clipboard\}/);
   });
 });
 
@@ -600,7 +663,9 @@ describe("RF-06B renderer CSS", () => {
     ["Tailwind directive", /@(tailwind|apply|layer|theme)\b/],
     ["global selector", /:global|(^|[\s,}])(html|body|:root)\b/m],
     ["viewport height", /\b100vh\b|\d+(\.\d+)?vh\b/],
-    ["motion (RF-06D)", /@keyframes|\banimation\b|\btransition\b/],
+    // RF-06D replacement: transitions are allowed (reduced-motion rule below); keyframe animation is not.
+    ["keyframe animation (RF-06D uses transitions only)", /@keyframes|\banimation(-\w+)?\s*:/],
+    ["infinite motion", /\binfinite\b/],
     ["review frame width", /--frame-width/],
     ["prototype/global fonts", /Dancing Script|Playfair|Iowan/],
     ["!important", /!important/],
@@ -626,6 +691,44 @@ describe("RF-06B renderer CSS", () => {
     parts.push(current.trim());
     return parts;
   }
+
+  /** Returns the body of the first `@media <query> {…}` block (brace-matched), or null. */
+  function mediaBlock(source: string, query: string): string | null {
+    const start = source.indexOf(`@media ${query} {`);
+    if (start === -1) return null;
+    let depth = 0;
+    for (let index = source.indexOf("{", start); index < source.length; index += 1) {
+      if (source[index] === "{") depth += 1;
+      if (source[index] === "}") depth -= 1;
+      if (depth === 0) return source.slice(source.indexOf("{", start) + 1, index);
+    }
+    return null;
+  }
+
+  // RF-06D (P13, docs/TYPOGRAPHY_AND_MOTION.md): every transition outside the
+  // reduced-motion block is switched off, selector by selector, inside it.
+  it("every RF-06D transition is removed under prefers-reduced-motion: reduce", () => {
+    const reduceQuery = "(prefers-reduced-motion: reduce)";
+    const reduced = mediaBlock(cssCode, reduceQuery);
+    expect(reduced).not.toBeNull();
+    expect(cssCode.split(`@media ${reduceQuery}`)).toHaveLength(2);
+    const reducedRules = [...(reduced as string).matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+    const neutralized = new Set(
+      reducedRules
+        .filter((rule) => /transition:\s*none;/.test(rule[2] as string))
+        .flatMap((rule) => splitSelectorList(rule[1] as string)),
+    );
+    const outside = cssCode.replace(reduced as string, "");
+    const moving = [...outside.matchAll(/([^{}@;]+)\{([^{}]*)\}/g)].filter((rule) =>
+      /(^|[;\s])transition(-\w+)?\s*:(?!\s*none;)/.test(rule[2] as string),
+    );
+    expect(moving.length).toBeGreaterThan(0);
+    for (const rule of moving) {
+      for (const selector of splitSelectorList(rule[1] as string)) {
+        expect(neutralized.has(selector), selector).toBe(true);
+      }
+    }
+  });
 
   it("every rule's selector list starts from a module class", () => {
     const selectors = [...cssCode.matchAll(/(^|[{}])\s*([^{}@;]+)\{/g)].map((match) => (match[2] as string).trim());
@@ -666,6 +769,8 @@ const HARNESS_PAGE = `${HARNESS_ROOT}/page.tsx`;
 const HARNESS_WRAPPER = `${HARNESS_ROOT}/renderer-harness-client.tsx`;
 const HARNESS_SCENARIOS = `${HARNESS_ROOT}/harness-scenarios.ts`;
 const HARNESS_FILES = [HARNESS_GATE, HARNESS_PAGE, HARNESS_WRAPPER, HARNESS_SCENARIOS] as const;
+/** RF-06D: provenance note for the harness-only audio tone (not code). */
+const HARNESS_AUDIO_PROVENANCE = `${HARNESS_ROOT}/harness-audio-provenance.md`;
 
 const HARNESS_ALLOWED_IMPORTS: Readonly<Record<(typeof HARNESS_FILES)[number], readonly string[]>> = {
   [HARNESS_GATE]: ["next", "next/navigation"],
@@ -687,8 +792,10 @@ const HARNESS_ALLOWED_IMPORTS: Readonly<Record<(typeof HARNESS_FILES)[number], r
 };
 
 describe("internal renderer harness boundary", () => {
-  it("the harness tree is exactly the gate, page, wrapper and scenario module", () => {
-    expect(listSources(join(REPO_ROOT, HARNESS_ROOT)).sort()).toStrictEqual([...HARNESS_FILES].sort());
+  it("the harness tree is exactly the gate, page, wrapper and scenario module (plus the RF-06D audio provenance note)", () => {
+    expect(listSources(join(REPO_ROOT, HARNESS_ROOT)).sort()).toStrictEqual(
+      [...HARNESS_FILES, HARNESS_AUDIO_PROVENANCE].sort(),
+    );
   });
 
   it.each(HARNESS_FILES)("%s imports only its exact allowlist", (file) => {
@@ -860,10 +967,23 @@ describe("client import graph from the host (P26, P45)", () => {
     expect(importsOf(readRepoFile(RF05C_TIMESTAMP_VALIDATOR))).toStrictEqual([]);
   });
 
-  it("reaches no fixtures, harness, prototypes or RF-06C/D modules", () => {
+  // RF-06D replacement: the RSVP island needs the frozen RF-05A RSVP limits
+  // and canonical validator, so `rsvp-capability` (pure, framework-free) is
+  // now reached — and only through the two RF-06D RSVP modules.
+  it("reaches no fixtures, harness or prototypes; the RF-05A RSVP contract only through the RF-06D RSVP modules", () => {
     for (const file of graph.files) {
-      expect(file).not.toMatch(/fixtures|renderer-harness|prototypes|_directions|rsvp-capability/);
+      expect(file).not.toMatch(/fixtures|renderer-harness|prototypes|_directions/);
     }
+    const RSVP_CONTRACT = `${LIB}/rsvp-capability`;
+    expect(graph.files).toContain(`${RSVP_CONTRACT}.ts`);
+    const valueImporters = graph.files.filter(
+      (file) =>
+        /\.(ts|tsx)$/.test(file) &&
+        importsOf(readRepoFile(file)).some(
+          (statement) => !statement.typeOnly && resolveSpecifier(file, statement.specifier) === RSVP_CONTRACT,
+        ),
+    );
+    expect(valueImporters.sort()).toStrictEqual([RF06D_RSVP, RF06D_RSVP_MODEL].sort());
   });
 
   it.each(graph.files.filter((file) => /\.(ts|tsx)$/.test(file)))(
@@ -1090,5 +1210,195 @@ describe("RF-06C boundaries across the repository", () => {
         expect(modulePath, file).not.toMatch(/templates\/core\/client\/|invitation-renderer-host/);
       }
     }
+  });
+});
+
+// ===========================================================================
+// RF-06D extension (docs/DECISIONS.md "RF-06-0 …" P7, P13, P30–P35, P39).
+// Everything above keeps its RF-06A/B/C protections. RF-06D relaxes the
+// RF-06B "static only" rules for exactly the named island modules, one
+// least-privilege owner per interaction primitive; RF-06B files stay static
+// and the RF-06C browser adapters stay the only browser-global owners.
+// ===========================================================================
+
+const RF06D_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06D_FILES)[number], readonly string[]>> = {
+  [RF06D_OPENING]: [
+    "react",
+    `${V1}/copy`,
+    CSS_MODULE,
+    `${V1}/sections/decor`,
+    RF06D_OPENING_STATE.replace(/\.ts$/, ""),
+  ],
+  [RF06D_COUNTDOWN]: [
+    `${LIB}/ceremony-countdown`,
+    `${LIB}/invitation-view-model-types`,
+    `${LIB}/renderer-capabilities`,
+    `${V1}/copy`,
+    CSS_MODULE,
+  ],
+  [RF06D_MUSIC]: ["react", `${LIB}/renderer-capabilities`, `${V1}/copy`, CSS_MODULE],
+  [RF06D_GIFT_DIALOG]: ["react", `${V1}/copy`, CSS_MODULE],
+  [RF06D_COPY_BUTTON]: ["react", `${LIB}/renderer-capabilities`, `${V1}/copy`, CSS_MODULE],
+  [RF06D_RSVP]: [
+    "react",
+    "lib/domain",
+    `${LIB}/rsvp-capability`,
+    `${V1}/copy`,
+    CSS_MODULE,
+    RF06D_RSVP_MODEL.replace(/\.ts$/, ""),
+  ],
+  [RF06D_OPENING_STATE]: [],
+  [RF06D_RSVP_MODEL]: ["lib/domain", `${LIB}/rsvp-capability`],
+};
+
+/** Forbidden in every RF-06D file (comments stripped). */
+const RF06D_FORBIDDEN: readonly [string, RegExp][] = [
+  ["prototype", /app\/internal\/prototypes|public\/prototypes|_directions|GreenIvoryEditorialPrototype/],
+  ["Supabase", /supabase/i],
+  ["service_role", /service_role/],
+  ["lib/server import", /lib\/server|\.\.\/server\//],
+  ["DB client", /createClient|\bpg\b|postgres/i],
+  ["process.env", /process\.env/],
+  ["secret", /SECRET|API_KEY/],
+  ["network", /\bfetch\b|XMLHttpRequest|sendBeacon|WebSocket|EventSource|\/api\//],
+  ["persistence", /localStorage|sessionStorage|indexedDB|\bcookie|caches\./i],
+  ["window", /\bwindow\b/],
+  ["document", /\bdocument\b/],
+  ["navigator / Clipboard API", /\bnavigator\b|\bclipboard\.write|writeText|execCommand/],
+  ["Audio element / API", /\bAudio\b|HTMLAudioElement|HTMLMediaElement|<audio|<video|\.src\s*=|preload|\.loop\b|autoplay/i],
+  ["current time / Date", /Date\.now|\bnew Date\b|\bDate\(|Date\.parse|Date\.UTC|performance\.now/],
+  ["Intl / locale formatting", /\bIntl\b|toLocale/],
+  ["Date getters", /get(UTC)?(Day|Date|Month|FullYear|Hours)\b/],
+  ["timers", /\b(set|clear)(Interval|Timeout)\b|requestAnimationFrame|requestIdleCallback/],
+  ["observers / media queries", /IntersectionObserver|ResizeObserver|MutationObserver|matchMedia/],
+  ["randomness", /Math\.random|randomUUID|getRandomValues/],
+  ["dynamic import / require / import.meta", /\bimport\s*\(|\brequire\s*\(|import\.meta/],
+  ["filesystem", /["']node:|["']fs["']|readdir|readFile/],
+  ["use client / use server", /["']use (client|server)["']/],
+  ["next import", /from\s+["']next(\/[^"']*)?["']/],
+  ["MAYBE attendance", /\bMAYBE\b/],
+  ["common QR", /QR_COMMON|commonMediaId|qr\.common/],
+  ["additional note", /additional_?note/i],
+  ["guest identity / token", /guestId|guest_id|[?&]guest=|token/i],
+  ["fabricated success", /status:\s*["']SUCCESS["']/],
+  ["framer-motion", /framer-motion|\bmotion\./],
+  ["dangerouslySetInnerHTML", /dangerouslySetInnerHTML/],
+  ["external font URL", /fonts\.(googleapis|gstatic)\.com/],
+  ["capability construction / host wiring", /useInvitationRendererCapabilities|composeRendererCapabilities|InvitationRendererHost|templates\/core/],
+];
+
+const ALL_HOOKS =
+  /\buse(State|Effect|LayoutEffect|InsertionEffect|Ref|Memo|Callback|Reducer|SyncExternalStore|Context|Transition|Optimistic|ActionState|Id|DeferredValue|ImperativeHandle)\b/;
+
+/**
+ * P39 least privilege: each interaction primitive is allowed in exactly the
+ * listed RF-06D module(s), and in no RF-06A, RF-06B or RF-06C file.
+ */
+const RF06D_PRIVILEGE: readonly [string, RegExp, readonly string[]][] = [
+  ["useState", /\buseState\b/, [RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP]],
+  ["useReducer", /\buseReducer\b/, [RF06D_OPENING, RF06D_RSVP]],
+  ["useRef", /\buseRef\b/, [RF06D_OPENING, RF06D_GIFT_DIALOG]],
+  ["useEffect", /\buseEffect\b/, [RF06D_OPENING, RF06D_GIFT_DIALOG]],
+  [
+    "other hooks",
+    /\buse(LayoutEffect|InsertionEffect|Memo|Callback|SyncExternalStore|Context|Transition|Optimistic|ActionState|Id|DeferredValue|ImperativeHandle)\b/,
+    [],
+  ],
+  ["button element", /<button\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP]],
+  ["click handler", /\bonClick\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON]],
+  ["dialog element / API", /<dialog\b|role="dialog"|showModal|HTMLDialogElement|\.close\(\)|onClose\b|onCancel\b/, [RF06D_GIFT_DIALOG]],
+  ["programmatic focus", /\.focus\(/, [RF06D_OPENING, RF06D_GIFT_DIALOG]],
+  ["form events", /\bonSubmit\b|\bonChange\b|preventDefault/, [RF06D_RSVP]],
+  ["form controls", /<form\b|<input\b|<select\b|<textarea\b|<fieldset\b|<label\b/, [RF06D_RSVP]],
+  ["music capability actions", /\.play\(|\.pause\(|MusicCapabilityV1/, [RF06D_MUSIC]],
+  ["clipboard capability action", /copyText|ClipboardCapabilityV1/, [RF06D_COPY_BUTTON]],
+  ["RSVP capability action", /\.submit\(|RsvpCapabilityV1/, [RF06D_RSVP]],
+  ["clock capability consumption", /nowEpochMs|ClockCapabilityV1|deriveCeremonyCountdownV1/, [RF06D_COUNTDOWN]],
+  ["tabindex", /\btabIndex\b/, [RF06D_OPENING]],
+];
+
+describe("RF-06D interactive files", () => {
+  it("every listed file exists; islands are .tsx, models are .ts", () => {
+    for (const file of RF06D_ISLAND_FILES) expect(file.endsWith(".tsx"), file).toBe(true);
+    for (const file of RF06D_MODEL_FILES) expect(file.endsWith(".ts"), file).toBe(true);
+    for (const file of RF06D_FILES) expect(() => readRepoFile(file), file).not.toThrow();
+    expect(Object.keys(RF06D_ALLOWED_IMPORTS).sort()).toStrictEqual([...RF06D_FILES].sort());
+  });
+
+  it.each(RF06D_FILES)("%s imports only its exact allowlist", (file) => {
+    expect([...new Set(resolvedImportsOf(file))].sort(), file).toStrictEqual([...RF06D_ALLOWED_IMPORTS[file]].sort());
+  });
+
+  it.each(RF06D_FILES)("%s contains no forbidden data, network, persistence, browser-global, time or identity code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of RF06D_FORBIDDEN) {
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+  });
+
+  it.each(RF06D_PRIVILEGE)("interaction: %s appears only in its owning RF-06D module(s)", (_label, pattern, owners) => {
+    for (const file of RF06D_FILES) {
+      expect(pattern.test(codeOf(file)), file).toBe(owners.includes(file));
+    }
+    for (const file of [...RF06A_FILES, ...RF06B_CODE_FILES]) {
+      expect(pattern.test(codeOf(file)), file).toBe(false);
+    }
+  });
+
+  it("the pure models import no React, render nothing and use no hooks", () => {
+    for (const file of RF06D_MODEL_FILES) {
+      const code = codeOf(file);
+      expect(code, file).not.toMatch(/from\s+["']react|\/>|<\/[A-Za-z]|return\s*\(?\s*<[A-Za-z]/);
+      expect(ALL_HOOKS.test(code), file).toBe(false);
+      expect(/\.(submit|play|pause|copyText)\(/.test(code), file).toBe(false);
+    }
+  });
+
+  it("RF-06B files stay static: no hook, and no RF-06C browser adapter is imported by any RF-06D file", () => {
+    for (const file of RF06B_CODE_FILES) expect(ALL_HOOKS.test(codeOf(file)), file).toBe(false);
+    for (const file of RF06D_FILES) {
+      for (const modulePath of resolvedImportsOf(file)) expect(modulePath, file).not.toMatch(/templates\/core/);
+    }
+  });
+
+  it("the RF-06C browser-global owners are unchanged: nothing in RF-06D touches navigator, Audio, Date.now or intervals", () => {
+    for (const [, pattern, owners] of RF06C_BROWSER_PRIVILEGE.filter(([label]) => label !== "React hooks")) {
+      for (const file of RF06D_FILES) expect(pattern.test(codeOf(file)), file).toBe(false);
+      expect(owners.every((owner) => RF06C_FILES.includes(owner as (typeof RF06C_FILES)[number]))).toBe(true);
+    }
+  });
+
+  it("only the root and the gift section render islands, and only the root reads capabilities", () => {
+    const islandImporters = [...RF06A_FILES, ...RF06B_CODE_FILES, ...RF06D_FILES].filter((file) =>
+      resolvedImportsOf(file).some((modulePath) => modulePath.startsWith(`${RF06D_DIR}/`) && !/-(state|model)$/.test(modulePath)),
+    );
+    expect(islandImporters.sort()).toStrictEqual(
+      [`${V1}/elegant-editorial-v1.tsx`, `${V1}/sections/gift.tsx`, `${V1}/sections/opening-cover.tsx`].sort(),
+    );
+    for (const file of RF06B_CODE_FILES) {
+      if (file === `${V1}/elegant-editorial-v1.tsx`) continue;
+      expect(/\bcapabilities\b/.test(codeOf(file)), file).toBe(false);
+    }
+  });
+
+  it("the gift section adds a copy control only for a present clipboard and the canonical account number", () => {
+    const code = codeOf(`${V1}/sections/gift.tsx`);
+    expect(code).toMatch(
+      /\{line\.key === "accountNumber" && clipboard !== undefined \? \(\s*<dd className=\{styles\.giftLineAction\}>\s*<CopyAccountButton clipboard=\{clipboard\} value=\{line\.value\} sideLabel=\{sideLabel\} \/>/,
+    );
+    expect(code.match(/<CopyAccountButton\b/g)).toHaveLength(1);
+    expect(code.match(/<GiftDialog>/g)).toHaveLength(1);
+  });
+
+  it("the music control is reachable only through the root's section-and-capability gate", () => {
+    const root = codeOf(`${V1}/elegant-editorial-v1.tsx`);
+    expect(root.match(/<MusicControl\b/g)).toHaveLength(1);
+    expect(root.match(/<Countdown\b/g)).toHaveLength(1);
+    expect(root.match(/<Rsvp\b/g)).toHaveLength(1);
+    expect(codeOf(RF06D_MUSIC)).not.toMatch(/media\.audio|sections\.|isMusicCapabilityPermittedV1/);
+  });
+
+  it("no island declares a client or server boundary; the production host stays the only client entry", () => {
+    for (const file of RF06D_FILES) expect(/["']use (client|server)["']/.test(readRepoFile(file)), file).toBe(false);
   });
 });

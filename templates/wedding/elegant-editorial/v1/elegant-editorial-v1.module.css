@@ -7,7 +7,10 @@
  * on the root (palette.ts); fonts only from the v1 next/font variables
  * (fonts.ts) plus generic fallbacks. No global tokens, no Tailwind, no
  * runtime font import, no viewport-height dependency, no review-frame
- * width variable. RF-06B is static: no animation or transition here.
+ * width variable. RF-06B static rules come first; the RF-06D interactive
+ * rules follow at the end. RF-06D motion is CSS transitions only (no
+ * keyframes, no infinite animation), and every transition is removed under
+ * `prefers-reduced-motion: reduce` in the block at the very end.
  */
 
 /* ---------------------------------------------------------------------- */
@@ -985,4 +988,566 @@
   font-size: 12px;
   letter-spacing: 0.24em;
   color: var(--ee-bronze);
+}
+
+/* ====================================================================== */
+/* RF-06D interactive islands                                             */
+/* ====================================================================== */
+
+/* Opening envelope (interactive/opening-interaction.tsx) ---------------- */
+
+.openingStage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.openingStage .openingEnvelope {
+  margin-top: 64px;
+  overflow: visible;
+}
+
+.openingStage .envelopeFlap {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+  transition: transform 900ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.openingStage .envelopeSeal,
+.openingStage .envelopeSealRing,
+.openingStage .envelopeSealLeaf,
+.openingStage .envelopeSealStem {
+  transition: opacity 420ms ease-out;
+}
+
+.openingStage[data-opening="opened"] .envelopeFlap {
+  transform: scaleY(-0.6);
+}
+
+.openingStage[data-opening="opened"] .envelopeSeal,
+.openingStage[data-opening="opened"] .envelopeSealRing,
+.openingStage[data-opening="opened"] .envelopeSealLeaf,
+.openingStage[data-opening="opened"] .envelopeSealStem {
+  opacity: 0;
+}
+
+/* "Skip" reaches the opened state with no transition at all. */
+.openingStage[data-motion="instant"] .envelopeFlap,
+.openingStage[data-motion="instant"] .envelopeSeal,
+.openingStage[data-motion="instant"] .envelopeSealRing,
+.openingStage[data-motion="instant"] .envelopeSealLeaf,
+.openingStage[data-motion="instant"] .envelopeSealStem {
+  transition: none;
+}
+
+.openingLetter {
+  width: 100%;
+}
+
+.openingLetter:focus {
+  outline: none;
+}
+
+.openingLetter:focus-visible {
+  outline: 1px dashed var(--ee-gold);
+  outline-offset: 6px;
+}
+
+.openingControls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 28px;
+}
+
+.openingButton,
+.openingSkip {
+  min-height: 44px;
+  margin: 0;
+  font-family: var(--ee-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.openingButton {
+  padding: 0 28px;
+  border: 1px solid var(--ee-gold);
+  border-radius: 999px;
+  background-color: var(--ee-on-accent);
+  color: var(--ee-accent-deep);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.openingButton:hover {
+  background-color: var(--ee-gold);
+  color: var(--ee-on-accent);
+}
+
+.openingSkip {
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background-color: transparent;
+  color: var(--ee-on-accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.openingButton:focus-visible,
+.openingSkip:focus-visible {
+  outline: 2px solid var(--ee-gold);
+  outline-offset: 3px;
+}
+
+/* Countdown (interactive/countdown.tsx) -------------------------------- */
+
+.countdown {
+  padding: 40px var(--ee-gutter);
+  background-color: var(--ee-surface-sage);
+}
+
+.countdownHeading {
+  margin-bottom: 18px;
+  font-family: var(--ee-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ee-bronze);
+}
+
+.countdownParts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.countdownPart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  padding: 12px 4px;
+  border: 1px solid var(--ee-border);
+  border-radius: 6px;
+  background-color: var(--ee-surface);
+}
+
+.countdownValue {
+  font-family: var(--ee-serif);
+  font-size: 28px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ee-accent-deep);
+  overflow-wrap: anywhere;
+}
+
+.countdownUnit {
+  margin-top: 6px;
+  font-family: var(--ee-sans);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ee-muted);
+}
+
+.countdownPassed {
+  font-family: var(--ee-script);
+  font-size: 30px;
+  line-height: 1.3;
+  color: var(--ee-accent-deep);
+}
+
+/* Music control (interactive/music-control.tsx) ------------------------ */
+
+.music {
+  position: fixed;
+  right: max(16px, calc(50% - 224px));
+  bottom: 16px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: calc(100% - 32px);
+  pointer-events: none;
+}
+
+.musicButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--ee-gold);
+  border-radius: 50%;
+  background-color: var(--ee-accent);
+  color: var(--ee-on-accent);
+  box-shadow: 0 10px 24px -14px var(--ee-accent-deep);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background-color 160ms ease;
+}
+
+.musicButton[aria-pressed="true"] {
+  background-color: var(--ee-accent-deep);
+}
+
+.musicButton:focus-visible {
+  outline: 2px solid var(--ee-gold);
+  outline-offset: 3px;
+}
+
+.musicGlyph {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.musicNote {
+  max-width: 280px;
+  padding: 8px 12px;
+  border: 1px solid var(--ee-border);
+  border-radius: 6px;
+  background-color: var(--ee-surface);
+  font-family: var(--ee-sans);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--ee-text);
+  pointer-events: auto;
+}
+
+/* Gift dialog and copy control (interactive/gift-dialog.tsx, copy-account-button.tsx) */
+
+.giftOpen,
+.giftDialogClose,
+.copyButton {
+  margin: 0;
+  font-family: var(--ee-sans);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.giftOpen {
+  min-height: 48px;
+  margin-top: 24px;
+  padding: 0 28px;
+  border: 1px solid var(--ee-accent);
+  border-radius: 999px;
+  background-color: var(--ee-accent);
+  color: var(--ee-on-accent);
+  font-size: 12px;
+}
+
+.giftOpen:hover {
+  background-color: var(--ee-accent-deep);
+}
+
+.giftDialog {
+  width: 100%;
+  max-width: 100%;
+  max-height: calc(100% - 24px);
+  max-height: calc(100dvh - 24px);
+  margin: auto auto 0;
+  padding: 0;
+  border: 1px solid var(--ee-border);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  background-color: var(--ee-background);
+  color: var(--ee-text);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.giftDialog[open] {
+  transform: none;
+  opacity: 1;
+  transition: transform 260ms ease-out, opacity 200ms ease-out;
+}
+
+@starting-style {
+  .giftDialog[open] {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+.giftDialog::backdrop {
+  background-color: color-mix(in srgb, var(--ee-accent-deep) 60%, transparent);
+}
+
+@media (min-width: 768px) {
+  .giftDialog {
+    max-width: 440px;
+    margin: auto;
+    border-bottom: 1px solid var(--ee-border);
+    border-radius: 16px;
+  }
+}
+
+.giftDialogHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 12px 12px var(--ee-gutter);
+  border-bottom: 1px solid var(--ee-border);
+  background-color: var(--ee-background);
+}
+
+.giftDialogTitle {
+  min-width: 0;
+  font-family: var(--ee-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--ee-bronze);
+}
+
+.giftDialogClose {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--ee-border);
+  border-radius: 999px;
+  background-color: var(--ee-surface);
+  color: var(--ee-accent-deep);
+  font-size: 11px;
+}
+
+.giftDialogContent {
+  padding: 20px var(--ee-gutter) 28px;
+}
+
+.giftDialogContent .giftSides {
+  margin-top: 0;
+}
+
+.giftLineAction {
+  margin-top: 8px;
+}
+
+.copyControl {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.copyButton {
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid var(--ee-accent);
+  border-radius: 999px;
+  background-color: var(--ee-surface);
+  color: var(--ee-accent);
+  font-size: 11px;
+}
+
+.copyButton:hover {
+  background-color: var(--ee-accent);
+  color: var(--ee-on-accent);
+}
+
+.copyButton[aria-disabled="true"] {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.copyFeedback {
+  font-family: var(--ee-sans);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ee-muted);
+  overflow-wrap: anywhere;
+}
+
+.giftOpen:focus-visible,
+.giftDialogClose:focus-visible,
+.copyButton:focus-visible {
+  outline: 2px solid var(--ee-accent-deep);
+  outline-offset: 3px;
+}
+
+/* RSVP (interactive/rsvp.tsx) ------------------------------------------ */
+
+.rsvpForm {
+  display: grid;
+  gap: 20px;
+  text-align: left;
+}
+
+.rsvpIntro {
+  font-size: 15px;
+  line-height: 1.7;
+  text-align: center;
+  color: var(--ee-muted);
+}
+
+.rsvpField,
+.rsvpFieldset {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.rsvpLabel {
+  padding: 0;
+  font-family: var(--ee-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ee-accent-deep);
+}
+
+.rsvpInput,
+.rsvpTextarea {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--ee-border);
+  border-radius: 6px;
+  background-color: var(--ee-surface);
+  color: var(--ee-text);
+  font-family: var(--ee-serif);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.rsvpTextarea {
+  resize: vertical;
+}
+
+.rsvpChoice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid var(--ee-border);
+  border-radius: 6px;
+  background-color: var(--ee-surface);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.rsvpChoice:has(:checked) {
+  border-color: var(--ee-accent);
+  background-color: var(--ee-surface-sage);
+}
+
+.rsvpRadio {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--ee-accent);
+}
+
+.rsvpHint {
+  font-family: var(--ee-sans);
+  font-size: 12px;
+  color: var(--ee-muted);
+}
+
+.rsvpHint[data-over-limit="true"],
+.rsvpError {
+  color: var(--ee-heart);
+}
+
+.rsvpError {
+  font-family: var(--ee-sans);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.rsvpSubmit {
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  border: 1px solid var(--ee-accent);
+  border-radius: 999px;
+  background-color: var(--ee-accent);
+  color: var(--ee-on-accent);
+  font-family: var(--ee-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+
+.rsvpSubmit:hover {
+  background-color: var(--ee-accent-deep);
+}
+
+.rsvpSubmit[aria-disabled="true"] {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.rsvpInput:focus-visible,
+.rsvpTextarea:focus-visible,
+.rsvpRadio:focus-visible,
+.rsvpSubmit:focus-visible {
+  outline: 2px solid var(--ee-accent-deep);
+  outline-offset: 2px;
+}
+
+.rsvpResult {
+  margin-top: 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--ee-border);
+  border-radius: 6px;
+  background-color: var(--ee-surface-sage);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ee-accent-deep);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Reduced motion: every RF-06D transition above is removed, so opening,  */
+/* dialog, buttons and status changes are immediate and never wait.       */
+/* ---------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .openingStage .envelopeFlap,
+  .openingStage .envelopeSeal,
+  .openingStage .envelopeSealRing,
+  .openingStage .envelopeSealLeaf,
+  .openingStage .envelopeSealStem,
+  .openingButton,
+  .musicButton,
+  .giftOpen,
+  .giftDialogClose,
+  .copyButton,
+  .giftDialog[open],
+  .rsvpSubmit {
+    transition: none;
+  }
 }

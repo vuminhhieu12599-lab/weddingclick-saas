@@ -174,6 +174,9 @@ describe("copy.ts (P10)", () => {
   it("contains no date, weekday, lunar, location, price or customer data", () => {
     const text = JSON.stringify(ELEGANT_EDITORIAL_V1_COPY);
     expect(text).not.toMatch(/\d{1,2}[/.]\d{1,2}|20\d\d|Thứ (Hai|Ba|Tư|Năm|Sáu|Bảy)|Chủ Nhật|Bính Ngọ|Đà Nẵng|Hồ Chí Minh|VND|đồng/);
-    expect(text).not.toMatch(/\bMAYBE\b|QR_COMMON|RSVP|countdown|music/i);
+    // RF-06D replacement: v1 copy now owns the RSVP, countdown and music
+    // controls (keys `rsvp`, `countdown`, `music`), so only the forbidden
+    // semantics stay banned. RF-06D copy is asserted in interactive-copy.test.ts.
+    expect(text).not.toMatch(/\bMAYBE\b|QR_COMMON|additional_?note/i);
   });
 });
