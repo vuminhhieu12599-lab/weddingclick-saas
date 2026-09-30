@@ -1227,7 +1227,7 @@ RF-05 defines no template-level fallback renderer.
 
 ## Invitation Rendering Foundation — RF-06-0 First Production Renderer Contract Clarification
 
-**Status:** docs only. Authored for independent review; **not yet frozen**. RF-01 is frozen at `5ee6bd1`, RF-02 at `f2f9ea2`, RF-03 at `260a03f`, RF-04 at `fe8b400`, and RF-05 is complete and frozen at `fc94b30` (RF-05D PASS). RF-06 discovery and planning passed, but the frozen docs left the first production renderer's identity, full manifest, font and asset policy, content adaptations, server/client composition and checkpoint process open. This section is the **single authoritative RF-06 contract**. Where RF9, RF10, RF14, RF15, RF16, the RF-04 clarification (R3, R12, R15, R23–R25), the RF-05 clarification (K5, K19, K35, K37–K39), `docs/TEMPLATE_SYSTEM.md` §5–§7 or `docs/ARCHITECTURE.md` §10 describe these more broadly or conceptually, this section governs RF-06. It does not reopen any RF-00 through RF-05 decision, and it does not change the RF-02 Snapshot, the RF-03 `InvitationViewModel`, the RF-04 `RendererSelectionContextV1` or any RF-05 contract. No RF-06 code exists yet. **RF-06A has not started. Task 030 stays blocked** (RF16).
+**Status:** docs only, **FROZEN** at `ef0b632` (2026-09-29). RF-01 is frozen at `5ee6bd1`, RF-02 at `f2f9ea2`, RF-03 at `260a03f`, RF-04 at `fe8b400`, and RF-05 is complete and frozen at `fc94b30` (RF-05D PASS). RF-06 discovery and planning passed, but the frozen docs left the first production renderer's identity, full manifest, font and asset policy, content adaptations, server/client composition and checkpoint process open. This section is the **single authoritative RF-06 contract**. Where RF9, RF10, RF14, RF15, RF16, the RF-04 clarification (R3, R12, R15, R23–R25), the RF-05 clarification (K5, K19, K35, K37–K39), `docs/TEMPLATE_SYSTEM.md` §5–§7 or `docs/ARCHITECTURE.md` §10 describe these more broadly or conceptually, this section governs RF-06. It does not reopen any RF-00 through RF-05 decision, and it does not change the RF-02 Snapshot, the RF-03 `InvitationViewModel`, the RF-04 `RendererSelectionContextV1` or any RF-05 contract. No RF-06 code exists yet. **RF-06A has not started. Task 030 stays blocked** (RF16).
 
 **Product Owner sign-off (2026-09-29).** Approved: the P16 design keys (`green-ivory`, `editorial-classic`, `STANDARD`); the P3 font families (Great Vibes, Source Serif 4, Inter via `next/font`), with Vietnamese glyph and licence QA still required before any certification claim; and personalized RSVP without a name input, submitting `guestName: null` (P31). Not approved: a music-unavailable indicator. It is replaced by the P35 degraded-state rule (no capability, no control, no indicator). No Product Owner choice in this section remains open.
 
@@ -1556,6 +1556,230 @@ RF-06E owns only QA execution/evidence, final documentation synchronization and 
 - **Leaves unchanged:** conceptual examples such as `wedding.elegant-editorial.v1` in `docs/TEMPLATE_SYSTEM.md` §5, `docs/ARCHITECTURE.md` §10, `docs/DATABASE.md` §12–§13 and `docs/PHYSICAL_DATABASE_PLAN.md` §2.10–§2.11; the conceptual manifest word-list in `docs/TEMPLATE_SYSTEM.md` §6; and the `docs/ROADMAP.md` Week 3 "architecture proving template" wording. All of these are compatible with this section.
 
 No real contradiction was found. Other documents are synchronized with this section in RF-06E (P42).
+
+## Elegant Editorial Production Design Baseline — Task029 Reconciliation + Product Owner Rulings
+
+**Status:** docs only. Authored for **true independent review**; **not yet frozen**. Product Owner rulings Design Baseline A1 and Design Baseline D1–D13 dated 2026-09-30. This addendum does **not** rewrite RF-06-0 (P1–P46) or any RF-05 rule (K1–K45); every one of them stays in force. It adds the Product Owner's design decision for Elegant Editorial v1 (`wedding.elegant-editorial.v1`) and the process for remediating the RF-06B/RF-06D output against it.
+
+**Checkpoint state when authored.** Branch `weddingclick-v2`, HEAD `5eee33b`. RF-06D frozen production baseline `ae28dca`. RF-06E: **BLOCKED**. RF-06F: **not started**. Task 030: **not started** and still blocked (RF16, P41).
+
+**Identifier note.** The Product Owner rulings in this addendum have these citation names: **Design Baseline A1** and **Design Baseline D1**, **Design Baseline D2**, … **Design Baseline D13**. They are a separate namespace from the historical RF-06-0 subsection headings "D1 — Fonts" … "D5 — Production identity", which keep their original identifiers and are not renamed. This addendum always cites its own rulings by the full "Design Baseline" name. Later documents, reviews and reports must do the same whenever a bare "A1" or "Dn" could be ambiguous.
+
+### Visual authority
+
+**B1. Visual source of truth.** The Task029 component `GreenIvoryEditorialPrototype` (`app/internal/prototypes/invitation/_directions/green-ivory-editorial/`) at commit `03131816d7966ccd9fad0e135df37bd65af7ee99` is the **visual source of truth** for Elegant Editorial v1. The Product Owner accepted the Task029 reconciliation report as the production design baseline. This makes P2 more specific: Task029 is still reference only for code (no production import of `app/internal/prototypes/**`, no prototype asset, hook, helper, data file or CSS module at runtime, and no prototype path in production). For **visual intent**, however, it is the authority.
+
+**B2. Reconciliation rule.**
+
+```text
+TARGET PRODUCTION DESIGN
+  = TASK029 APPROVED VISUAL INTENT
+  + ONLY THE MINIMUM DIFFERENCES REQUIRED BY THE FROZEN RF-06 / RF-05 CONTRACT
+```
+
+Where Task029 and the frozen production contract can coexist, **Task029 wins visually**. Every production deviation from Task029 must cite a specific frozen RF-06-0 / RF-05 rule (B4) or a ruling in this addendum (Design Baseline A1, Design Baseline D1–D13).
+
+**B3. What is not design authority.** The current RF-06B/RF-06D production appearance (`6e558a0`, `ae28dca`) is **not** a design authority. Tests that pin that implementation's drift are **not** evidence of Product Owner design approval. Remediation may update those tests (under the owning checkpoint, P44). It may never use them to justify keeping the drift.
+
+### Required production adaptations — KEEP
+
+**B4. Mandatory differences, not drift.** These stay mandatory. Where they differ from Task029, the difference is required and is **not** design drift:
+
+- no prototype runtime imports or assets (P2, P6);
+- WeddingClick-owned production artwork with recorded provenance (P4–P6, Design Baseline A1);
+- the approved production font families (P3);
+- no hard-coded "Đà Nẵng" (P7);
+- Hero media is the cover only, with the required typographic Hero fallback (P7, Design Baseline D4);
+- no groom/bride portrait media and no photo cluster (P7);
+- no Timeline and no Dress Code section (P7);
+- Love Story is text-only (P7, Design Baseline D8);
+- the canonical invitation message is rendered verbatim, and the guest line is separate (P7, Design Baseline D1);
+- canonical family fields and order (P7, RF4, RF5);
+- RF-05C ceremony date/time behavior, and a separate lunar label (P7, K32);
+- the Monday-first 42-cell calendar (K33);
+- canonical event order and data, with no lunar text on events (P7, RF2, RF6);
+- the countdown is clock-gated and has the required passed state (P7, K27–K29, Design Baseline D7);
+- canonical gallery order, with `UNAVAILABLE` slots kept in place (P7, Design Baseline D9);
+- operational-side gift rules and no `QR_COMMON` (P7, RF13);
+- truthful clipboard behavior (P34, K22);
+- music is capability-gated, with no autoplay (P35, K24–K25);
+- RSVP is capability-gated; choices are `ATTENDING` / `NOT_ATTENDING` only (no `MAYBE`); party size is 1–20; personalized RSVP has no guest-name input; success appears only after an actual `SUCCESS` (P30–P33, K16–K19);
+- the opening is skippable and never permanently blocks content (P13);
+- the gift dialog is a bottom sheet on mobile and a modal on desktop (P13);
+- the production desktop column is about 480 px (P12);
+- no horizontal overflow (P11);
+- no invented customer or media data (P7);
+- the reduced-motion rules (P13).
+
+### RESTORE Task029 design
+
+**B5. Restore scope.** Production restores the Task029 visual design, except where B4 or a ruling below requires a difference. "Task029" means the B1 commit. Each item names what to restore, then the constraint that applies to it, if any. The numbers below are item identifiers only. They are **not** the renderer section order, which is fixed by the authoritative target root order after this list.
+
+1. **Opening artwork.** Green envelope, ivory liner, gold 囍 seal and moss opening cover. Artwork follows Design Baseline A1.
+2. **Tap target.** The envelope is the primary tap target.
+3. **Hint copy.** "Chạm vào thiệp để mở".
+4. **Opening choreography.** Seal → flap → cover-photo card rise → dissolve. No-cover behavior follows Design Baseline D3. Skip follows Design Baseline D2.
+5. **Photo-led Hero.** "Save the date"; couple names on one line by default (Design Baseline D5); a small inline gold serif "&"; the dotted `DD.MM.YYYY` date, derived by RF-05C, with no location suffix (B4); no ceremony-title line when cover media is resolved. Fallback follows Design Baseline D4.
+6. **Couple / story.** The approved Great Vibes quote ("Hôn nhân là chuyện cả đời." / "Yêu người vừa ý, cưới người mình thương."); asymmetric left/right text plates (typographic, with no portrait media, B4); the floral divider (Design Baseline A1 artwork); no visible "Cô dâu & Chú rể" heading.
+7. **Families.** The line–❧–line ornament; two columns with a central divider; the approved side labels ("Nhà Trai" / "Nhà Gái", chosen by explicit `side`, P7); no visible section heading; no family address.
+8. **Invitation message.** No visible "Thư mời" heading; Task029 message typography. The guest line follows Design Baseline D1.
+9. **Ceremony.** The shared sage-gradient ceremony band; the approved two-part date composition; inline "Tức ngày" as separate label copy next to the verbatim `lunarDateDisplay` (P7, K32); `WEEKDAY · HH:mm` presentation from RF-05C.
+10. **Calendar.** The approved moss card and bouquet composition (Design Baseline A1 artwork); the two-line intro "Đám cưới của chúng mình" / "Sẽ diễn ra vào"; a Great Vibes month; no visible year; no visible section heading; out-of-month cells of the K33 42-cell grid rendered blank; a pulsing heart on the ceremony day, disabled under reduced motion. Column order is Monday → Sunday (K33), not Task029's Sunday-first order.
+11. **Events.** The approved card hierarchy; a 34 px dotted date; "HH:mm - Weekday"; an uppercase venue; a square "Xem chỉ đường" button (only when `mapUrl` exists, P7); no visible "Chương trình" heading; no event lunar text (B4). The side tag follows Design Baseline D6.
+12. **Countdown.** Placed after Events; the approved ✦ transition; the kicker is exactly **"Đếm ngược"**; ivory background; unboxed cells with a top rule; unpadded values; labels "Ngày" / "Giờ" / "Phút" / "Giây"; no "Hẹn ngày chung vui". Clock gating follows B4. The passed state follows Design Baseline D7.
+13. **Love story.** A dark moss band spanning the full column width; a gold quote mark; white-soft italic text; no visible heading; no bordered light card. Height follows Design Baseline D8.
+14. **Gallery.** The approved 4-column editorial grid, 44 px row rhythm and 10-slot cyclic layout (Task029 `GALLERY_LAYOUT`). Tail handling follows Design Baseline D9. Task029 also shows the kicker "Album ảnh cưới" (category A copy).
+15. **Gift.** Placed after RSVP and before Gallery; the approved note ("Sự hiện diện của bạn là món quà quý giá nhất. Nếu muốn gửi lời chúc mừng, gia đình xin phép nhận tại đây."); a square moss "Gửi quà cưới" CTA; the Task029 visual language; no visible "Hộp mừng cưới" heading. The dialog uses the Task029 row labels "Ngân hàng" / "Chủ tài khoản" / "Số tài khoản" and "Sao chép" / "Đã sao chép", which appear only after `SUCCESS` (P34). Side rules follow B4.
+16. **RSVP.** The approved bordered card; the two-line heading "Xác nhận tham dự" / "& Gửi lời chúc"; Task029 copy where it is compatible with the frozen contract: name placeholder "Nhập tên của bạn" (unpersonalized only, P31), select label "Bạn có thể tham dự không?", choices "Sẽ tham dự" (`ATTENDING`) and "Tiếc quá, không tham dự được" (`NOT_ATTENDING`), and message placeholder "Gửi lời chúc đến cô dâu & chú rể…". Task029's "Sẽ cố gắng tham dự" is `MAYBE` and is excluded (B4). Square controls; submit copy "Gửi lời chúc". Party size follows Design Baseline D10, success/edit follows Design Baseline D11, and input font size follows Design Baseline D12.
+17. **Closing.** The dark moss gradient band; a gold ❧; the exact Task029 closing copy ("Sự hiện diện của bạn là niềm hạnh phúc trọn vẹn nhất trong ngày cưới của chúng tôi. Xin chân thành cảm ơn."), rendered as Task029 renders it: **one flowing italic paragraph** in the beige-on-moss treatment that wraps naturally, with no forced line breaks and no `white-space: pre-line` behavior. The newline characters in the Task029 source data do not create a required three-line composition. Then the inline couple names in white-soft and a gold dotted date.
+18. **Music.** Top-right; 40 px; ivory/gold idle treatment; ♪ (idle) / ♫ (playing); a pulse only while `status === "PLAYING"`; safe under reduced motion. Presence follows P35.
+19. **Section reveals.** In the Task029 style: fade plus a rise of about 22 px, once per element. CSS or `IntersectionObserver` is allowed. Content is visible without JavaScript and under reduced motion (P13). No new package (P13, CLAUDE.md §24).
+20. **Square corners.** The square-cornered control language wherever Task029 uses it.
+21. **Palette details.** `#4a5240` for body/message text; `#6f7a63` for secondary, lunar and address text; `#d0433a` for the heart; `#5c7052` for the opening highlight; the Task029 gold-alpha hairlines; beige-on-moss treatment. Bronze follows Design Baseline D13.
+22. **Great Vibes scope.** Great Vibes is used only for the approved couple quote and the calendar month.
+
+The Task029 cover composition (reading order label → names → date → envelope → hint) is part of the visual reference under B2. Design Baseline D1 keeps the guest line off the cover.
+
+**Target root order (authoritative).** The renderer's root flow is exactly:
+
+```text
+Opening → Hero → Couple → Invitation message → Families → Ceremony → Calendar → Events
+  → ✦ → ✦ → Countdown → Love Story → RSVP → Gift → Gallery → Closing
+```
+
+- Music is a floating control. It is **not** part of the root flow.
+- The two consecutive ✦ ornaments are **intentional**. Task029 has Events → ✦ → Timeline → ✦ → Countdown. The frozen production contract removes Timeline (P7), so the faithful reconciled result keeps both ornaments. They are not collapsed into one.
+- This statement overrides any ordering implied by the B5 item numbers. In particular, Invitation message comes before Families, Countdown comes after Events, RSVP comes before Gift, and Gift comes before Gallery.
+
+### Design Baseline A1 — Decor asset route (RESOLVED)
+
+**Design Baseline A1.** The existing Task029 prototype PNGs are **not** shipped, because their production provenance and rights are not sufficiently documented (P4). Production uses a **new WeddingClick-owned decor set** created specifically for Elegant Editorial v1. It faithfully reproduces the approved Task029 visual intent **without copying undocumented source pixels**.
+
+- **Required visual targets:** green envelope; green hinged flap; ivory/gold liner; gold 囍 seal; the rising ivory-framed cover-card treatment; the calendar botanical corner bouquets; the couple floral divider; ❧ / ✦ / heart motifs where appropriate.
+- **Media type:** original SVG/vector artwork for geometry and symbols, and original raster artwork where photographic or botanical fidelity requires it. Do not force everything into simple SVG if that materially loses the approved Task029 appearance.
+- **Requirements:** created and owned by WeddingClick for this renderer; provenance recorded in `templates/wedding/elegant-editorial/v1/PROVENANCE.md` (the P5 location, never under `public/`); production files only under `public/renderers/wedding/elegant-editorial/v1/`; within the P6 payload budget; no Task029 runtime asset dependency; no copied undocumented prototype pixels.
+- **Status:** RESOLVED — new WeddingClick-owned, design-matched production artwork. Creating the assets is step 4 of B9. It is not part of this docs addendum.
+
+### Product Owner rulings Design Baseline D1–D13 (all RESOLVED)
+
+**Design Baseline D1 — Guest line.** The separate guest line is exactly:
+- **Personalized** (`viewModel.guest` present): **"Trân trọng kính mời {guest.displayName}"**. `{guest.displayName}` is the canonical runtime `viewModel.guest.displayName`, used as presentation only and never as identity or authorization (K20).
+- **Unpersonalized** (`viewModel.guest` absent): **"Trân trọng kính mời Quý khách"**.
+
+"Trân trọng kính mời" is the salutation identified during reconciliation. "Quý khách" is the existing approved default guest copy (P7, P10). No new brand wording is introduced.
+
+**Placement.** The guest line is rendered immediately **before** the canonical invitation message, in the same Task029 invitation-message composition and Task029 serif/message visual language. It is **never** on the opening cover and never in the Hero.
+
+**Message and persistence.** The invitation message stays the canonical `viewModel.content.invitationMessage`, rendered **verbatim** (P7). The guest is never interpolated into it. The guest line is presentation only and is never persisted as customer data.
+
+**Design Baseline D2 — Skip control.** A small, understated text link below the Task029 hint. Its exact visible copy is **"Bỏ qua"**. It is in the same family and mood as the hint, visually secondary, and not a pill or button. It must remain accessible and keyboard-operable (P13).
+
+**Design Baseline D3 — No-cover opening.** When `media.cover` is absent or `UNAVAILABLE`, no photo card rises. The envelope flap still opens, the cover dissolves, and the page continues to the Hero fallback (Design Baseline D4). No image media is fabricated.
+
+**Design Baseline D4 — Hero fallback.** When the cover is absent or `UNAVAILABLE`, the fallback uses the same Hero zone and Task029 visual language on a moss-deep background. It shows names, ceremony title and date (P7), keeping Task029 alignment, typographic hierarchy as closely as possible, and the small inline serif "&". The ceremony title appears **only** in this fallback state, never over a resolved cover image.
+
+**Design Baseline D5 — Long names.** Names stay on one line by default. When they genuinely cannot fit at the supported width, they wrap naturally and keep the inline small serif "&". The current stacked-name composition is not forced. Names are never reduced below 18 px, and there is no horizontal overflow. This is a responsive exception, not a new composition.
+
+**Design Baseline D6 — Event side tag.** In `COMMON`, a side tag is shown only for events whose `side` is `GROOM` or `BRIDE`. There is no tag for `COMMON`-side events. In `GROOM` and `BRIDE`, no redundant side tags are added. (Task029 shows a tag only when more than one operational side exists, which never happens for a side-specific variant.)
+Rule of Three: COMMON → tag on GROOM/BRIDE-side events only; GROOM → no tags; BRIDE → no tags.
+
+**Design Baseline D7 — Countdown passed state.** The exact passed-state copy is **"Ngày vui đã đến"**, in the approved countdown kicker typography and visual language. It is **not** Great Vibes. Live countdown values never return after the ceremony has passed, and negative values are never shown (P7, K28).
+
+**Design Baseline D8 — Love Story height.** Production has no Love Story background photo, so the band uses content-driven height with balanced vertical padding derived from Task029, instead of the photo-driven 420 px minimum. It must still read as the Task029 dark moss editorial band.
+
+**Design Baseline D9 — Gallery tail.** The 10-slot Task029 pattern repeats cyclically. A final lone half-width tile that would otherwise leave an awkward empty pair spans the full width instead. Canonical media is never reordered, and an `UNAVAILABLE` item keeps its canonical slot (P7).
+
+**Design Baseline D10 — RSVP party size.** The exact visible label is **"Số người tham dự"**. The control is a numeric select from 1 to 20, shown only for `ATTENDING` (`NOT_ATTENDING` submits 0, P31). It uses Task029 form visual language and square controls.
+
+**Design Baseline D11 — RSVP success / edit.** The exact Task029 success wording is used, with no invented replacement copy:
+- `ATTENDING`: "Cảm ơn {name} đã phản hồi — rất mong được đón tiếp!"
+- `NOT_ATTENDING`: "Cảm ơn {name} đã phản hồi!"
+- a quoted recap of the message when one was sent;
+- the edit action "Sửa lại".
+
+`{name}` is **presentation only**. Unpersonalized flows use the name the user typed; personalized flows use `viewModel.guest.displayName`. The frozen submission contract is unchanged: personalized submissions still send `guestName: null` (P31, K16). The success UI appears only after a resolved `SUCCESS` (P32, K18). "Sửa lại" is a local return to the form, not a K18 current-RSVP prefill. Any resubmission goes through `capabilities.rsvp` again.
+
+**Design Baseline D12 — Input font size.** Interactive text inputs, selects and the textarea use **16 px** on mobile to avoid iOS focus zoom. This is an allowed usability adaptation. Everything else keeps Task029 typography.
+
+**Design Baseline D13 — Bronze.** The approved Task029 bronze **`#8c6f4e`** is restored. The implementation value `#7d6243` is not kept merely because the implementation changed it. If RF-06E accessibility certification later shows a mandatory accessibility failure, that specific evidence goes back to the Product Owner before this token changes. There is no pre-emptive redesign.
+
+### Copy authority
+
+**B6. Brand-visible string provenance.** Every brand-visible string in Elegant Editorial v1 must map to exactly one of:
+
+- **A** — exact Task029-approved copy (B1 commit);
+- **B** — explicit frozen contract copy (RF-06-0 / RF-05);
+- **C** — necessary runtime, error or accessibility copy;
+- **D-ID** — one of the Product Owner rulings in this addendum (Design Baseline A1, Design Baseline D1–D13).
+
+No replacement visual or brand copy is invented. Tests never grant design approval. Specific rulings:
+
+- **"Save the date"** — Task029-approved (A). **KEEP.**
+- **"Đếm ngược"** — Task029-approved (A). **RESTORE** as the countdown kicker.
+- **"Hẹn ngày chung vui"** — implementation-chosen, **not** Product Owner approved. **REMOVE** from the live countdown heading.
+
+Removing a *visible* section heading (B5) does not forbid an accessible name for that section. Such names are category C copy, used only where accessibility needs them.
+
+### Visual acceptance gate (mandatory)
+
+**B7. Rendered evidence for every visual remediation checkpoint.** This applies to the RF-06B and RF-06D remediation checkpoints and the RF-06E rerun. It adds to the P39 manual QA and does not replace it.
+
+- **Widths:** 360 / 390 / 430 px for both Task029 and production. Production is also checked at 768 and 1280 px.
+- **Evidence:** full-page screenshots; side-by-side Task029 vs production; crops of every changed section; opening-sequence frames; Gift dialog states; RSVP states; reduced-motion evidence; long-name evidence.
+- **Scenarios:** `COMMON`, `GROOM`, `BRIDE`; personalized and unpersonalized.
+- **Pass criteria.** A visual checkpoint **cannot PASS solely because automated tests pass**. The reviewer must show that:
+  - no unauthorized visual drift remains in the changed scope;
+  - every visible string has B6 provenance;
+  - every Task029 deviation cites a frozen production constraint (B4) or a Product Owner ruling;
+  - there is no horizontal overflow;
+  - production decor meets the Design Baseline A1 / P5 / P6 payload and provenance rules.
+
+### Remediation ownership
+
+**B8. Owner patches (P44 classification, made concrete for this remediation).** Owners are never merged into one implementation patch.
+
+| Owner | Scope |
+|---|---|
+| **RF-06B** | static composition; root section ordering; visible/static copy; static typography; palette; static section appearance (Hero, Couple, Families, Message, Ceremony, Calendar, Events, Love Story, Gallery, Closing); static Gift placement and intro; static opening artwork and markup; production decor and provenance (Design Baseline A1) |
+| **RF-06D** | opening overlay activation and choreography; card rise; skip interaction; countdown interactive presentation and passed state; music visual interaction; Gift dialog tabs, copy and interaction; RSVP interaction and presentation; scroll reveal; envelope float; calendar heart pulse; reduced-motion behavior |
+| **RF-06C** | **no design remediation**. Only the separately tracked sticky music `ERROR` retry defect |
+
+### Remediation sequence (frozen)
+
+**B9.**
+
+1. Design Baseline addendum authoring (this section)
+2. **True independent** Design Baseline review
+3. Design Baseline commit / push / freeze
+4. WeddingClick-owned production decor creation plus provenance (Design Baseline A1)
+5. RF-06B visual remediation — author
+6. **True independent** RF-06B remediation review
+7. RF-06B remediation commit / push / refreeze
+8. RF-06D visual/interaction remediation — author
+9. **True independent** RF-06D remediation review
+10. RF-06D remediation commit / push / refreeze
+11. RF-06C sticky-music-`ERROR` owner patch
+12. **True independent** RF-06C patch review
+13. RF-06C commit / push / refreeze
+14. RF-06E rerun **from the beginning**, including the B7 visual acceptance gate
+15. RF-06F final verification
+16. Only then is Task 030 unblocked
+
+Each owner patch follows P44 steps 3–6 (targeted patch, focused plus regression tests, true independent review, commit/push/refreeze). Running RF-06D before RF-06C here does not reopen the P42 dependency order. The RF-06C item is an independent defect patch, and RF-06E reruns from the beginning after all three.
+
+### Relationship to RF-06-0
+
+**B10.**
+
+- **Preserves unchanged:** P1–P46 and every RF-05 rule.
+- **Tightens:**
+  - P2, where Task029 becomes the visual source of truth (B1–B3);
+  - P5/P6, where the prototype-PNG route is closed and new owned artwork is required (Design Baseline A1);
+  - P10, where fixed copy must satisfy B6;
+  - P39/P43, where the B7 visual acceptance gate is added.
+- **Concretizes:** P7 guest line, Hero fallback, countdown passed copy and gallery `UNAVAILABLE` behavior (Design Baseline D1, Design Baseline D4, Design Baseline D7, Design Baseline D9); P13 skip control (Design Baseline D2); P31 party-size and success presentation (Design Baseline D10, Design Baseline D11); P44 owner classification (B8).
+
+No frozen contract is relaxed.
 
 ## Draft / Review / Publish
 
