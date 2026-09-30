@@ -6,12 +6,7 @@ import type { EventDateTimePresentationV1 } from "../../../../../lib/invitation-
  * arithmetic, no Intl, no timezone logic (RF-05 K30–K31).
  */
 
-/** `DD . MM . YYYY` from the RF-05C parts. */
+/** Task029 dotted `DD.MM.YYYY` from the RF-05C parts. */
 export function formatDottedDate(presentation: EventDateTimePresentationV1): string {
-  return `${presentation.day} . ${presentation.month} . ${presentation.year}`;
-}
-
-/** `DD/MM/YYYY` from the RF-05C parts. */
-export function formatSlashedDate(presentation: EventDateTimePresentationV1): string {
-  return `${presentation.day}/${presentation.month}/${presentation.year}`;
+  return `${presentation.day}.${presentation.month}.${presentation.year}`;
 }

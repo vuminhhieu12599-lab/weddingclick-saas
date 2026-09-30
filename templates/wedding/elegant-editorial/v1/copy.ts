@@ -7,14 +7,23 @@
  * never read from the ViewModel, never templated with customer data. A copy
  * change after the RF-06F freeze is v2. Nothing here is a date, weekday,
  * lunar value, venue or name; those come only from canonical data.
+ *
+ * Every visible brand string maps to Design Baseline B6: exact Task029 copy
+ * (A), frozen contract copy (B), a Design Baseline Dn ruling, or accessibility
+ * copy (C). Section `heading` values are accessible names only (C): the
+ * Design Baseline removes those headings visually (B5).
  */
 
 export const ELEGANT_EDITORIAL_V1_COPY = Object.freeze({
   opening: Object.freeze({
-    label: "Thiệp mời cưới",
-    /** Precedes the guest line; the guest line is presentation text only. */
+    /** Task029 cover label (A). */
+    label: "Thiệp Mời Cưới",
+    /**
+     * Design Baseline D1 guest line, rendered immediately before the
+     * invitation message (never on the opening): salutation + guest.
+     */
     salutation: "Trân trọng kính mời",
-    /** Unpersonalized invitation: stands in for the absent guest overlay. */
+    /** Design Baseline D1: unpersonalized invitation, stands in for the absent guest overlay. */
     defaultGuest: "Quý khách",
     /** RF-06D: explicit open control (plays the finite envelope transition). */
     open: "Mở thiệp",
@@ -28,8 +37,10 @@ export const ELEGANT_EDITORIAL_V1_COPY = Object.freeze({
   }),
   couple: Object.freeze({
     heading: "Cô dâu & Chú rể",
-    /** Role labels chosen by the person's explicit `side`, never by position. */
-    roleBySide: Object.freeze({ GROOM: "Chú rể", BRIDE: "Cô dâu" }),
+    /** Task029 two-line couple quote (A). */
+    quote: Object.freeze(["Hôn nhân là chuyện cả đời.", "Yêu người vừa ý, cưới người mình thương."] as const),
+    /** Task029 plate labels (A), chosen by the person's explicit `side`, never by position. */
+    roleBySide: Object.freeze({ GROOM: "Chú Rể", BRIDE: "Cô Dâu" }),
   }),
   message: Object.freeze({
     heading: "Thư mời",
@@ -46,7 +57,8 @@ export const ELEGANT_EDITORIAL_V1_COPY = Object.freeze({
   }),
   calendar: Object.freeze({
     heading: "Lịch ngày cưới",
-    intro: "Ngày chung đôi của chúng mình",
+    /** Task029 two-line intro (A). */
+    intro: Object.freeze(["Đám cưới của chúng mình", "Sẽ diễn ra vào"] as const),
     monthPrefix: "Tháng",
     /** Monday → Sunday, matching the RF-05C Monday-first grid (K33). */
     weekdayHeaders: Object.freeze(["T2", "T3", "T4", "T5", "T6", "T7", "CN"] as const),
@@ -66,7 +78,8 @@ export const ELEGANT_EDITORIAL_V1_COPY = Object.freeze({
   }),
   gift: Object.freeze({
     heading: "Hộp mừng cưới",
-    intro: "Sự hiện diện của quý khách là món quà quý giá nhất. Nếu muốn gửi lời chúc mừng từ xa, xin vui lòng tham khảo thông tin dưới đây.",
+    /** Task029 gift note (A). */
+    intro: "Sự hiện diện của bạn là món quà quý giá nhất. Nếu muốn gửi lời chúc mừng, gia đình xin phép nhận tại đây.",
     bankName: "Ngân hàng",
     accountName: "Chủ tài khoản",
     accountNumber: "Số tài khoản",
@@ -127,7 +140,8 @@ export const ELEGANT_EDITORIAL_V1_COPY = Object.freeze({
   }),
   closing: Object.freeze({
     heading: "Lời cảm ơn",
-    line: "Rất hân hạnh được đón tiếp",
+    /** Task029 closing copy (A), one flowing paragraph with no forced line breaks (B5 item 17). */
+    line: "Sự hiện diện của bạn là niềm hạnh phúc trọn vẹn nhất trong ngày cưới của chúng tôi. Xin chân thành cảm ơn.",
   }),
   a11y: Object.freeze({
     coverImageAlt: "Ảnh cưới của",

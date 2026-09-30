@@ -743,7 +743,8 @@ describe("RF-06B renderer CSS", () => {
 
 describe("RF-06B decor and provenance (P4–P6)", () => {
   // Design Baseline A1 decor set (docs/DECISIONS.md, B9 step 4): SVG and
-  // WebP files recorded in PROVENANCE.md, not yet referenced by the renderer.
+  // WebP files recorded in PROVENANCE.md, referenced by the renderer by exact
+  // literal path only (rules at the end of this block).
   const DECOR_DIR = "public/renderers/wedding/elegant-editorial/v1";
   const DECOR_SVG_FILES = [
     "calendar-heart.svg",
@@ -847,9 +848,66 @@ describe("RF-06B decor and provenance (P4–P6)", () => {
     }
   });
 
-  it("decor is inline vector geometry only: no image element, href or data URI", () => {
-    const code = codeOf(`${V1}/sections/decor.tsx`);
-    expect(code).not.toMatch(/<image|<img|href|data:|url\(|base64/);
+  // RF-06B cross-checkpoint compatibility correction (Design Baseline A1): the
+  // renderer now references the frozen decor set, file-backed, by exact literal
+  // path only. This replaces the former "decor is inline vector geometry only"
+  // rule; the CSS-module url( ban above stays in force.
+  const DECOR_PUBLIC_PATH = `/${DECOR_DIR.replace(/^public\//, "")}/`;
+  const OPENING_DECOR_FILES = [
+    "opening-cover-card-frame.svg",
+    "opening-envelope-body.svg",
+    "opening-envelope-flap.svg",
+    "opening-envelope-liner.svg",
+    "opening-seal-double-happiness.svg",
+  ] as const;
+  /** Exactly the renderer modules allowed an `<img>`: runtime media, or one fixed decor file each. */
+  const IMG_ELEMENT_MODULES = [
+    `${V1}/sections/media-image.tsx`,
+    `${V1}/sections/couple.tsx`,
+    `${V1}/sections/families.tsx`,
+    `${V1}/sections/calendar.tsx`,
+    `${V1}/sections/events.tsx`,
+    `${V1}/sections/closing.tsx`,
+  ] as const;
+  const DECOR_MODULE = `${V1}/sections/decor.tsx`;
+
+  it("decor.tsx uses the opening files only as exact literal SVG <image> sources, nothing else file-backed", () => {
+    const code = codeOf(DECOR_MODULE);
+    expect(code).not.toMatch(/<img\b|data:|url\(|base64|xlink:|<use\b|<foreignObject|dangerouslySetInnerHTML|https?:/);
+    const hrefs = [...code.matchAll(/<image\b[^>]*>/g)].map((match) => /\shref="([^"]*)"/.exec(match[0])?.[1]);
+    expect([...hrefs].sort()).toStrictEqual(OPENING_DECOR_FILES.map((file) => `${DECOR_PUBLIC_PATH}${file}`).sort());
+    // Every href is one of those literal attributes: no computed href={…}.
+    expect(code.match(/\bhref\b/g)).toHaveLength(OPENING_DECOR_FILES.length);
+  });
+
+  it("renderer modules reference decor only by exact literal paths to files in the frozen decor set", () => {
+    const onDisk = new Set(decorFiles());
+    for (const file of RF06B_RENDERER_FILES) {
+      const code = codeOf(file);
+      // No path construction around the decor directory (template or concatenation).
+      expect(code, file).not.toMatch(/renderers\/[^"'`\n]*\$\{|`[^`]*\/renderers\/|\/renderers\/[^"'`\n]*["'`]\s*\+/);
+      for (const match of code.matchAll(/["'`]([^"'`\n]*\/renderers\/[^"'`\n]*)["'`]/g)) {
+        const literal = match[1] as string;
+        expect(literal, file).toMatch(/^\/renderers\/wedding\/elegant-editorial\/v1\/[a-z0-9-]+\.(svg|webp)$/);
+        const name = literal.slice(DECOR_PUBLIC_PATH.length);
+        expect(onDisk.has(name), `${file}: ${literal}`).toBe(true);
+        // The opening artwork is owned by the static EnvelopeMotif only.
+        if ((OPENING_DECOR_FILES as readonly string[]).includes(name)) expect(file).toBe(DECOR_MODULE);
+      }
+    }
+  });
+
+  it("<img> only in the exact media/decor modules, <image> only in decor.tsx, no next/image, no other public or remote source", () => {
+    for (const file of RF06B_RENDERER_FILES) {
+      const code = codeOf(file);
+      expect(/<img\b/.test(code), file).toBe((IMG_ELEMENT_MODULES as readonly string[]).includes(file));
+      expect(/<image\b/.test(code), file).toBe(file === DECOR_MODULE);
+      expect(code, file).not.toMatch(/next\/image|https?:\/\/|data:/);
+      // A literal src/href attribute may only point into the frozen decor directory.
+      for (const match of code.matchAll(/\s(?:src|href)="([^"]*)"/g)) {
+        expect(match[1], file).toMatch(/^\/renderers\/wedding\/elegant-editorial\/v1\//);
+      }
+    }
   });
 });
 

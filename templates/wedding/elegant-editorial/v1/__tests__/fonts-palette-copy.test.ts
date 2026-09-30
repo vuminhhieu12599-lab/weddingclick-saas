@@ -127,6 +127,29 @@ describe("palette.ts (P9, P16)", () => {
     expect(css.replace(/\/\*[\s\S]*?\*\//g, "")).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/);
   });
 
+  it("carries the Task029 / Design Baseline tokens", () => {
+    expect(ELEGANT_EDITORIAL_V1_PALETTE).toMatchObject({
+      "--ee-accent": "#47593f",
+      "--ee-accent-deep": "#2e3c29",
+      "--ee-accent-soft": "#8a9a7c",
+      "--ee-background": "#faf7ef",
+      "--ee-surface": "#fdfcf9",
+      "--ee-surface-sage": "#eef1e7",
+      "--ee-gold": "#b99a5b",
+      "--ee-text": "#2c3327",
+      "--ee-muted": "#4a5240",
+      "--ee-secondary": "#6f7a63",
+      "--ee-heart": "#d0433a",
+      "--ee-opening-highlight": "#5c7052",
+      // Design Baseline D13: the Task029 bronze is restored, not the former #7d6243.
+      "--ee-bronze": "#8c6f4e",
+    });
+  });
+
+  // RF-06B remediation: the former bronze-on-ivory AA pair is dropped. The
+  // Product Owner restored the Task029 bronze (Design Baseline D13); any
+  // mandatory accessibility failure is RF-06E evidence for the Product Owner,
+  // never a pre-emptive token change. The measured ratio is pinned below.
   it("body text / background pairs meet WCAG AA contrast", () => {
     const luminance = (hex: string): number => {
       const channels = [1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16) / 255);
@@ -142,13 +165,17 @@ describe("palette.ts (P9, P16)", () => {
       ["--ee-text", "--ee-background"],
       ["--ee-muted", "--ee-background"],
       ["--ee-muted", "--ee-surface-sage"],
-      ["--ee-bronze", "--ee-background"],
       ["--ee-accent", "--ee-surface"],
       ["--ee-on-accent", "--ee-accent"],
       ["--ee-on-accent-muted", "--ee-accent"],
+      ["--ee-surface-sage", "--ee-accent"],
     ] as const) {
       expect(contrast(p[fg], p[bg]), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
     }
+    // Recorded evidence for RF-06E (Design Baseline D13, B5 item 21): the Task029
+    // bronze (~4.37:1) and secondary (~4.23:1) on ivory are below 4.5:1 for small text.
+    expect(contrast(p["--ee-bronze"], p["--ee-background"])).toBeCloseTo(4.37, 1);
+    expect(contrast(p["--ee-secondary"], p["--ee-background"])).toBeCloseTo(4.23, 1);
   });
 });
 
@@ -169,6 +196,23 @@ describe("copy.ts (P10)", () => {
     expect(ELEGANT_EDITORIAL_V1_COPY.calendar.weekdayHeaders).toStrictEqual(["T2", "T3", "T4", "T5", "T6", "T7", "CN"]);
     expect(ELEGANT_EDITORIAL_V1_COPY.events.mapLink).toBe("Xem chỉ đường");
     expect(ELEGANT_EDITORIAL_V1_COPY.ceremony.lunarLabel).toBe("Tức ngày");
+  });
+
+  // Design Baseline B6: RF-06B-owned visible strings are exact Task029 (A) or Dn copy.
+  it("uses the exact Task029 / Design Baseline strings for RF-06B-owned visible copy", () => {
+    const copy = ELEGANT_EDITORIAL_V1_COPY;
+    expect(copy.opening.label).toBe("Thiệp Mời Cưới");
+    expect(copy.opening.defaultGuest).toBe("Quý khách");
+    expect(copy.couple.quote).toStrictEqual(["Hôn nhân là chuyện cả đời.", "Yêu người vừa ý, cưới người mình thương."]);
+    expect(copy.couple.roleBySide).toStrictEqual({ GROOM: "Chú Rể", BRIDE: "Cô Dâu" });
+    expect(copy.calendar.intro).toStrictEqual(["Đám cưới của chúng mình", "Sẽ diễn ra vào"]);
+    expect(copy.gallery.heading).toBe("Album ảnh cưới");
+    expect(copy.gift.intro).toBe(
+      "Sự hiện diện của bạn là món quà quý giá nhất. Nếu muốn gửi lời chúc mừng, gia đình xin phép nhận tại đây.",
+    );
+    expect(copy.closing.line).toBe(
+      "Sự hiện diện của bạn là niềm hạnh phúc trọn vẹn nhất trong ngày cưới của chúng tôi. Xin chân thành cảm ơn.",
+    );
   });
 
   it("contains no date, weekday, lunar, location, price or customer data", () => {

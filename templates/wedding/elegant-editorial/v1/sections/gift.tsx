@@ -79,6 +79,11 @@ function sidePresentation(
  * rendered, so the RF-06D dialog entry point never opens an empty dialog.
  * Visibility is otherwise decided by the caller from `sections.gift` only.
  *
+ * RF-06B static layer (Design Baseline B5 item 15): placed after RSVP and
+ * before Gallery by the root, the Task029 note on ivory, and no visible
+ * section heading (an accessible name only). The entry-point control, its
+ * copy and the dialog presentation belong to the RF-06D island.
+ *
  * RF-06D: the sides live inside the gift dialog island. A copy control is
  * added next to a non-blank canonical account number only when a clipboard
  * capability is present; the bank text stays selectable either way.
@@ -93,8 +98,8 @@ export function Gift({ operationalSides, gift, qr, clipboard }: GiftProps) {
   }
 
   return (
-    <section className={styles.section} aria-labelledby="ee-gift-heading">
-      <h2 id="ee-gift-heading" className={styles.sectionHeading}>
+    <section className={styles.giftBlock} aria-labelledby="ee-gift-heading">
+      <h2 id="ee-gift-heading" className={styles.srOnly}>
         {COPY.gift.heading}
       </h2>
       <p className={styles.giftIntro}>{COPY.gift.intro}</p>

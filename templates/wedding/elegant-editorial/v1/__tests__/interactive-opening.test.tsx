@@ -66,7 +66,7 @@ describe("opening state (pure)", () => {
 });
 
 describe("opening markup (server render / first client render)", () => {
-  it.each(INVITATION_VARIANTS)("%s: sealed envelope, explicit open + skip buttons, guest line present", async (variant) => {
+  it.each(INVITATION_VARIANTS)("%s: sealed envelope, explicit open + skip buttons, no guest line on the opening", async (variant) => {
     const { viewModel, selection } = await buildRendererFixture({ variant, guest: FIXTURE_GUESTS.NORMAL });
     const html = renderToStaticMarkup(
       <ElegantEditorialV1 viewModel={viewModel} sections={selection.effectiveSections} capabilities={{}} />,
@@ -79,10 +79,14 @@ describe("opening markup (server render / first client render)", () => {
       COPY.opening.open,
       COPY.opening.skip,
     ]);
-    // Content is semantically present before any interaction.
-    expect(opening).toContain(FIXTURE_GUESTS.NORMAL.displayName);
-    expect(opening).toContain(COPY.opening.salutation);
+    // Content is semantically present before any interaction: the couple names (h1) are on the
+    // opening. The guest line is never on the opening (frozen Design Baseline D1); its placement
+    // before the invitation message is RF-06B static composition, asserted in elegant-editorial-v1.test.tsx.
     expect(opening).toMatch(/<h1[^>]*>/);
+    expect(opening).not.toContain(FIXTURE_GUESTS.NORMAL.displayName);
+    expect(opening).not.toContain(COPY.opening.salutation);
+    expect(opening).not.toContain("data-guest");
+    expect(html).toContain(FIXTURE_GUESTS.NORMAL.displayName);
     // The envelope stays decorative and never focusable.
     expect(opening).toMatch(/<svg[^>]*aria-hidden="true" focusable="false"/);
     // The rest of the invitation is rendered, not hidden behind the opening.
@@ -92,12 +96,13 @@ describe("opening markup (server render / first client render)", () => {
     expect(html).not.toMatch(/\sinert\b|aria-hidden="true"[^>]*><main|display:\s*none/);
   });
 
-  it("the guest line is the programmatic focus target after opening, never a tab stop", async () => {
+  it("the letter is the programmatic focus target after opening, never a tab stop", async () => {
     const { viewModel, selection } = await buildRendererFixture({ variant: "COMMON" });
     const opening = header(
       renderToStaticMarkup(<ElegantEditorialV1 viewModel={viewModel} sections={selection.effectiveSections} capabilities={{}} />),
     );
-    expect(opening).toMatch(/<div class="[^"]*openingLetter[^"]*" tabindex="-1"><div class="[^"]*guestLine/);
+    expect(opening).toMatch(/<div class="[^"]*openingLetter[^"]*" tabindex="-1">/);
+    expect(opening.match(/tabindex="[^"]*"/g)).toStrictEqual(['tabindex="-1"']);
   });
 
   it("rendering the opening never starts music, reads time or schedules a timer", async () => {
@@ -132,7 +137,7 @@ describe("opening source contract", () => {
     expect(code).not.toMatch(/setTimeout|setInterval|requestAnimationFrame|localStorage|sessionStorage|cookie|music|play\(/);
   });
 
-  it("moves focus to the guest line only after opening (controls leave the DOM)", () => {
+  it("moves focus to the letter only after opening (controls leave the DOM)", () => {
     expect(code).toMatch(/useEffect\(\(\) => \{\s*if \(opened\) letterRef\.current\?\.focus\(\);\s*\}, \[opened\]\);/);
     expect(code).toMatch(/\{opened \? null : \(/);
   });

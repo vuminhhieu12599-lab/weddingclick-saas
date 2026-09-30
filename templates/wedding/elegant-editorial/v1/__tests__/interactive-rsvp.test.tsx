@@ -368,13 +368,16 @@ describe("renderer gate (K19, P30)", () => {
     }
   });
 
-  it("with a capability: the block sits after the gallery and before the closing", async () => {
+  // Root placement of the RSVP slot is RF-06B static composition (frozen Design
+  // Baseline root order: Love Story → RSVP → Gift → Gallery → Closing) and is
+  // asserted in elegant-editorial-v1.test.tsx; this island test keeps only the
+  // capability-gated rendering of the block.
+  it("with a capability: the block renders, exactly once, with its heading", async () => {
     const { viewModel, selection } = await buildRendererFixture({ variant: "COMMON" });
     const html = renderToStaticMarkup(
       <ElegantEditorialV1 viewModel={viewModel} sections={selection.effectiveSections} capabilities={{ rsvp: double({ status: "UNAVAILABLE" }) }} />,
     );
-    expect(html.indexOf("ee-gallery-heading")).toBeLessThan(html.indexOf("ee-rsvp-heading"));
-    expect(html.indexOf("ee-rsvp-heading")).toBeLessThan(html.indexOf("ee-closing-heading"));
+    expect(html.split('aria-labelledby="ee-rsvp-heading"')).toHaveLength(2);
     expect(rsvpBlock(html)).toContain(`>${COPY.rsvp.heading}</h2>`);
   });
 });

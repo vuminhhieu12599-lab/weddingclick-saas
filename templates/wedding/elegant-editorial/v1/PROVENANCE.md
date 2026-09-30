@@ -3,7 +3,12 @@
 Provenance note required by docs/DECISIONS.md "RF-06-0 First Production
 Renderer Contract Clarification" P4–P6.
 
-## Production decor in v1
+## Legacy inline decor (replaced)
+
+Integration status (factual maintenance, RF-06B visual remediation): the
+inline motifs below were the rendered decor of the original RF-06B renderer.
+They are replaced in the renderer by the Design Baseline A1 file-backed set
+further down and are no longer rendered. Their creation record is unchanged.
 
 | Artwork | Location | Form |
 |---|---|---|
@@ -16,10 +21,8 @@ Renderer Contract Clarification" P4–P6.
 Palette gradients and surface patterns are CSS in
 `elegant-editorial-v1.module.css`.
 
-The renderer currently loads no decor files and no raster decor. The
-Design Baseline A1 decor set below exists under
-`public/renderers/wedding/elegant-editorial/v1/`, but no renderer module
-references it yet.
+The renderer now loads the Design Baseline A1 decor set below from
+`public/renderers/wedding/elegant-editorial/v1/`, by exact literal path.
 
 ## Record
 
@@ -45,9 +48,9 @@ references it yet.
 Created for docs/DECISIONS.md "Elegant Editorial Production Design Baseline"
 Design Baseline A1 (remediation sequence B9 step 4), against the Design
 Baseline frozen at `f4e76a2`. The visual reference for every file is the
-Task 029 `GreenIvoryEditorialPrototype` (commit `0313181`). These files are
-**not yet used** by the renderer: RF-06B / RF-06D remediation integrates them
-later. Until then the inline SVG decor above is still the rendered decor.
+Task 029 `GreenIvoryEditorialPrototype` (commit `0313181`). Integration
+status: all eleven files are referenced by the renderer (RF-06B visual
+remediation); the inline SVG decor above is no longer rendered.
 
 Version path: `public/renderers/wedding/elegant-editorial/v1/` (immutable
 once used by a published invitation, P6 / CLAUDE.md §9).

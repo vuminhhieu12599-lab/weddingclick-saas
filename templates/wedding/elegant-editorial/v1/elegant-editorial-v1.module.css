@@ -1,13 +1,16 @@
 /*
  * Elegant Editorial v1 — renderer-scoped styles (docs/DECISIONS.md
- * "RF-06-0 …" P3, P9, P11–P13).
+ * "RF-06-0 …" P3, P9, P11–P13; "Elegant Editorial Production Design
+ * Baseline" B1–B5).
  *
  * Every selector is anchored on a module class, so nothing leaks outside the
  * renderer root. Colors come only from the v1 palette custom properties set
- * on the root (palette.ts); fonts only from the v1 next/font variables
- * (fonts.ts) plus generic fallbacks. No global tokens, no Tailwind, no
- * runtime font import, no viewport-height dependency, no review-frame
- * width variable. RF-06B static rules come first; the RF-06D interactive
+ * on the root (palette.ts); Task029 gold-alpha hairlines and shadows are
+ * `color-mix` over those tokens. Fonts come only from the v1 next/font
+ * variables (fonts.ts) plus generic fallbacks. No global tokens, no
+ * Tailwind, no runtime font import, no viewport-height dependency, no
+ * review-frame width variable. RF-06B static rules come first and carry the
+ * Task029 `GreenIvoryEditorialPrototype` values; the RF-06D interactive
  * rules follow at the end. RF-06D motion is CSS transitions only (no
  * keyframes, no infinite animation), and every transition is removed under
  * `prefers-reduced-motion: reduce` in the block at the very end.
@@ -68,6 +71,7 @@
   background-color: var(--ee-background);
 }
 
+/* P12: the ≈480 px editorial column on a renderer-owned backdrop. */
 @media (min-width: 768px) {
   .root {
     padding: 48px 0;
@@ -95,200 +99,26 @@
   border: 0;
 }
 
-.nameLine {
-  display: block;
-  overflow-wrap: anywhere;
+/*
+ * Couple names stay on one line by default and wrap naturally only when
+ * they genuinely cannot fit (Design Baseline D5): never inside a word,
+ * never truncated, never overflowing.
+ */
+.name {
+  overflow-wrap: break-word;
 }
 
-/* ---------------------------------------------------------------------- */
-/* Opening / cover (static)                                               */
-/* ---------------------------------------------------------------------- */
-
-.opening {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 64px 32px 56px;
-  background-color: var(--ee-accent);
-  background-image: radial-gradient(circle at 50% 18%, var(--ee-accent) 0%, var(--ee-accent-deep) 100%);
-  color: var(--ee-on-accent);
-}
-
-.openingFrame {
-  position: absolute;
-  inset: 16px;
-  border: 1px solid var(--ee-gold);
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-.openingLabel {
-  font-family: var(--ee-sans);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.38em;
-  text-transform: uppercase;
-  color: var(--ee-on-accent-muted);
-}
-
-.openingNames {
-  margin-top: 24px;
-  max-width: 100%;
+/* The small inline serif "&" between the names (decor.tsx CoupleAmpersand). */
+.amp {
   font-family: var(--ee-serif);
-  font-size: 28px;
-  line-height: 1.25;
-  color: var(--ee-on-accent);
-}
-
-.openingAmp {
-  display: block;
-  margin: 4px 0;
-  font-family: var(--ee-script);
-  font-size: 34px;
-  line-height: 1.1;
-  color: var(--ee-gold);
-}
-
-.openingDate {
-  margin-top: 16px;
-  font-family: var(--ee-sans);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.24em;
-  color: var(--ee-on-accent-muted);
-}
-
-.openingEnvelope {
-  width: min(260px, 100%);
-  height: auto;
-  margin-top: 32px;
-}
-
-.guestLine {
-  width: 100%;
-  margin-top: 28px;
-}
-
-.guestSalutation {
-  font-family: var(--ee-serif);
-  font-style: italic;
-  font-size: 15px;
-  color: var(--ee-on-accent-muted);
-}
-
-.guestName {
-  margin-top: 6px;
-  font-family: var(--ee-serif);
-  font-size: 20px;
-  line-height: 1.4;
-  color: var(--ee-on-accent);
-  overflow-wrap: anywhere;
 }
 
 /* ---------------------------------------------------------------------- */
-/* Hero                                                                   */
+/* Shared section chrome (also used by the RF-06D RSVP island)            */
 /* ---------------------------------------------------------------------- */
 
-.hero {
-  position: relative;
-  background-color: var(--ee-surface-sage);
-}
-
-.heroMedia {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  overflow: hidden;
-  background-color: var(--ee-accent-soft);
-}
-
-.heroImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.heroScrim {
-  position: absolute;
-  inset: 0;
-  background-image: linear-gradient(180deg, transparent 45%, var(--ee-accent-deep) 100%);
-  opacity: 0.9;
-}
-
-.heroTypographic {
-  display: flex;
-  justify-content: center;
-  padding-top: 48px;
-}
-
-.heroSprigTop {
-  width: 120px;
-  height: auto;
-}
-
-.heroContent {
-  padding: 20px var(--ee-gutter) 48px;
-  color: var(--ee-accent-deep);
-}
-
-.hero[data-media-state="resolved"] .heroContent {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  padding-bottom: 36px;
-  color: var(--ee-on-accent);
-}
-
-.heroKicker {
-  font-family: var(--ee-serif);
-  font-style: italic;
-  font-size: 16px;
-}
-
-.heroNames {
-  margin-top: 8px;
-  font-family: var(--ee-serif);
-  font-size: 26px;
-  line-height: 1.25;
-}
-
-.heroAmp {
-  display: block;
-  font-family: var(--ee-script);
-  font-size: 28px;
-  line-height: 1.1;
-  color: var(--ee-gold);
-}
-
-.heroCeremony {
-  margin-top: 16px;
-  font-family: var(--ee-sans);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-}
-
-.heroDate {
-  margin-top: 6px;
-  font-family: var(--ee-sans);
-  font-size: 12px;
-  letter-spacing: 0.2em;
-}
-
-/* ---------------------------------------------------------------------- */
-/* Shared section rhythm                                                  */
-/* ---------------------------------------------------------------------- */
-
-.section,
-.sectionSage {
+.section {
   padding: 44px var(--ee-gutter);
-}
-
-.sectionSage {
-  background-color: var(--ee-surface-sage);
 }
 
 .sectionHeading {
@@ -301,243 +131,371 @@
   color: var(--ee-bronze);
 }
 
+/* Task029 section kicker (visible only where Task029 shows one). */
+.sectionKicker {
+  margin-bottom: 22px;
+  font-family: var(--ee-sans);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ee-bronze);
+}
+
 /* ---------------------------------------------------------------------- */
-/* Decor                                                                  */
+/* Opening / cover (static)                                               */
 /* ---------------------------------------------------------------------- */
 
-.ornament {
+.opening {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  margin-bottom: 24px;
+  min-height: 640px;
+  min-height: 100svh;
+  padding: 56px 24px 48px;
+  overflow: hidden;
+  background-color: var(--ee-accent);
+  background-image: radial-gradient(
+    circle at 50% 20%,
+    var(--ee-opening-highlight) 0%,
+    var(--ee-accent) 48%,
+    var(--ee-accent-deep) 100%
+  );
+  color: var(--ee-on-accent);
 }
 
-.decorSprig {
-  width: 72px;
-  height: auto;
-}
-
-.decorMirrored {
-  transform: scaleX(-1);
-}
-
-.ornamentMark {
-  width: 9px;
-  height: 9px;
-  fill: var(--ee-gold);
-}
-
-.decorStem {
-  fill: none;
-  stroke: var(--ee-accent);
-  stroke-width: 1.2;
-  stroke-linecap: round;
-}
-
-.decorLeaf {
-  fill: var(--ee-accent);
-}
-
-.decorLeafSoft {
-  fill: var(--ee-accent-soft);
-}
-
-.decorBud {
-  fill: var(--ee-gold);
-}
-
-.decorBlossom {
-  fill: var(--ee-surface);
-  stroke: var(--ee-gold);
-  stroke-width: 1;
-}
-
-.decorBouquet {
-  width: 72px;
-  height: 72px;
-}
-
-.envelopeBody {
-  fill: var(--ee-surface);
-  stroke: var(--ee-gold);
-  stroke-width: 1.5;
-}
-
-.envelopeFold {
-  fill: none;
-  stroke: var(--ee-border);
-  stroke-width: 1.2;
-}
-
-.envelopeFlap {
-  fill: var(--ee-background);
-  stroke: var(--ee-gold);
-  stroke-width: 1.2;
-  stroke-linejoin: round;
-}
-
-.envelopeSeal {
-  fill: var(--ee-heart);
-}
-
-.envelopeSealRing {
-  fill: none;
-  stroke: var(--ee-on-accent);
-  stroke-width: 1;
-  opacity: 0.55;
-}
-
-.envelopeSealLeaf {
-  fill: var(--ee-on-accent);
-  opacity: 0.9;
-}
-
-.envelopeSealStem {
-  fill: none;
-  stroke: var(--ee-on-accent);
-  stroke-width: 1.2;
-  stroke-linecap: round;
-}
-
-.heart {
+.openingFrame {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 30px;
-  height: 27px;
-  transform: translate(-50%, -50%);
-  fill: var(--ee-heart);
+  inset: 18px;
+  border: 1px solid color-mix(in srgb, var(--ee-gold) 60%, transparent);
+  pointer-events: none;
+}
+
+.openingLabel {
+  position: relative;
+  margin-bottom: 20px;
+  font-family: var(--ee-sans);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--ee-surface-sage);
+  opacity: 0.85;
+}
+
+.openingNames {
+  position: relative;
+  max-width: 100%;
+  font-family: var(--ee-serif);
+  font-size: 19px;
+  line-height: 1.4;
+  text-wrap: balance;
+  color: var(--ee-on-accent);
+}
+
+.openingDate {
+  position: relative;
+  margin-top: 8px;
+  font-family: var(--ee-sans);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--ee-gold);
+}
+
+.openingEnvelope {
+  width: min(300px, 100%);
+  height: auto;
+  margin-top: 32px;
 }
 
 /* ---------------------------------------------------------------------- */
-/* Couple                                                                 */
+/* Hero — one dominant cover photo, typography integrated over it         */
 /* ---------------------------------------------------------------------- */
 
-.couple {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
+.hero {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 480px;
+  overflow: hidden;
+  background-color: var(--ee-accent-deep);
 }
 
-.couplePerson {
-  min-width: 0;
-  padding: 18px 8px;
-  border-top: 1px solid var(--ee-border);
-  border-bottom: 1px solid var(--ee-border);
+.heroImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heroScrim {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    180deg,
+    transparent 40%,
+    color-mix(in srgb, var(--ee-accent-deep) 82%, transparent) 100%
+  );
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding: 0 28px 40px;
+}
+
+.heroKicker {
+  margin-bottom: 8px;
+  font-family: var(--ee-serif);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--ee-surface-sage);
+}
+
+.heroNames {
+  font-family: var(--ee-serif);
+  font-size: clamp(18px, 6.2vw, 27px);
+  line-height: 1.2;
+  text-wrap: balance;
+  color: var(--ee-surface);
+}
+
+.heroAmp {
+  display: inline-block;
+  margin: 0 0.2em;
+  font-size: 0.55em;
+  color: var(--ee-gold);
+}
+
+/* Design Baseline D4: the ceremony title appears only in the no-cover Hero. */
+.heroCeremony {
+  margin-top: 12px;
+  font-family: var(--ee-sans);
+  font-size: 11px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--ee-surface-sage);
+}
+
+.heroDate {
+  margin-top: 12px;
+  font-family: var(--ee-sans);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ee-gold);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Couple / story — quote and asymmetric editorial plates                 */
+/* ---------------------------------------------------------------------- */
+
+.coupleBand {
+  padding: 6px 0;
+  background-color: var(--ee-surface);
+}
+
+.coupleQuote {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 34px 16px 4px;
+  font-family: var(--ee-script);
+  font-size: 24px;
+  line-height: 1.45;
+  color: var(--ee-accent);
+}
+
+.coupleQuoteLine {
+  max-width: 100%;
+  text-wrap: balance;
+}
+
+/* Primary plate left, secondary plate right: the Task029 portrait-story
+   asymmetry kept without portrait media (P7). */
+.couplePlate {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 26px 40px 30px;
+  text-align: left;
+}
+
+.couplePlate[data-align="end"] {
+  align-items: flex-end;
+  padding: 4px 40px 30px;
+  text-align: right;
 }
 
 .coupleRole {
+  margin-bottom: 8px;
   font-family: var(--ee-sans);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.22em;
+  font-size: 10px;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
   color: var(--ee-bronze);
 }
 
 .coupleName {
-  margin-top: 8px;
+  max-width: 100%;
   font-family: var(--ee-serif);
-  font-size: 19px;
-  line-height: 1.35;
-  color: var(--ee-accent-deep);
-  overflow-wrap: anywhere;
+  font-size: 22px;
+  line-height: 1.3;
+  color: var(--ee-accent);
+  overflow-wrap: break-word;
+}
+
+.coupleDivider {
+  width: calc(100% - 48px);
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.coupleDividerImage {
+  width: 100%;
+  height: auto;
 }
 
 /* ---------------------------------------------------------------------- */
-/* Invitation message                                                     */
+/* Invitation message + guest line                                        */
 /* ---------------------------------------------------------------------- */
+
+.messageBand {
+  padding: 38px 30px 26px;
+  background-color: var(--ee-background);
+}
+
+.guestLine,
+.message {
+  font-family: var(--ee-serif);
+  font-size: 15px;
+  line-height: 1.9;
+  color: var(--ee-muted);
+  overflow-wrap: break-word;
+}
+
+.guestName {
+  overflow-wrap: break-word;
+}
 
 .message {
-  font-size: 16px;
-  line-height: 1.85;
-  color: var(--ee-muted);
   white-space: pre-line;
-  overflow-wrap: anywhere;
 }
 
 /* ---------------------------------------------------------------------- */
-/* Families                                                               */
+/* Families — line–❧–line, two columns around a central gold divider      */
 /* ---------------------------------------------------------------------- */
 
+.familiesBand {
+  padding: 0 20px 32px;
+  background-color: var(--ee-background);
+}
+
+.familyOrnament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.familyOrnamentLine {
+  width: 36px;
+  height: 1px;
+  background-color: var(--ee-gold);
+}
+
+.familyOrnamentMark {
+  width: 19px;
+  height: auto;
+}
+
 .families {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
-  gap: 24px 16px;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
 }
 
 .familyColumn {
+  position: relative;
+  flex: 1 1 0;
   min-width: 0;
+  padding: 0 14px;
+}
+
+.familyDivider {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 1px;
+  height: 48px;
+  transform: translateY(-50%);
+  background-color: color-mix(in srgb, var(--ee-gold) 40%, transparent);
 }
 
 .familySide {
   margin-bottom: 10px;
   font-family: var(--ee-sans);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.24em;
+  font-size: 10px;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--ee-accent);
+  color: var(--ee-bronze);
 }
 
 .familyName {
-  font-size: 16px;
-  line-height: 1.6;
-  color: var(--ee-accent-deep);
-  overflow-wrap: anywhere;
-}
-
-.familyAddress {
-  margin-top: 8px;
-  font-family: var(--ee-sans);
+  font-family: var(--ee-serif);
   font-size: 13px;
-  line-height: 1.55;
-  color: var(--ee-muted);
-  overflow-wrap: anywhere;
+  line-height: 1.75;
+  color: var(--ee-accent);
+  overflow-wrap: break-word;
 }
 
 /* ---------------------------------------------------------------------- */
-/* Ceremony                                                               */
+/* Ceremony band — ceremony, calendar and events share one sage band      */
 /* ---------------------------------------------------------------------- */
+
+.ceremonyBand {
+  padding: 8px 24px;
+  background-image: linear-gradient(
+    180deg,
+    var(--ee-background) 0%,
+    var(--ee-surface-sage) 30%,
+    var(--ee-surface-sage) 70%,
+    var(--ee-background) 100%
+  );
+}
+
+.ceremony {
+  padding: 4px 8px 8px;
+}
 
 .ceremonyTitle {
+  margin-bottom: 20px;
   font-family: var(--ee-sans);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.32em;
+  font-size: 12px;
+  letter-spacing: 0.34em;
   text-transform: uppercase;
   color: var(--ee-accent);
 }
 
 .ceremonyDate {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  display: flex;
   align-items: center;
-  gap: 16px;
-  margin-top: 22px;
-  padding: 16px 0;
-  border-top: 1px solid var(--ee-border);
-  border-bottom: 1px solid var(--ee-border);
-}
-
-.ceremonyWeekday {
-  justify-self: end;
-  font-family: var(--ee-sans);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ee-bronze);
+  justify-content: center;
+  gap: 18px;
+  padding: 18px 0;
+  border-top: 1px solid color-mix(in srgb, var(--ee-gold) 35%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--ee-gold) 35%, transparent);
 }
 
 .ceremonyDay {
-  padding: 0 16px;
-  border-right: 1px solid var(--ee-border);
-  border-left: 1px solid var(--ee-border);
   font-family: var(--ee-serif);
-  font-size: 48px;
-  font-weight: 600;
+  font-size: 46px;
   line-height: 1;
   color: var(--ee-accent);
 }
@@ -546,163 +504,191 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-self: start;
-  gap: 2px;
+  gap: 3px;
+  padding-left: 16px;
+  border-left: 1px solid color-mix(in srgb, var(--ee-gold) 35%, transparent);
   font-family: var(--ee-sans);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
+  font-size: 11px;
+  line-height: 1.6;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ee-bronze);
-}
-
-.ceremonyTime {
-  margin-top: 16px;
-  font-family: var(--ee-sans);
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: 0.16em;
-  color: var(--ee-accent-deep);
 }
 
 .lunar {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 12px;
+  margin-top: 16px;
+  font-family: var(--ee-serif);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--ee-secondary);
 }
 
+/* "Tức ngày" is separate fixed copy; the canonical value is shown verbatim (K32). */
 .lunarLabel {
-  font-family: var(--ee-sans);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--ee-bronze);
+  white-space: nowrap;
 }
 
 .lunarValue {
-  font-family: var(--ee-serif);
-  font-style: italic;
-  font-size: 15px;
-  color: var(--ee-muted);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+}
+
+.ceremonyMeta {
+  margin-top: 6px;
+  font-family: var(--ee-sans);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--ee-accent);
+}
+
+.ceremonyWeekday {
+  text-transform: uppercase;
 }
 
 /* ---------------------------------------------------------------------- */
-/* Calendar                                                               */
+/* Calendar — moss card with production corner bouquets                   */
 /* ---------------------------------------------------------------------- */
+
+/*
+ * The stage spans the full column (it cancels the band's side padding), so
+ * each bouquet's straight source edge sits flush with the column edge and
+ * reads as flowers continuing off the page, never as a cut. Bouquet size is
+ * the Task029 clamp (at most 128 px, the P6 2x size of the 256 px files).
+ */
+.calendarStage {
+  position: relative;
+  margin: 0 calc(-1 * var(--ee-gutter));
+  padding: 34px 0 44px;
+}
+
+.calendarBotanicalStart,
+.calendarBotanicalEnd {
+  position: absolute;
+  z-index: 2;
+  width: clamp(100px, 30vw, 128px);
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+.calendarBotanicalStart {
+  top: -24px;
+  left: 0;
+}
+
+.calendarBotanicalEnd {
+  right: 0;
+  bottom: 6px;
+}
 
 .calendarCard {
   position: relative;
-  max-width: 300px;
+  max-width: 260px;
   margin: 0 auto;
-  padding: 28px 20px 24px;
-  border-radius: 20px;
+  padding: 26px 22px 22px;
+  border-radius: 22px;
   background-color: var(--ee-accent);
   background-image: linear-gradient(165deg, var(--ee-accent) 0%, var(--ee-accent-deep) 100%);
-  color: var(--ee-on-accent);
-}
-
-.calendarBouquetStart,
-.calendarBouquetEnd {
-  position: absolute;
-  width: 64px;
-  height: 64px;
-  pointer-events: none;
-}
-
-.calendarBouquetStart {
-  top: -18px;
-  left: -14px;
-  transform: scaleY(-1);
-}
-
-.calendarBouquetEnd {
-  right: -14px;
-  bottom: -18px;
-  transform: scaleX(-1);
+  box-shadow: 0 18px 34px -20px color-mix(in srgb, var(--ee-accent-deep) 50%, transparent);
+  color: var(--ee-surface);
 }
 
 .calendarIntro {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 14px;
   font-family: var(--ee-sans);
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10px;
+  line-height: 1.5;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--ee-on-accent-muted);
+  color: var(--ee-surface-sage);
+  opacity: 0.85;
+}
+
+.calendarIntroLine {
+  display: block;
 }
 
 .calendarMonth {
-  margin-top: 8px;
+  margin-bottom: 14px;
   font-family: var(--ee-script);
-  font-size: 44px;
+  font-size: 46px;
   line-height: 1.15;
-  color: var(--ee-on-accent);
-}
-
-.calendarYear {
-  font-family: var(--ee-sans);
-  font-size: 12px;
-  letter-spacing: 0.3em;
-  color: var(--ee-on-accent-muted);
+  letter-spacing: 0.01em;
+  color: var(--ee-surface);
 }
 
 .calendarTable {
   width: 100%;
-  margin-top: 14px;
   border-collapse: collapse;
   table-layout: fixed;
   font-family: var(--ee-sans);
 }
 
 .calendarWeekday {
-  padding-bottom: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--ee-on-accent-muted);
+  padding: 0 0 6px;
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--ee-surface) 50%, transparent);
 }
 
+/* Task029 rhythm: 24 px day cells with an 11 px row gap. */
 .calendarDay,
-.calendarOutsideDay,
 .calendarCeremonyDay {
   position: relative;
-  height: 32px;
+  height: 35px;
   padding: 0;
-  font-size: 13px;
+  font-size: 11px;
   text-align: center;
   vertical-align: middle;
+  color: var(--ee-surface);
 }
 
-.calendarDay {
-  color: var(--ee-on-accent);
-}
-
-.calendarOutsideDay {
-  color: var(--ee-on-accent-muted);
-  opacity: 0.4;
+.calendarHeart {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 32px;
+  height: auto;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--ee-heart) 55%, transparent));
 }
 
 .calendarCeremonyNumber {
   position: relative;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--ee-on-accent);
+  color: var(--ee-surface);
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--ee-accent-deep) 50%, transparent);
 }
 
 /* ---------------------------------------------------------------------- */
-/* Events                                                                 */
+/* Events — Task029 cards inside the ceremony band                        */
 /* ---------------------------------------------------------------------- */
 
 .eventList {
-  display: grid;
-  gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .eventCard {
   padding: 24px 20px 22px;
-  border: 1px solid var(--ee-border);
+  border: 1px solid color-mix(in srgb, var(--ee-gold) 70%, transparent);
   border-radius: 6px;
   background-color: var(--ee-surface);
+  box-shadow: 0 12px 24px -20px color-mix(in srgb, var(--ee-accent-deep) 35%, transparent);
+}
+
+.eventTag {
+  margin-bottom: 10px;
+  font-family: var(--ee-sans);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ee-bronze);
 }
 
 .eventTitle {
@@ -710,69 +696,71 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1.5;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--ee-accent);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .eventWhen {
   margin-top: 14px;
-  font-family: var(--ee-sans);
-  font-size: 13px;
-  letter-spacing: 0.08em;
-  color: var(--ee-bronze);
 }
 
 .eventTime {
-  font-weight: 600;
-}
-
-.eventDot {
-  margin: 0 8px;
+  font-family: var(--ee-sans);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--ee-bronze);
 }
 
 .eventDate {
-  margin-top: 4px;
-  font-size: 20px;
-  color: var(--ee-accent-deep);
+  margin-top: 6px;
+  font-family: var(--ee-serif);
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  color: var(--ee-accent);
 }
 
 .eventVenue {
-  margin-top: 14px;
-  font-size: 17px;
-  color: var(--ee-accent-deep);
-  overflow-wrap: anywhere;
+  margin: 16px auto 18px;
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--ee-gold) 35%, transparent);
+}
+
+.eventVenueName {
+  font-family: var(--ee-serif);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ee-accent);
+  overflow-wrap: break-word;
 }
 
 .eventAddress {
-  margin-top: 4px;
-  font-family: var(--ee-sans);
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--ee-muted);
-  overflow-wrap: anywhere;
+  margin-top: 6px;
+  font-family: var(--ee-serif);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ee-secondary);
+  overflow-wrap: break-word;
 }
 
+/* Square Task029 CTA (B5 item 20). */
 .eventMapLink {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-block;
   min-height: 44px;
-  margin-top: 18px;
   padding: 0 20px;
   border: 1px solid var(--ee-accent);
   font-family: var(--ee-sans);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
+  line-height: 44px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   text-decoration: none;
   color: var(--ee-accent);
-}
-
-.eventMapLink:hover {
-  background-color: var(--ee-surface-sage);
 }
 
 .eventMapLink:focus-visible {
@@ -780,24 +768,44 @@
   outline-offset: 3px;
 }
 
+/* The two ✦ beats: Events → ✦ → ✦ → Countdown. */
+.ornamentPause {
+  display: flex;
+  justify-content: center;
+  padding: 26px 0 4px;
+}
+
+.ornamentPause[data-tight="true"] {
+  padding-top: 8px;
+}
+
+.ornamentGlyph {
+  width: 13px;
+  height: 13px;
+  opacity: 0.85;
+}
+
 /* ---------------------------------------------------------------------- */
-/* Love story                                                             */
+/* Love story — dark moss editorial band, text only                       */
 /* ---------------------------------------------------------------------- */
 
+/* Design Baseline D8: content-driven height, balanced Task029 padding. */
+.storyBand {
+  display: flex;
+  justify-content: center;
+  padding: 44px 26px;
+  background-color: var(--ee-accent-deep);
+  background-image: linear-gradient(180deg, var(--ee-accent) 0%, var(--ee-accent-deep) 100%);
+}
+
 .storyCard {
-  position: relative;
-  padding: 32px 22px 26px;
-  border: 1px solid var(--ee-border);
-  background-color: var(--ee-surface);
+  width: 100%;
+  max-width: 300px;
 }
 
 .storyQuoteMark {
-  position: absolute;
-  top: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0 10px;
-  background-color: var(--ee-surface-sage);
+  display: block;
+  margin-bottom: 6px;
   font-family: var(--ee-serif);
   font-size: 40px;
   line-height: 1;
@@ -805,21 +813,28 @@
 }
 
 .storyText {
+  font-family: var(--ee-serif);
   font-style: italic;
   font-size: 16px;
   line-height: 1.85;
-  color: var(--ee-muted);
+  color: var(--ee-surface);
   white-space: pre-line;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 /* ---------------------------------------------------------------------- */
 /* Gift (static)                                                          */
 /* ---------------------------------------------------------------------- */
 
+.giftBlock {
+  padding: 18px 26px 40px;
+  background-color: var(--ee-background);
+}
+
 .giftIntro {
-  font-size: 15px;
-  line-height: 1.75;
+  font-family: var(--ee-serif);
+  font-size: 13px;
+  line-height: 1.8;
   color: var(--ee-muted);
 }
 
@@ -897,27 +912,72 @@
 }
 
 /* ---------------------------------------------------------------------- */
-/* Gallery                                                                */
+/* Gallery — Task029 4-column editorial rhythm, 10-slot cycle             */
 /* ---------------------------------------------------------------------- */
 
+.galleryBand {
+  padding: 42px 16px 20px;
+  background-color: var(--ee-surface);
+}
+
+/* Sparse auto-placement only: canonical media order is never changed. */
 .gallery {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: 44px;
   gap: 8px;
 }
 
 .galleryItem {
   position: relative;
   min-width: 0;
-  aspect-ratio: 3 / 4;
   overflow: hidden;
   background-color: var(--ee-surface-sage);
+  box-shadow: 0 10px 20px -16px color-mix(in srgb, var(--ee-accent-deep) 40%, transparent);
 }
 
-.galleryItem:nth-child(3n + 1),
-.galleryItem:last-child:nth-child(3n + 2) {
-  grid-column: 1 / -1;
-  aspect-ratio: 3 / 2;
+/* Task029 GALLERY_LAYOUT spans (columns × 44 px rows), one rule per slot. */
+.galleryItem[data-slot="0"] {
+  grid-column: span 4;
+  grid-row: span 7;
+}
+
+.galleryItem[data-slot="1"],
+.galleryItem[data-slot="2"] {
+  grid-column: span 2;
+  grid-row: span 5;
+}
+
+.galleryItem[data-slot="3"] {
+  grid-column: span 2;
+  grid-row: span 8;
+}
+
+.galleryItem[data-slot="4"],
+.galleryItem[data-slot="5"] {
+  grid-column: span 2;
+  grid-row: span 4;
+}
+
+.galleryItem[data-slot="6"] {
+  grid-column: span 4;
+  grid-row: span 4;
+}
+
+.galleryItem[data-slot="7"],
+.galleryItem[data-slot="8"] {
+  grid-column: span 2;
+  grid-row: span 6;
+}
+
+.galleryItem[data-slot="9"] {
+  grid-column: span 4;
+  grid-row: span 5;
+}
+
+/* Design Baseline D9: a final lone half-width tile spans the full width. */
+.galleryItem[data-span="full"] {
+  grid-column: span 4;
 }
 
 .galleryImage {
@@ -933,61 +993,86 @@
   width: 100%;
   height: 100%;
   padding: 12px;
-  border: 1px solid var(--ee-border);
-  background-color: var(--ee-surface);
-  background-image: repeating-linear-gradient(
-    135deg,
-    var(--ee-surface) 0,
-    var(--ee-surface) 10px,
-    var(--ee-background) 10px,
-    var(--ee-background) 20px
-  );
+  border: 1px solid color-mix(in srgb, var(--ee-gold) 35%, transparent);
+  background-color: var(--ee-background);
+  font-family: var(--ee-serif);
   font-style: italic;
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.5;
-  color: var(--ee-muted);
+  color: var(--ee-secondary);
 }
 
 /* ---------------------------------------------------------------------- */
-/* Closing                                                                */
+/* Closing — deep moss bookend                                            */
 /* ---------------------------------------------------------------------- */
 
 .closing {
-  padding: 48px var(--ee-gutter) 64px;
-  background-color: var(--ee-surface-sage);
+  padding: 50px 28px 44px;
+  background-color: var(--ee-accent-deep);
+  background-image: linear-gradient(165deg, var(--ee-accent) 0%, var(--ee-accent-deep) 100%);
+  color: var(--ee-surface);
 }
 
+/*
+ * The production fleuron is single-colour moss; on the moss band it is
+ * re-coloured to exactly the palette gold (#b99a5b) by a CSS filter chain,
+ * so the frozen asset file itself is never changed.
+ */
 .closingOrnament {
-  margin-bottom: 20px;
+  width: 30px;
+  height: auto;
+  margin: 0 auto 16px;
+  filter: brightness(0) saturate(100%) invert(81%) sepia(9%) saturate(4735%) hue-rotate(336deg) brightness(108%)
+    contrast(45%);
 }
 
 .closingLine {
+  margin-bottom: 14px;
+  font-family: var(--ee-serif);
   font-style: italic;
-  font-size: 17px;
-  color: var(--ee-muted);
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--ee-surface-sage);
 }
 
 .closingNames {
-  margin-top: 14px;
-  font-size: 24px;
+  font-family: var(--ee-serif);
+  font-size: 23px;
   line-height: 1.3;
-  color: var(--ee-accent-deep);
-}
-
-.closingAmp {
-  display: block;
-  font-family: var(--ee-script);
-  font-size: 26px;
-  line-height: 1.1;
-  color: var(--ee-gold);
+  text-wrap: balance;
+  color: var(--ee-surface);
 }
 
 .closingDate {
-  margin-top: 14px;
+  margin-top: 12px;
   font-family: var(--ee-sans);
-  font-size: 12px;
-  letter-spacing: 0.24em;
-  color: var(--ee-bronze);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ee-gold);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Opening envelope artwork (decor.tsx EnvelopeMotif, rendered by the     */
+/* RF-06D opening island; its motion rules are in the RF-06D block)       */
+/* ---------------------------------------------------------------------- */
+
+/* The frozen Design Baseline A1 opening files, layered on the body canvas. */
+.envelopeCardClip,
+.envelopeCard,
+.envelopeBody,
+.envelopeLiner,
+.envelopeFlapFace {
+  pointer-events: none;
+}
+
+/* Task029 depth: the flap and the wax seal cast a soft shadow. */
+.envelopeFlap {
+  filter: drop-shadow(0 3px 4px color-mix(in srgb, var(--ee-accent-deep) 35%, transparent));
+}
+
+.envelopeSeal {
+  filter: drop-shadow(0 3px 4px color-mix(in srgb, var(--ee-accent-deep) 45%, transparent));
 }
 
 /* ====================================================================== */

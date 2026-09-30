@@ -46,6 +46,13 @@ import { OpeningCover } from "./sections/opening-cover";
  *   are present; otherwise nothing music-related at all (P35);
  * - copy control: only with `capabilities.clipboard` (P34);
  * - RSVP: only with `capabilities.rsvp` (K19, P30); production supplies none.
+ *
+ * Root placement follows the frozen Design Baseline target root order:
+ * Opening → Hero → Couple → Invitation message → Families → Ceremony →
+ * Calendar → Events → ✦ → ✦ → Countdown → Love Story → RSVP → Gift →
+ * Gallery → Closing. Music floats outside the flow. Ceremony, Calendar and
+ * Events share the Task029 sage band; the two ✦ close the Events block.
+ * Placement never changes gating: every section/capability gate still applies.
  */
 export function ElegantEditorialV1({ viewModel, sections, capabilities }: InvitationRendererPropsV1) {
   const { people, families, ceremony, events, content, gift, media, operationalSides } = viewModel;
@@ -66,23 +73,25 @@ export function ElegantEditorialV1({ viewModel, sections, capabilities }: Invita
       data-variant={viewModel.variant}
     >
       <main className={styles.column}>
-        <OpeningCover people={people} guest={viewModel.guest} ceremonyDate={ceremonyDate} />
+        <OpeningCover people={people} ceremonyDate={ceremonyDate} />
         <Hero people={people} ceremony={ceremony} cover={media.cover} ceremonyDate={ceremonyDate} />
         <Couple people={people} />
-        {invitationMessage !== null ? <InvitationMessage message={invitationMessage} /> : null}
+        <InvitationMessage guestDisplayName={viewModel.guest?.displayName} message={invitationMessage} />
         <Families families={families} />
-        <Ceremony ceremony={ceremony} ceremonyDate={ceremonyDate} />
-        <Calendar grid={monthGrid} />
+        <div className={styles.ceremonyBand}>
+          <Ceremony ceremony={ceremony} ceremonyDate={ceremonyDate} />
+          <Calendar grid={monthGrid} />
+          <Events variant={viewModel.variant} events={events} />
+        </div>
         {capabilities.clock !== undefined ? <Countdown ceremony={ceremony} clock={capabilities.clock} /> : null}
-        <Events events={events} />
         {loveStory !== null ? <LoveStory story={loveStory} /> : null}
+        {capabilities.rsvp !== undefined ? (
+          <Rsvp rsvp={capabilities.rsvp} personalized={viewModel.guest !== undefined} />
+        ) : null}
         {sections.gift ? (
           <Gift operationalSides={operationalSides} gift={gift} qr={media.qr} clipboard={capabilities.clipboard} />
         ) : null}
         {sections.gallery ? <Gallery gallery={media.gallery} coupleText={coupleText} /> : null}
-        {capabilities.rsvp !== undefined ? (
-          <Rsvp rsvp={capabilities.rsvp} personalized={viewModel.guest !== undefined} />
-        ) : null}
         <Closing people={people} ceremonyDate={ceremonyDate} />
       </main>
       {sections.music && capabilities.music !== undefined ? <MusicControl music={capabilities.music} /> : null}
