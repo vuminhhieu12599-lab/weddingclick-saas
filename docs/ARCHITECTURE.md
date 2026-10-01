@@ -392,6 +392,7 @@ If a public-read bucket is chosen for operational reasons, object paths must be 
 - The Timeline repository converts the database `TIME(0)` value (`HH:mm:00`) to the canonical Snapshot `HH:mm`. Any other shape fails loudly.
 - `createSupabaseMediaResolver` (`lib/server/supabase/supabase-media-resolver.ts`) implements the RF-03 `MediaResolver`. It makes one Project-scoped `project_media` query and one batch `createSignedUrls` call against `project-media`.
 - Signed URLs are runtime-only, with a 1-hour TTL. They are never written to a Snapshot or to the database.
+- `buildStaffInvitationPreview` (`lib/server/invitation-preview/`) composes the above into a staff preview for one variant. It builds an ephemeral, in-memory Snapshot and never writes `invitation_versions` or publishes. The renderer key comes only from the `template_versions.renderer_key` row the Project design pins, and RF-04 selection fails closed for an unregistered key. Resolved media URLs exist only in the returned ViewModel.
 
 Public (anonymous) rendering is not covered by these adapters and still needs its own approved design.
 
