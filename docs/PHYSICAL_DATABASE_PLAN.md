@@ -1,7 +1,8 @@
 # WeddingClick V2 — Physical Database Plan
 
 **Task:** 001 (Revision 4 — final micro patch, two closing integrity corrections after Revision 3's review)
-**Status:** APPROVED / FROZEN — passed external review. Foundation migrations 0001–0006 (Task 002) have been executed and smoke-tested on DEV/STAGING. Migrations 0007–0020 remain planned and have not been executed yet. An additive bridge migration, `0006b_atomic_project_creation_rpc.sql` (Task 005B), has been authored — not applied — between 0006 and 0007; see §16 for its placement and the migration file itself for full detail. It does not renumber or redesign any part of this frozen plan.
+**Status:** APPROVED / FROZEN — passed external review. Foundation migrations 0001–0006 (Task 002) have been executed and smoke-tested on DEV/STAGING. An additive bridge migration, `0006b_atomic_project_creation_rpc.sql` (Task 005B), sits between 0006 and 0007; see §16 for its placement and the migration file itself for full detail. It does not renumber or redesign any part of this frozen plan.
+*Migration status (updated 2026-10-01, RF-06E closeout; supersedes the original "0007–0020 not executed yet" / "0006b not applied" wording, which described the state at plan approval):* this plan documents the physical design, not live database state. Application state is recorded only where repository evidence exists: `docs/DECISIONS.md` records DEV/STAGING application of 0026 "immediately after 0025, with no drift" (Task 027) and of 0027 (RF-L02); per-migration records for the other migrations live with their owning task entries, and where none exists the state is not asserted here. Migrations 0028–0032 are committed, authored migration files that were **not** applied by the workflow that authored them (§16a). No production-database application is claimed by this document.
 **Depends on:** `CLAUDE.md`, `docs/DECISIONS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/TEMPLATE_SYSTEM.md`, `docs/SECURITY.md`, `docs/DEVELOPMENT_RULES.md`, `docs/LEGACY_AUDIT.md`
 **Last updated:** 2026-09-26
 
@@ -366,7 +367,7 @@ This selection feeds countdown target, primary calendar emphasis, and the templa
 
 > **Forward note (RF-00 contract recovery, 2026-09-26):** for invitation rendering, the fallback chain above is superseded by the **occasion-matched ceremony selection** in `docs/DECISIONS.md` RF2. Candidates are only the variant-visible events whose `occasion_type` is `THANH_HON` (COMMON/GROOM) or `VU_QUY` (BRIDE). The exact per-variant priority tiers and the ceremony-selection "earliest" order (`starts_at`, `sort_order`, `id`) are defined **only** in RF2; this note does not restate them. `RECEPTION`/`CUSTOM` events and other-side events never substitute. No candidate is a BLOCKING `REQUIRED_CEREMONY_EVENT_MISSING`. The column shape, the partial unique index, and the index's role (at most one primary per Project/side) are unchanged.
 >
-> **Planned additive column (checkpoint RF-L01, not yet applied):** `lunar_date_display TEXT NULL`, with no default. It holds manually entered display text for this one event and is never computed. It is the canonical lunar-date home (`docs/DECISIONS.md` RF6). This is the one approved exception to the frozen table shape. It is recorded in §16a when its migration ships, together with the matching `create_project_event`/`update_project_event` redefinition. There is **no** lunar-data backfill: existing rows stay `NULL`, and the legacy `wedding_details.lunar_date_display` is never copied into events (RF6).
+> **Additive column (checkpoint RF-L01, migration 0027; applied and runtime-verified in DEV/STAGING by RF-L02 per `docs/DECISIONS.md` RF17; production application not recorded here):** `lunar_date_display TEXT NULL`, with no default. It holds manually entered display text for this one event and is never computed. It is the canonical lunar-date home (`docs/DECISIONS.md` RF6). This is the one approved exception to the frozen table shape. It is recorded in §16a, together with the matching `create_project_event`/`update_project_event` redefinition. There is **no** lunar-data backfill: existing rows stay `NULL`, and the legacy `wedding_details.lunar_date_display` is never copied into events (RF6).
 
 RLS: enabled + forced. SELECT: `is_staff()`. INSERT/UPDATE/DELETE: policies for `is_staff()` remain present from this migration, but **feature migration `0022_project_events_actions` (Task 023) revoked the underlying `authenticated` table-level `INSERT`/`UPDATE`/`DELETE` privileges**, making these policies unreachable in practice — see §16a. Canonical create/update/delete is now performed exclusively by the audited `public.create_project_event(...)`/`public.update_project_event(...)`/`public.delete_project_event(...)` `SECURITY DEFINER` business-action functions (independently self-authorizing via `is_staff()`, update no-op-suppressed, logging `CANONICAL_DATA_APPLIED` only on create/update-with-real-change/delete), not by a direct authenticated-session table write. Anonymous/guest/customer-token: none (server-only reads for display/countdown, §M).
 
@@ -1343,6 +1344,23 @@ The migration list in §16 (`0001`–`0020`) is the frozen foundation schema pha
 
 Both 0021 and 0022 are privilege/workflow tightening only, not schema shape changes: no column, constraint, index, or FK on `wedding_details` or `project_events` was added, removed, or altered by either migration.
 
+**Later feature migrations (index added 2026-10-01, RF-06E closeout).** The detailed entries above stopped at 0022. Each later migration is described by its own file header and its owning `docs/DECISIONS.md` entry; this index only lists them and the application state the repository records. "Not asserted" means this repository holds no record either way; it is not a claim that the migration is unapplied.
+
+| Migration | Purpose | Recorded application state |
+|---|---|---|
+| `0023_project_media_storage` | Task 024: private `project-media` Storage bucket and staff-only object policies | not asserted here |
+| `0024_project_lifecycle_payment_assignment` | Task 025: lifecycle / payment / staff-assignment business actions | not asserted here |
+| `0025_access_link_actions` | Task 026: issue / rotate / revoke access-link business actions | present in DEV/STAGING, inferred from the Task 027 record that 0026 was applied immediately after 0025 with no drift |
+| `0026_intake_actions` | Task 027: submit / apply / reject intake business actions | applied and runtime-verified in DEV/STAGING (Task 027) |
+| `0027_project_events_lunar_date_display` | RF-L01: `project_events.lunar_date_display` + redefined `create_project_event` / `update_project_event` | applied and runtime-verified in DEV/STAGING (RF-L02) |
+| `0028_project_media_portrait_types` | `PORTRAIT_GROOM` / `PORTRAIT_BRIDE` media roles (§2.9) | committed, authored; **not applied** by the authoring workflow |
+| `0029_project_timeline_items` | `project_timeline_items` table (§2.9a) | committed, authored; **not applied** by the authoring workflow |
+| `0030_project_dress_codes` | `project_dress_codes` / `project_dress_code_swatches` tables (§2.9b) | committed, authored; **not applied** by the authoring workflow |
+| `0031_project_media_story_types` | `PHOTO_STORY` / `LOVE_STORY_PHOTO` media roles (§2.9) | committed, authored; **not applied** by the authoring workflow |
+| `0032_rsvps_maybe_and_response_name` | RSVP `MAYBE` + typed response-name semantics (§2.20) | committed, authored; **not applied** by the authoring workflow |
+
+No production-database application of any migration is recorded in this document.
+
 ---
 
 ## 17. O. V1 Collision Check
@@ -1396,4 +1414,4 @@ Two further items surfaced by a third external review, tagged **[G1]**/**[G2]** 
 
 ## R. Implementation Readiness
 
-**APPROVED and EXECUTED** for Task 002's Foundation migration batch (`0001`–`0006`), which has passed its own external review and been executed and smoke-tested on DEV/STAGING. Revision 2's structural gaps, Revision 3's 18 targeted SQL/integrity corrections, and Revision 4's two final guards (**[G1]**, **[G2]**) are now resolved with one exact, unambiguous, dependency-ordered mechanism each, per §Q, the Final Dependency Walk, and this Revision 4 note. Migrations `0007`–`0020` remain planned and have not yet been executed.
+**APPROVED and EXECUTED** for Task 002's Foundation migration batch (`0001`–`0006`), which has passed its own external review and been executed and smoke-tested on DEV/STAGING. Revision 2's structural gaps, Revision 3's 18 targeted SQL/integrity corrections, and Revision 4's two final guards (**[G1]**, **[G2]**) are now resolved with one exact, unambiguous, dependency-ordered mechanism each, per §Q, the Final Dependency Walk, and this Revision 4 note. At approval time, migrations `0007`–`0020` remained planned and had not yet been executed (historical; for current recorded status see the top Status header and §16a).

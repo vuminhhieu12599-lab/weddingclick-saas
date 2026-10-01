@@ -1486,7 +1486,7 @@ Both expose the **same** renderer key set. RF-06A/B tests assert exact key-set e
   - audio `UNAVAILABLE` → no capability, no control, no indicator.
 
   In neither degraded case is a disabled music button, broken-music icon, "music unavailable" text or placeholder control rendered. The honest degraded state is the absence of the feature. It never presents a broken or non-actionable interaction. With `sections.music` false, no music control renders even when the capability is present.
-- There is one audio instance per rendered invitation. Initial status is `PAUSED`, with no autoplay. `play()` runs only from an explicit user gesture, and loop is `true`.
+- The controller owns at most one current audio instance at a time (*corrected 2026-10-01 after the RF-06C sticky-`ERROR` patch; previously "one audio instance per rendered invitation"*). A `BLOCKED` (autoplay/policy) retry reuses the current instance. After a genuine `ERROR` the failed instance is discarded, and the next explicit user `play()` creates a fresh one; nothing is retried automatically. Initial status is `PAUSED`, with no autoplay. `play()` runs only from an explicit user gesture, and loop is `true`.
 - A browser autoplay/user-agent policy rejection (`NotAllowedError`) → `BLOCKED`. Any other expected playback failure (media error, decode or network failure) → `ERROR`. Expected `BLOCKED`/`ERROR` outcomes resolve the command promise and never reject it. Unexpected faults may reject (K23, K25).
 - The current `status` stays authoritative: the renderer shows playing only while `status === "PLAYING"`, handles rejection without showing success, and never leaves an unhandled rejection.
 - There is no volume or mute control in v1. A later explicit gesture may retry after `BLOCKED`/`ERROR`, but nothing retries automatically.
@@ -1571,7 +1571,7 @@ No real contradiction was found. Other documents are synchronized with this sect
 
 ## Elegant Editorial Production Design Baseline — Task029 Reconciliation + Product Owner Rulings
 
-**Status:** docs only. Authored for **true independent review**; **not yet frozen**. Product Owner rulings Design Baseline A1 and Design Baseline D1–D13 dated 2026-09-30. This addendum does **not** rewrite RF-06-0 (P1–P46) or any RF-05 rule (K1–K45); every one of them stays in force. It adds the Product Owner's design decision for Elegant Editorial v1 (`wedding.elegant-editorial.v1`) and the process for remediating the RF-06B/RF-06D output against it.
+**Status:** docs only. Frozen after true independent review at commit `f4e76a21c8ffb425b216eb8e42159e68257d075a` (*status corrected 2026-10-01, RF-06E closeout; it previously still read "not yet frozen"*). That freeze makes this addendum frozen historical documentation, not authority over later rulings: Task029 (`GreenIvoryEditorialPrototype`, B1) remains the direct approved visual source, and later explicit Product Owner rulings (for example Micro-Checkpoint 10) override any stale derived interpretation recorded here. Product Owner rulings Design Baseline A1 and Design Baseline D1–D13 dated 2026-09-30. This addendum does **not** rewrite RF-06-0 (P1–P46) or any RF-05 rule (K1–K45); every one of them stays in force. It adds the Product Owner's design decision for Elegant Editorial v1 (`wedding.elegant-editorial.v1`) and the process for remediating the RF-06B/RF-06D output against it.
 
 **Checkpoint state when authored.** Branch `weddingclick-v2`, HEAD `5eee33b`. RF-06D frozen production baseline `ae28dca`. RF-06E: **BLOCKED**. RF-06F: **not started**. Task 030: **not started** and still blocked (RF16, P41).
 
@@ -1778,6 +1778,25 @@ Removing a *visible* section heading (B5) does not forbid an accessible name for
 16. Only then is Task 030 unblocked
 
 Each owner patch follows P44 steps 3–6 (targeted patch, focused plus regression tests, true independent review, commit/push/refreeze). Running RF-06D before RF-06C here does not reopen the P42 dependency order. The RF-06C item is an independent defect patch, and RF-06E reruns from the beginning after all three.
+
+### RF-06E closeout — Product Owner process waiver (2026-10-01)
+
+**B11.** The RF-06E rerun (B9 step 14) ran at HEAD `8a2dbc2` (Elegant Editorial freeze `7c066ef`, RF-06C sticky-`ERROR` freeze `8a2dbc2`). Its static contract, security and documentation QA result is **PASS**, with no production blocker. It did not produce B7 rendered evidence or P39 manual-device evidence.
+
+**Decision.** The Product Owner explicitly **waives** producing a **new** B7 visual evidence matrix (360 / 390 / 430 / 768 / 1280 px) and **new** manual-device music evidence before RF-06F. RF-06E may proceed to RF-06F on the basis of this explicit process waiver.
+
+**Context.**
+- Elegant Editorial v1 already had direct Product Owner live visual approval before its freeze.
+- Final integration ran 390 px primary and 1280 px sanity checks.
+- The independent renderer review passed.
+- The RF-06C owner tests passed, and so did the true independent RF-06C patch review.
+- Another full screenshot/device evidence cycle would duplicate evidence that already exists.
+
+**Limits.** This is a process waiver only. Nothing here claims that:
+- B7 evidence at 360 / 390 / 430 / 768 / 1280 px was newly captured during RF-06E;
+- a real-device music `ERROR` → explicit retry → `PLAYING` path was observed.
+
+That real-device music check stays a **deferred** manual/operational QA item. No code defect was waived, and production behavior is unchanged.
 
 ### Relationship to RF-06-0
 
