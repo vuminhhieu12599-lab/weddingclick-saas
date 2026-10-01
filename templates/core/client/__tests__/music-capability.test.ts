@@ -326,19 +326,140 @@ describe("createMusicController: retry is explicit only", () => {
     }
   });
 
-  it("after ERROR an explicit play may succeed", async () => {
+});
+
+describe("createMusicController: sticky ERROR retry (RF-06C owner patch)", () => {
+  const MEDIA_FAILURE = new DOMException("decode", "NotSupportedError");
+
+  /** Like a browser: once failed, an element keeps rejecting play() (it never reloads by itself). */
+  function failingAudio(instances: FakeAudio[]): FakeAudio {
+    const audio = new FakeAudio();
+    audio.behavior = { kind: "reject", reason: MEDIA_FAILURE };
+    instances.push(audio);
+    return audio;
+  }
+
+  it("a rejected play → ERROR, never PLAYING, and nothing retries on its own", async () => {
+    vi.useFakeTimers();
+    try {
+      const { controller, factory, instances } = setup();
+      factory.mockImplementationOnce(() => failingAudio(instances));
+      controller.activate();
+      await controller.play();
+      expect(controller.getStatus()).toBe("ERROR");
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      await flush();
+      expect(vi.getTimerCount()).toBe(0);
+      expect(factory).toHaveBeenCalledTimes(1);
+      expect(instances[0]?.playCalls).toBe(1);
+      expect(controller.getStatus()).toBe("ERROR");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("an explicit play from ERROR makes exactly one fresh attempt on a new instance and can return to PLAYING", async () => {
     const { controller, factory, instances } = setup();
-    factory.mockImplementationOnce(() => {
-      const audio = new FakeAudio();
-      audio.behavior = { kind: "reject", reason: new DOMException("decode", "NotSupportedError") };
-      instances.push(audio);
-      return audio;
-    });
+    factory.mockImplementationOnce(() => failingAudio(instances));
     controller.activate();
     await controller.play();
     expect(controller.getStatus()).toBe("ERROR");
-    instances[0]!.behavior = { kind: "resolve" };
+
     await controller.play();
+    expect(factory).toHaveBeenCalledTimes(2);
+    const [failed, fresh] = instances;
+    expect(failed?.playCalls).toBe(1);
+    expect(failed?.listenerCount()).toBe(0);
+    expect(failed?.pauseCalls).toBe(1);
+    expect(fresh?.playCalls).toBe(1);
+    expect(fresh?.src).toBe(URL_A);
+    expect(fresh?.preload).toBe("none");
+    expect(fresh?.loop).toBe(true);
+    expect(controller.getStatus()).toBe("PLAYING");
+
+    // The released instance can no longer touch status.
+    failed!.dispatch("error");
+    expect(controller.getStatus()).toBe("PLAYING");
+  });
+
+  it("a failed retry stays honestly ERROR and every later explicit retry is still a fresh attempt", async () => {
+    const { controller, factory, instances } = setup();
+    factory.mockImplementation(() => failingAudio(instances));
+    controller.activate();
+    await controller.play();
+    await controller.play();
+    await controller.play();
+    expect(controller.getStatus()).toBe("ERROR");
+    expect(factory).toHaveBeenCalledTimes(3);
+    expect(instances.map((audio) => audio.playCalls)).toStrictEqual([1, 1, 1]);
+
+    factory.mockImplementation(() => {
+      const audio = new FakeAudio();
+      instances.push(audio);
+      return audio;
+    });
+    await controller.play();
+    expect(controller.getStatus()).toBe("PLAYING");
+    expect(factory).toHaveBeenCalledTimes(4);
+  });
+
+  it("a media error during playback → ERROR; the explicit retry uses a fresh instance", async () => {
+    const { controller, factory, instances } = setup();
+    controller.activate();
+    await controller.play();
+    const first = instances[0] as FakeAudio;
+    first.behavior = { kind: "reject", reason: MEDIA_FAILURE };
+    first.dispatch("error");
+    expect(controller.getStatus()).toBe("ERROR");
+
+    await controller.play();
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(first.playCalls).toBe(1);
+    expect(controller.getStatus()).toBe("PLAYING");
+  });
+
+  it("a stale AbortError from a play superseded by pause is not a failure: the next play reuses the instance", async () => {
+    const { controller, factory, instances } = setup();
+    controller.activate();
+    await controller.play();
+    const audio = instances[0] as FakeAudio;
+    audio.behavior = { kind: "manual" };
+    const pending = controller.play();
+    await controller.pause();
+    audio.settle({ reason: new DOMException("interrupted by pause()", "AbortError") });
+    await pending;
+    expect(controller.getStatus()).toBe("PAUSED");
+
+    audio.behavior = { kind: "resolve" };
+    await controller.play();
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(controller.getStatus()).toBe("PLAYING");
+  });
+
+  it("a slow failed attempt settling after a newer successful retry never overwrites PLAYING", async () => {
+    const { controller, factory, instances } = setup();
+    factory.mockImplementationOnce(() => failingAudio(instances));
+    controller.activate();
+    await controller.play();
+    expect(controller.getStatus()).toBe("ERROR");
+
+    factory.mockImplementationOnce(() => {
+      const audio = new FakeAudio();
+      audio.behavior = { kind: "manual" };
+      instances.push(audio);
+      return audio;
+    });
+    const slow = controller.play();
+    const fresh = instances[1] as FakeAudio;
+    // A second explicit press while the first retry is pending reuses that fresh instance.
+    fresh.behavior = { kind: "resolve" };
+    await controller.play();
+    expect(controller.getStatus()).toBe("PLAYING");
+    expect(factory).toHaveBeenCalledTimes(2);
+
+    fresh.settle({ reason: MEDIA_FAILURE });
+    await expect(slow).resolves.toBeUndefined();
     expect(controller.getStatus()).toBe("PLAYING");
   });
 });

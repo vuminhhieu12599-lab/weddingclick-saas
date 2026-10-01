@@ -172,6 +172,24 @@ describe("explicit play / pause actions", () => {
     expect(double.play).not.toHaveBeenCalled();
   });
 
+  it("ERROR keeps an operable, unpressed toggle whose status note offers the retry", () => {
+    const html = renderToStaticMarkup(<MusicControl music={music("ERROR")} />);
+    expect(html).toMatch(/<button type="button" class="[^"]*musicButton[^"]*" aria-pressed="false">/);
+    expect(html).not.toMatch(/<button[^>]*(disabled|aria-disabled)/);
+    expect(html).toContain(`>${COPY.music.toggle}</span>`);
+    expect(COPY.music.error).toMatch(/thử lại/);
+  });
+
+  it("each explicit press from ERROR is exactly one fresh play() and never a pause()", async () => {
+    const double = music("ERROR");
+    await runMusicToggle(double);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(double.play).toHaveBeenCalledTimes(1);
+    await runMusicToggle(double);
+    expect(double.play).toHaveBeenCalledTimes(2);
+    expect(double.pause).not.toHaveBeenCalled();
+  });
+
   it("the command never retries on its own", async () => {
     const double = music("BLOCKED");
     await runMusicToggle(double);

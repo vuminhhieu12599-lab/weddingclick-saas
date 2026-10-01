@@ -21,7 +21,11 @@ import {
  *   other DOMException → `ERROR`. Those expected outcomes resolve the command
  *   Promise. Anything that is not a DOMException is an unexpected fault and
  *   rejects, leaving `status` unchanged;
- * - nothing retries: a later explicit `play()` is the only retry (K25);
+ * - nothing retries: a later explicit `play()` is the only retry (K25). A
+ *   media element that reached `ERROR` is never asked to play again (a
+ *   browser does not reload a failed element on `play()`, so `ERROR` would
+ *   stick): the next explicit `play()` releases it and makes its fresh
+ *   attempt on a new instance. `BLOCKED` retries on the same instance;
  * - there is no volume, mute, seek or playlist surface.
  *
  * Owner lifecycle: the controller is inert until `activate()` and
@@ -78,6 +82,8 @@ export function createMusicController(url: string, createAudio: MusicAudioFactor
   let status: MusicPlaybackStatusV1 = "PAUSED";
   let active = false;
   let audio: MusicAudioElementV1 | null = null;
+  /** The owned instance reached `ERROR`; the next explicit `play()` replaces it. */
+  let audioFailed = false;
   /** Bumped by every command and by deactivation; a stale `play()` settlement never writes status. */
   let commandSequence = 0;
   const subscribers = new Set<() => void>();
@@ -95,7 +101,10 @@ export function createMusicController(url: string, createAudio: MusicAudioFactor
     pause: () => {
       if (audio !== null && audio.paused) setStatus("PAUSED");
     },
-    error: () => setStatus("ERROR"),
+    error: () => {
+      audioFailed = true;
+      setStatus("ERROR");
+    },
   };
 
   function ensureAudio(): MusicAudioElementV1 {
@@ -109,14 +118,20 @@ export function createMusicController(url: string, createAudio: MusicAudioFactor
     return created;
   }
 
-  function release(): void {
-    commandSequence += 1;
+  /** Detaches, pauses and forgets the owned instance (if any). */
+  function discardAudio(): void {
     const owned = audio;
     audio = null;
+    audioFailed = false;
     if (owned !== null) {
       for (const type of MUSIC_AUDIO_EVENT_TYPES) owned.removeEventListener(type, mediaListeners[type]);
       owned.pause();
     }
+  }
+
+  function release(): void {
+    commandSequence += 1;
+    discardAudio();
     setStatus("PAUSED");
   }
 
@@ -132,6 +147,8 @@ export function createMusicController(url: string, createAudio: MusicAudioFactor
     async play(): Promise<void> {
       // Before mount or after its owner is gone there is nothing to play.
       if (!active) return;
+      // Explicit retry after ERROR: a fresh instance, created inside the same user gesture.
+      if (audioFailed) discardAudio();
       const element = ensureAudio();
       commandSequence += 1;
       const sequence = commandSequence;
@@ -143,7 +160,10 @@ export function createMusicController(url: string, createAudio: MusicAudioFactor
         if (expected === undefined) throw error;
         outcome = expected;
       }
-      if (sequence === commandSequence && element === audio) setStatus(outcome);
+      if (sequence === commandSequence && element === audio) {
+        if (outcome === "ERROR") audioFailed = true;
+        setStatus(outcome);
+      }
     },
     async pause(): Promise<void> {
       commandSequence += 1;
