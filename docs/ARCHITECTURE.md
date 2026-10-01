@@ -386,6 +386,15 @@ Preferred V2 direction is a private or tightly controlled Project media bucket w
 
 If a public-read bucket is chosen for operational reasons, object paths must be non-guessable and write/delete access must still be staff/server-authorized. Any deviation from private storage preference requires an explicit security review.
 
+**Staff-context rendering adapters (current state).** For staff-side rendering, these server adapters run only with the staff-scoped Supabase client, so table and `storage.objects` RLS (`is_staff()`) stays the enforcement. They never use `service_role`:
+
+- `loadSnapshotPayloadInput` (`lib/server/invitation-snapshot/`) loads Project media rows, Timeline rows and the Dress Code, and passes them to the RF-02 builder.
+- The Timeline repository converts the database `TIME(0)` value (`HH:mm:00`) to the canonical Snapshot `HH:mm`. Any other shape fails loudly.
+- `createSupabaseMediaResolver` (`lib/server/supabase/supabase-media-resolver.ts`) implements the RF-03 `MediaResolver`. It makes one Project-scoped `project_media` query and one batch `createSignedUrls` call against `project-media`.
+- Signed URLs are runtime-only, with a 1-hour TTL. They are never written to a Snapshot or to the database.
+
+Public (anonymous) rendering is not covered by these adapters and still needs its own approved design.
+
 ---
 
 ## 15. Media Lifecycle
