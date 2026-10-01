@@ -42,18 +42,6 @@ export function musicStatusNote(status: MusicPlaybackStatusV1, faulted: boolean)
   return null;
 }
 
-function MusicGlyph({ playing }: { playing: boolean }) {
-  return (
-    <svg className={styles.musicGlyph} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      {playing ? (
-        <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />
-      ) : (
-        <path d="M17 3v11.2a3.3 3.3 0 1 1-2-3V7l-6 1.6v7.6a3.3 3.3 0 1 1-2-3V6.2z" />
-      )}
-    </svg>
-  );
-}
-
 interface MusicControlProps {
   music: MusicCapabilityV1;
 }
@@ -64,6 +52,12 @@ interface MusicControlProps {
  * no disabled, placeholder or "unavailable" variant. Nothing plays until the
  * user presses the button, and nothing retries on its own. The pressed
  * state is `status === "PLAYING"` and nothing else.
+ *
+ * Task029 visual language (Design Baseline B5 item 18): a 40 px ivory/gold
+ * round control at the top right, ♪ while not playing and ♫ while playing;
+ * the glyph pulses only while `PLAYING` (CSS keyed on `data-music-status`,
+ * off under reduced motion). `BLOCKED` / `ERROR` keep the idle look and add
+ * their fixed note.
  */
 export function MusicControl({ music }: MusicControlProps) {
   const [faulted, setFaulted] = useState(false);
@@ -78,7 +72,9 @@ export function MusicControl({ music }: MusicControlProps) {
   return (
     <div className={styles.music} data-music-status={music.status.toLowerCase()}>
       <button type="button" className={styles.musicButton} aria-pressed={playing} onClick={handleToggle}>
-        <MusicGlyph playing={playing} />
+        <span className={styles.musicGlyph} aria-hidden="true">
+          {playing ? "♫" : "♪"}
+        </span>
         <span className={styles.srOnly}>{COPY.toggle}</span>
       </button>
       <p className={note === null ? styles.srOnly : styles.musicNote} role="status">

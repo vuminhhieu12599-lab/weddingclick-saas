@@ -44,7 +44,7 @@ afterEach(() => {
 
 const VALID_INPUTS: RsvpSubmitInputV1[] = [
   { attendance: "ATTENDING", partySize: 2, message: "Chúc mừng!", guestName: "Anh Hiếu và gia đình" },
-  { attendance: "NOT_ATTENDING", partySize: 0, message: null, guestName: null },
+  { attendance: "NOT_ATTENDING", partySize: 0, message: null, guestName: "Anh Hiếu" },
 ];
 
 async function harnessCapabilities(id: (typeof HARNESS_SCENARIO_IDS)[number]) {

@@ -190,7 +190,7 @@ describe("copy.ts (P10)", () => {
   });
 
   it("uses the frozen Vietnamese labels", () => {
-    expect(ELEGANT_EDITORIAL_V1_COPY.opening.salutation).toBe("Trân trọng kính mời");
+    expect(ELEGANT_EDITORIAL_V1_COPY.opening.salutation).toBe("TRÂN TRỌNG KÍNH MỜI");
     expect(ELEGANT_EDITORIAL_V1_COPY.hero.kicker).toBe("Save the date");
     expect(ELEGANT_EDITORIAL_V1_COPY.families.labelBySide).toStrictEqual({ GROOM: "Nhà Trai", BRIDE: "Nhà Gái" });
     expect(ELEGANT_EDITORIAL_V1_COPY.calendar.weekdayHeaders).toStrictEqual(["T2", "T3", "T4", "T5", "T6", "T7", "CN"]);
@@ -208,7 +208,7 @@ describe("copy.ts (P10)", () => {
     expect(copy.calendar.intro).toStrictEqual(["Đám cưới của chúng mình", "Sẽ diễn ra vào"]);
     expect(copy.gallery.heading).toBe("Album ảnh cưới");
     expect(copy.gift.intro).toBe(
-      "Sự hiện diện của bạn là món quà quý giá nhất. Nếu muốn gửi lời chúc mừng, gia đình xin phép nhận tại đây.",
+      "Sự hiện diện của bạn là món quà quý giá nhất. Nếu muốn gửi quà chúc mừng, gia đình xin phép nhận tại đây.",
     );
     expect(copy.closing.line).toBe(
       "Sự hiện diện của bạn là niềm hạnh phúc trọn vẹn nhất trong ngày cưới của chúng tôi. Xin chân thành cảm ơn.",
@@ -221,6 +221,7 @@ describe("copy.ts (P10)", () => {
     // RF-06D replacement: v1 copy now owns the RSVP, countdown and music
     // controls (keys `rsvp`, `countdown`, `music`), so only the forbidden
     // semantics stay banned. RF-06D copy is asserted in interactive-copy.test.ts.
-    expect(text).not.toMatch(/\bMAYBE\b|QR_COMMON|additional_?note/i);
+    // MAYBE is approved copy since the RSVP completion amendment.
+    expect(text).not.toMatch(/QR_COMMON|additional_?note/i);
   });
 });

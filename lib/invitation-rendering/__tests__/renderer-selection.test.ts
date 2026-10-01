@@ -489,6 +489,10 @@ describe("selectRendererCompatibility — effective visibility truth table (R9)"
       gallery: true,
       music: false,
       gift: false,
+      // A v1 payload without sections.timeline (built before the RF7 Timeline amendment) reads as unavailable.
+      timeline: false,
+      dressCode: false,
+      photoStory: false,
     });
   });
 

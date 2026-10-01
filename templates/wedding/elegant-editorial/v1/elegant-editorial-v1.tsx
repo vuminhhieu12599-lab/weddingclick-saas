@@ -7,18 +7,22 @@ import { ELEGANT_EDITORIAL_V1_FONT_VARIABLES_CLASS_NAME } from "./fonts";
 import { Countdown } from "./interactive/countdown";
 import { MusicControl } from "./interactive/music-control";
 import { Rsvp } from "./interactive/rsvp";
+import { SectionReveal } from "./interactive/section-reveal";
 import { ELEGANT_EDITORIAL_V1_PALETTE_STYLE } from "./palette";
 import { Calendar } from "./sections/calendar";
 import { Ceremony } from "./sections/ceremony";
 import { Closing } from "./sections/closing";
 import { Couple } from "./sections/couple";
-import { Events } from "./sections/events";
+import { DressCode } from "./sections/dress-code";
+import { Events, OrnamentPause } from "./sections/events";
 import { Families } from "./sections/families";
 import { Gallery } from "./sections/gallery";
 import { Gift } from "./sections/gift";
 import { Hero } from "./sections/hero";
 import { InvitationMessage } from "./sections/invitation-message";
 import { LoveStory } from "./sections/love-story";
+import { PhotoStory } from "./sections/photo-story";
+import { Timeline } from "./sections/timeline";
 import { OpeningCover } from "./sections/opening-cover";
 
 /**
@@ -45,24 +49,28 @@ import { OpeningCover } from "./sections/opening-cover";
  * - music control: only when `sections.music` **and** `capabilities.music`
  *   are present; otherwise nothing music-related at all (P35);
  * - copy control: only with `capabilities.clipboard` (P34);
- * - RSVP: only with `capabilities.rsvp` (K19, P30); production supplies none.
+ * - RSVP: only with `capabilities.rsvp` (K19, P30); production supplies none;
+ * - section reveal: progressive enhancement only; the static markup is
+ *   visible without it (Design Baseline B5 item 19).
  *
  * Root placement follows the frozen Design Baseline target root order:
- * Opening → Hero → Couple → Invitation message → Families → Ceremony →
- * Calendar → Events → ✦ → ✦ → Countdown → Love Story → RSVP → Gift →
- * Gallery → Closing. Music floats outside the flow. Ceremony, Calendar and
- * Events share the Task029 sage band; the two ✦ close the Events block.
+ * Opening → Hero → Couple → Invitation block → Families → Ceremony →
+ * Countdown → Calendar → Events → ✦ → Timeline → tight ✦ → Photo Story →
+ * Love Story → RSVP → Gift → Dress Code → Gallery → Closing (Task029 rhythm;
+ * RF7 Timeline, Dress Code and Photo Story amendments; Countdown above the
+ * Calendar per the Micro-Checkpoint 10 Product Owner ruling).
+ * Music floats outside the flow. Ceremony, Countdown, Calendar and Events
+ * (with its ✦) share the Task029 sage band; Timeline renders only when `sections.timeline`.
  * Placement never changes gating: every section/capability gate still applies.
  */
 export function ElegantEditorialV1({ viewModel, sections, capabilities }: InvitationRendererPropsV1) {
-  const { people, families, ceremony, events, content, gift, media, operationalSides } = viewModel;
+  const { people, families, ceremony, content, gift, media, operationalSides } = viewModel;
   const ceremonyDate = deriveEventDateTimePresentationV1(ceremony);
   const monthGrid = deriveCeremonyMonthGridV1(viewModel);
   const coupleText = `${people.primary.name} ${ELEGANT_EDITORIAL_V1_COPY.a11y.and} ${people.secondary.name}`;
 
-  // `sections.*` alone decides visibility. The null checks below only narrow
-  // the types: RF-04 R9 makes a visible section with null content impossible.
-  const invitationMessage = sections.invitationMessage ? content.invitationMessage : null;
+  // `sections.*` alone decides visibility. The null check below only narrows
+  // the type: RF-04 R9 makes a visible section with null content impossible.
   const loveStory = sections.loveStory ? content.loveStory : null;
 
   return (
@@ -73,26 +81,29 @@ export function ElegantEditorialV1({ viewModel, sections, capabilities }: Invita
       data-variant={viewModel.variant}
     >
       <main className={styles.column}>
-        <OpeningCover people={people} ceremonyDate={ceremonyDate} />
+        <OpeningCover people={people} ceremonyDate={ceremonyDate} cover={media.cover} />
         <Hero people={people} ceremony={ceremony} cover={media.cover} ceremonyDate={ceremonyDate} />
-        <Couple people={people} />
-        <InvitationMessage guestDisplayName={viewModel.guest?.displayName} message={invitationMessage} />
+        <Couple people={people} portrait={media.portrait} />
+        <InvitationMessage guestDisplayName={viewModel.guest?.displayName} />
         <Families families={families} />
         <div className={styles.ceremonyBand}>
           <Ceremony ceremony={ceremony} ceremonyDate={ceremonyDate} />
+          {capabilities.clock !== undefined ? <Countdown ceremony={ceremony} clock={capabilities.clock} /> : null}
           <Calendar grid={monthGrid} />
-          <Events variant={viewModel.variant} events={events} />
+          <Events variant={viewModel.variant} cards={viewModel.ceremonyCards} />
         </div>
-        {capabilities.clock !== undefined ? <Countdown ceremony={ceremony} clock={capabilities.clock} /> : null}
-        {loveStory !== null ? <LoveStory story={loveStory} /> : null}
-        {capabilities.rsvp !== undefined ? (
-          <Rsvp rsvp={capabilities.rsvp} personalized={viewModel.guest !== undefined} />
-        ) : null}
+        {sections.timeline ? <Timeline items={content.timeline} /> : null}
+        <OrnamentPause tight />
+        {sections.photoStory ? <PhotoStory items={media.photoStory} coupleText={coupleText} /> : null}
+        {loveStory !== null ? <LoveStory story={loveStory} photo={media.loveStoryPhoto} coupleText={coupleText} /> : null}
+        {capabilities.rsvp !== undefined ? <Rsvp rsvp={capabilities.rsvp} /> : null}
         {sections.gift ? (
           <Gift operationalSides={operationalSides} gift={gift} qr={media.qr} clipboard={capabilities.clipboard} />
         ) : null}
+        {sections.dressCode && content.dressCode !== null ? <DressCode dressCode={content.dressCode} /> : null}
         {sections.gallery ? <Gallery gallery={media.gallery} coupleText={coupleText} /> : null}
         <Closing people={people} ceremonyDate={ceremonyDate} />
+        <SectionReveal />
       </main>
       {sections.music && capabilities.music !== undefined ? <MusicControl music={capabilities.music} /> : null}
     </div>

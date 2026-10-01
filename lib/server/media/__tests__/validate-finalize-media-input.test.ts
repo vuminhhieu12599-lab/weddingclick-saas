@@ -49,6 +49,10 @@ describe("validateFinalizeMediaInput — storagePath scoping", () => {
     expect(result.storagePath).toBe(storagePath);
   });
 
+  it.each(["PORTRAIT_GROOM", "PORTRAIT_BRIDE"] as const)("accepts the %s portrait role (migration 0028)", (mediaType) => {
+    expect(validateFinalizeMediaInput({ mediaType, storagePath }, projectId).mediaType).toBe(mediaType);
+  });
+
   it("rejects a path belonging to a different project", () => {
     const otherProjectId = "22222222-2222-2222-2222-222222222222";
     expectBadRequest({ mediaType: "COVER", storagePath: `${otherProjectId}/${uuid}` }, projectId);

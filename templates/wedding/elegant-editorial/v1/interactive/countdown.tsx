@@ -17,16 +17,13 @@ export type CeremonyCountdownDisplay =
   | { readonly state: "UPCOMING"; readonly parts: readonly CountdownPart[] }
   | { readonly state: "PASSED" };
 
-function pad2(value: number): string {
-  return String(value).padStart(2, "0");
-}
-
 /**
  * Presentation of the frozen RF-05C countdown (K27–K29): the only target is
  * `ceremony.startsAt`, the only current time is `clock.nowEpochMs`. This
- * never reads a clock, parses a date or computes a duration itself; it only
- * pads the already-derived parts. `hasPassed` becomes the fixed passed copy,
- * so no negative value is ever shown.
+ * never reads a clock, parses a date or computes a duration itself; the
+ * already-derived parts are shown unpadded, as Task029 shows them (Design
+ * Baseline B5 item 12). `hasPassed` becomes the fixed Design Baseline D7
+ * copy, so no negative value is ever shown.
  */
 export function ceremonyCountdownDisplay(
   ceremony: InvitationViewModel["ceremony"],
@@ -38,9 +35,9 @@ export function ceremonyCountdownDisplay(
     state: "UPCOMING",
     parts: [
       { unit: "days", value: String(countdown.days) },
-      { unit: "hours", value: pad2(countdown.hours) },
-      { unit: "minutes", value: pad2(countdown.minutes) },
-      { unit: "seconds", value: pad2(countdown.seconds) },
+      { unit: "hours", value: String(countdown.hours) },
+      { unit: "minutes", value: String(countdown.minutes) },
+      { unit: "seconds", value: String(countdown.seconds) },
     ],
   };
 }
@@ -56,6 +53,11 @@ interface CountdownProps {
  * mount only, so no current time ever enters server-rendered markup. Each
  * clock refresh is a normal rerender with a new `nowEpochMs`. `role="timer"`
  * keeps the per-second change out of polite announcements.
+ *
+ * Task029 presentation (Design Baseline B5 item 12): ivory section, the
+ * "Đếm ngược" kicker, four unboxed cells with a gold top rule. Once passed,
+ * the kicker line carries "Ngày vui đã đến" (Design Baseline D7) in the same
+ * kicker typography and the cells are gone.
  */
 export function Countdown({ ceremony, clock }: CountdownProps) {
   const display = ceremonyCountdownDisplay(ceremony, clock);
@@ -66,17 +68,15 @@ export function Countdown({ ceremony, clock }: CountdownProps) {
       aria-labelledby="ee-countdown-heading"
       data-countdown={display.state.toLowerCase()}
     >
-      <h2 id="ee-countdown-heading" className={styles.countdownHeading}>
-        {COPY.heading}
+      <h2 id="ee-countdown-heading" className={styles.countdownKicker}>
+        {display.state === "PASSED" ? COPY.passed : COPY.heading}
       </h2>
-      {display.state === "PASSED" ? (
-        <p className={styles.countdownPassed}>{COPY.passed}</p>
-      ) : (
-        <ol className={styles.countdownParts} role="timer">
+      {display.state === "PASSED" ? null : (
+        <ol className={styles.countdownRow} role="timer">
           {display.parts.map((part) => (
-            <li key={part.unit} className={styles.countdownPart}>
+            <li key={part.unit} className={styles.countdownCell}>
               <span className={styles.countdownValue}>{part.value}</span>
-              <span className={styles.countdownUnit}>{COPY.units[part.unit]}</span>
+              <span className={styles.countdownLabel}>{COPY.units[part.unit]}</span>
             </li>
           ))}
         </ol>

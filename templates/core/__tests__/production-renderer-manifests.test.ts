@@ -58,11 +58,14 @@ describe("P16/P21 — Elegant Editorial v1 exact values", () => {
     expect(compatibility.supportedPayloadSchemaVersions).toStrictEqual([1]);
     expect(compatibility.supportedVariants).toStrictEqual(["COMMON", "GROOM", "BRIDE"]);
     expect(compatibility.sectionCapabilities).toStrictEqual({
-      invitationMessage: true,
+      invitationMessage: false,
       loveStory: true,
       gallery: true,
       music: true,
       gift: true,
+      timeline: true,
+      dressCode: true,
+      photoStory: true,
     });
     expect(Object.keys(compatibility)).toStrictEqual([
       "rendererKey",
@@ -79,11 +82,13 @@ describe("P16/P21 — Elegant Editorial v1 exact values", () => {
     expect(design.fontPresets).toStrictEqual(["editorial-classic"]);
     expect(design.effectPresets).toStrictEqual(["STANDARD"]);
     expect(design.sectionSettingsSchema).toStrictEqual({
-      invitationMessage: { type: "boolean" },
       loveStory: { type: "boolean" },
       gallery: { type: "boolean" },
       music: { type: "boolean" },
       gift: { type: "boolean" },
+      timeline: { type: "boolean" },
+      dressCode: { type: "boolean" },
+      photoStory: { type: "boolean" },
     });
     expect(design.designSettingsSchema).toStrictEqual({});
     expect(Object.keys(design)).toStrictEqual([
@@ -103,7 +108,7 @@ describe("P16/P21 — Elegant Editorial v1 exact values", () => {
         rendererKey: EE_KEY,
         supportedPayloadSchemaVersions: [1],
         supportedVariants: ["COMMON", "GROOM", "BRIDE"],
-        sectionCapabilities: { invitationMessage: true, loveStory: true, gallery: true, music: true, gift: true },
+        sectionCapabilities: { invitationMessage: false, loveStory: true, gallery: true, music: true, gift: true, timeline: true, dressCode: true, photoStory: true },
       },
       design: {
         schemaVersion: 1,
@@ -111,11 +116,13 @@ describe("P16/P21 — Elegant Editorial v1 exact values", () => {
         fontPresets: ["editorial-classic"],
         effectPresets: ["STANDARD"],
         sectionSettingsSchema: {
-          invitationMessage: { type: "boolean" },
           loveStory: { type: "boolean" },
           gallery: { type: "boolean" },
           music: { type: "boolean" },
           gift: { type: "boolean" },
+          timeline: { type: "boolean" },
+          dressCode: { type: "boolean" },
+          photoStory: { type: "boolean" },
         },
         designSettingsSchema: {},
       },
@@ -132,7 +139,8 @@ describe("P16/P21 — Elegant Editorial v1 exact values", () => {
   it("section capabilities and section settings schema cover exactly RENDERER_SECTION_KEYS", () => {
     const { compatibility, design } = ELEGANT_EDITORIAL_V1_MANIFEST;
     expect(Object.keys(compatibility.sectionCapabilities)).toStrictEqual([...RENDERER_SECTION_KEYS]);
-    expect(Object.keys(design.sectionSettingsSchema)).toStrictEqual([...RENDERER_SECTION_KEYS]);
+    // Settings exist only for capable sections: v1 is not capable of invitationMessage (Micro-Checkpoint 10).
+    expect(Object.keys(design.sectionSettingsSchema)).toStrictEqual(RENDERER_SECTION_KEYS.filter((key) => key !== "invitationMessage"));
   });
 
   it("a non-empty designSettingsSchema is not the frozen v1 value", () => {

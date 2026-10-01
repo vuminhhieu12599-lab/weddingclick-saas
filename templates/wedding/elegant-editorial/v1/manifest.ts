@@ -22,11 +22,16 @@ export const ELEGANT_EDITORIAL_V1_MANIFEST: RendererProductionManifestV1 = {
     supportedPayloadSchemaVersions: [1],
     supportedVariants: ["COMMON", "GROOM", "BRIDE"],
     sectionCapabilities: {
-      invitationMessage: true,
+      // Micro-Checkpoint 10 Product Owner ruling: v1 renders only the two-line
+      // invitation block, never the canonical invitation message.
+      invitationMessage: false,
       loveStory: true,
       gallery: true,
       music: true,
       gift: true,
+      timeline: true,
+      dressCode: true,
+      photoStory: true,
     },
   },
   design: {
@@ -35,11 +40,13 @@ export const ELEGANT_EDITORIAL_V1_MANIFEST: RendererProductionManifestV1 = {
     fontPresets: ["editorial-classic"],
     effectPresets: ["STANDARD"],
     sectionSettingsSchema: {
-      invitationMessage: { type: "boolean" },
       loveStory: { type: "boolean" },
       gallery: { type: "boolean" },
       music: { type: "boolean" },
       gift: { type: "boolean" },
+      timeline: { type: "boolean" },
+      dressCode: { type: "boolean" },
+      photoStory: { type: "boolean" },
     },
     designSettingsSchema: {},
   },

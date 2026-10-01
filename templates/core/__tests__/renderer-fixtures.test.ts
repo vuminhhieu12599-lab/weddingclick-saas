@@ -25,7 +25,8 @@ import { PRODUCTION_COMPATIBILITY_REGISTRY } from "../production-renderer-manife
  */
 
 const EE_KEY = "wedding.elegant-editorial.v1";
-const ALL_TRUE = { invitationMessage: true, loveStory: true, gallery: true, music: true, gift: true };
+// invitationMessage: Elegant Editorial v1 is not capable of it (Micro-Checkpoint 10).
+const ALL_TRUE = { invitationMessage: false, loveStory: true, gallery: true, music: true, gift: true, timeline: true, dressCode: true, photoStory: false };
 const CANONICAL_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 let fetchSpy: ReturnType<typeof vi.fn>;
@@ -132,6 +133,9 @@ describe("per-variant pipeline success", () => {
       "gallery",
       "music",
       "gift",
+      "timeline",
+      "dressCode",
+      "photoStory",
     ]);
     expect(viewModel.design).toMatchObject({
       paletteKey: "green-ivory",
@@ -233,7 +237,7 @@ describe("guest and lunar foundation", () => {
     const present = await buildRendererFixture({ variant });
     const absent = await buildRendererFixture({ variant, ceremonyLunar: "ABSENT" });
     expect(present.viewModel.ceremony.lunarDateDisplay).toBe(
-      variant === "BRIDE" ? "Nhằm ngày 08 tháng 09 năm Bính Ngọ" : "Nhằm ngày 09 tháng 09 năm Bính Ngọ",
+      variant === "BRIDE" ? "07/09 Âm Lịch" : "08/09 Âm Lịch",
     );
     expect(absent.viewModel.ceremony.lunarDateDisplay).toBeNull();
     for (const event of present.viewModel.events) {

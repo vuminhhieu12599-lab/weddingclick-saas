@@ -70,9 +70,11 @@ describe("buildInvitationViewModel — Snapshot-only non-media mapping (V7–V9)
     expect(vm.ceremony).toEqual(payload.ceremony);
     expect(vm.events).toEqual(payload.events);
     expect(vm.operationalSides).toEqual(["GROOM", "BRIDE"]);
-    expect(vm.content).toEqual(payload.content);
+    // The fixture Snapshot predates the RF7 Timeline amendment: absent timeline reads as [] / false.
+    expect("timeline" in payload.content).toBe(false);
+    expect(vm.content).toEqual({ ...payload.content, timeline: [], dressCode: null });
     expect(vm.gift).toEqual(payload.gift);
-    expect(vm.sections).toEqual(payload.sections);
+    expect(vm.sections).toEqual({ ...payload.sections, timeline: false, dressCode: false, photoStory: false });
     expect(vm.design).toEqual(payload.design);
   });
 
@@ -82,6 +84,7 @@ describe("buildInvitationViewModel — Snapshot-only non-media mapping (V7–V9)
     expect(Object.keys(vm).sort()).toEqual(
       [
         "ceremony",
+        "ceremonyCards",
         "content",
         "design",
         "events",
@@ -307,6 +310,131 @@ describe("buildInvitationViewModel — cover, gallery and audio slots", () => {
 // QR (M10, M11)
 // ---------------------------------------------------------------------------
 
+// RF7 Timeline amendment: ordered Snapshot values copied unchanged; older v1 payloads read as [] / false.
+describe("buildInvitationViewModel — timeline", () => {
+  it("copies the ordered Snapshot timeline and sections.timeline as owned values", () => {
+    const base = snapshot();
+    const payload = {
+      ...base,
+      content: { ...base.content, timeline: [{ id: "t-2", time: "11:00", label: "Khai tiệc" }, { id: "t-1", time: "08:30", label: "Đón khách" }] },
+      sections: { ...base.sections, timeline: true },
+    };
+    const vm = build(payload);
+    expect(vm.content.timeline).toEqual(payload.content.timeline);
+    expect(vm.content.timeline[0]).not.toBe(payload.content.timeline[0]);
+    expect(vm.sections.timeline).toBe(true);
+  });
+});
+
+// RF7 Photo Story / Love Story photo amendment: own slots only, resolved through the injected resolver.
+describe("[media-batch] buildInvitationViewModel — Photo Story and Love Story photo slots", () => {
+  it("[media-batch] older payloads give [] / absent; referenced ids keep order and runtime state", async () => {
+    const legacy = build(snapshot());
+    expect(legacy.media.photoStory).toEqual([]);
+    expect("loveStoryPhoto" in legacy.media).toBe(false);
+    const base = snapshot();
+    const payload = { ...base, media: { ...base.media, photoStoryMediaIds: ["ps-1", "ps-2"], loveStoryPhotoMediaId: "ls" } };
+    const resolver = recordingResolver({ "ps-2": (id) => unavailable(id) });
+    const vm = buildInvitationViewModel({ snapshot: payload, mediaResolutions: await resolveSnapshotMedia(payload, resolver) });
+    expect(resolver.calls.slice(-3)).toEqual(["ps-1", "ps-2", "ls"]);
+    expect(vm.media.photoStory).toEqual([resolved("ps-1"), { status: "UNAVAILABLE", mediaId: "ps-2" }]);
+    expect(vm.media.loveStoryPhoto).toEqual(resolved("ls"));
+    expect(vm.media.gallery.map((item) => item.mediaId)).toEqual(base.media.galleryMediaIds);
+  });
+});
+
+// RF7 Dress Code amendment: owned copy; colours re-checked because they become inline CSS.
+describe("buildInvitationViewModel — dress code", () => {
+  function withDressCode(dressCode: NonNullable<SnapshotPayloadV1["content"]["dressCode"]>) {
+    const base = snapshot();
+    return { ...base, content: { ...base.content, dressCode }, sections: { ...base.sections, dressCode: true } };
+  }
+
+  it("copies description and ordered swatches as owned values", () => {
+    const payload = withDressCode({ description: "Tông màu ấm", swatches: [{ id: "s-1", color: "#caa06a" }, { id: "s-2", color: "#3d352b" }] });
+    const vm = build(payload);
+    expect(vm.content.dressCode).toEqual(payload.content.dressCode);
+    expect(vm.content.dressCode?.swatches[0]).not.toBe(payload.content.dressCode.swatches[0]);
+    expect(vm.sections.dressCode).toBe(true);
+  });
+
+  it.each(["red", "#CAA06A", "url(x)", "#caa06a;color:red", "var(--x)"])("rejects a persisted swatch colour %j", (color) => {
+    expect(() => build(withDressCode({ description: null, swatches: [{ id: "s-1", color }] }))).toThrow(InvitationViewModelInvariantError);
+  });
+});
+
+// RF2 "Ceremony-card presentation" (Micro-Checkpoint 7): runtime-only, derived from the Snapshot events.
+describe("buildInvitationViewModel — ceremony cards", () => {
+  it("derives owned copies with rite-derived titles and leaves events and event titles untouched", () => {
+    const payload = snapshot({ variant: "COMMON" });
+    const vm = build(payload);
+    expect(vm.events.map((event) => event.id)).toEqual(payload.events.map((event) => event.id));
+    // The COMMON fixture has a groom-side THANH_HON but no bride-side VU_QUY: one honest card, no substitute.
+    expect(vm.ceremonyCards.map((card) => [card.side, card.title, card.event.id])).toEqual([["GROOM", "Lễ Thành Hôn", "g-thanhhon"]]);
+    expect(vm.ceremonyCards[0]?.event.title).toBe("Lễ Thành Hôn nhà trai");
+    expect(vm.ceremonyCards[0]?.event).toEqual(vm.events[0]);
+    expect(vm.ceremonyCards[0]?.event).not.toBe(vm.events[0]);
+    expect(payload).not.toHaveProperty("ceremonyCards");
+  });
+
+  it("BRIDE gets the bride-side Vu Quy card", () => {
+    const vm = build(snapshot({ variant: "BRIDE" }));
+    expect(vm.ceremonyCards.map((card) => [card.side, card.title, card.event.title])).toEqual([["BRIDE", "Lễ Vu Quy", "Lễ Vu Quy nhà gái"]]);
+  });
+});
+
+// RF7 Product Owner amendment (2026-10-01): optional, additive portrait refs in payload v1.
+describe("buildInvitationViewModel — portrait slots", () => {
+  function withPortraits(portrait: NonNullable<SnapshotPayloadV1["media"]["portrait"]>, variant: InvitationVariant = "COMMON") {
+    const base = snapshot({ variant });
+    return { ...base, media: { ...base.media, portrait } };
+  }
+
+  it("an older v1 Snapshot without media.portrait gives two absent portrait slots and nothing else changes", () => {
+    const legacy = snapshot();
+    expect("portrait" in legacy.media).toBe(false);
+    const vm = build(legacy);
+    expect(vm.media.portrait).toEqual({});
+    expect(Object.keys(vm.media).sort()).toEqual(["audio", "cover", "gallery", "photoStory", "portrait", "qr"]);
+  });
+
+  it("maps RESOLVED portraits with their runtime url and dimensions, for every variant", () => {
+    for (const variant of ["COMMON", "GROOM", "BRIDE"] as const) {
+      const vm = build(withPortraits({ groomMediaId: "m-portrait-groom", brideMediaId: "m-portrait-bride" }, variant));
+      expect(vm.media.portrait.groom, variant).toEqual(resolved("m-portrait-groom"));
+      expect(vm.media.portrait.bride, variant).toEqual(resolved("m-portrait-bride"));
+    }
+  });
+
+  it("keeps a referenced UNAVAILABLE portrait as a present slot and an unreferenced side absent", () => {
+    const vm = build(withPortraits({ groomMediaId: "m-portrait-groom" }), {
+      overrides: { "m-portrait-groom": unavailable("m-portrait-groom") },
+    });
+    expect(vm.media.portrait.groom).toEqual({ status: "UNAVAILABLE", mediaId: "m-portrait-groom" });
+    expect("bride" in vm.media.portrait).toBe(false);
+    // Never filled from cover or gallery.
+    expect(vm.media.cover).toEqual(resolved("m-cover"));
+  });
+
+  it("requires a resolution for every referenced portrait (M5): a missing one throws instead of becoming UNAVAILABLE", () => {
+    const payload = withPortraits({ groomMediaId: "m-portrait-groom", brideMediaId: "m-portrait-bride" });
+    const set = completeSet(payload).filter((entry) => entry.mediaId !== "m-portrait-bride");
+    expect(() => build(payload, { set })).toThrow(InvitationViewModelInvariantError);
+  });
+
+  it("resolves portraits through the injected resolver once each, after every pre-portrait reference", async () => {
+    const payload = withPortraits({ groomMediaId: "m-portrait-groom", brideMediaId: "m-portrait-bride" });
+    const resolver = recordingResolver({ "m-portrait-bride": (id) => unavailable(id) });
+
+    const set = await resolveSnapshotMedia(payload, resolver);
+    const vm = buildInvitationViewModel({ snapshot: payload, mediaResolutions: set });
+
+    expect(resolver.calls).toEqual([...extractSnapshotMediaRefs(snapshot()), "m-portrait-groom", "m-portrait-bride"]);
+    expect(vm.media.portrait.groom?.status).toBe("RESOLVED");
+    expect(vm.media.portrait.bride).toEqual({ status: "UNAVAILABLE", mediaId: "m-portrait-bride" });
+  });
+});
+
 describe("buildInvitationViewModel — QR variant matrix and single reference", () => {
   it.each<[string, InvitationVariant, Record<string, MediaResolution>, Record<string, string>]>([
     ["COMMON groom RESOLVED / bride RESOLVED", "COMMON", {}, { groom: "RESOLVED", bride: "RESOLVED" }],
@@ -419,6 +547,9 @@ describe("buildInvitationViewModel — sections and design", () => {
       gallery: true,
       music: true,
       gift: true,
+      timeline: false,
+      dressCode: false,
+      photoStory: false,
     });
     expect(vm.media.gallery.every((item) => item.status === "UNAVAILABLE")).toBe(true);
   });
@@ -759,6 +890,9 @@ describe("RF-02 Snapshot → Layer A → Layer B", () => {
         { id: "m-qr-bride", projectId: PROJECT_ID, mediaType: "QR_BRIDE", sortOrder: 0 },
         { id: "m-qr-common", projectId: PROJECT_ID, mediaType: "QR_COMMON", sortOrder: 0 },
       ],
+      timelineItems: [],
+      dressCode: null,
+      dressCodeSwatches: [],
       design: {
         projectId: PROJECT_ID,
         templateVersionId: "tv-1",

@@ -4,6 +4,7 @@ import { ELEGANT_EDITORIAL_V1_COPY } from "../copy";
 import styles from "../elegant-editorial-v1.module.css";
 import { formatDottedDate } from "./date-text";
 import { CoupleAmpersand } from "./decor";
+import { formatCoupleDisplayName } from "./display-name";
 import { MediaImage } from "./media-image";
 
 const COPY = ELEGANT_EDITORIAL_V1_COPY;
@@ -40,9 +41,9 @@ export function Hero({ people, ceremony, cover, ceremonyDate }: HeroProps) {
       <div className={styles.heroContent}>
         <p className={styles.heroKicker}>{COPY.hero.kicker}</p>
         <p className={styles.heroNames}>
-          <span className={styles.name}>{people.primary.name}</span>
+          <span className={styles.name}>{formatCoupleDisplayName(people.primary.name)}</span>
           <CoupleAmpersand className={styles.heroAmp} />
-          <span className={styles.name}>{people.secondary.name}</span>
+          <span className={styles.name}>{formatCoupleDisplayName(people.secondary.name)}</span>
         </p>
         {mediaState === "resolved" ? null : <p className={styles.heroCeremony}>{ceremony.title}</p>}
         <p className={styles.heroDate}>{formatDottedDate(ceremonyDate)}</p>

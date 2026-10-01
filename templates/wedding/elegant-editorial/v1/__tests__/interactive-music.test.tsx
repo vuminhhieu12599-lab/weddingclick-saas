@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -70,7 +73,8 @@ function render(viewModel: InvitationViewModel, sections: RendererEffectiveSecti
   );
 }
 
-const MUSIC_UI = /data-music-status|musicButton|aria-pressed|Nhạc nền|nhạc/i;
+// Gift side tabs also use aria-pressed, so the music UI is matched by its own hooks and glyphs.
+const MUSIC_UI = /data-music-status|musicButton|musicGlyph|Nhạc nền|nhạc|♪|♫/i;
 
 describe("render gate (P35 degraded-state rule)", () => {
   it("no capability → no control, no indicator, no placeholder", async () => {
@@ -94,7 +98,7 @@ describe("render gate (P35 degraded-state rule)", () => {
   it("section on + capability → exactly one real toggle button; the renderer never inspects media.audio for it", async () => {
     const { viewModel, sections } = await fixture();
     const html = render(viewModel, sections, music("PAUSED"));
-    expect(html.match(/<button[^>]*aria-pressed/g)).toHaveLength(1);
+    expect(html.match(/<button[^>]*musicButton[^>]*aria-pressed/g)).toHaveLength(1);
     expect(html).not.toMatch(/<audio|autoplay/);
     expect(html).not.toContain(viewModel.media.audio?.status === "RESOLVED" ? viewModel.media.audio.url : "∅");
   });
@@ -200,5 +204,25 @@ describe("rejected commands (K23 unexpected faults)", () => {
       pause: async () => {},
     };
     await expect(runMusicToggle(throwing)).resolves.toBe("FAULTED");
+  });
+});
+
+describe("Task029 music visual language (Design Baseline B5 item 18)", () => {
+  const css = readFileSync(join(__dirname, "..", "elegant-editorial-v1.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+
+  it("♪ while not playing, ♫ only while PLAYING, decorative to assistive technology", () => {
+    for (const status of MUSIC_PLAYBACK_STATUSES) {
+      const html = renderToStaticMarkup(<MusicControl music={music(status)} />);
+      expect(html).toMatch(new RegExp(`<span class="[^"]*musicGlyph[^"]*" aria-hidden="true">${status === "PLAYING" ? "♫" : "♪"}</span>`));
+    }
+  });
+
+  it("40 px ivory/gold round control at the top right; the pulse is keyed on PLAYING only and removed under reduced motion", () => {
+    expect(css).toMatch(/\.music \{[^}]*position: fixed;[^}]*top: 16px;/);
+    expect(css).toMatch(/\.musicButton \{[^}]*width: 40px;[^}]*height: 40px;[^}]*border: 1px solid var\(--ee-gold\);/);
+    const pulses = [...css.matchAll(/([^{}]+)\{[^{}]*animation: ee-music-pulse/g)].map((match) => (match[1] as string).trim());
+    expect(pulses).toStrictEqual(['.music[data-music-status="playing"] .musicGlyph']);
+    const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
+    expect(reduced).toMatch(/\.music\[data-music-status="playing"\] \.musicGlyph \{\s*animation: none;/);
   });
 });

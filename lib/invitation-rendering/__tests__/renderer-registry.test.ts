@@ -29,8 +29,8 @@ function expectInvariant(manifests: readonly RendererCompatibilityManifestV1[]):
 }
 
 describe("RF-04 section key vocabulary (R7, R8)", () => {
-  it("is exactly the five Snapshot Sections v1 keys", () => {
-    expect([...RENDERER_SECTION_KEYS]).toEqual(["invitationMessage", "loveStory", "gallery", "music", "gift"]);
+  it("is exactly the Snapshot Sections v1 keys, with the additive timeline and dressCode keys last (RF7 amendments)", () => {
+    expect([...RENDERER_SECTION_KEYS]).toEqual(["invitationMessage", "loveStory", "gallery", "music", "gift", "timeline", "dressCode", "photoStory"]);
     expectTypeOf<RendererSectionKey>().toEqualTypeOf<keyof SnapshotSections>();
   });
 });

@@ -8,7 +8,18 @@ import {
 import { ApiError } from "../../errors/api-error";
 import { validateUploadIntentInput } from "../validate-upload-intent-input";
 
-const IMAGE_MEDIA_TYPES: MediaType[] = ["COVER", "GALLERY", "QR_GROOM", "QR_BRIDE", "QR_COMMON"];
+// PORTRAIT_GROOM / PORTRAIT_BRIDE (migration 0028) reuse the image policy with no portrait-specific allowlist.
+const IMAGE_MEDIA_TYPES: MediaType[] = [
+  "COVER",
+  "GALLERY",
+  "QR_GROOM",
+  "QR_BRIDE",
+  "QR_COMMON",
+  "PORTRAIT_GROOM",
+  "PORTRAIT_BRIDE",
+  "PHOTO_STORY",
+  "LOVE_STORY_PHOTO",
+];
 
 function expectBadRequest(body: unknown) {
   const error = (() => {

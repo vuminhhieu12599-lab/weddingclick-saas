@@ -19,18 +19,17 @@ export const ELEGANT_EDITORIAL_V1_COPY = Object.freeze({
     /** Task029 cover label (A). */
     label: "Thiệp Mời Cưới",
     /**
-     * Design Baseline D1 guest line, rendered immediately before the
-     * invitation message (never on the opening): salutation + guest.
+     * Two-line invitation block kicker (Product Owner ruling, Micro-Checkpoint
+     * 10; supersedes the Design Baseline D1 one-line guest line). Never on the
+     * opening.
      */
-    salutation: "Trân trọng kính mời",
+    salutation: "TRÂN TRỌNG KÍNH MỜI",
     /** Design Baseline D1: unpersonalized invitation, stands in for the absent guest overlay. */
     defaultGuest: "Quý khách",
-    /** RF-06D: explicit open control (plays the finite envelope transition). */
-    open: "Mở thiệp",
-    /** RF-06D: explicit skip control (opens immediately, no transition). */
-    skip: "Xem ngay",
-    /** RF-06D: accessible name of the opening control group. */
-    controlsLabel: "Mở thiệp mời",
+    /** RF-06D: the envelope is the primary tap target; Task029 envelope accessible name (A). */
+    openEnvelope: "Mở thiệp mời",
+    /** RF-06D: Task029 hint under the envelope (A). */
+    hint: "Chạm vào thiệp để mở",
   }),
   hero: Object.freeze({
     kicker: "Save the date",
@@ -41,9 +40,6 @@ export const ELEGANT_EDITORIAL_V1_COPY = Object.freeze({
     quote: Object.freeze(["Hôn nhân là chuyện cả đời.", "Yêu người vừa ý, cưới người mình thương."] as const),
     /** Task029 plate labels (A), chosen by the person's explicit `side`, never by position. */
     roleBySide: Object.freeze({ GROOM: "Chú Rể", BRIDE: "Cô Dâu" }),
-  }),
-  message: Object.freeze({
-    heading: "Thư mời",
   }),
   families: Object.freeze({
     heading: "Gia đình hai bên",
@@ -67,9 +63,35 @@ export const ELEGANT_EDITORIAL_V1_COPY = Object.freeze({
   events: Object.freeze({
     heading: "Chương trình",
     mapLink: "Xem chỉ đường",
+    /**
+     * Product Owner ruling (Micro-Checkpoint 7A): visible ceremony-card title by
+     * the card's side, whose rite is fixed (GROOM → Thành Hôn, BRIDE → Vu Quy;
+     * RF2 "Ceremony-card presentation"). Template copy; never `event.title`.
+     */
+    ceremonyCardTitleBySide: Object.freeze({ GROOM: "Tiệc mừng lễ thành hôn", BRIDE: "Tiệc mừng lễ vu quy" }),
   }),
   loveStory: Object.freeze({
     heading: "Chuyện của chúng mình",
+  }),
+  photoStory: Object.freeze({
+    /** Accessible name only; Task029 shows no visible Photo Story heading (C). */
+    heading: "Khoảnh khắc của chúng mình",
+    /** Photo alt prefix, then the 1-based position and the couple (C). */
+    imageAlt: "Ảnh kỷ niệm",
+  }),
+  loveStoryPhoto: Object.freeze({
+    /** Love Story background photo alt prefix, then the couple (C). */
+    imageAlt: "Ảnh chuyện tình của",
+  }),
+  dressCode: Object.freeze({
+    /** Task029 visible kicker (A). */
+    heading: "Dress code",
+    /** Accessible name of the swatch list (C); each swatch is announced by its hex value. */
+    swatchesLabel: "Bảng màu gợi ý",
+  }),
+  timeline: Object.freeze({
+    /** Accessible name only; Task029 shows no visible Timeline heading (C). */
+    heading: "Lịch trình",
   }),
   gallery: Object.freeze({
     heading: "Album ảnh cưới",
@@ -78,30 +100,31 @@ export const ELEGANT_EDITORIAL_V1_COPY = Object.freeze({
   }),
   gift: Object.freeze({
     heading: "Hộp mừng cưới",
-    /** Task029 gift note (A). */
-    intro: "Sự hiện diện của bạn là món quà quý giá nhất. Nếu muốn gửi lời chúc mừng, gia đình xin phép nhận tại đây.",
+    /** Gift note (Product Owner exact copy, Micro-Checkpoint 10). */
+    intro: "Sự hiện diện của bạn là món quà quý giá nhất. Nếu muốn gửi quà chúc mừng, gia đình xin phép nhận tại đây.",
     bankName: "Ngân hàng",
     accountName: "Chủ tài khoản",
     accountNumber: "Số tài khoản",
     qrAltPrefix: "Mã QR chuyển khoản",
     qrUnavailable: "Mã QR tạm thời chưa hiển thị",
-    /** RF-06D gift dialog. */
-    openDialog: "Xem thông tin mừng cưới",
-    dialogTitle: "Thông tin mừng cưới",
+    /** RF-06D: Task029 CTA (A), also the Task029 dialog accessible name. */
+    openDialog: "Gửi quà cưới",
+    /** RF-06D: Task029 close control accessible name (A); the visible glyph is ✕. */
     closeDialog: "Đóng",
-    /** RF-06D copy control: shown only with a clipboard capability. */
+    /** RF-06D copy control (Task029 "Sao chép" / "Đã sao chép", A): shown only with a clipboard capability. */
     copyAccountNumber: "Sao chép",
     copyAccountNumberTarget: "số tài khoản",
-    copyPending: "Đang sao chép…",
-    copySucceeded: "Đã sao chép số tài khoản",
+    /** Shown only after a resolved `SUCCESS` (P34). */
+    copySucceeded: "Đã sao chép",
     copyFailed: "Chưa sao chép được, vui lòng thử lại",
     copyUnavailable: "Trình duyệt chưa hỗ trợ sao chép tự động, vui lòng sao chép thủ công",
   }),
   countdown: Object.freeze({
-    heading: "Hẹn ngày chung vui",
+    /** Task029 countdown kicker (A; Design Baseline B6). */
+    heading: "Đếm ngược",
     /** Fixed unit labels for the RF-05C 24-hour-day parts. */
     units: Object.freeze({ days: "Ngày", hours: "Giờ", minutes: "Phút", seconds: "Giây" }),
-    /** Shown once the ceremony start has been reached (`hasPassed`); never negative values. */
+    /** Design Baseline D7: shown once the ceremony start has been reached (`hasPassed`); never negative values. */
     passed: "Ngày vui đã đến",
   }),
   music: Object.freeze({
@@ -112,18 +135,43 @@ export const ELEGANT_EDITORIAL_V1_COPY = Object.freeze({
     commandFailed: "Chưa điều khiển được nhạc, vui lòng thử lại.",
   }),
   rsvp: Object.freeze({
+    /** Task029 two-line heading (A); the "&" before the second line is template glyph. */
     heading: "Xác nhận tham dự",
-    intro: "Xin vui lòng cho chúng mình biết bạn có thể đến chung vui hay không.",
-    attendanceLegend: "Bạn sẽ tham dự chứ?",
-    /** Exactly the two canonical choices (RF15, K15): no third option. */
-    attendanceLabels: Object.freeze({ ATTENDING: "Tôi sẽ tham dự", NOT_ATTENDING: "Tôi không thể tham dự" }),
-    guestNameLabel: "Tên của bạn",
+    headingSecondLine: "Gửi lời chúc",
+    /** Task029 select label (A). */
+    attendanceLabel: "Bạn có thể tham dự không?",
+    /** Exactly the three canonical choices in order (RSVP completion amendment), Task029 wording (A). */
+    attendanceLabels: Object.freeze({
+      ATTENDING: "Sẽ tham dự",
+      MAYBE: "Sẽ cố gắng tham dự",
+      NOT_ATTENDING: "Tiếc quá, không tham dự được",
+    }),
+    /** The always-visible response-name input (Product Owner ruling): accessible name and placeholder. */
+    guestNameLabel: "Tên bạn là gì?",
+    guestNamePlaceholder: "Tên bạn là gì?",
+    /** Design Baseline D10. */
     partySizeLabel: "Số người tham dự",
+    /** Accessible name of the message textarea (C); Task029 placeholder (A). */
     messageLabel: "Lời nhắn (không bắt buộc)",
+    messagePlaceholder: "Gửi lời chúc đến cô dâu & chú rể…",
     messageLimitPrefix: "Tối đa",
     messageLimitSuffix: "ký tự",
-    submit: "Gửi xác nhận",
+    /** Task029 submit (A); pending state (C). */
+    submit: "Gửi lời chúc",
     submitting: "Đang gửi…",
+    /**
+     * Design Baseline D11 success wording (Task029, A), composed around the
+     * presentation-only name: "Cảm ơn {name} đã phản hồi — rất mong được đón
+     * tiếp!" / "Cảm ơn {name} đã phản hồi!". Shown only after `SUCCESS`.
+     */
+    success: Object.freeze({
+      thanks: "Cảm ơn",
+      responded: "đã phản hồi",
+      attendingTail: "— rất mong được đón tiếp!",
+      notAttendingTail: "!",
+    }),
+    /** Design Baseline D11 local edit action. */
+    edit: "Sửa lại",
     errors: Object.freeze({
       attendanceRequired: "Vui lòng chọn tham dự hoặc không tham dự.",
       guestNameRequired: "Vui lòng nhập tên của bạn.",
@@ -131,8 +179,8 @@ export const ELEGANT_EDITORIAL_V1_COPY = Object.freeze({
       messageTooLong: "Lời nhắn quá dài.",
       inputRejected: "Thông tin chưa hợp lệ, vui lòng kiểm tra lại.",
     }),
+    /** Non-success results (C): truthful state only; success uses `success` above. */
     results: Object.freeze({
-      SUCCESS: "Cảm ơn bạn! Xác nhận tham dự đã được ghi nhận.",
       INVALID: "Thông tin chưa hợp lệ, vui lòng kiểm tra lại.",
       UNAVAILABLE: "Hiện chưa thể gửi xác nhận tham dự. Vui lòng thử lại sau.",
       FAILED: "Gửi xác nhận chưa thành công. Vui lòng thử lại.",
@@ -145,6 +193,8 @@ export const ELEGANT_EDITORIAL_V1_COPY = Object.freeze({
   }),
   a11y: Object.freeze({
     coverImageAlt: "Ảnh cưới của",
+    /** Couple portrait alt prefix by explicit side, then the display name: "Ảnh chân dung chú rể Minh Khôi" (C). */
+    portraitImageAltBySide: Object.freeze({ GROOM: "Ảnh chân dung chú rể", BRIDE: "Ảnh chân dung cô dâu" }),
     and: "và",
   }),
 } as const);

@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -62,7 +65,7 @@ function countdownBlock(html: string): string {
 }
 
 function parts(block: string): string[][] {
-  return [...block.matchAll(/countdownValue[^"]*">([^<]*)<\/span><span class="[^"]*countdownUnit[^"]*">([^<]*)</g)].map(
+  return [...block.matchAll(/countdownValue[^"]*">([^<]*)<\/span><span class="[^"]*countdownLabel[^"]*">([^<]*)</g)].map(
     (match) => [match[1] as string, match[2] as string],
   );
 }
@@ -103,7 +106,7 @@ describe("capability gate (K29)", () => {
 });
 
 describe("presentation of the frozen result (K28)", () => {
-  it("future ceremony: days unpadded, hours/minutes/seconds two digits, fixed unit labels", async () => {
+  it("future ceremony: every part unpadded (Task029, Design Baseline B5 item 12), fixed unit labels", async () => {
     const { viewModel, sections, target } = await fixture();
     const html = render(viewModel, sections, { clock: { nowEpochMs: target - (123 * DAY + 4 * HOUR + 5 * MINUTE + 6 * SECOND) } });
     const block = countdownBlock(html);
@@ -111,9 +114,9 @@ describe("presentation of the frozen result (K28)", () => {
     expect(block).toMatch(/<ol[^>]*role="timer"/);
     expect(parts(block)).toStrictEqual([
       ["123", COPY.countdown.units.days],
-      ["04", COPY.countdown.units.hours],
-      ["05", COPY.countdown.units.minutes],
-      ["06", COPY.countdown.units.seconds],
+      ["4", COPY.countdown.units.hours],
+      ["5", COPY.countdown.units.minutes],
+      ["6", COPY.countdown.units.seconds],
     ]);
   });
 
@@ -123,14 +126,14 @@ describe("presentation of the frozen result (K28)", () => {
       state: "UPCOMING",
       parts: [
         { unit: "days", value: "0" },
-        { unit: "hours", value: "00" },
-        { unit: "minutes", value: "00" },
-        { unit: "seconds", value: "00" },
+        { unit: "hours", value: "0" },
+        { unit: "minutes", value: "0" },
+        { unit: "seconds", value: "0" },
       ],
     });
     expect(ceremonyCountdownDisplay(viewModel.ceremony, { nowEpochMs: target - 1000 })).toMatchObject({
       state: "UPCOMING",
-      parts: [{ value: "0" }, { value: "00" }, { value: "00" }, { value: "01" }],
+      parts: [{ value: "0" }, { value: "0" }, { value: "0" }, { value: "1" }],
     });
   });
 
@@ -138,14 +141,16 @@ describe("presentation of the frozen result (K28)", () => {
     const { viewModel, sections, target } = await fixture();
     const block = countdownBlock(render(viewModel, sections, { clock: { nowEpochMs: target } }));
     expect(block).toContain('data-countdown="passed"');
-    expect(block).toContain(`>${COPY.countdown.passed}</p>`);
+    // Design Baseline D7: the passed copy takes the kicker line; the live kicker is gone.
+    expect(block).toContain(`>${COPY.countdown.passed}</h2>`);
+    expect(block).not.toContain(COPY.countdown.heading);
     expect(block).not.toContain("role=\"timer\"");
   });
 
   it("past ceremony: fixed passed copy, never negative values", async () => {
     const { viewModel, sections, target } = await fixture();
     const block = countdownBlock(render(viewModel, sections, { clock: { nowEpochMs: target + 400 * DAY } }));
-    expect(block).toContain(`>${COPY.countdown.passed}</p>`);
+    expect(block).toContain(`>${COPY.countdown.passed}</h2>`);
     expect(block).not.toMatch(/-\d|countdownValue/);
   });
 
@@ -154,7 +159,7 @@ describe("presentation of the frozen result (K28)", () => {
     const a = parts(countdownBlock(render(viewModel, sections, { clock: { nowEpochMs: target - 10 * SECOND } })));
     const b = parts(countdownBlock(render(viewModel, sections, { clock: { nowEpochMs: target - 9 * SECOND } })));
     expect(a[3]).toStrictEqual(["10", COPY.countdown.units.seconds]);
-    expect(b[3]).toStrictEqual(["09", COPY.countdown.units.seconds]);
+    expect(b[3]).toStrictEqual(["9", COPY.countdown.units.seconds]);
   });
 });
 
@@ -164,7 +169,7 @@ describe("target is the variant's canonical ceremony (Rule of Three)", () => {
     // COMMON/GROOM: 2026-10-18 09:00, BRIDE: 2026-10-17 09:00 (Asia/Ho_Chi_Minh).
     expect(viewModel.ceremony.startsAt).toBe(variant === "BRIDE" ? "2026-10-17T02:00:00.000Z" : "2026-10-18T02:00:00.000Z");
     const block = countdownBlock(render(viewModel, sections, { clock: { nowEpochMs: target - 2 * HOUR } }));
-    expect(parts(block).map(([value]) => value)).toStrictEqual(["0", "02", "00", "00"]);
+    expect(parts(block).map(([value]) => value)).toStrictEqual(["0", "2", "0", "0"]);
     // One hour after the (earlier) BRIDE ceremony, COMMON/GROOM still count down.
     const brideTarget = Date.parse("2026-10-17T02:00:00.000Z");
     const later = countdownBlock(render(viewModel, sections, { clock: { nowEpochMs: brideTarget + HOUR } }));
@@ -183,5 +188,32 @@ describe("target is the variant's canonical ceremony (Rule of Three)", () => {
   it("a non-finite clock is a programming fault from the frozen helper, never a fabricated countdown", async () => {
     const { viewModel } = await fixture();
     expect(() => ceremonyCountdownDisplay(viewModel.ceremony, { nowEpochMs: Number.NaN })).toThrow(RangeError);
+  });
+});
+
+describe("Task029 countdown presentation (Design Baseline B5 item 12, B6, D7)", () => {
+  const css = readFileSync(join(__dirname, "..", "elegant-editorial-v1.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+
+  it("exact copy: kicker \"Đếm ngược\", passed \"Ngày vui đã đến\"; \"Hẹn ngày chung vui\" is gone", async () => {
+    expect(COPY.countdown.heading).toBe("Đếm ngược");
+    expect(COPY.countdown.passed).toBe("Ngày vui đã đến");
+    expect(JSON.stringify(COPY)).not.toContain("Hẹn ngày chung vui");
+    const { viewModel, sections, target } = await fixture();
+    for (const nowEpochMs of [target - DAY, target + DAY]) {
+      expect(render(viewModel, sections, { clock: { nowEpochMs } })).not.toContain("Hẹn ngày chung vui");
+    }
+    const live = countdownBlock(render(viewModel, sections, { clock: { nowEpochMs: target - DAY } }));
+    expect(live).toMatch(/<h2 id="ee-countdown-heading" class="[^"]*countdownKicker[^"]*">Đếm ngược<\/h2>/);
+  });
+
+  it("ivory section, unboxed cells with a gold top rule, kicker typography (never Great Vibes) for both states", () => {
+    expect(css).toMatch(/\.countdown \{[^}]*background-color: var\(--ee-background\);/);
+    const cell = /\.countdownCell \{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(cell).toMatch(/border-top: 1px solid color-mix\(in srgb, var\(--ee-gold\) 50%, transparent\);/);
+    expect(cell).not.toMatch(/border(-radius)?:|background/);
+    const kicker = /\.countdownKicker \{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(kicker).toMatch(/font-family: var\(--ee-sans\);/);
+    expect(kicker).toMatch(/text-transform: uppercase;/);
+    expect(css).not.toMatch(/\.countdown[A-Za-z]*[^{]*\{[^}]*var\(--ee-script\)/);
   });
 });

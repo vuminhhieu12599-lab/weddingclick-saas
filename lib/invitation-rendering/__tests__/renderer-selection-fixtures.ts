@@ -24,6 +24,9 @@ export const ALL_CAPABLE: RendererSectionCapabilities = {
   gallery: true,
   music: true,
   gift: true,
+  timeline: true,
+  dressCode: true,
+  photoStory: true,
 };
 
 export function manifest(overrides: Partial<RendererCompatibilityManifestV1> = {}): RendererCompatibilityManifestV1 {
@@ -42,6 +45,9 @@ export const ALL_AVAILABLE: SnapshotSections = {
   gallery: true,
   music: true,
   gift: true,
+  timeline: true,
+  dressCode: true,
+  photoStory: true,
 };
 
 export interface SelectionSnapshotOptions {

@@ -61,12 +61,16 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-/** All elements of `type` in a (not yet rendered) element tree, walking children props only. */
+/**
+ * All elements of `type` in a (not yet rendered) element tree, walking
+ * children props and the gift dialog's `panels[].content` only.
+ */
 function findElements(node: ReactNode, type: unknown): ReactElement<Record<string, unknown>>[] {
   if (Array.isArray(node)) return node.flatMap((child) => findElements(child as ReactNode, type));
   if (!isValidElement<Record<string, unknown>>(node)) return [];
   const own = node.type === type ? [node] : [];
-  return [...own, ...findElements(node.props.children as ReactNode, type)];
+  const panels = Array.isArray(node.props.panels) ? (node.props.panels as { content: ReactNode }[]).map((panel) => panel.content) : [];
+  return [...own, ...findElements(node.props.children as ReactNode, type), ...findElements(panels, type)];
 }
 
 function giftTree(viewModel: InvitationViewModel, clip: ClipboardCapabilityV1 | undefined) {
@@ -89,13 +93,17 @@ describe("gift dialog", () => {
   it.each(INVITATION_VARIANTS)("%s: one explicit entry button and one closed, labelled modal dialog holding the canonical sides", async (variant) => {
     const { viewModel, selection } = await buildRendererFixture({ variant });
     const gift = giftBlock(render(viewModel, selection.effectiveSections));
+    // Task029 square moss CTA, exact copy "Gửi quà cưới" (Design Baseline B5 item 15).
+    expect(COPY.gift.openDialog).toBe("Gửi quà cưới");
     expect(gift).toMatch(new RegExp(`<button type="button" class="[^"]*giftOpen[^"]*" aria-haspopup="dialog">${COPY.gift.openDialog}</button>`));
     expect(gift.match(/<dialog\b[^>]*>/g)).toStrictEqual([
-      expect.stringMatching(/^<dialog class="[^"]*giftDialog[^"]*" aria-labelledby="ee-gift-dialog-title">$/),
+      expect.stringMatching(new RegExp(`^<dialog class="[^"]*giftDialog[^"]*" aria-label="${COPY.gift.openDialog}">$`)),
     ]);
-    expect(gift).toContain(`id="ee-gift-dialog-title" class="`);
-    expect(gift).toContain(`>${COPY.gift.dialogTitle}</h2>`);
-    expect(gift).toMatch(new RegExp(`<button type="button" class="[^"]*giftDialogClose[^"]*">${COPY.gift.closeDialog}</button>`));
+    // Task029 ✕ close control, named "Đóng"; no invented visible dialog title.
+    expect(gift).toMatch(
+      new RegExp(`<button type="button" class="[^"]*giftDialogClose[^"]*" aria-label="${COPY.gift.closeDialog}"><span aria-hidden="true">✕</span></button>`),
+    );
+    expect(gift).not.toMatch(/Thông tin mừng cưới|ee-gift-dialog-title/);
     // Close comes before the content, so showModal() moves focus onto it first.
     expect(gift.indexOf("giftDialogClose")).toBeLessThan(gift.indexOf("data-side="));
     // P7: a rendered dialog is never empty.
@@ -104,10 +112,33 @@ describe("gift dialog", () => {
     expect(gift).not.toMatch(/QR_COMMON|commonMediaId/);
   });
 
+  it("Rule of Three: side tabs only when more than one side (COMMON), in operational order; the first side is shown", async () => {
+    const tabs = async (variant: (typeof INVITATION_VARIANTS)[number]) => {
+      const { viewModel, selection } = await buildRendererFixture({ variant });
+      const gift = giftBlock(render(viewModel, selection.effectiveSections));
+      return {
+        tabs: [...gift.matchAll(/class="[^"]*giftTab(?!s)[^"]*" aria-pressed="(true|false)" aria-controls="ee-gift-panel-(\w+)">([^<]*)</g)].map((m) => [m[2], m[1], m[3]]),
+        panels: [...gift.matchAll(/<div id="ee-gift-panel-(\w+)" class="[^"]*giftPanel[^"]*" data-side="\w+"( hidden="")?>/g)].map((m) => [m[1], m[2] === undefined ? "shown" : "hidden"]),
+      };
+    };
+    expect(await tabs("COMMON")).toStrictEqual({
+      tabs: [
+        ["GROOM", "true", COPY.families.labelBySide.GROOM],
+        ["BRIDE", "false", COPY.families.labelBySide.BRIDE],
+      ],
+      panels: [
+        ["GROOM", "shown"],
+        ["BRIDE", "hidden"],
+      ],
+    });
+    expect(await tabs("GROOM")).toStrictEqual({ tabs: [], panels: [["GROOM", "shown"]] });
+    expect(await tabs("BRIDE")).toStrictEqual({ tabs: [], panels: [["BRIDE", "shown"]] });
+  });
+
   it("Rule of Three: GROOM/BRIDE dialogs hold only their own side; COMMON holds both in operational order", async () => {
     const sides = async (variant: (typeof INVITATION_VARIANTS)[number]) => {
       const { viewModel, selection } = await buildRendererFixture({ variant });
-      return [...giftBlock(render(viewModel, selection.effectiveSections)).matchAll(/data-side="(\w+)"/g)].map((m) => m[1]);
+      return [...giftBlock(render(viewModel, selection.effectiveSections)).matchAll(/<article[^>]*data-side="(\w+)"/g)].map((m) => m[1]);
     };
     expect(await sides("COMMON")).toStrictEqual(["GROOM", "BRIDE"]);
     expect(await sides("GROOM")).toStrictEqual(["GROOM"]);
@@ -117,7 +148,7 @@ describe("gift dialog", () => {
   it("QR UNAVAILABLE keeps the bank text and the honest note inside the dialog", async () => {
     const { viewModel, selection } = await buildRendererFixture({ variant: "COMMON", unavailableMediaIds: [FIXTURE_MEDIA_IDS.QR_GROOM] });
     const dialog = giftBlock(render(viewModel, selection.effectiveSections));
-    const groom = dialog.slice(dialog.indexOf('data-side="GROOM"'), dialog.indexOf('data-side="BRIDE"'));
+    const groom = dialog.slice(dialog.indexOf('id="ee-gift-panel-GROOM"'), dialog.indexOf('id="ee-gift-panel-BRIDE"'));
     expect(groom).toContain("9001000000001");
     expect(groom).toContain(COPY.gift.qrUnavailable);
     expect(groom).not.toContain("<img");
@@ -140,7 +171,7 @@ describe("gift dialog", () => {
     expect(html).not.toMatch(/<dialog|giftOpen|copyButton/);
   });
 
-  it("dialog source: native showModal()/close(), explicit close, Escape via the native close event, focus returns to the opener", () => {
+  it("dialog source: native showModal()/close(), explicit close, Escape and backdrop via the native close event, focus returns to the opener", () => {
     const code = readFileSync(join(V1_DIR, "interactive", "gift-dialog.tsx"), "utf8")
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/(^|[^:])\/\/.*$/gm, "$1");
@@ -149,17 +180,27 @@ describe("gift dialog", () => {
     expect(code).toMatch(/onClose=\{handleClose\}/);
     expect(code).toMatch(/openerRef\.current\?\.focus\(\);/);
     expect(code).toMatch(/onClick=\{\(\) => setOpen\(false\)\}/);
+    // Task029 scrim: a click on the dialog box itself (the backdrop) closes it.
+    expect(code).toMatch(/if \(event\.target === event\.currentTarget\) setOpen\(false\);/);
     expect(code).not.toMatch(/\bdocument\b|\bwindow\b|addEventListener|role="dialog"|aria-modal/);
   });
 
-  it("the dialog island renders its children unchanged and nothing else of its own", () => {
-    const html = renderToStaticMarkup(
-      <GiftDialog>
-        <p data-probe="x">nội dung</p>
-      </GiftDialog>,
+  it("the dialog island renders its panels unchanged; one panel means no tabs, two mean two tabs", () => {
+    const one = renderToStaticMarkup(<GiftDialog panels={[{ side: "BRIDE", label: "Nhà Gái", content: <p data-probe="x">nội dung</p> }]} />);
+    expect(one).toContain('<p data-probe="x">nội dung</p>');
+    expect(one.match(/<button/g)).toHaveLength(2);
+    expect(one).not.toContain("aria-pressed");
+    const two = renderToStaticMarkup(
+      <GiftDialog
+        panels={[
+          { side: "GROOM", label: "Nhà Trai", content: <p data-probe="a">a</p> },
+          { side: "BRIDE", label: "Nhà Gái", content: <p data-probe="b">b</p> },
+        ]}
+      />,
     );
-    expect(html).toContain('<p data-probe="x">nội dung</p>');
-    expect(html.match(/<button/g)).toHaveLength(2);
+    expect(two.match(/<button/g)).toHaveLength(4);
+    expect(two).toContain('<p data-probe="a">a</p>');
+    expect(two).toContain('<p data-probe="b">b</p>');
   });
 });
 
@@ -241,10 +282,17 @@ describe("copy results (K21–K22)", () => {
     await expect(copyWithFeedback(clip, "x")).resolves.toBe("FAILED");
   });
 
-  it("idle shows nothing and pending is not success copy", () => {
+  it("idle and pending show nothing; only SUCCESS carries the Task029 \"Đã sao chép\"", () => {
     expect(copyFeedbackText("IDLE")).toBeNull();
-    expect(copyFeedbackText("PENDING")).toBe(COPY.gift.copyPending);
-    expect(COPY.gift.copyPending).not.toBe(COPY.gift.copySucceeded);
+    expect(copyFeedbackText("PENDING")).toBeNull();
+    expect(COPY.gift.copyAccountNumber).toBe("Sao chép");
+    expect(COPY.gift.copySucceeded).toBe("Đã sao chép");
+  });
+
+  it("the control label turns to \"Đã sao chép\" only from the SUCCESS feedback state", () => {
+    const code = readFileSync(join(V1_DIR, "interactive", "copy-account-button.tsx"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(code).toMatch(/\{feedback === "SUCCESS" \? COPY\.copySucceeded : COPY\.copyAccountNumber\}/);
+    expect(code.match(/COPY\.copySucceeded/g)).toHaveLength(2);
   });
 
   it("the copy island never touches the Clipboard API or a legacy fallback", () => {

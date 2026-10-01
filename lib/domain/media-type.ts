@@ -1,12 +1,30 @@
-/** docs/DATABASE.md §11; docs/PHYSICAL_DATABASE_PLAN.md §2.9 */
-export const MEDIA_TYPES = ["COVER", "GALLERY", "AUDIO", "QR_GROOM", "QR_BRIDE", "QR_COMMON"] as const;
+/**
+ * docs/DATABASE.md §11; docs/PHYSICAL_DATABASE_PLAN.md §2.9. PORTRAIT_GROOM /
+ * PORTRAIT_BRIDE: optional portrait roles (docs/DECISIONS.md RF7 Product
+ * Owner amendment, migration 0028). PHOTO_STORY (many, ordered) and
+ * LOVE_STORY_PHOTO (one effective): RF7 Photo Story / Love Story photo
+ * amendment, migration 0031.
+ */
+export const MEDIA_TYPES = [
+  "COVER",
+  "GALLERY",
+  "AUDIO",
+  "QR_GROOM",
+  "QR_BRIDE",
+  "QR_COMMON",
+  "PORTRAIT_GROOM",
+  "PORTRAIT_BRIDE",
+  "PHOTO_STORY",
+  "LOVE_STORY_PHOTO",
+] as const;
 
 export type MediaType = (typeof MEDIA_TYPES)[number];
 
 /**
  * Task 024 (Phase 1) frozen upload policy — docs/SECURITY.md §15 ("approved
  * MIME/type", "file-size limit"). Two policies only: IMAGE (every
- * image-bearing MediaType — COVER/GALLERY/QR_GROOM/QR_BRIDE/QR_COMMON) and
+ * image-bearing MediaType — COVER/GALLERY/QR_GROOM/QR_BRIDE/QR_COMMON/
+ * PORTRAIT_GROOM/PORTRAIT_BRIDE) and
  * AUDIO. Values match the frozen `project-media` Storage bucket
  * configuration (supabase/migrations/..._0023_project_media_storage.sql)
  * exactly — the two must never diverge.
@@ -30,14 +48,14 @@ function isAudioMediaType(mediaType: MediaType): boolean {
   return AUDIO_MEDIA_TYPES.includes(mediaType);
 }
 
-/** COVER/GALLERY/QR_GROOM/QR_BRIDE/QR_COMMON -> image policy; AUDIO -> audio policy. */
+/** Every image role (COVER, GALLERY, QR and PORTRAIT roles) -> image policy; AUDIO -> audio policy. */
 export function allowedMimeTypesForMediaType(
   mediaType: MediaType,
 ): readonly MediaMimeType[] {
   return isAudioMediaType(mediaType) ? AUDIO_MEDIA_MIME_TYPES : IMAGE_MEDIA_MIME_TYPES;
 }
 
-/** COVER/GALLERY/QR_GROOM/QR_BRIDE/QR_COMMON -> 10 MiB; AUDIO -> 20 MiB. */
+/** Every image role (COVER, GALLERY, QR and PORTRAIT roles) -> 10 MiB; AUDIO -> 20 MiB. */
 export function maxBytesForMediaType(mediaType: MediaType): number {
   return isAudioMediaType(mediaType) ? AUDIO_MEDIA_MAX_BYTES : IMAGE_MEDIA_MAX_BYTES;
 }

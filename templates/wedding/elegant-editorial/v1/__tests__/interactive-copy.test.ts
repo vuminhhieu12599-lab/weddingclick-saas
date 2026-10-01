@@ -10,14 +10,12 @@ import { ELEGANT_EDITORIAL_V1_COPY as COPY } from "../copy";
  */
 
 const D_COPY = {
-  opening: { open: COPY.opening.open, skip: COPY.opening.skip, controlsLabel: COPY.opening.controlsLabel },
+  opening: { openEnvelope: COPY.opening.openEnvelope, hint: COPY.opening.hint },
   gift: {
     openDialog: COPY.gift.openDialog,
-    dialogTitle: COPY.gift.dialogTitle,
     closeDialog: COPY.gift.closeDialog,
     copyAccountNumber: COPY.gift.copyAccountNumber,
     copyAccountNumberTarget: COPY.gift.copyAccountNumberTarget,
-    copyPending: COPY.gift.copyPending,
     copySucceeded: COPY.gift.copySucceeded,
     copyFailed: COPY.gift.copyFailed,
     copyUnavailable: COPY.gift.copyUnavailable,
@@ -41,7 +39,7 @@ describe("RF-06D fixed copy", () => {
       expect(text.trim().length, text).toBeGreaterThan(0);
       expect(text, text).toBe(text.trim());
     }
-    for (const group of [COPY.countdown, COPY.countdown.units, COPY.music, COPY.rsvp, COPY.rsvp.errors, COPY.rsvp.results]) {
+    for (const group of [COPY.countdown, COPY.countdown.units, COPY.music, COPY.rsvp, COPY.rsvp.errors, COPY.rsvp.results, COPY.rsvp.success]) {
       expect(Object.isFrozen(group)).toBe(true);
     }
   });
@@ -53,10 +51,11 @@ describe("RF-06D fixed copy", () => {
     for (const guest of Object.values(FIXTURE_GUESTS)) expect(text).not.toContain(guest.displayName);
   });
 
-  it("RSVP copy covers exactly the two attendance choices and the four frozen results", () => {
-    expect(Object.keys(COPY.rsvp.attendanceLabels)).toStrictEqual(["ATTENDING", "NOT_ATTENDING"]);
-    expect(Object.keys(COPY.rsvp.results).sort()).toStrictEqual(["FAILED", "INVALID", "SUCCESS", "UNAVAILABLE"]);
-    expect(JSON.stringify(COPY)).not.toMatch(/\bMAYBE\b|QR_COMMON|Có thể|Sẽ cố gắng/);
+  it("RSVP copy covers exactly the three attendance choices, the three non-success results and the D11 success wording", () => {
+    expect(Object.keys(COPY.rsvp.attendanceLabels)).toStrictEqual(["ATTENDING", "MAYBE", "NOT_ATTENDING"]);
+    expect(Object.keys(COPY.rsvp.results).sort()).toStrictEqual(["FAILED", "INVALID", "UNAVAILABLE"]);
+    expect(Object.keys(COPY.rsvp.success)).toStrictEqual(["thanks", "responded", "attendingTail", "notAttendingTail"]);
+    expect(JSON.stringify(COPY)).not.toMatch(/QR_COMMON|Có thể/);  // MAYBE / "Sẽ cố gắng tham dự" are canonical since the RSVP completion amendment.
   });
 
   it("music copy has no unavailable/placeholder text (P35: absence is the degraded state)", () => {
@@ -66,5 +65,38 @@ describe("RF-06D fixed copy", () => {
 
   it("countdown units match the four frozen RF-05C parts", () => {
     expect(Object.keys(COPY.countdown.units)).toStrictEqual(["days", "hours", "minutes", "seconds"]);
+  });
+});
+
+describe("Task029 / Design Baseline exact RF-06D copy (B6)", () => {
+  it("every D string maps to its approved source", () => {
+    expect(COPY.opening).toMatchObject({ openEnvelope: "Mở thiệp mời", hint: "Chạm vào thiệp để mở" });
+    expect(COPY.opening).not.toHaveProperty("skip");
+    expect(COPY.countdown).toMatchObject({ heading: "Đếm ngược", passed: "Ngày vui đã đến" });
+    expect(COPY.gift).toMatchObject({ openDialog: "Gửi quà cưới", closeDialog: "Đóng", copyAccountNumber: "Sao chép", copySucceeded: "Đã sao chép" });
+    expect(COPY.rsvp).toMatchObject({
+      heading: "Xác nhận tham dự",
+      headingSecondLine: "Gửi lời chúc",
+      attendanceLabel: "Bạn có thể tham dự không?",
+      // Product Owner ruling (RSVP completion): the always-visible name prompt.
+      guestNameLabel: "Tên bạn là gì?",
+      guestNamePlaceholder: "Tên bạn là gì?",
+      partySizeLabel: "Số người tham dự",
+      messagePlaceholder: "Gửi lời chúc đến cô dâu & chú rể…",
+      submit: "Gửi lời chúc",
+      edit: "Sửa lại",
+    });
+    expect(COPY.rsvp.attendanceLabels).toStrictEqual({
+      ATTENDING: "Sẽ tham dự",
+      MAYBE: "Sẽ cố gắng tham dự",
+      NOT_ATTENDING: "Tiếc quá, không tham dự được",
+    });
+  });
+
+  it("implementation-chosen D copy that the Design Baseline removed is gone", () => {
+    const text = JSON.stringify(COPY);
+    for (const removed of ["Hẹn ngày chung vui", "Xem ngay", "Mở thiệp\"", "Xem thông tin mừng cưới", "Thông tin mừng cưới", '"Gửi xác nhận"', "Tôi sẽ tham dự", "Bạn sẽ tham dự chứ?"]) {
+      expect(text, removed).not.toContain(removed);
+    }
   });
 });

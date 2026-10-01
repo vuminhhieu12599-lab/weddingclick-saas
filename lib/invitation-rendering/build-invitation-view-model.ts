@@ -1,9 +1,11 @@
+import { selectCeremonyCards } from "./ceremony-cards";
 import { extractSnapshotMediaRefs } from "./extract-snapshot-media-refs";
 import type {
   BuildInvitationViewModelInput,
   GuestOverlay,
   InvitationViewModel,
   MediaResolution,
+  ViewModelDressCode,
   ViewModelEvent,
   ViewModelFamily,
   ViewModelGift,
@@ -12,13 +14,15 @@ import type {
   ViewModelPerson,
 } from "./invitation-view-model-types";
 import { InvitationViewModelInvariantError, projectMediaResolution } from "./media-resolution";
-import type {
-  SnapshotDesignSettingValue,
-  SnapshotEvent,
-  SnapshotFamily,
-  SnapshotGiftSide,
-  SnapshotPayloadV1,
-  SnapshotPerson,
+import {
+  DRESS_CODE_SWATCH_COLOR_PATTERN,
+  type SnapshotDesignSettingValue,
+  type SnapshotDressCode,
+  type SnapshotEvent,
+  type SnapshotFamily,
+  type SnapshotGiftSide,
+  type SnapshotPayloadV1,
+  type SnapshotPerson,
 } from "./snapshot-payload-types";
 import { COUPLE_SIDES, type CoupleSide } from "./wedding-domain-types";
 
@@ -79,10 +83,19 @@ export function buildInvitationViewModel(input: BuildInvitationViewModelInput): 
       lunarDateDisplay: snapshot.ceremony.lunarDateDisplay,
     },
     events: snapshot.events.map(projectEvent),
+    ceremonyCards: selectCeremonyCards(snapshot).map((card) => ({
+      side: card.side,
+      title: card.title,
+      event: projectEvent(card.event),
+    })),
     operationalSides: [...snapshot.operationalSides],
     content: {
       invitationMessage: snapshot.content.invitationMessage,
       loveStory: snapshot.content.loveStory,
+      // RF7 Timeline amendment: copied unchanged; absent in older v1 payloads → [].
+      timeline: (snapshot.content.timeline ?? []).map((item) => ({ id: item.id, time: item.time, label: item.label })),
+      // RF7 Dress Code amendment: absent in older v1 payloads → null.
+      dressCode: projectDressCode(snapshot.content.dressCode ?? null),
     },
     gift: projectGift(snapshot),
     media: projectMedia(snapshot, resolutions),
@@ -92,6 +105,9 @@ export function buildInvitationViewModel(input: BuildInvitationViewModelInput): 
       gallery: snapshot.sections.gallery,
       music: snapshot.sections.music,
       gift: snapshot.sections.gift,
+      timeline: snapshot.sections.timeline === true,
+      dressCode: snapshot.sections.dressCode === true,
+      photoStory: snapshot.sections.photoStory === true,
     },
     design: {
       paletteKey: snapshot.design.paletteKey,
@@ -255,22 +271,48 @@ function slot(resolutions: ReadonlyMap<string, MediaResolution>, mediaId: string
  * M6–M11: every Snapshot reference stays observable with its runtime state.
  * Absent reference → absent slot; gallery keeps Snapshot order and count.
  * QR roles come only from `media.qr`; there is no common QR slot.
+ * Portrait slots come only from the optional `media.portrait` (absent in
+ * older v1 payloads, which therefore give two absent portrait slots).
  */
 function projectMedia(
   snapshot: SnapshotPayloadV1,
   resolutions: ReadonlyMap<string, MediaResolution>,
 ): ViewModelMedia {
-  const { coverMediaId, galleryMediaIds, audioMediaId, qr } = snapshot.media;
+  const { coverMediaId, galleryMediaIds, audioMediaId, qr, portrait, photoStoryMediaIds, loveStoryPhotoMediaId } =
+    snapshot.media;
 
   const media: ViewModelMedia = {
     gallery: galleryMediaIds.map((mediaId) => slot(resolutions, mediaId)),
     qr: {},
+    portrait: {},
+    photoStory: (photoStoryMediaIds ?? []).map((mediaId) => slot(resolutions, mediaId)),
   };
   if (coverMediaId !== undefined) media.cover = slot(resolutions, coverMediaId);
   if (audioMediaId !== undefined) media.audio = slot(resolutions, audioMediaId);
   if (qr.groomMediaId !== undefined) media.qr.groom = slot(resolutions, qr.groomMediaId);
   if (qr.brideMediaId !== undefined) media.qr.bride = slot(resolutions, qr.brideMediaId);
+  if (portrait?.groomMediaId !== undefined) media.portrait.groom = slot(resolutions, portrait.groomMediaId);
+  if (portrait?.brideMediaId !== undefined) media.portrait.bride = slot(resolutions, portrait.brideMediaId);
+  if (loveStoryPhotoMediaId !== undefined) media.loveStoryPhoto = slot(resolutions, loveStoryPhotoMediaId);
   return media;
+}
+
+/**
+ * RF7 Dress Code amendment: owned copy. Each swatch colour is re-checked
+ * against the strict `#rrggbb` form, because it becomes an inline CSS value:
+ * a persisted payload can never inject any other CSS.
+ */
+function projectDressCode(dressCode: SnapshotDressCode | null): ViewModelDressCode | null {
+  if (dressCode === null) return null;
+  return {
+    description: dressCode.description,
+    swatches: dressCode.swatches.map((swatch) => {
+      if (typeof swatch.color !== "string" || !DRESS_CODE_SWATCH_COLOR_PATTERN.test(swatch.color)) {
+        throw new InvitationViewModelInvariantError(`Snapshot dress code swatch ${swatch.id} is not a #rrggbb colour`);
+      }
+      return { id: swatch.id, color: swatch.color };
+    }),
+  };
 }
 
 /** V1: exactly `displayName`, passed through as given. */

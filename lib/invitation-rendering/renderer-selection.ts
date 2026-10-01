@@ -164,5 +164,8 @@ function computeEffectiveSections(
     gallery: visible("gallery"),
     music: visible("music"),
     gift: visible("gift"),
+    timeline: visible("timeline"),
+    dressCode: visible("dressCode"),
+    photoStory: visible("photoStory"),
   };
 }

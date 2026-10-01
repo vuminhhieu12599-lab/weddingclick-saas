@@ -25,6 +25,9 @@ export const ALL_VISIBLE: RendererEffectiveSections = {
   gallery: true,
   music: true,
   gift: true,
+  timeline: true,
+  dressCode: true,
+  photoStory: true,
 };
 
 export function contractViewModel(): InvitationViewModel {

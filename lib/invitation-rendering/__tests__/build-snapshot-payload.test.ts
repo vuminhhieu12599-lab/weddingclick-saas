@@ -161,6 +161,9 @@ function input(overrides: Partial<BuildSnapshotPayloadInput> = {}): BuildSnapsho
     weddingDetails: details(),
     events,
     media,
+    timelineItems: [],
+    dressCode: null,
+    dressCodeSwatches: [],
     design: design(),
     templateVersion,
     ...overrides,
@@ -462,7 +465,7 @@ describe("COMMON / GROOM / BRIDE success payloads", () => {
 
   it("content passes canonical values through unchanged", () => {
     const payload = success({ weddingDetails: details({ invitationMessage: "  Kính mời  ", loveStory: null }) });
-    expect(payload.content).toEqual({ invitationMessage: "  Kính mời  ", loveStory: null });
+    expect(payload.content).toEqual({ invitationMessage: "  Kính mời  ", loveStory: null, timeline: [], dressCode: null });
   });
 
   it("has exactly the frozen top-level keys", () => {
@@ -655,12 +658,265 @@ describe("media reference extraction", () => {
 });
 
 // ---------------------------------------------------------------------------
+// portrait media (docs/DECISIONS.md RF7 Product Owner amendment, 2026-10-01)
+// ---------------------------------------------------------------------------
+
+describe("portrait media (optional, additive payload v1)", () => {
+  const portraits = [
+    mediaRow("m-portrait-groom-late", "PORTRAIT_GROOM", 5),
+    mediaRow("m-portrait-groom-b", "PORTRAIT_GROOM", 1),
+    mediaRow("m-portrait-groom-a", "PORTRAIT_GROOM", 1),
+    mediaRow("m-portrait-bride", "PORTRAIT_BRIDE", 0),
+  ];
+
+  it("is absent when the Project has no portrait, so the payload is exactly the pre-portrait one", () => {
+    const payload = success();
+    expect("portrait" in payload.media).toBe(false);
+    expect(Object.keys(payload.media).sort()).toEqual(["audioMediaId", "coverMediaId", "galleryMediaIds", "qr"]);
+    expect(payload.payloadSchemaVersion).toBe(1);
+  });
+
+  it("uses one effective portrait per side: the first by sortOrder, then id (RF11 rule C)", () => {
+    const payload = success({ media: [...media, ...portraits] });
+    expect(payload.media.portrait).toEqual({ groomMediaId: "m-portrait-groom-a", brideMediaId: "m-portrait-bride" });
+    expect(payload.payloadSchemaVersion).toBe(1);
+    expect(success({ media: [...portraits].reverse().concat(media) }).media).toEqual(payload.media);
+  });
+
+  it("keeps an absent side absent", () => {
+    expect(success({ media: [...media, mediaRow("m-portrait-bride", "PORTRAIT_BRIDE", 0)] }).media.portrait).toEqual({
+      brideMediaId: "m-portrait-bride",
+    });
+    expect(success({ media: [mediaRow("m-portrait-groom", "PORTRAIT_GROOM", 0)] }).media.portrait).toEqual({
+      groomMediaId: "m-portrait-groom",
+    });
+  });
+
+  it("is the same for COMMON, GROOM and BRIDE (both people appear in every variant)", () => {
+    for (const variant of ["COMMON", "GROOM", "BRIDE"] as const) {
+      expect(success({ variant, media: [...media, ...portraits] }).media.portrait, variant).toEqual({
+        groomMediaId: "m-portrait-groom-a",
+        brideMediaId: "m-portrait-bride",
+      });
+    }
+  });
+
+  it("never feeds cover, gallery, audio, QR or sections, and is never fed by them", () => {
+    const base = success();
+    const payload = success({ media: [...media, ...portraits] });
+    const { portrait, ...rest } = payload.media;
+    expect(portrait).toBeDefined();
+    expect(rest).toEqual(base.media);
+    expect(payload.sections).toEqual(base.sections);
+    expect(Object.keys(payload.sections).sort()).toEqual(["dressCode", "gallery", "gift", "invitationMessage", "loveStory", "music", "photoStory", "timeline"]);
+    // COVER/GALLERY rows never become portraits.
+    expect(success({ media: [mediaRow("c", "COVER", 0), mediaRow("g", "GALLERY", 0)] }).media.portrait).toBeUndefined();
+  });
+
+  it("stores stable ids only", () => {
+    const json = JSON.stringify(success({ media: [...media, ...portraits] }).media.portrait);
+    expect(json).not.toMatch(/https?:|project-media|\//);
+  });
+
+  it("extraction appends groom then bride portrait after the bride QR, keeping the pre-portrait order", () => {
+    const payload = success({ media: [...media, ...portraits] });
+    expect(extractSnapshotMediaRefs(payload)).toEqual([
+      ...extractSnapshotMediaRefs(success()),
+      "m-portrait-groom-a",
+      "m-portrait-bride",
+    ]);
+    expect(extractSnapshotMediaRefs(payload)).not.toContain("m-portrait-groom-b");
+    expect(extractSnapshotMediaRefs(payload)).not.toContain("m-portrait-groom-late");
+  });
+
+  it("extraction of a v1 payload built before portraits (no media.portrait) is unchanged", () => {
+    const legacy = structuredClone(success());
+    delete (legacy.media as { portrait?: unknown }).portrait;
+    expect("portrait" in legacy.media).toBe(false);
+    expect(extractSnapshotMediaRefs(legacy)).toEqual(extractSnapshotMediaRefs(success()));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// timeline (docs/DECISIONS.md RF7 Timeline amendment, 2026-10-01)
+// ---------------------------------------------------------------------------
+
+describe("timeline (canonical structured content, additive payload v1)", () => {
+  const row = (id: string, time: string, label: string, sortOrder: number, projectId = PROJECT_ID) => ({ id, projectId, time, label, sortOrder });
+
+  it("orders by sortOrder, then id — never by time — and copies values unchanged", () => {
+    const payload = success({
+      timelineItems: [
+        row("t-c", "07:00", "Khai tiệc", 3),
+        row("t-b", "09:00", "  Làm lễ  ", 1),
+        row("t-a", "11:00", "Đón khách", 1),
+      ],
+    });
+    expect(payload.content.timeline).toEqual([
+      { id: "t-a", time: "11:00", label: "Đón khách" },
+      { id: "t-b", time: "09:00", label: "  Làm lễ  " },
+      { id: "t-c", time: "07:00", label: "Khai tiệc" },
+    ]);
+    expect(payload.sections.timeline).toBe(true);
+    expect(payload.payloadSchemaVersion).toBe(1);
+  });
+
+  it("supports zero, one and many rows (no fixed count)", () => {
+    expect(success().content.timeline).toEqual([]);
+    expect(success().sections.timeline).toBe(false);
+    expect(success({ timelineItems: [row("t-1", "08:30", "Đón khách", 0)] }).content.timeline).toHaveLength(1);
+    const many = Array.from({ length: 12 }, (_, i) => row(`t-${String(i).padStart(2, "0")}`, "10:00", `Bước ${i}`, i));
+    expect(success({ timelineItems: many }).content.timeline).toHaveLength(12);
+  });
+
+  it("is never derived from events: canonical events give no timeline, and the timeline never touches events", () => {
+    const base = success();
+    expect(base.events.length).toBeGreaterThan(0);
+    expect(base.content.timeline).toEqual([]);
+    const withTimeline = success({ timelineItems: [row("t-1", "08:30", "Đón khách", 0)] });
+    expect(withTimeline.events).toEqual(base.events);
+    expect(withTimeline.ceremony).toEqual(base.ceremony);
+  });
+
+  it.each([
+    ["a time that is not HH:mm", [row("t-1", "8:30", "Đón khách", 0)]],
+    ["a time with seconds", [row("t-1", "08:30:00", "Đón khách", 0)]],
+    ["an out-of-range time", [row("t-1", "24:00", "Đón khách", 0)]],
+    ["a blank label", [row("t-1", "08:30", "   ", 0)]],
+    ["an over-long label", [row("t-1", "08:30", "x".repeat(201), 0)]],
+    ["a non-integer sortOrder", [row("t-1", "08:30", "Đón khách", 1.5)]],
+    ["a duplicate id", [row("t-1", "08:30", "A", 0), row("t-1", "09:00", "B", 1)]],
+    ["a row from another Project", [row("t-1", "08:30", "A", 0, "other-project")]],
+  ])("rejects %s with a typed invariant error", (_label, timelineItems) => {
+    expect(() => build({ timelineItems })).toThrow(SnapshotPayloadInvariantError);
+  });
+
+  it("is variant-independent and unaffected by design.sectionSettings (content availability only)", () => {
+    const timelineItems = [row("t-1", "08:30", "Đón khách", 0)];
+    for (const variant of ["COMMON", "GROOM", "BRIDE"] as const) {
+      expect(success({ variant, timelineItems }).content.timeline, variant).toEqual([{ id: "t-1", time: "08:30", label: "Đón khách" }]);
+    }
+    expect(success({ timelineItems, design: design({ sectionSettings: { timeline: false } }) }).sections.timeline).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Photo Story / Love Story photo (docs/DECISIONS.md RF7 media amendment, 2026-10-01)
+// ---------------------------------------------------------------------------
+
+describe("[media-batch] Photo Story and Love Story photo media (additive payload v1)", () => {
+  it("[media-batch] are absent without rows, so the payload keeps its pre-batch media keys", () => {
+    const payload = success();
+    expect("photoStoryMediaIds" in payload.media).toBe(false);
+    expect("loveStoryPhotoMediaId" in payload.media).toBe(false);
+    expect(payload.sections.photoStory).toBe(false);
+  });
+
+  it("[media-batch] keeps every PHOTO_STORY row in sortOrder → id order and one effective LOVE_STORY_PHOTO", () => {
+    const rows = [
+      mediaRow("ps-c", "PHOTO_STORY", 2),
+      mediaRow("ps-b", "PHOTO_STORY", 1),
+      mediaRow("ps-a", "PHOTO_STORY", 1),
+      ...Array.from({ length: 4 }, (_, i) => mediaRow(`ps-x${i}`, "PHOTO_STORY", 9)),
+      mediaRow("ls-late", "LOVE_STORY_PHOTO", 5),
+      mediaRow("ls-first", "LOVE_STORY_PHOTO", 0),
+    ];
+    const payload = success({ media: [...media, ...rows] });
+    expect(payload.media.photoStoryMediaIds).toEqual(["ps-a", "ps-b", "ps-c", "ps-x0", "ps-x1", "ps-x2", "ps-x3"]);
+    expect(payload.media.loveStoryPhotoMediaId).toBe("ls-first");
+    expect(payload.sections.photoStory).toBe(true);
+    expect(payload.payloadSchemaVersion).toBe(1);
+    // Never fed by or feeding other roles.
+    const rest: Partial<typeof payload.media> = { ...payload.media };
+    delete rest.photoStoryMediaIds;
+    delete rest.loveStoryPhotoMediaId;
+    expect(rest).toEqual(success().media);
+    expect(success({ media: [mediaRow("g", "GALLERY", 0), mediaRow("c", "COVER", 0)] }).media.photoStoryMediaIds).toBeUndefined();
+    expect(success({ media: [mediaRow("g", "GALLERY", 0), mediaRow("c", "COVER", 0)] }).media.loveStoryPhotoMediaId).toBeUndefined();
+  });
+
+  it("[media-batch] extraction appends Photo Story ids then the Love Story photo after the earlier refs", () => {
+    const payload = success({ media: [...media, mediaRow("ps-1", "PHOTO_STORY", 0), mediaRow("ps-2", "PHOTO_STORY", 1), mediaRow("ls", "LOVE_STORY_PHOTO", 0)] });
+    expect(extractSnapshotMediaRefs(payload)).toEqual([...extractSnapshotMediaRefs(success()), "ps-1", "ps-2", "ls"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// dress code (docs/DECISIONS.md RF7 Dress Code amendment, 2026-10-01)
+// ---------------------------------------------------------------------------
+
+describe("dress code (configurable project data, additive payload v1)", () => {
+  const code = (description: string | null = "Tông màu ấm", projectId = PROJECT_ID) => ({ projectId, description });
+  const swatch = (id: string, color: string, sortOrder: number, projectId = PROJECT_ID) => ({ id, projectId, color, sortOrder });
+
+  it("is null without a Dress Code, and sections.dressCode is false", () => {
+    const payload = success();
+    expect(payload.content.dressCode).toBeNull();
+    expect(payload.sections.dressCode).toBe(false);
+    expect(payload.payloadSchemaVersion).toBe(1);
+  });
+
+  it("copies the description and orders swatches by sortOrder, then id; any count", () => {
+    const payload = success({
+      dressCode: code("  Tông màu ấm  "),
+      dressCodeSwatches: [swatch("s-c", "#3d352b", 2), swatch("s-b", "#caa06a", 1), swatch("s-a", "#7c5c42", 1)],
+    });
+    expect(payload.content.dressCode).toEqual({
+      description: "  Tông màu ấm  ",
+      swatches: [
+        { id: "s-a", color: "#7c5c42" },
+        { id: "s-b", color: "#caa06a" },
+        { id: "s-c", color: "#3d352b" },
+      ],
+    });
+    expect(payload.sections.dressCode).toBe(true);
+    const many = Array.from({ length: 9 }, (_, i) => swatch(`s-${i}`, "#aabbcc", i));
+    expect(success({ dressCode: code(), dressCodeSwatches: many }).content.dressCode?.swatches).toHaveLength(9);
+  });
+
+  it("is available with only a description or only swatches; not with neither", () => {
+    expect(success({ dressCode: code("Lịch sự") }).sections.dressCode).toBe(true);
+    expect(success({ dressCode: code(null), dressCodeSwatches: [swatch("s-1", "#caa06a", 0)] }).sections.dressCode).toBe(true);
+    const empty = success({ dressCode: code(null) });
+    expect(empty.content.dressCode).toEqual({ description: null, swatches: [] });
+    expect(empty.sections.dressCode).toBe(false);
+  });
+
+  it.each([
+    ["an uppercase hex", [swatch("s-1", "#CAA06A", 0)]],
+    ["a shorthand hex", [swatch("s-1", "#cab", 0)]],
+    ["a CSS keyword", [swatch("s-1", "red", 0)]],
+    ["a CSS function", [swatch("s-1", "rgb(1,2,3)", 0)]],
+    ["a url()", [swatch("s-1", "url(x)", 0)]],
+    ["a var()", [swatch("s-1", "var(--x)", 0)]],
+    ["an injected declaration", [swatch("s-1", "#caa06a;background:url(x)", 0)]],
+    ["a non-integer sortOrder", [swatch("s-1", "#caa06a", 0.5)]],
+    ["a duplicate id", [swatch("s-1", "#caa06a", 0), swatch("s-1", "#7c5c42", 1)]],
+    ["a swatch from another Project", [swatch("s-1", "#caa06a", 0, "other-project")]],
+  ])("rejects %s with a typed invariant error", (_label, dressCodeSwatches) => {
+    expect(() => build({ dressCode: code(), dressCodeSwatches })).toThrow(SnapshotPayloadInvariantError);
+  });
+
+  it("rejects a blank or over-long description, another Project's row, and swatches without a Dress Code", () => {
+    expect(() => build({ dressCode: code("   ") })).toThrow(SnapshotPayloadInvariantError);
+    expect(() => build({ dressCode: code("x".repeat(1001)) })).toThrow(SnapshotPayloadInvariantError);
+    expect(() => build({ dressCode: code("A", "other-project") })).toThrow(SnapshotPayloadInvariantError);
+    expect(() => build({ dressCode: null, dressCodeSwatches: [swatch("s-1", "#caa06a", 0)] })).toThrow(SnapshotPayloadInvariantError);
+  });
+
+  it("is never inferred from design: palette/settings give no Dress Code, and sectionSettings never change availability", () => {
+    expect(success({ design: design({ sectionSettings: { dressCode: true } }) }).content.dressCode).toBeNull();
+    expect(success({ dressCode: code(), design: design({ sectionSettings: { dressCode: false } }) }).sections.dressCode).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // sections (S1–S7, S10)
 // ---------------------------------------------------------------------------
 
 describe("sections", () => {
-  it("has exactly the five frozen keys", () => {
-    expect(Object.keys(success().sections).sort()).toEqual(["gallery", "gift", "invitationMessage", "loveStory", "music"]);
+  it("has exactly the five frozen keys plus the additive timeline, dressCode and photoStory keys", () => {
+    expect(Object.keys(success().sections).sort()).toEqual(["dressCode", "gallery", "gift", "invitationMessage", "loveStory", "music", "photoStory", "timeline"]);
   });
 
   it.each([
@@ -688,10 +944,10 @@ describe("sections", () => {
   });
 
   it("is never changed by design.sectionSettings", () => {
-    const allOff = success({ design: design({ sectionSettings: { invitationMessage: false, loveStory: false, gallery: false, music: false, gift: false } }) });
-    const allOn = success({ design: design({ sectionSettings: { invitationMessage: true, loveStory: true, gallery: true, music: true, gift: true } }) });
+    const allOff = success({ design: design({ sectionSettings: { invitationMessage: false, loveStory: false, gallery: false, music: false, gift: false, timeline: false, dressCode: false, photoStory: false } }) });
+    const allOn = success({ design: design({ sectionSettings: { invitationMessage: true, loveStory: true, gallery: true, music: true, gift: true, timeline: true, dressCode: true, photoStory: true } }) });
     const empty = success({ design: design({ sectionSettings: {} }) });
-    const expected = { invitationMessage: true, loveStory: true, gallery: true, music: true, gift: true };
+    const expected = { invitationMessage: true, loveStory: true, gallery: true, music: true, gift: true, timeline: false, dressCode: false, photoStory: false };
     expect(allOff.sections).toEqual(expected);
     expect(allOn.sections).toEqual(expected);
     expect(empty.sections).toEqual(expected);

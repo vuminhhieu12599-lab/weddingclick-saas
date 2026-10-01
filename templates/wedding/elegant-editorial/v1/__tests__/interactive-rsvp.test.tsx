@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -20,6 +23,7 @@ import {
   rsvpMessageLength,
   rsvpPhaseForOutcome,
   rsvpPhaseReducer,
+  rsvpTakesPartySize,
   type RsvpDraft,
   type RsvpPhase,
 } from "../interactive/rsvp-model";
@@ -28,7 +32,7 @@ vi.mock("../fonts", () => ({ ELEGANT_EDITORIAL_V1_FONT_VARIABLES_CLASS_NAME: "ee
 
 const { ElegantEditorialV1 } = await import("../elegant-editorial-v1");
 const { ELEGANT_EDITORIAL_V1_COPY: COPY } = await import("../copy");
-const { Rsvp, createRsvpSubmissionGate, settleRsvpSubmit } = await import("../interactive/rsvp");
+const { Rsvp, createRsvpSubmissionGate, rsvpSuccessText, settleRsvpSubmit } = await import("../interactive/rsvp");
 const { InvitationRendererHost } = await import("../../../../core/invitation-renderer-host");
 const { RendererHarnessClient } = await import("../../../../../app/internal/renderer-harness/renderer-harness-client");
 
@@ -91,103 +95,94 @@ function rsvpBlock(html: string): string {
 // Frozen K15/K16 input rules
 // ---------------------------------------------------------------------------
 
-describe("personalized input (P31: no name input, guestName null)", () => {
-  it("ATTENDING sends the chosen party size and guestName: null, even if a name was somehow typed", () => {
-    const result = buildRsvpSubmitInput(draft({ attendance: "ATTENDING", partySize: 3, guestName: "ignored" }), true);
-    expect(result).toStrictEqual({
-      ok: true,
-      input: { attendance: "ATTENDING", partySize: 3, message: null, guestName: null },
-    });
-  });
-
-  it("the display name is never part of the input", () => {
-    const result = buildRsvpSubmitInput(draft({ attendance: "NOT_ATTENDING" }), true);
-    expect(result.ok && Object.keys(result.input).sort()).toStrictEqual(["attendance", "guestName", "message", "partySize"]);
-    expect(JSON.stringify(result)).not.toContain(FIXTURE_GUESTS.NORMAL.displayName);
-  });
-});
-
-describe("non-personalized input (K16: required name, non-blank after trim)", () => {
+// RSVP completion amendment: one input rule for personalized and unpersonalized invitations.
+describe("response name (always required, never identity)", () => {
   it.each(["", " ", "\t\n  "])("blank name %j is invalid locally", (guestName) => {
-    expect(buildRsvpSubmitInput(draft({ attendance: "ATTENDING", guestName }), false)).toStrictEqual({
+    expect(buildRsvpSubmitInput(draft({ attendance: "ATTENDING", guestName }))).toStrictEqual({
       ok: false,
       errors: ["GUEST_NAME_REQUIRED"],
     });
   });
 
-  it("a free-form name is sent exactly as typed (no normalization)", () => {
-    const result = buildRsvpSubmitInput(draft({ attendance: "ATTENDING", partySize: 2, guestName: " Em và sự cô đơn " }), false);
+  it("a free-form name is sent trimmed, and is the only name in the input", () => {
+    const result = buildRsvpSubmitInput(draft({ attendance: "ATTENDING", partySize: 2, guestName: " Em và sự cô đơn " }));
     expect(result).toStrictEqual({
       ok: true,
-      input: { attendance: "ATTENDING", partySize: 2, message: null, guestName: " Em và sự cô đơn " },
+      input: { attendance: "ATTENDING", partySize: 2, message: null, guestName: "Em và sự cô đơn" },
     });
+    expect(result.ok && Object.keys(result.input).sort()).toStrictEqual(["attendance", "guestName", "message", "partySize"]);
   });
 });
 
 describe("status / party size / message", () => {
-  it("exactly two attendance choices, the canonical ones", () => {
-    expect(RSVP_ATTENDANCE_STATUSES).toStrictEqual(["ATTENDING", "NOT_ATTENDING"]);
-    expect(Object.keys(COPY.rsvp.attendanceLabels)).toStrictEqual(["ATTENDING", "NOT_ATTENDING"]);
-  });
-
-  it("no attendance chosen is invalid locally", () => {
-    expect(buildRsvpSubmitInput(INITIAL_RSVP_DRAFT, true)).toStrictEqual({ ok: false, errors: ["ATTENDANCE_REQUIRED"] });
-  });
-
-  it("party-size choices are exactly the frozen 1–20 range", () => {
-    expect(RSVP_PARTY_SIZE_CHOICES).toStrictEqual(Array.from({ length: 20 }, (_, index) => index + 1));
-    expect(INITIAL_RSVP_DRAFT.partySize).toBe(1);
-  });
-
-  it.each([0, 21, 1.5, Number.NaN])("ATTENDING party size %s is invalid locally", (partySize) => {
-    expect(buildRsvpSubmitInput(draft({ attendance: "ATTENDING", partySize }), true)).toStrictEqual({
-      ok: false,
-      errors: ["PARTY_SIZE_RANGE"],
+  it("exactly three attendance choices, in order ATTENDING → MAYBE → NOT_ATTENDING", () => {
+    expect(RSVP_ATTENDANCE_STATUSES).toStrictEqual(["ATTENDING", "MAYBE", "NOT_ATTENDING"]);
+    expect(COPY.rsvp.attendanceLabels).toStrictEqual({
+      ATTENDING: "Sẽ tham dự",
+      MAYBE: "Sẽ cố gắng tham dự",
+      NOT_ATTENDING: "Tiếc quá, không tham dự được",
     });
   });
 
-  it("ATTENDING 1 and 20 are valid", () => {
+  it("no attendance chosen is invalid locally", () => {
+    expect(buildRsvpSubmitInput(draft({ attendance: null, guestName: "Khách" }))).toStrictEqual({
+      ok: false,
+      errors: ["ATTENDANCE_REQUIRED"],
+    });
+  });
+
+  it("the Task029 select starts on \"Sẽ tham dự\" (ATTENDING) with party size 1; nothing comes from a stored response (K18)", () => {
+    expect(INITIAL_RSVP_DRAFT).toStrictEqual({ attendance: "ATTENDING", partySize: 1, message: "", guestName: "" });
+    expect(Object.isFrozen(INITIAL_RSVP_DRAFT)).toBe(true);
+  });
+
+  it("party-size choices are exactly the 1–20 range", () => {
+    expect(RSVP_PARTY_SIZE_CHOICES).toStrictEqual(Array.from({ length: 20 }, (_, index) => index + 1));
+  });
+
+  it.each(["ATTENDING", "MAYBE"] as const)("%s: party size 1 and 20 valid; 0, 21, 1.5, NaN invalid", (attendance) => {
     for (const partySize of [1, 20]) {
-      expect(buildRsvpSubmitInput(draft({ attendance: "ATTENDING", partySize }), true).ok).toBe(true);
+      expect(buildRsvpSubmitInput(draft({ attendance, partySize, guestName: "Khách" }))).toMatchObject({ ok: true, input: { partySize } });
+    }
+    for (const partySize of [0, 21, 1.5, Number.NaN]) {
+      expect(buildRsvpSubmitInput(draft({ attendance, partySize, guestName: "Khách" }))).toStrictEqual({ ok: false, errors: ["PARTY_SIZE_RANGE"] });
     }
   });
 
   it("NOT_ATTENDING always sends exactly 0, whatever the stale party-size choice", () => {
-    const result = buildRsvpSubmitInput(draft({ attendance: "NOT_ATTENDING", partySize: 7 }), true);
+    const result = buildRsvpSubmitInput(draft({ attendance: "NOT_ATTENDING", partySize: 7, guestName: "Khách" }));
     expect(result.ok && result.input.partySize).toBe(0);
   });
 
   it("message: blank → null; otherwise verbatim; 500 code points allowed, 501 rejected", () => {
-    const blank = buildRsvpSubmitInput(draft({ attendance: "ATTENDING", message: "  \n " }), true);
+    const base = { attendance: "ATTENDING" as const, guestName: "Khách" };
+    const blank = buildRsvpSubmitInput(draft({ ...base, message: "  \n " }));
     expect(blank.ok && blank.input.message).toBeNull();
-    const kept = buildRsvpSubmitInput(draft({ attendance: "ATTENDING", message: "  Chúc mừng!\n" }), true);
+    const kept = buildRsvpSubmitInput(draft({ ...base, message: "  Chúc mừng!\n" }));
     expect(kept.ok && kept.input.message).toBe("  Chúc mừng!\n");
     const emoji500 = "💐".repeat(RSVP_MESSAGE_MAX_LENGTH);
-    expect(emoji500.length).toBe(1000);
     expect(rsvpMessageLength(emoji500)).toBe(500);
-    expect(buildRsvpSubmitInput(draft({ attendance: "ATTENDING", message: emoji500 }), true).ok).toBe(true);
-    expect(buildRsvpSubmitInput(draft({ attendance: "ATTENDING", message: `${emoji500}a` }), true)).toStrictEqual({
+    expect(buildRsvpSubmitInput(draft({ ...base, message: emoji500 })).ok).toBe(true);
+    expect(buildRsvpSubmitInput(draft({ ...base, message: `${emoji500}a` }))).toStrictEqual({
       ok: false,
       errors: ["MESSAGE_TOO_LONG"],
     });
   });
 
-  it("every accepted draft is valid under the frozen canonical validator", () => {
-    for (const personalized of [true, false]) {
-      for (const attendance of RSVP_ATTENDANCE_STATUSES) {
-        for (const partySize of RSVP_PARTY_SIZE_CHOICES) {
-          const result = buildRsvpSubmitInput(draft({ attendance, partySize, guestName: "Khách", message: "x" }), personalized);
-          expect(result.ok).toBe(true);
-          if (result.ok) expect(isValidRsvpSubmitInputV1(result.input, { personalized })).toBe(true);
-        }
+  it("every accepted draft is valid under the canonical validator", () => {
+    for (const attendance of RSVP_ATTENDANCE_STATUSES) {
+      for (const partySize of RSVP_PARTY_SIZE_CHOICES) {
+        const result = buildRsvpSubmitInput(draft({ attendance, partySize, guestName: "Khách", message: "x" }));
+        expect(result.ok).toBe(true);
+        if (result.ok) expect(isValidRsvpSubmitInputV1(result.input)).toBe(true);
       }
     }
   });
 
-  it("collects every local error at once", () => {
-    expect(buildRsvpSubmitInput(draft({ message: "a".repeat(501) }), false)).toStrictEqual({
+  it("collects every local error at once, the name first", () => {
+    expect(buildRsvpSubmitInput(draft({ attendance: null, message: "a".repeat(501) }))).toStrictEqual({
       ok: false,
-      errors: ["ATTENDANCE_REQUIRED", "GUEST_NAME_REQUIRED", "MESSAGE_TOO_LONG"],
+      errors: ["GUEST_NAME_REQUIRED", "ATTENDANCE_REQUIRED", "MESSAGE_TOO_LONG"],
     });
   });
 });
@@ -196,7 +191,7 @@ describe("status / party size / message", () => {
 // K17/K18/P32 results and state machine (unit-test doubles only)
 // ---------------------------------------------------------------------------
 
-const VALID_INPUT: RsvpSubmitInputV1 = Object.freeze({ attendance: "ATTENDING", partySize: 2, message: null, guestName: null });
+const VALID_INPUT: RsvpSubmitInputV1 = Object.freeze({ attendance: "ATTENDING", partySize: 2, message: null, guestName: "Anh Hiếu" });
 
 describe("submit results", () => {
   it.each(RSVP_SUBMIT_RESULT_STATUSES)("%s resolves to its own outcome and phase", async (status) => {
@@ -224,12 +219,21 @@ describe("submit results", () => {
     }
   });
 
-  it("every result has fixed, distinct copy; only SUCCESS copy speaks of success", () => {
-    const texts = RSVP_SUBMIT_RESULT_STATUSES.map((status) => COPY.rsvp.results[status]);
-    expect(new Set(texts).size).toBe(4);
-    for (const status of ["INVALID", "UNAVAILABLE", "FAILED"] as const) {
-      expect(COPY.rsvp.results[status]).not.toMatch(/ghi nhận|Cảm ơn/);
-    }
+  it("every non-success result has fixed, distinct copy that never speaks of success", () => {
+    expect(Object.keys(COPY.rsvp.results).sort()).toStrictEqual(["FAILED", "INVALID", "UNAVAILABLE"]);
+    const texts = (["INVALID", "UNAVAILABLE", "FAILED"] as const).map((status) => COPY.rsvp.results[status]);
+    expect(new Set(texts).size).toBe(3);
+    for (const text of texts) expect(text).not.toMatch(/ghi nhận|Cảm ơn|phản hồi/);
+  });
+
+  it("Design Baseline D11: the exact Task029 success sentence around the presentation-only name", () => {
+    expect(rsvpSuccessText({ attendance: "ATTENDING", name: "Anh Hiếu và gia đình", message: null })).toBe(
+      "Cảm ơn Anh Hiếu và gia đình đã phản hồi — rất mong được đón tiếp!",
+    );
+    expect(rsvpSuccessText({ attendance: "NOT_ATTENDING", name: "Em và sự cô đơn", message: "Chúc mừng!" })).toBe(
+      "Cảm ơn Em và sự cô đơn đã phản hồi!",
+    );
+    expect(COPY.rsvp.edit).toBe("Sửa lại");
   });
 });
 
@@ -242,6 +246,15 @@ describe("state machine (P32)", () => {
     expect(start("IDLE")).toBe("PENDING");
     for (const status of RSVP_SUBMIT_RESULT_STATUSES) expect(settle("PENDING", status)).toBe(status);
     expect(settle("PENDING", "REJECTED")).toBe("FAILED");
+  });
+
+  it("EDIT (\"Sửa lại\") returns from success to the form only; it never creates a success", () => {
+    expect(rsvpPhaseReducer("SUCCESS", { type: "EDIT" })).toBe("IDLE");
+    for (const phase of ["IDLE", "PENDING", "INVALID", "UNAVAILABLE", "FAILED"] as const) {
+      expect(rsvpPhaseReducer(phase, { type: "EDIT" })).toBe(phase);
+    }
+    // A resubmission after editing starts a new capability round-trip.
+    expect(start(rsvpPhaseReducer("SUCCESS", { type: "EDIT" }))).toBe("PENDING");
   });
 
   it("pending ignores a second start; success ignores any start", () => {
@@ -297,46 +310,87 @@ describe("submission concurrency (P32)", () => {
 // ---------------------------------------------------------------------------
 
 describe("form markup (server render / first client render)", () => {
-  function form(personalized: boolean): string {
-    return renderToStaticMarkup(<Rsvp rsvp={double({ status: "UNAVAILABLE" })} personalized={personalized} />);
+  // Rendered through the root so personalization comes from the real viewModel.guest.
+  async function form(personalized: boolean): Promise<string> {
+    const { viewModel, selection } = await buildRendererFixture({ variant: "COMMON", ...(personalized ? { guest: FIXTURE_GUESTS.NORMAL } : {}) });
+    const html = renderToStaticMarkup(
+      <ElegantEditorialV1 viewModel={viewModel} sections={selection.effectiveSections} capabilities={{ rsvp: double({ status: "UNAVAILABLE" }) }} />,
+    );
+    return html.slice(html.indexOf('aria-labelledby="ee-rsvp-heading"'), html.indexOf('aria-labelledby="ee-gift-heading"'));
   }
 
-  it("personalized: no guest-name input; labelled radio pair, message textarea with limit hint, submit", () => {
-    const html = form(true);
-    expect(html).not.toMatch(/name="guestName"|ee-rsvp-guest-name/);
-    expect(html).toMatch(/<form[^>]*novalidate/i);
-    expect(html).toMatch(/<fieldset[^>]*><legend[^>]*>Bạn sẽ tham dự chứ\?<\/legend>/);
-    expect([...html.matchAll(/<input type="radio" class="[^"]*rsvpRadio[^"]*" name="attendance" value="(\w+)"\/>/g)].map((m) => m[1])).toStrictEqual([
-      "ATTENDING",
-      "NOT_ATTENDING",
-    ]);
-    for (const status of RSVP_ATTENDANCE_STATUSES) expect(html).toContain(`<span>${COPY.rsvp.attendanceLabels[status]}</span>`);
-    expect(html).toMatch(/<label for="ee-rsvp-message"[^>]*>[^<]+<\/label><textarea id="ee-rsvp-message"/);
-    expect(html).toMatch(/aria-describedby="ee-rsvp-message-hint"/);
-    expect(html).toContain(`>0/500 · ${COPY.rsvp.messageLimitPrefix} 500 ${COPY.rsvp.messageLimitSuffix}</p>`);
-    expect(html).toMatch(new RegExp(`<button type="submit" class="[^"]*rsvpSubmit[^"]*">${COPY.rsvp.submit}</button>`));
-    expect(html).not.toMatch(/\bMAYBE\b|placeholder=/);
-    // Party size appears only after ATTENDING is chosen; nothing is prefilled (K18).
-    expect(html).not.toMatch(/<select|checked/);
-  });
-
-  it("non-personalized: a required, labelled guest-name input", () => {
-    const html = form(false);
+  // RSVP completion amendment: name → attendance → party size → message → submit, for every invitation.
+  it.each([true, false])("personalized=%s: heading, then name, attendance, party size, message, submit — in that order", async (personalized) => {
+    const html = await form(personalized);
+    expect(html).toMatch(/<div class="[^"]*rsvpCard[^"]*"><h2 id="ee-rsvp-heading" class="[^"]*rsvpHeading[^"]*">/);
     expect(html).toMatch(
-      /<label for="ee-rsvp-guest-name"[^>]*>Tên của bạn<\/label><input id="ee-rsvp-guest-name" type="text"[^>]*required=""[^>]*name="guestName" value=""\/>/,
+      /<span class="[^"]*rsvpHeadingLine[^"]*">Xác nhận tham dự<\/span> <span class="[^"]*rsvpHeadingLine[^"]*"><span class="[^"]*rsvpHeadingAmp[^"]*">&amp;<\/span>Gửi lời chúc<\/span>/,
     );
+    expect(html).toMatch(/<form[^>]*novalidate/i);
+    const order = ['id="ee-rsvp-guest-name"', 'id="ee-rsvp-attendance"', 'id="ee-rsvp-party-size"', 'id="ee-rsvp-message"', 'type="submit"'].map((m) => html.indexOf(m));
+    expect(order.every((at) => at > -1)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toStrictEqual(order);
+    expect(html).toMatch(/<label for="ee-rsvp-guest-name" class="[^"]*srOnly[^"]*">Tên bạn là gì\?<\/label><input id="ee-rsvp-guest-name"/);
+    const input = /<input id="ee-rsvp-guest-name"[^>]*>/.exec(html)?.[0] ?? "";
+    for (const attribute of ['name="guestName"', 'type="text"', 'placeholder="Tên bạn là gì?"', 'required=""', 'maxLength="200"']) {
+      expect(input).toContain(attribute);
+    }
+    // Micro-Checkpoint 10: always empty, personalized or not; never pre-filled from guest identity.
+    expect(input).toContain('value=""');
+    expect(input).not.toContain(FIXTURE_GUESTS.NORMAL.displayName);
+    const attendance = html.slice(html.indexOf('id="ee-rsvp-attendance"'), html.indexOf("</select>", html.indexOf('id="ee-rsvp-attendance"')));
+    expect([...attendance.matchAll(/<option value="(\w+)"( selected="")?>([^<]*)<\/option>/g)].map((m) => [m[1], m[2] !== undefined, m[3]])).toStrictEqual([
+      ["ATTENDING", true, "Sẽ tham dự"],
+      ["MAYBE", false, "Sẽ cố gắng tham dự"],
+      ["NOT_ATTENDING", false, "Tiếc quá, không tham dự được"],
+    ]);
+    const party = html.slice(html.indexOf('id="ee-rsvp-party-size"'), html.indexOf("</select>", html.indexOf('id="ee-rsvp-party-size"')));
+    expect([...party.matchAll(/<option value="(\d+)"/g)].map((m) => Number(m[1]))).toStrictEqual(RSVP_PARTY_SIZE_CHOICES);
+    expect(html).toMatch(/placeholder="Gửi lời chúc đến cô dâu &amp; chú rể…"/);
+    expect(html).toMatch(/<button type="submit" class="[^"]*rsvpSubmit[^"]*">Gửi lời chúc<\/button>/);
   });
 
-  it("an always-present status region announces results; no result is shown before a submit", () => {
-    const html = form(true);
+  it("source: the party-size select shows for ATTENDING and MAYBE only (rsvpTakesPartySize)", () => {
+    const code = readFileSync(join(__dirname, "..", "interactive", "rsvp.tsx"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(code).toMatch(/\{rsvpTakesPartySize\(draft\.attendance\) \? \(/);
+    expect(rsvpTakesPartySize("ATTENDING")).toBe(true);
+    expect(rsvpTakesPartySize("MAYBE")).toBe(true);
+    expect(rsvpTakesPartySize("NOT_ATTENDING")).toBe(false);
+    expect(rsvpTakesPartySize(null)).toBe(false);
+  });
+
+  it("an always-present status region announces results; no result or success is shown before a submit", async () => {
+    const html = await form(true);
     expect(html).toMatch(/<p class="[^"]*srOnly[^"]*" role="status" data-rsvp-result="idle"><\/p>/);
-    for (const status of RSVP_SUBMIT_RESULT_STATUSES) expect(html).not.toContain(COPY.rsvp.results[status]);
+    for (const text of Object.values(COPY.rsvp.results)) expect(html).not.toContain(text);
+    expect(html).not.toMatch(/Cảm ơn|Sửa lại|rsvpEditButton/);
+  });
+
+  it("D12 / square controls: 16 px fields, square fields, select and submit", () => {
+    const css = readFileSync(join(__dirname, "..", "elegant-editorial-v1.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const selector of [".rsvpInput,\n.rsvpTextarea", ".rsvpSelect"]) {
+      const body = css.slice(css.indexOf(`${selector} {`), css.indexOf("}", css.indexOf(`${selector} {`)));
+      expect(body, selector).toMatch(/font-size: 16px;/);
+      expect(body, selector).toMatch(/border-radius: 0;/);
+    }
+    const submit = css.slice(css.indexOf(".rsvpSubmit {"), css.indexOf("}", css.indexOf(".rsvpSubmit {")));
+    expect(submit).toMatch(/border-radius: 0;/);
+    expect(css).not.toMatch(/\.rsvp[A-Za-z]*[^{]*\{[^}]*border-radius: (999px|50%)/);
   });
 
   it("rendering never submits", () => {
     const rsvp = double({ status: "SUCCESS" });
-    renderToStaticMarkup(<Rsvp rsvp={rsvp} personalized={false} />);
+    renderToStaticMarkup(<Rsvp rsvp={rsvp} />);
     expect(rsvp.submit).not.toHaveBeenCalled();
+  });
+
+  it("source: success UI only from the SUCCESS phase; the recap name is presentation only and never sent", () => {
+    const code = readFileSync(join(__dirname, "..", "interactive", "rsvp.tsx"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(code).toMatch(/const succeeded = phase === "SUCCESS" && recap !== null;/);
+    expect(code).toMatch(/name: built\.input\.guestName,/);
+    // The capability receives only the model-built input.
+    expect(code.match(/gate\.run\(/g)).toHaveLength(1);
+    expect(code).toMatch(/gate\.run\(rsvp, built\.input\)/);
   });
 });
 
@@ -358,13 +412,13 @@ describe("renderer gate (K19, P30)", () => {
     expect(html).not.toMatch(/ee-rsvp-heading|<form/);
   });
 
-  it("with a capability: the root passes it by identity and derives personalization only from viewModel.guest", async () => {
+  it("with a capability: the root passes it by identity and nothing from viewModel.guest", async () => {
     const rsvp = double({ status: "UNAVAILABLE" });
     for (const guest of [FIXTURE_GUESTS.NORMAL, undefined]) {
       const { viewModel, selection } = await buildRendererFixture({ variant: "BRIDE", ...(guest === undefined ? {} : { guest }) });
       const tree = ElegantEditorialV1({ viewModel, sections: selection.effectiveSections, capabilities: { rsvp } });
       const [element] = findElements(tree, Rsvp);
-      expect(element?.props).toStrictEqual({ rsvp, personalized: guest !== undefined });
+      expect(element?.props).toStrictEqual({ rsvp });
     }
   });
 
@@ -378,7 +432,7 @@ describe("renderer gate (K19, P30)", () => {
       <ElegantEditorialV1 viewModel={viewModel} sections={selection.effectiveSections} capabilities={{ rsvp: double({ status: "UNAVAILABLE" }) }} />,
     );
     expect(html.split('aria-labelledby="ee-rsvp-heading"')).toHaveLength(2);
-    expect(rsvpBlock(html)).toContain(`>${COPY.rsvp.heading}</h2>`);
+    expect(rsvpBlock(html)).toContain(`>${COPY.rsvp.heading}</span>`);
   });
 });
 
@@ -391,7 +445,7 @@ describe("harness UNAVAILABLE capability (P33)", () => {
     expect(rsvpBlock(html)).toMatch(/<form/);
     expect(rsvpBlock(html)).toContain('name="guestName"');
 
-    const built = buildRsvpSubmitInput(draft({ attendance: "ATTENDING", partySize: 2, guestName: "Khách thử" }), false);
+    const built = buildRsvpSubmitInput(draft({ attendance: "MAYBE", partySize: 2, guestName: "Khách thử" }));
     if (!built.ok) throw new Error("fixture draft must be valid");
     const gate = createRsvpSubmissionGate();
     for (let attempt = 0; attempt < 3; attempt += 1) {

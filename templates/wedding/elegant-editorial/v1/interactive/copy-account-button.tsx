@@ -30,7 +30,7 @@ export async function copyWithFeedback(clipboard: ClipboardCapabilityV1, text: s
 
 const FEEDBACK_COPY: Readonly<Record<CopyFeedback, string | null>> = Object.freeze({
   IDLE: null,
-  PENDING: COPY.copyPending,
+  PENDING: null,
   SUCCESS: COPY.copySucceeded,
   FAILED: COPY.copyFailed,
   UNAVAILABLE: COPY.copyUnavailable,
@@ -51,8 +51,10 @@ export interface CopyAccountButtonProps {
 /**
  * RF-06D copy control island. The gift section renders it only with a
  * clipboard capability and a non-blank canonical account number. Feedback
- * is local presentation state: "copied" appears only after a resolved
- * `SUCCESS`, and nothing is stored. A second press while one copy is
+ * is local presentation state: the Task029 square control reads "Sao chép"
+ * and turns to "Đã sao chép" only after a resolved `SUCCESS` (also announced
+ * through the status region). `FAILED` / `UNAVAILABLE` show their honest
+ * note under the row. Nothing is stored. A second press while one copy is
  * pending is ignored.
  */
 export function CopyAccountButton({ clipboard, value, sideLabel }: CopyAccountButtonProps) {
@@ -74,13 +76,13 @@ export function CopyAccountButton({ clipboard, value, sideLabel }: CopyAccountBu
         aria-disabled={feedback === "PENDING" ? true : undefined}
         data-copy-feedback={feedback.toLowerCase()}
       >
-        {COPY.copyAccountNumber}
+        {feedback === "SUCCESS" ? COPY.copySucceeded : COPY.copyAccountNumber}
         <span className={styles.srOnly}>
           {" "}
           {COPY.copyAccountNumberTarget} {sideLabel}
         </span>
       </button>
-      <span className={text === null ? styles.srOnly : styles.copyFeedback} role="status">
+      <span className={text === null || feedback === "SUCCESS" ? styles.srOnly : styles.copyFeedback} role="status">
         {text}
       </span>
     </span>

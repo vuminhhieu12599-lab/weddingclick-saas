@@ -156,7 +156,6 @@ const RF06A_FORBIDDEN: readonly [string, RegExp][] = [
   ["renderer component (RF-06B)", /renderer-component|InvitationRendererComponent/],
   ["host (RF-06B)", /InvitationRendererHost|renderer-host/],
   ["capabilities (RF-06C)", /renderer-capabilities|rsvp-capability|Capability/],
-  ["MAYBE attendance", /\bMAYBE\b/],
   ["external font URL", /fonts\.(googleapis|gstatic)\.com/],
 ];
 
@@ -259,6 +258,8 @@ const RF06D_COPY_BUTTON = `${RF06D_DIR}/copy-account-button.tsx`;
 const RF06D_RSVP = `${RF06D_DIR}/rsvp.tsx`;
 const RF06D_OPENING_STATE = `${RF06D_DIR}/opening-state.ts`;
 const RF06D_RSVP_MODEL = `${RF06D_DIR}/rsvp-model.ts`;
+/** RF-06D visual/interaction remediation: Task029 section reveal (Design Baseline B5 item 19). */
+const RF06D_REVEAL = `${RF06D_DIR}/section-reveal.tsx`;
 const RF06D_ISLAND_FILES = [
   RF06D_OPENING,
   RF06D_COUNTDOWN,
@@ -266,6 +267,7 @@ const RF06D_ISLAND_FILES = [
   RF06D_GIFT_DIALOG,
   RF06D_COPY_BUTTON,
   RF06D_RSVP,
+  RF06D_REVEAL,
 ] as const;
 const RF06D_MODEL_FILES = [RF06D_OPENING_STATE, RF06D_RSVP_MODEL] as const;
 const RF06D_FILES = [...RF06D_ISLAND_FILES, ...RF06D_MODEL_FILES] as const;
@@ -306,7 +308,6 @@ describe("templates/** production tree (P39)", () => {
     /\bAudio\b/,
     /Date\.now/,
     /execCommand/,
-    /\bMAYBE\b/,
     /fonts\.(googleapis|gstatic)\.com/,
   ];
 
@@ -339,6 +340,8 @@ describe("templates/** production tree (P39)", () => {
 // lists and rules here and weakens none of them.
 // ===========================================================================
 
+// RSVP completion amendment (2026-10-01): MAYBE is a canonical attendance status, so the former
+// "no MAYBE" rules are removed from every forbidden-pattern list below.
 const V1 = "templates/wedding/elegant-editorial/v1";
 
 /** RF-06B core: client binding registry and the client host. */
@@ -356,6 +359,8 @@ const RF06B_RENDERER_FILES = [
   `${V1}/sections/couple.tsx`,
   `${V1}/sections/date-text.ts`,
   `${V1}/sections/decor.tsx`,
+  // Micro-Checkpoint 1: pure two-token decorative couple-name presentation (Product Owner ruling).
+  `${V1}/sections/display-name.ts`,
   `${V1}/sections/events.tsx`,
   `${V1}/sections/families.tsx`,
   `${V1}/sections/gallery.tsx`,
@@ -363,6 +368,12 @@ const RF06B_RENDERER_FILES = [
   `${V1}/sections/hero.tsx`,
   `${V1}/sections/invitation-message.tsx`,
   `${V1}/sections/love-story.tsx`,
+  // Micro-Checkpoint 8: Task029 Timeline (RF7 Timeline amendment).
+  `${V1}/sections/timeline.tsx`,
+  // Micro-Checkpoint 9: Task029 Dress Code (RF7 Dress Code amendment).
+  `${V1}/sections/dress-code.tsx`,
+  // Media batch: Task029 Photo Story (RF7 Photo Story amendment).
+  `${V1}/sections/photo-story.tsx`,
   `${V1}/sections/media-image.tsx`,
   `${V1}/sections/opening-cover.tsx`,
 ] as const;
@@ -405,11 +416,13 @@ const RF06B_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06B_CODE_FILES)[number], 
     `${V1}/interactive/countdown`,
     `${V1}/interactive/music-control`,
     `${V1}/interactive/rsvp`,
+    `${V1}/interactive/section-reveal`,
     ...[
       "calendar",
       "ceremony",
       "closing",
       "couple",
+      "dress-code",
       "events",
       "families",
       "gallery",
@@ -418,6 +431,8 @@ const RF06B_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06B_CODE_FILES)[number], 
       "invitation-message",
       "love-story",
       "opening-cover",
+      "photo-story",
+      "timeline",
     ].map((section) => `${V1}/sections/${section}`),
   ],
   [`${V1}/copy.ts`]: [],
@@ -431,10 +446,18 @@ const RF06B_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06B_CODE_FILES)[number], 
     ...SECTION_COMMON,
     `${V1}/sections/date-text`,
     `${V1}/sections/decor`,
+    `${V1}/sections/display-name`,
   ],
-  [`${V1}/sections/couple.tsx`]: [`${LIB}/invitation-view-model-types`, ...SECTION_COMMON],
+  // Micro-Checkpoint 6: RESOLVED portraits render through the shared MediaImage (RF7 Product Owner amendment).
+  [`${V1}/sections/couple.tsx`]: [
+    `${LIB}/invitation-view-model-types`,
+    ...SECTION_COMMON,
+    `${V1}/sections/display-name`,
+    `${V1}/sections/media-image`,
+  ],
   [`${V1}/sections/date-text.ts`]: [`${LIB}/event-date-time-presentation`],
   [`${V1}/sections/decor.tsx`]: [CSS_MODULE],
+  [`${V1}/sections/display-name.ts`]: [],
   [`${V1}/sections/events.tsx`]: [
     `${LIB}/event-date-time-presentation`,
     `${LIB}/invitation-view-model-types`,
@@ -458,10 +481,15 @@ const RF06B_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06B_CODE_FILES)[number], 
     ...SECTION_COMMON,
     `${V1}/sections/date-text`,
     `${V1}/sections/decor`,
+    `${V1}/sections/display-name`,
     `${V1}/sections/media-image`,
   ],
   [`${V1}/sections/invitation-message.tsx`]: SECTION_COMMON,
-  [`${V1}/sections/love-story.tsx`]: SECTION_COMMON,
+  // Media batch: the RESOLVED Love Story photo renders through the shared MediaImage.
+  [`${V1}/sections/love-story.tsx`]: [`${LIB}/invitation-view-model-types`, ...SECTION_COMMON, `${V1}/sections/media-image`],
+  [`${V1}/sections/photo-story.tsx`]: [`${LIB}/invitation-view-model-types`, ...SECTION_COMMON, `${V1}/sections/media-image`],
+  [`${V1}/sections/timeline.tsx`]: [`${LIB}/invitation-view-model-types`, ...SECTION_COMMON],
+  [`${V1}/sections/dress-code.tsx`]: [`${LIB}/invitation-view-model-types`, ...SECTION_COMMON],
   [`${V1}/sections/media-image.tsx`]: [`${LIB}/invitation-view-model-types`],
   // RF-06D: the envelope artwork moved into the opening island, which imports decor itself.
   [`${V1}/sections/opening-cover.tsx`]: [
@@ -469,6 +497,7 @@ const RF06B_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06B_CODE_FILES)[number], 
     `${LIB}/invitation-view-model-types`,
     ...SECTION_COMMON,
     `${V1}/sections/date-text`,
+    `${V1}/sections/display-name`,
     `${V1}/interactive/opening-interaction`,
   ],
 };
@@ -509,7 +538,6 @@ const RF06B_FORBIDDEN: readonly [string, RegExp][] = [
   ["import.meta", /import\.meta/],
   ["filesystem", /["']node:|["']fs["']|readdir|readFile|\bglob\b/],
   ["use server", /["']use server["']/],
-  ["MAYBE attendance", /\bMAYBE\b/],
   ["common QR", /QR_COMMON|commonMediaId|qr\.common/],
   ["additional note", /additional_?note/i],
   ["prototype location fiction", /Đà Nẵng/],
@@ -648,7 +676,9 @@ describe("RF-06B template files", () => {
     expect(code).toContain(
       "{sections.music && capabilities.music !== undefined ? <MusicControl music={capabilities.music} /> : null}",
     );
-    expect(code).toMatch(/\{capabilities\.rsvp !== undefined \? \(\s*<Rsvp rsvp=\{capabilities\.rsvp\} personalized=\{viewModel\.guest !== undefined\} \/>/);
+    // Micro-Checkpoint 10: RSVP receives only the capability; no guest data (the name input always starts empty).
+    expect(code).toContain("{capabilities.rsvp !== undefined ? <Rsvp rsvp={capabilities.rsvp} /> : null}");
+    expect(code.match(/<SectionReveal \/>/g)).toHaveLength(1);
     expect(code).toMatch(/clipboard=\{capabilities\.clipboard\}/);
   });
 });
@@ -663,9 +693,7 @@ describe("RF-06B renderer CSS", () => {
     ["Tailwind directive", /@(tailwind|apply|layer|theme)\b/],
     ["global selector", /:global|(^|[\s,}])(html|body|:root)\b/m],
     ["viewport height", /\b100vh\b|\d+(\.\d+)?vh\b/],
-    // RF-06D replacement: transitions are allowed (reduced-motion rule below); keyframe animation is not.
-    ["keyframe animation (RF-06D uses transitions only)", /@keyframes|\banimation(-\w+)?\s*:/],
-    ["infinite motion", /\binfinite\b/],
+
     ["review frame width", /--frame-width/],
     ["prototype/global fonts", /Dancing Script|Playfair|Iowan/],
     ["!important", /!important/],
@@ -705,6 +733,55 @@ describe("RF-06B renderer CSS", () => {
     return null;
   }
 
+  // RF-06D visual/interaction remediation (Design Baseline B5 items 4, 10, 18, 19):
+  // keyframes are allowed only for the named Task029 motions, and exactly three
+  // gentle loops exist (envelope float while sealed, calendar heart, music while
+  // PLAYING). Every animation is switched off under reduced motion, except the
+  // opening settle marker, which fires at once there instead of waiting.
+  it("keyframes only for the named Task029 motions; infinite only for the three approved loops", () => {
+    const keyframes = [...cssCode.matchAll(/@keyframes ([\w-]+)/g)].map((match) => match[1]).sort();
+    expect(keyframes).toStrictEqual(
+      [
+        "ee-calendar-heart-pulse",
+        "ee-envelope-float",
+        "ee-music-pulse",
+        "ee-opening-card-rise",
+        "ee-opening-dissolve",
+        "ee-opening-hero-in",
+        "ee-opening-settle",
+      ].sort(),
+    );
+    const loops = [...cssCode.matchAll(/([^{}]+)\{[^{}]*\binfinite\b[^{}]*\}/g)].map((match) => (match[1] as string).trim()).sort();
+    expect(loops).toStrictEqual(
+      [".calendarHeart", ".music[data-music-status=\"playing\"] .musicGlyph", ".openingEnvelopeFloat"].sort(),
+    );
+  });
+
+  it("every RF-06D animation is removed under prefers-reduced-motion: reduce (the settle marker only becomes immediate)", () => {
+    const reduceQuery = "(prefers-reduced-motion: reduce)";
+    const reduced = mediaBlock(cssCode, reduceQuery) ?? "";
+    const reducedRules = [...reduced.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+    const stopped = new Set(
+      reducedRules.filter((rule) => /animation:\s*none;/.test(rule[2] as string)).flatMap((rule) => splitSelectorList(rule[1] as string)),
+    );
+    const immediate = new Set(
+      reducedRules
+        .filter((rule) => /animation-duration:\s*1ms;\s*animation-delay:\s*0s;/.test(rule[2] as string))
+        .flatMap((rule) => splitSelectorList(rule[1] as string)),
+    );
+    const outside = cssCode.replace(reduced, "");
+    const animated = [...outside.matchAll(/([^{}@;]+)\{([^{}]*)\}/g)].filter((rule) =>
+      /(^|[;\s])animation(-delay)?\s*:(?!\s*none;)/.test(rule[2] as string),
+    );
+    expect(animated.length).toBeGreaterThan(0);
+    for (const rule of animated) {
+      for (const selector of splitSelectorList(rule[1] as string)) {
+        const settle = selector.startsWith('.openingStage[data-opening="opening"]') && !selector.includes(" ");
+        expect(settle ? immediate.has(selector) : stopped.has(selector), selector).toBe(true);
+      }
+    }
+  });
+
   // RF-06D (P13, docs/TYPOGRAPHY_AND_MOTION.md): every transition outside the
   // reduced-motion block is switched off, selector by selector, inside it.
   it("every RF-06D transition is removed under prefers-reduced-motion: reduce", () => {
@@ -731,7 +808,9 @@ describe("RF-06B renderer CSS", () => {
   });
 
   it("every rule's selector list starts from a module class", () => {
-    const selectors = [...cssCode.matchAll(/(^|[{}])\s*([^{}@;]+)\{/g)].map((match) => (match[2] as string).trim());
+    // Keyframe blocks hold percentage/from/to steps, not selectors.
+    const withoutKeyframes = cssCode.replace(/@keyframes[^{]*\{(?:[^{}]*\{[^{}]*\})*\s*\}/g, "");
+    const selectors = [...withoutKeyframes.matchAll(/(^|[{}])\s*([^{}@;]+)\{/g)].map((match) => (match[2] as string).trim());
     expect(selectors.length).toBeGreaterThan(20);
     for (const list of selectors) {
       for (const selector of splitSelectorList(list)) {
@@ -761,7 +840,24 @@ describe("RF-06B decor and provenance (P4–P6)", () => {
     ["calendar-botanical-bottom-right.webp", [256, 256]],
     ["calendar-botanical-top-left.webp", [256, 256]],
     ["couple-floral-divider.webp", [600, 200]],
+    // Micro-Checkpoint 1B: size-optimized copies of the approved Task029 envelope PNGs.
+    ["opening-envelope-body.webp", [600, 400]],
+    ["opening-envelope-flap.webp", [570, 380]],
+    ["opening-envelope-seal.webp", [132, 132]],
+    // Micro-Checkpoint 4: size-optimized copies of the approved Task029 bouquets and floral strip.
+    ["calendar-flower-top-left.webp", [256, 256]],
+    ["calendar-flower-bottom-right.webp", [256, 256]],
+    ["portrait-divider-floral-strip.webp", [600, 200]],
   ]);
+  /** The only decor files derived from Task029 prototype pixels (Product Owner decision, 2026-10-01). */
+  const TASK029_DERIVED_FILES = [
+    "opening-envelope-body.webp",
+    "opening-envelope-flap.webp",
+    "opening-envelope-seal.webp",
+    "calendar-flower-top-left.webp",
+    "calendar-flower-bottom-right.webp",
+    "portrait-divider-floral-strip.webp",
+  ] as const;
   const decorFiles = (): string[] => readdirSync(join(REPO_ROOT, DECOR_DIR)).sort();
   const readDecorBytes = (file: string): Buffer => readFileSync(join(REPO_ROOT, DECOR_DIR, file));
 
@@ -797,6 +893,10 @@ describe("RF-06B decor and provenance (P4–P6)", () => {
   it("every file on disk in the decor directory has a provenance row and no prototype-pixel derivation", () => {
     const note = readRepoFile(RF06B_PROVENANCE_FILE);
     expect(note.match(/Derived from Task 029 prototype pixels:\*\* \*\*NO\.\*\*/g)).toHaveLength(2);
+    // Exactly two YES records (envelope; bouquets + strip), together listing exactly the Task029-derived rasters.
+    expect(note.match(/Derived from Task 029 prototype pixels:\*\* \*\*YES\.\*\*/g)).toHaveLength(2);
+    const derivedSection = note.slice(note.indexOf("## Approved Task029 opening envelope rasters"));
+    expect([...derivedSection.matchAll(/^\| `([^`]+)` \|/gm)].map((match) => match[1])).toStrictEqual([...TASK029_DERIVED_FILES]);
     for (const file of decorFiles()) {
       expect(note, file).toMatch(new RegExp(`^\\| \`${file.replace(/[.]/g, "\\.")}\` \\|`, "m"));
     }
@@ -853,12 +953,13 @@ describe("RF-06B decor and provenance (P4–P6)", () => {
   // path only. This replaces the former "decor is inline vector geometry only"
   // rule; the CSS-module url( ban above stays in force.
   const DECOR_PUBLIC_PATH = `/${DECOR_DIR.replace(/^public\//, "")}/`;
+  // Micro-Checkpoint 1B: the approved Task029 body/flap/seal rasters replace the
+  // former SVG envelope layers, which stay on disk unreferenced (legacy).
   const OPENING_DECOR_FILES = [
     "opening-cover-card-frame.svg",
-    "opening-envelope-body.svg",
-    "opening-envelope-flap.svg",
-    "opening-envelope-liner.svg",
-    "opening-seal-double-happiness.svg",
+    "opening-envelope-body.webp",
+    "opening-envelope-flap.webp",
+    "opening-envelope-seal.webp",
   ] as const;
   /** Exactly the renderer modules allowed an `<img>`: runtime media, or one fixed decor file each. */
   const IMG_ELEMENT_MODULES = [
@@ -872,6 +973,7 @@ describe("RF-06B decor and provenance (P4–P6)", () => {
   const DECOR_MODULE = `${V1}/sections/decor.tsx`;
 
   it("decor.tsx uses the opening files only as exact literal SVG <image> sources, nothing else file-backed", () => {
+    expect(codeOf(DECOR_MODULE)).not.toMatch(/opening-envelope-(body|flap|liner)\.svg|opening-seal-double-happiness/);
     const code = codeOf(DECOR_MODULE);
     expect(code).not.toMatch(/<img\b|data:|url\(|base64|xlink:|<use\b|<foreignObject|dangerouslySetInnerHTML|https?:/);
     const hrefs = [...code.matchAll(/<image\b[^>]*>/g)].map((match) => /\shref="([^"]*)"/.exec(match[0])?.[1]);
@@ -1033,7 +1135,6 @@ describe("internal renderer harness boundary", () => {
       /["']node:/,
       /app\/internal\/prototypes|public\/prototypes|_directions/,
       /public\/renderers|\/renderers\//,
-      /\bMAYBE\b/,
       /Date\.now|\bnew Date\b|Math\.random/,
     ]) {
       expect(pattern.test(code), `${file}: ${String(pattern)}`).toBe(false);
@@ -1203,7 +1304,6 @@ const RF06C_FORBIDDEN: readonly [string, RegExp][] = [
   ["dynamic import / require / import.meta", /\bimport\s*\(|\brequire\s*\(|import\.meta/],
   ["filesystem", /["']node:|["']fs["']|readdir|readFile/],
   ["use server", /["']use server["']/],
-  ["MAYBE attendance", /\bMAYBE\b/],
   ["external font URL", /fonts\.(googleapis|gstatic)\.com/],
   ["next import", /from\s+["']next(\/[^"']*)?["']/],
   ["renderer component import", /elegant-editorial/],
@@ -1376,9 +1476,12 @@ describe("RF-06C boundaries across the repository", () => {
 const RF06D_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06D_FILES)[number], readonly string[]>> = {
   [RF06D_OPENING]: [
     "react",
+    `${LIB}/invitation-view-model-types`,
     `${V1}/copy`,
     CSS_MODULE,
     `${V1}/sections/decor`,
+    // The rising card shows only the RESOLVED media.cover, through the shared media element.
+    `${V1}/sections/media-image`,
     RF06D_OPENING_STATE.replace(/\.ts$/, ""),
   ],
   [RF06D_COUNTDOWN]: [
@@ -1389,7 +1492,7 @@ const RF06D_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06D_FILES)[number], reado
     CSS_MODULE,
   ],
   [RF06D_MUSIC]: ["react", `${LIB}/renderer-capabilities`, `${V1}/copy`, CSS_MODULE],
-  [RF06D_GIFT_DIALOG]: ["react", `${V1}/copy`, CSS_MODULE],
+  [RF06D_GIFT_DIALOG]: ["react", `${LIB}/wedding-domain-types`, `${V1}/copy`, CSS_MODULE],
   [RF06D_COPY_BUTTON]: ["react", `${LIB}/renderer-capabilities`, `${V1}/copy`, CSS_MODULE],
   [RF06D_RSVP]: [
     "react",
@@ -1399,6 +1502,7 @@ const RF06D_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06D_FILES)[number], reado
     CSS_MODULE,
     RF06D_RSVP_MODEL.replace(/\.ts$/, ""),
   ],
+  [RF06D_REVEAL]: ["react", CSS_MODULE],
   [RF06D_OPENING_STATE]: [],
   [RF06D_RSVP_MODEL]: ["lib/domain", `${LIB}/rsvp-capability`],
 };
@@ -1422,13 +1526,13 @@ const RF06D_FORBIDDEN: readonly [string, RegExp][] = [
   ["Intl / locale formatting", /\bIntl\b|toLocale/],
   ["Date getters", /get(UTC)?(Day|Date|Month|FullYear|Hours)\b/],
   ["timers", /\b(set|clear)(Interval|Timeout)\b|requestAnimationFrame|requestIdleCallback/],
-  ["observers / media queries", /IntersectionObserver|ResizeObserver|MutationObserver|matchMedia/],
+  // IntersectionObserver is privileged to the section reveal only (RF06D_PRIVILEGE below).
+  ["observers / media queries", /ResizeObserver|MutationObserver|matchMedia/],
   ["randomness", /Math\.random|randomUUID|getRandomValues/],
   ["dynamic import / require / import.meta", /\bimport\s*\(|\brequire\s*\(|import\.meta/],
   ["filesystem", /["']node:|["']fs["']|readdir|readFile/],
   ["use client / use server", /["']use (client|server)["']/],
   ["next import", /from\s+["']next(\/[^"']*)?["']/],
-  ["MAYBE attendance", /\bMAYBE\b/],
   ["common QR", /QR_COMMON|commonMediaId|qr\.common/],
   ["additional note", /additional_?note/i],
   ["guest identity / token", /guestId|guest_id|[?&]guest=|token/i],
@@ -1449,17 +1553,20 @@ const ALL_HOOKS =
 const RF06D_PRIVILEGE: readonly [string, RegExp, readonly string[]][] = [
   ["useState", /\buseState\b/, [RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP]],
   ["useReducer", /\buseReducer\b/, [RF06D_OPENING, RF06D_RSVP]],
-  ["useRef", /\buseRef\b/, [RF06D_OPENING, RF06D_GIFT_DIALOG]],
-  ["useEffect", /\buseEffect\b/, [RF06D_OPENING, RF06D_GIFT_DIALOG]],
+  // RF-06D remediation: RSVP manages focus around "Sửa lại" (D11); the reveal observes once after mount.
+  ["useRef", /\buseRef\b/, [RF06D_OPENING, RF06D_GIFT_DIALOG, RF06D_RSVP, RF06D_REVEAL]],
+  ["useEffect", /\buseEffect\b/, [RF06D_OPENING, RF06D_GIFT_DIALOG, RF06D_RSVP, RF06D_REVEAL]],
   [
     "other hooks",
     /\buse(LayoutEffect|InsertionEffect|Memo|Callback|SyncExternalStore|Context|Transition|Optimistic|ActionState|Id|DeferredValue|ImperativeHandle)\b/,
     [],
   ],
   ["button element", /<button\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP]],
-  ["click handler", /\bonClick\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON]],
+  ["click handler", /\bonClick\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP]],
   ["dialog element / API", /<dialog\b|role="dialog"|showModal|HTMLDialogElement|\.close\(\)|onClose\b|onCancel\b/, [RF06D_GIFT_DIALOG]],
-  ["programmatic focus", /\.focus\(/, [RF06D_OPENING, RF06D_GIFT_DIALOG]],
+  ["programmatic focus", /\.focus\(/, [RF06D_OPENING, RF06D_GIFT_DIALOG, RF06D_RSVP]],
+  ["IntersectionObserver", /IntersectionObserver/, [RF06D_REVEAL]],
+  ["reveal marks", /data-ee-reveal/, [RF06D_REVEAL]],
   ["form events", /\bonSubmit\b|\bonChange\b|preventDefault/, [RF06D_RSVP]],
   ["form controls", /<form\b|<input\b|<select\b|<textarea\b|<fieldset\b|<label\b/, [RF06D_RSVP]],
   ["music capability actions", /\.play\(|\.pause\(|MusicCapabilityV1/, [RF06D_MUSIC]],
@@ -1539,7 +1646,9 @@ describe("RF-06D interactive files", () => {
       /\{line\.key === "accountNumber" && clipboard !== undefined \? \(\s*<dd className=\{styles\.giftLineAction\}>\s*<CopyAccountButton clipboard=\{clipboard\} value=\{line\.value\} sideLabel=\{sideLabel\} \/>/,
     );
     expect(code.match(/<CopyAccountButton\b/g)).toHaveLength(1);
-    expect(code.match(/<GiftDialog>/g)).toHaveLength(1);
+    // RF-06D remediation: one panel per present side, handed to the single dialog island.
+    expect(code.match(/<GiftDialog\b/g)).toHaveLength(1);
+    expect(code).toMatch(/<GiftDialog\s+panels=\{sides\.map\(/);
   });
 
   it("the music control is reachable only through the root's section-and-capability gate", () => {

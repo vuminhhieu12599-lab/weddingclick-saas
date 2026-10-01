@@ -10,9 +10,15 @@ import { RSVP_ATTENDANCE_STATUSES, type RsvpAttendanceStatus } from "../domain";
  * carries a token, guest id or `?guest=` identity.
  */
 
-/** K16 / docs/PHYSICAL_DATABASE_PLAN.md §2.20: ATTENDING party size range. */
+/** K16 / docs/PHYSICAL_DATABASE_PLAN.md §2.20: ATTENDING and MAYBE party size range (0032). */
 export const RSVP_ATTENDING_PARTY_SIZE_MIN = 1;
 export const RSVP_ATTENDING_PARTY_SIZE_MAX = 20;
+
+/**
+ * RSVP completion amendment: maximum typed response-name length in Unicode
+ * code points, the same bound as `guests.display_name` (§2.19).
+ */
+export const RSVP_GUEST_NAME_MAX_LENGTH = 200;
 
 /** K16 / §2.20 `CHECK`: maximum message length in characters (PostgreSQL `char_length`). */
 export const RSVP_MESSAGE_MAX_LENGTH = 500;
@@ -22,7 +28,13 @@ export interface RsvpSubmitInputV1 {
   readonly attendance: RsvpAttendanceStatus;
   readonly partySize: number;
   readonly message: string | null;
-  readonly guestName: string | null;
+  /**
+   * RSVP completion amendment: the typed response name, required for every
+   * submission (personalized or not), already trimmed, non-blank, at most
+   * 200 code points. Display data only: NEVER guest identity, which comes
+   * solely from the secure guest context the capability carries itself.
+   */
+  readonly guestName: string;
 }
 
 /** K17: exactly four outcomes. */
@@ -70,6 +82,7 @@ function isRsvpAttendanceStatus(value: unknown): value is RsvpAttendanceStatus {
 
 function isValidPartySize(attendance: RsvpAttendanceStatus, partySize: unknown): boolean {
   if (typeof partySize !== "number" || !Number.isInteger(partySize)) return false;
+  // ATTENDING and MAYBE share the 1–20 range (0032); NOT_ATTENDING is exactly 0.
   if (attendance === "NOT_ATTENDING") return partySize === 0;
   return partySize >= RSVP_ATTENDING_PARTY_SIZE_MIN && partySize <= RSVP_ATTENDING_PARTY_SIZE_MAX;
 }
@@ -84,26 +97,29 @@ function isValidMessage(message: unknown): boolean {
   return typeof message === "string" && codePointLength(message) <= RSVP_MESSAGE_MAX_LENGTH;
 }
 
-function isValidGuestName(guestName: unknown, personalized: boolean): boolean {
-  if (personalized) return guestName === null || typeof guestName === "string";
-  return typeof guestName === "string" && guestName.trim().length > 0;
+/** Required for every submission: already trimmed, non-blank, at most 200 code points. */
+function isValidGuestName(guestName: unknown): boolean {
+  return (
+    typeof guestName === "string" &&
+    guestName.length > 0 &&
+    guestName === guestName.trim() &&
+    codePointLength(guestName) <= RSVP_GUEST_NAME_MAX_LENGTH
+  );
 }
 
 /**
- * K16 canonical RSVP input validation. Pure: never normalizes, trims,
- * mutates or throws for invalid input. `personalized` means the ViewModel
- * carries a guest overlay; anything but `true` is treated as non-personalized.
+ * K16 canonical RSVP input validation (RSVP completion amendment). Pure:
+ * never normalizes, trims, mutates or throws for invalid input. The same
+ * rules apply to personalized and unpersonalized invitations: the name is
+ * required for both and is never used as identity.
  */
-export function isValidRsvpSubmitInputV1(
-  input: unknown,
-  context: { readonly personalized: boolean },
-): input is RsvpSubmitInputV1 {
+export function isValidRsvpSubmitInputV1(input: unknown): input is RsvpSubmitInputV1 {
   if (!isPlainRecord(input) || !hasExactInputKeys(input)) return false;
   const { attendance, partySize, message, guestName } = input;
   return (
     isRsvpAttendanceStatus(attendance) &&
     isValidPartySize(attendance, partySize) &&
     isValidMessage(message) &&
-    isValidGuestName(guestName, context.personalized === true)
+    isValidGuestName(guestName)
   );
 }

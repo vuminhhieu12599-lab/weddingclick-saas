@@ -42,7 +42,29 @@ export const FIXTURE_MEDIA_IDS = Object.freeze({
   AUDIO: "00000000-0000-4000-8000-000000000205",
   QR_GROOM: "00000000-0000-4000-8000-000000000206",
   QR_BRIDE: "00000000-0000-4000-8000-000000000207",
+  PORTRAIT_GROOM: "00000000-0000-4000-8000-000000000208",
+  PORTRAIT_BRIDE: "00000000-0000-4000-8000-000000000209",
+  PHOTO_STORY_1: "00000000-0000-4000-8000-000000000211",
+  PHOTO_STORY_2: "00000000-0000-4000-8000-000000000212",
+  PHOTO_STORY_3: "00000000-0000-4000-8000-000000000213",
+  PHOTO_STORY_4: "00000000-0000-4000-8000-000000000214",
+  PHOTO_STORY_5: "00000000-0000-4000-8000-000000000215",
+  LOVE_STORY_PHOTO: "00000000-0000-4000-8000-000000000216",
 });
+
+/** Fixture PHOTO_STORY ids in canonical order (Task029's five-photo cluster). */
+export const FIXTURE_PHOTO_STORY_IDS = Object.freeze([
+  FIXTURE_MEDIA_IDS.PHOTO_STORY_1,
+  FIXTURE_MEDIA_IDS.PHOTO_STORY_2,
+  FIXTURE_MEDIA_IDS.PHOTO_STORY_3,
+  FIXTURE_MEDIA_IDS.PHOTO_STORY_4,
+  FIXTURE_MEDIA_IDS.PHOTO_STORY_5,
+] as const);
+
+/** Extra fixture GALLERY id `n` (n ≥ 4), for galleries beyond the three base images. */
+export function fixtureExtraGalleryId(n: number): string {
+  return `00000000-0000-4000-8000-0000000007${String(n).padStart(2, "0")}`;
+}
 
 /** Fixture image dimensions for the fixture resolver; audio has none. */
 export const FIXTURE_MEDIA_DIMENSIONS: Readonly<Record<string, { readonly width: number; readonly height: number }>> =
@@ -53,6 +75,14 @@ export const FIXTURE_MEDIA_DIMENSIONS: Readonly<Record<string, { readonly width:
     [FIXTURE_MEDIA_IDS.GALLERY_3]: Object.freeze({ width: 1200, height: 1200 }),
     [FIXTURE_MEDIA_IDS.QR_GROOM]: Object.freeze({ width: 600, height: 600 }),
     [FIXTURE_MEDIA_IDS.QR_BRIDE]: Object.freeze({ width: 600, height: 600 }),
+    [FIXTURE_MEDIA_IDS.PORTRAIT_GROOM]: Object.freeze({ width: 900, height: 1200 }),
+    [FIXTURE_MEDIA_IDS.PORTRAIT_BRIDE]: Object.freeze({ width: 900, height: 1200 }),
+    [FIXTURE_MEDIA_IDS.PHOTO_STORY_1]: Object.freeze({ width: 960, height: 1200 }),
+    [FIXTURE_MEDIA_IDS.PHOTO_STORY_2]: Object.freeze({ width: 960, height: 1200 }),
+    [FIXTURE_MEDIA_IDS.PHOTO_STORY_3]: Object.freeze({ width: 960, height: 1200 }),
+    [FIXTURE_MEDIA_IDS.PHOTO_STORY_4]: Object.freeze({ width: 1200, height: 1200 }),
+    [FIXTURE_MEDIA_IDS.PHOTO_STORY_5]: Object.freeze({ width: 800, height: 1200 }),
+    [FIXTURE_MEDIA_IDS.LOVE_STORY_PHOTO]: Object.freeze({ width: 1200, height: 1500 }),
   });
 
 /** Free-form guest display names (CLAUDE.md §10): presentation only, never identity. */
@@ -64,20 +94,94 @@ export const FIXTURE_GUESTS: Readonly<Record<"NORMAL" | "LONG" | "PLAYFUL", Read
   PLAYFUL: Object.freeze({ displayName: "Em và sự cô đơn" }),
 });
 
-/** Ceremony-event lunar text, stored verbatim on the event (RF6). Fictional. */
+/**
+ * Ceremony-event lunar text, stored verbatim on the event (RF6). Fictional.
+ * Display-ready short form with no "Tức ngày"/"Nhằm ngày" prefix of its own
+ * (the renderer's separate "Tức ngày" label precedes it): the RF6 example
+ * values for a 2026-10-17 Vu Quy / 2026-10-18 Thành Hôn, in the approved
+ * Task029 casing ("08/09 Âm Lịch" for 18.10.2026). Never calculated.
+ */
 const FIXTURE_LUNAR = Object.freeze({
-  VU_QUY: "Nhằm ngày 08 tháng 09 năm Bính Ngọ",
-  THANH_HON: "Nhằm ngày 09 tháng 09 năm Bính Ngọ",
+  VU_QUY: "07/09 Âm Lịch",
+  THANH_HON: "08/09 Âm Lịch",
 });
 
 export type FixtureCeremonyLunar = "PRESENT" | "ABSENT";
+
+/** Optional portrait rows (RF7 Product Owner amendment). */
+export type FixturePortraits = "PRESENT" | "ABSENT";
 
 export interface RendererFixtureSourceOptions {
   variant: InvitationVariant;
   /** `ABSENT` stores `null` lunar text on every ceremony event. Default `PRESENT`. */
   ceremonyLunar?: FixtureCeremonyLunar;
+  /**
+   * `PRESENT` adds one PORTRAIT_GROOM and one PORTRAIT_BRIDE row. Default
+   * `ABSENT`: no portrait rows, so the payload is exactly the pre-portrait one.
+   */
+  portraits?: FixturePortraits;
   /** Task 028 `project_design.section_settings`. Default `{}` (no staff override). */
   sectionSettings?: Record<string, SnapshotDesignSettingValue>;
+  /** `ABSENT`: no timeline rows. Default `PRESENT`: the Task029 three-step fixture timeline. */
+  timeline?: FixtureTimeline;
+  /** `PRESENT` adds the five Task029-cluster PHOTO_STORY rows. Default `ABSENT`. */
+  photoStory?: FixturePortraits;
+  /** `PRESENT` adds one LOVE_STORY_PHOTO row. Default `ABSENT`. */
+  loveStoryPhoto?: FixturePortraits;
+  /** Total GALLERY rows (default 3, the base images; up to 99). Fixture only, to prove unbounded galleries. */
+  galleryCount?: number;
+  /** `ABSENT`: no Dress Code. Default `PRESENT`: the Task029 Dress Code fixture. */
+  dressCode?: FixtureDressCode;
+}
+
+/** Optional Dress Code (RF7 Dress Code amendment). */
+export type FixtureDressCode = "PRESENT" | "ABSENT";
+
+/** Task029 fixture Dress Code text and swatches (fixture content only, never a production default). */
+export const FIXTURE_DRESS_CODE_DESCRIPTION =
+  "Tông màu ấm, trang trọng và thoải mái vận động. Gia đình xin phép được ưu tiên các gam màu dưới đây, tránh sắc trắng/ngà dành riêng cho cô dâu.";
+
+export const FIXTURE_DRESS_CODE_SWATCH_IDS = Object.freeze({
+  GOLD: "00000000-0000-4000-8000-000000000501",
+  BROWN: "00000000-0000-4000-8000-000000000502",
+  BEIGE: "00000000-0000-4000-8000-000000000503",
+  DEEP: "00000000-0000-4000-8000-000000000504",
+});
+
+function dressCodeSource(dressCode: FixtureDressCode): Pick<BuildSnapshotPayloadInput, "dressCode" | "dressCodeSwatches"> {
+  if (dressCode === "ABSENT") return { dressCode: null, dressCodeSwatches: [] };
+  // Supplied out of order on purpose: the builder orders by sortOrder, then id.
+  return {
+    dressCode: { projectId: FIXTURE_PROJECT_ID, description: FIXTURE_DRESS_CODE_DESCRIPTION },
+    dressCodeSwatches: [
+      { id: FIXTURE_DRESS_CODE_SWATCH_IDS.DEEP, projectId: FIXTURE_PROJECT_ID, color: "#3d352b", sortOrder: 4 },
+      { id: FIXTURE_DRESS_CODE_SWATCH_IDS.GOLD, projectId: FIXTURE_PROJECT_ID, color: "#caa06a", sortOrder: 1 },
+      { id: FIXTURE_DRESS_CODE_SWATCH_IDS.BEIGE, projectId: FIXTURE_PROJECT_ID, color: "#e8dcc8", sortOrder: 3 },
+      { id: FIXTURE_DRESS_CODE_SWATCH_IDS.BROWN, projectId: FIXTURE_PROJECT_ID, color: "#7c5c42", sortOrder: 2 },
+    ],
+  };
+}
+
+/** Optional Timeline rows (RF7 Timeline amendment). */
+export type FixtureTimeline = "PRESENT" | "ABSENT";
+
+export const FIXTURE_TIMELINE_IDS = Object.freeze({
+  WELCOME: "00000000-0000-4000-8000-000000000301",
+  RITE: "00000000-0000-4000-8000-000000000302",
+  FEAST: "00000000-0000-4000-8000-000000000303",
+});
+
+/**
+ * The Task029 run-of-show (fixture content only, never a production default).
+ * Supplied out of order on purpose: the builder orders by sortOrder, then id.
+ */
+function timelineItems(timeline: FixtureTimeline): BuildSnapshotPayloadInput["timelineItems"] {
+  if (timeline === "ABSENT") return [];
+  return [
+    { id: FIXTURE_TIMELINE_IDS.FEAST, projectId: FIXTURE_PROJECT_ID, time: "11:00", label: "Khai tiệc", sortOrder: 3 },
+    { id: FIXTURE_TIMELINE_IDS.WELCOME, projectId: FIXTURE_PROJECT_ID, time: "08:30", label: "Đón khách", sortOrder: 1 },
+    { id: FIXTURE_TIMELINE_IDS.RITE, projectId: FIXTURE_PROJECT_ID, time: "09:00", label: "Làm lễ", sortOrder: 2 },
+  ];
 }
 
 function weddingDetails(): FixtureWeddingDetails {
@@ -123,6 +227,12 @@ function event(
  * Four canonical events: a bride-side VU_QUY, a groom-side THANH_HON, a
  * bride-side reception and a COMMON reception. RF-01 alone decides which
  * are visible and which is the ceremony for each variant.
+ *
+ * Neutral canonical data, as staff might enter it: the ceremony titles carry
+ * the home ("… tại tư gia …") and both ceremonies share sortOrder 1, so the
+ * bride-side VU_QUY (17.10) sorts first in RF2 display order. Ceremony-card
+ * presentation (GROOM before BRIDE, rite-derived titles) never depends on
+ * either (docs/DECISIONS.md RF2 "Ceremony-card presentation").
  */
 function events(lunar: FixtureCeremonyLunar): FixtureEventRecord[] {
   const present = lunar === "PRESENT";
@@ -186,7 +296,38 @@ function events(lunar: FixtureCeremonyLunar): FixtureEventRecord[] {
   ];
 }
 
-function media(): BuildSnapshotPayloadInput["media"] {
+function media(
+  portraits: FixturePortraits,
+  photoStory: FixturePortraits = "ABSENT",
+  loveStoryPhoto: FixturePortraits = "ABSENT",
+  galleryCount = 3,
+): BuildSnapshotPayloadInput["media"] {
+  const storyRows: BuildSnapshotPayloadInput["media"] = [
+    ...(photoStory === "PRESENT"
+      ? FIXTURE_PHOTO_STORY_IDS.map((id, index) => ({
+          id,
+          projectId: FIXTURE_PROJECT_ID,
+          mediaType: "PHOTO_STORY" as const,
+          sortOrder: index,
+        }))
+      : []),
+    ...(loveStoryPhoto === "PRESENT"
+      ? [{ id: FIXTURE_MEDIA_IDS.LOVE_STORY_PHOTO, projectId: FIXTURE_PROJECT_ID, mediaType: "LOVE_STORY_PHOTO" as const, sortOrder: 0 }]
+      : []),
+  ];
+  const extraGallery: BuildSnapshotPayloadInput["media"] = Array.from({ length: Math.max(0, galleryCount - 3) }, (_, i) => ({
+    id: fixtureExtraGalleryId(i + 4),
+    projectId: FIXTURE_PROJECT_ID,
+    mediaType: "GALLERY" as const,
+    sortOrder: i + 4,
+  }));
+  const portraitRows: BuildSnapshotPayloadInput["media"] =
+    portraits === "PRESENT"
+      ? [
+          { id: FIXTURE_MEDIA_IDS.PORTRAIT_GROOM, projectId: FIXTURE_PROJECT_ID, mediaType: "PORTRAIT_GROOM", sortOrder: 0 },
+          { id: FIXTURE_MEDIA_IDS.PORTRAIT_BRIDE, projectId: FIXTURE_PROJECT_ID, mediaType: "PORTRAIT_BRIDE", sortOrder: 0 },
+        ]
+      : [];
   return [
     { id: FIXTURE_MEDIA_IDS.COVER, projectId: FIXTURE_PROJECT_ID, mediaType: "COVER", sortOrder: 0 },
     { id: FIXTURE_MEDIA_IDS.GALLERY_1, projectId: FIXTURE_PROJECT_ID, mediaType: "GALLERY", sortOrder: 1 },
@@ -195,6 +336,9 @@ function media(): BuildSnapshotPayloadInput["media"] {
     { id: FIXTURE_MEDIA_IDS.AUDIO, projectId: FIXTURE_PROJECT_ID, mediaType: "AUDIO", sortOrder: 0 },
     { id: FIXTURE_MEDIA_IDS.QR_GROOM, projectId: FIXTURE_PROJECT_ID, mediaType: "QR_GROOM", sortOrder: 0 },
     { id: FIXTURE_MEDIA_IDS.QR_BRIDE, projectId: FIXTURE_PROJECT_ID, mediaType: "QR_BRIDE", sortOrder: 0 },
+    ...portraitRows,
+    ...storyRows,
+    ...extraGallery,
   ];
 }
 
@@ -212,7 +356,9 @@ export function buildRendererFixtureSourceInput(options: RendererFixtureSourceOp
     variant: options.variant,
     weddingDetails: weddingDetails(),
     events: events(options.ceremonyLunar ?? "PRESENT"),
-    media: media(),
+    media: media(options.portraits ?? "ABSENT", options.photoStory, options.loveStoryPhoto, options.galleryCount),
+    timelineItems: timelineItems(options.timeline ?? "PRESENT"),
+    ...dressCodeSource(options.dressCode ?? "PRESENT"),
     design: {
       projectId: FIXTURE_PROJECT_ID,
       templateVersionId: FIXTURE_TEMPLATE_VERSION_ID,

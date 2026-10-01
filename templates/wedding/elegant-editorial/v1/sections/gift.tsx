@@ -84,9 +84,11 @@ function sidePresentation(
  * section heading (an accessible name only). The entry-point control, its
  * copy and the dialog presentation belong to the RF-06D island.
  *
- * RF-06D: the sides live inside the gift dialog island. A copy control is
- * added next to a non-blank canonical account number only when a clipboard
- * capability is present; the bank text stays selectable either way.
+ * RF-06D: the sides live inside the gift dialog island, one panel per
+ * present side (Task029 side tabs when more than one). Each panel keeps its
+ * side label for assistive technology, the QR, and the Task029 rows. A copy
+ * control is added next to a non-blank canonical account number only when a
+ * clipboard capability is present; the bank text stays selectable either way.
  */
 export function Gift({ operationalSides, gift, qr, clipboard }: GiftProps) {
   const sides = operationalSides
@@ -103,13 +105,15 @@ export function Gift({ operationalSides, gift, qr, clipboard }: GiftProps) {
         {COPY.gift.heading}
       </h2>
       <p className={styles.giftIntro}>{COPY.gift.intro}</p>
-      <GiftDialog>
-        <div className={styles.giftSides}>
-          {sides.map(({ side, lines, qr: sideQr }) => {
-            const sideLabel = COPY.families.labelBySide[side];
-            return (
-              <article key={side} className={styles.giftSide} data-side={side}>
-                <h3 className={styles.giftSideLabel}>{sideLabel}</h3>
+      <GiftDialog
+        panels={sides.map(({ side, lines, qr: sideQr }) => {
+          const sideLabel = COPY.families.labelBySide[side];
+          return {
+            side,
+            label: sideLabel,
+            content: (
+              <article className={styles.giftSide} data-side={side}>
+                <h3 className={styles.srOnly}>{sideLabel}</h3>
                 {sideQr?.status === "RESOLVED" ? (
                   <MediaImage media={sideQr} alt={`${COPY.gift.qrAltPrefix} ${sideLabel}`} className={styles.giftQr} />
                 ) : null}
@@ -136,10 +140,10 @@ export function Gift({ operationalSides, gift, qr, clipboard }: GiftProps) {
                   </p>
                 ) : null}
               </article>
-            );
-          })}
-        </div>
-      </GiftDialog>
+            ),
+          };
+        })}
+      />
     </section>
   );
 }

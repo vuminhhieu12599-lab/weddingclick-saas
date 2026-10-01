@@ -2,6 +2,7 @@ import type { RsvpAttendanceStatus } from "../../../../../lib/domain";
 import {
   RSVP_ATTENDING_PARTY_SIZE_MAX,
   RSVP_ATTENDING_PARTY_SIZE_MIN,
+  RSVP_GUEST_NAME_MAX_LENGTH,
   RSVP_MESSAGE_MAX_LENGTH,
   isValidRsvpSubmitInputV1,
   type RsvpSubmitInputV1,
@@ -19,7 +20,7 @@ import {
  * (K16), and nothing here ever means "submitted".
  */
 
-/** Ascending ATTENDING party-size choices, straight from the frozen K16 range. */
+/** Ascending ATTENDING / MAYBE party-size choices, straight from the K16 range. */
 export const RSVP_PARTY_SIZE_CHOICES: readonly number[] = Object.freeze(
   Array.from(
     { length: RSVP_ATTENDING_PARTY_SIZE_MAX - RSVP_ATTENDING_PARTY_SIZE_MIN + 1 },
@@ -27,9 +28,20 @@ export const RSVP_PARTY_SIZE_CHOICES: readonly number[] = Object.freeze(
   ),
 );
 
-export { RSVP_MESSAGE_MAX_LENGTH };
+export { RSVP_GUEST_NAME_MAX_LENGTH, RSVP_MESSAGE_MAX_LENGTH };
 
-/** The editable form fields. `attendance` starts unanswered; there is no prefill (K18). */
+/** Statuses that take the 1–20 party-size select (ATTENDING and MAYBE). */
+export function rsvpTakesPartySize(attendance: RsvpAttendanceStatus | null): boolean {
+  return attendance === "ATTENDING" || attendance === "MAYBE";
+}
+
+/**
+ * The editable form fields. There is no current-RSVP prefill (K18): the
+ * draft never comes from a stored response. `attendance` is nullable for
+ * prevalidation, but the Task029 attendance select starts on "Sẽ tham dự"
+ * (`ATTENDING`), exactly as the approved Task029 form does (Design Baseline
+ * B5 item 16); the guest changes it explicitly.
+ */
 export interface RsvpDraft {
   readonly attendance: RsvpAttendanceStatus | null;
   readonly partySize: number;
@@ -38,7 +50,7 @@ export interface RsvpDraft {
 }
 
 export const INITIAL_RSVP_DRAFT: RsvpDraft = Object.freeze({
-  attendance: null,
+  attendance: "ATTENDING",
   partySize: RSVP_ATTENDING_PARTY_SIZE_MIN,
   message: "",
   guestName: "",
@@ -63,25 +75,26 @@ export function rsvpMessageLength(message: string): number {
 /**
  * Builds the frozen four-field input from the draft (K15, K16, P31):
  *
- * - `attendance`: required; exactly `ATTENDING` or `NOT_ATTENDING`;
- * - `partySize`: the chosen integer 1–20 for `ATTENDING`, exactly 0 for
- *   `NOT_ATTENDING` (which has no party-size input);
+ * - `attendance`: required; `ATTENDING`, `MAYBE` or `NOT_ATTENDING`;
+ * - `partySize`: the chosen integer 1–20 for `ATTENDING` / `MAYBE`, exactly 0
+ *   for `NOT_ATTENDING` (which has no party-size input);
  * - `message`: `null` when blank after trim, otherwise the text exactly as
  *   typed, at most 500 code points;
- * - `guestName`: personalized → always `null` (no name input; the display
- *   name is presentation only and never sent, K20); non-personalized →
- *   required, non-blank after trim, sent exactly as typed.
+ * - `guestName` (RSVP completion amendment): the typed response name, for
+ *   personalized and unpersonalized invitations alike, required, sent
+ *   trimmed. Display data only, never identity (the capability carries the
+ *   secure guest context itself).
  *
  * Nothing else is normalized. The result is finally checked with the frozen
  * canonical `isValidRsvpSubmitInputV1`, so this model can never produce an
  * input the contract rejects.
  */
-export function buildRsvpSubmitInput(draft: RsvpDraft, personalized: boolean): RsvpDraftResult {
+export function buildRsvpSubmitInput(draft: RsvpDraft): RsvpDraftResult {
   const errors: RsvpDraftError[] = [];
+  if (draft.guestName.trim().length === 0) errors.push("GUEST_NAME_REQUIRED");
   if (draft.attendance === null) errors.push("ATTENDANCE_REQUIRED");
-  if (!personalized && draft.guestName.trim().length === 0) errors.push("GUEST_NAME_REQUIRED");
   if (
-    draft.attendance === "ATTENDING" &&
+    rsvpTakesPartySize(draft.attendance) &&
     (!Number.isInteger(draft.partySize) ||
       draft.partySize < RSVP_ATTENDING_PARTY_SIZE_MIN ||
       draft.partySize > RSVP_ATTENDING_PARTY_SIZE_MAX)
@@ -93,11 +106,11 @@ export function buildRsvpSubmitInput(draft: RsvpDraft, personalized: boolean): R
 
   const input: RsvpSubmitInputV1 = {
     attendance: draft.attendance,
-    partySize: draft.attendance === "ATTENDING" ? draft.partySize : 0,
+    partySize: rsvpTakesPartySize(draft.attendance) ? draft.partySize : 0,
     message: draft.message.trim().length === 0 ? null : draft.message,
-    guestName: personalized ? null : draft.guestName,
+    guestName: draft.guestName.trim(),
   };
-  if (!isValidRsvpSubmitInputV1(input, { personalized })) return { ok: false, errors: ["INPUT_REJECTED"] };
+  if (!isValidRsvpSubmitInputV1(input)) return { ok: false, errors: ["INPUT_REJECTED"] };
   return { ok: true, input };
 }
 
@@ -112,7 +125,8 @@ export type RsvpPhase = "IDLE" | "PENDING" | RsvpSubmitResultStatusV1;
 
 export type RsvpPhaseAction =
   | { readonly type: "SUBMIT_STARTED" }
-  | { readonly type: "SUBMIT_SETTLED"; readonly outcome: RsvpSubmitOutcome };
+  | { readonly type: "SUBMIT_SETTLED"; readonly outcome: RsvpSubmitOutcome }
+  | { readonly type: "EDIT" };
 
 /** K18/P32: a rejected promise is shown as failure, never as success. */
 export function rsvpPhaseForOutcome(outcome: RsvpSubmitOutcome): RsvpSubmitResultStatusV1 {
@@ -124,8 +138,14 @@ export function rsvpPhaseForOutcome(outcome: RsvpSubmitOutcome): RsvpSubmitResul
  * A start while pending, or after success, is ignored (no duplicate or
  * post-success submission); a settlement outside pending is ignored. After
  * any non-success result the user may explicitly submit again.
+ *
+ * `EDIT` is the Design Baseline D11 "Sửa lại" action: a local return from
+ * success to the form (never a K18 prefill from a stored response). Any
+ * resubmission goes through the capability again. It changes nothing in
+ * any other phase.
  */
 export function rsvpPhaseReducer(phase: RsvpPhase, action: RsvpPhaseAction): RsvpPhase {
+  if (action.type === "EDIT") return phase === "SUCCESS" ? "IDLE" : phase;
   if (action.type === "SUBMIT_STARTED") {
     return phase === "PENDING" || phase === "SUCCESS" ? phase : "PENDING";
   }

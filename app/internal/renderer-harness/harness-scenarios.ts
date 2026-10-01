@@ -11,6 +11,7 @@ import {
   FIXTURE_GUESTS,
   FIXTURE_MEDIA_DIMENSIONS,
   FIXTURE_MEDIA_IDS,
+  fixtureExtraGalleryId,
   buildRendererFixtureSourceInput,
   type RendererFixtureSourceOptions,
 } from "../../../templates/core/fixtures/renderer-fixture-sources";
@@ -47,6 +48,18 @@ const HARNESS_MEDIA_FILES: Readonly<Record<string, string>> = Object.freeze({
   [FIXTURE_MEDIA_IDS.GALLERY_3]: "gallery-3.svg",
   [FIXTURE_MEDIA_IDS.QR_GROOM]: "qr-groom.svg",
   [FIXTURE_MEDIA_IDS.QR_BRIDE]: "qr-bride.svg",
+  [FIXTURE_MEDIA_IDS.PORTRAIT_GROOM]: "portrait-groom.svg",
+  [FIXTURE_MEDIA_IDS.PORTRAIT_BRIDE]: "portrait-bride.svg",
+  [FIXTURE_MEDIA_IDS.PHOTO_STORY_1]: "photo-story-1.svg",
+  [FIXTURE_MEDIA_IDS.PHOTO_STORY_2]: "photo-story-2.svg",
+  [FIXTURE_MEDIA_IDS.PHOTO_STORY_3]: "photo-story-3.svg",
+  [FIXTURE_MEDIA_IDS.PHOTO_STORY_4]: "photo-story-4.svg",
+  [FIXTURE_MEDIA_IDS.PHOTO_STORY_5]: "photo-story-5.svg",
+  [FIXTURE_MEDIA_IDS.LOVE_STORY_PHOTO]: "love-story.svg",
+  // Fixture-only extra gallery images (gallery-many) reuse the three gallery placeholders in turn.
+  ...Object.fromEntries(
+    Array.from({ length: 22 }, (_, i) => [fixtureExtraGalleryId(i + 4), `gallery-${(i % 3) + 1}.svg`]),
+  ),
 });
 
 function hasOwn(record: object, key: string): boolean {
@@ -115,12 +128,26 @@ const ALL_SECTIONS_OFF: Record<string, SnapshotDesignSettingValue> = Object.free
   gallery: false,
   music: false,
   gift: false,
+  timeline: false,
+  dressCode: false,
+  photoStory: false,
 });
 
 export const HARNESS_SCENARIOS = Object.freeze({
-  "common-full": { label: "COMMON — đầy đủ, khách mời", source: { variant: "COMMON" }, guest: FIXTURE_GUESTS.NORMAL },
-  groom: { label: "GROOM — không cá nhân hoá", source: { variant: "GROOM" } },
-  bride: { label: "BRIDE — tên khách vui", source: { variant: "BRIDE" }, guest: FIXTURE_GUESTS.PLAYFUL },
+  "common-full": {
+    label: "COMMON — đầy đủ, khách mời",
+    source: { variant: "COMMON", portraits: "PRESENT", photoStory: "PRESENT", loveStoryPhoto: "PRESENT" },
+    guest: FIXTURE_GUESTS.NORMAL,
+  },
+  groom: {
+    label: "GROOM — không cá nhân hoá",
+    source: { variant: "GROOM", portraits: "PRESENT", photoStory: "PRESENT", loveStoryPhoto: "PRESENT" },
+  },
+  bride: {
+    label: "BRIDE — tên khách vui",
+    source: { variant: "BRIDE", portraits: "PRESENT", photoStory: "PRESENT", loveStoryPhoto: "PRESENT" },
+    guest: FIXTURE_GUESTS.PLAYFUL,
+  },
   "long-guest": { label: "Tên khách dài", source: { variant: "COMMON" }, guest: FIXTURE_GUESTS.LONG },
   "cover-unavailable": {
     label: "Ảnh bìa không khả dụng",
@@ -136,6 +163,15 @@ export const HARNESS_SCENARIOS = Object.freeze({
     label: "QR nhà trai không khả dụng",
     source: { variant: "COMMON" },
     unavailableMediaIds: [FIXTURE_MEDIA_IDS.QR_GROOM],
+  },
+  "portrait-unavailable": {
+    label: "Ảnh chân dung chú rể không khả dụng",
+    source: { variant: "COMMON", portraits: "PRESENT" },
+    unavailableMediaIds: [FIXTURE_MEDIA_IDS.PORTRAIT_GROOM],
+  },
+  "gallery-many": {
+    label: "Album 25 ảnh",
+    source: { variant: "COMMON", galleryCount: 25 },
   },
   "lunar-null": { label: "Không có ngày âm lịch", source: { variant: "BRIDE", ceremonyLunar: "ABSENT" } },
   "sections-minimal": {

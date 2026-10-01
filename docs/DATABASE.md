@@ -31,6 +31,8 @@ customers
           ├── wedding_details
           ├── project_events
           ├── project_media
+          ├── project_timeline_items
+          ├── project_dress_codes ── project_dress_code_swatches
           ├── project_design
           ├── project_addons ── service_addons
           ├── project_invitations ─ template_versions ── templates
@@ -275,7 +277,7 @@ Suggested fields:
 
 - `id`.
 - `project_id` FK.
-- `media_type` — `COVER`, `GALLERY`, `AUDIO`, `QR_GROOM`, `QR_BRIDE`, etc.
+- `media_type` — `COVER`, `GALLERY`, `AUDIO`, `QR_GROOM`, `QR_BRIDE`, `QR_COMMON`, `PORTRAIT_GROOM`, `PORTRAIT_BRIDE` (optional portrait roles: migration 0028), `PHOTO_STORY` (ordered editorial photo cluster, separate from `GALLERY`) and `LOVE_STORY_PHOTO` (one effective Love Story photo) (migration 0031; docs/DECISIONS.md RF7 Product Owner amendments). `GALLERY` has no maximum count.
 - `storage_bucket`.
 - `storage_path`.
 - `mime_type` optional.
@@ -293,6 +295,27 @@ Indexes:
 Do not store lists as comma-separated text.
 
 Deletion must consider published-version references.
+
+### 11a. `project_timeline_items` (migration 0029)
+
+Ordered Timeline / Lịch trình steps of a Project (docs/DECISIONS.md RF7 "Timeline (Product Owner amendment)"). Canonical structured content, never derived from `project_events`.
+
+- `id`, `project_id` FK (`ON DELETE CASCADE`).
+- `time_of_day` — `TIME(0)`, local wall-clock, minute precision.
+- `label` — plain text, non-blank, at most 200 characters.
+- `sort_order` — staff-authoritative order (then `id`); never re-sorted by time.
+- `created_at`, `updated_at`.
+
+Zero, one or many rows per Project. Staff-only RLS like `project_media`. Published invitations read the steps from the Snapshot, never from this table.
+
+### 11b. `project_dress_codes` / `project_dress_code_swatches` (migration 0030)
+
+A Project's optional Dress Code (docs/DECISIONS.md RF7 "Dress Code (Product Owner amendment)"). Configurable project data, never inferred from theme settings or CSS.
+
+- `project_dress_codes`: `project_id` PK + FK (`ON DELETE CASCADE`), optional plain-text `description` (non-blank when present, ≤ 1000 characters), timestamps.
+- `project_dress_code_swatches`: `id`, `project_id` FK to `project_dress_codes` (`ON DELETE CASCADE`), `color` (canonical lowercase `#rrggbb` only), `sort_order` (then `id`), timestamps. Any number of swatches.
+
+Staff-only RLS like `project_media`. Published invitations read the Dress Code from the Snapshot.
 
 ---
 
@@ -545,8 +568,8 @@ Suggested fields:
 - `id`.
 - `project_id` FK.
 - `guest_id` nullable FK (`ON DELETE SET NULL`, not cascade — deleting a guest must not destroy their actual RSVP response).
-- `guest_display_name_snapshot` nullable — required (NOT NULL in effect via CHECK) when `guest_id` is null (non-personalized flow); for personalized flow, a copy of `guests.display_name` at submission time so the response stays legible even if the guest row is later removed.
-- `attendance` — `TEXT CHECK IN ('ATTENDING','NOT_ATTENDING')`, not boolean (see `docs/PHYSICAL_DATABASE_PLAN.md` §A for rationale).
+- `guest_display_name_snapshot` nullable — required (NOT NULL in effect via CHECK) when `guest_id` is null (non-personalized flow); for personalized flow, a copy of `guests.display_name` at submission time so the response stays legible even if the guest row is later removed. *Since migration 0032:* every new RSVP stores the typed response name here (personalized or not; display data only, never identity — identity is `guest_id`); older rows keep their stored value.
+- `attendance` — `TEXT CHECK IN ('ATTENDING','MAYBE','NOT_ATTENDING')` (MAYBE: migration 0032), not boolean (see `docs/PHYSICAL_DATABASE_PLAN.md` §A for rationale).
 - `party_size` integer, bounded (`0`–`20`).
 - `message` optional, bounded length.
 - `created_at`.
@@ -556,7 +579,7 @@ Rules:
 
 - personalized guest has one current RSVP; enforced via a partial unique index on `guest_id WHERE guest_id IS NOT NULL`;
 - `party_size` must be non-negative and bounded by an approved reasonable maximum (20);
-- `attendance = 'ATTENDING'` requires `party_size` between 1 and 20; `attendance = 'NOT_ATTENDING'` requires `party_size = 0` — both directions enforced by a single hard `CHECK`;
+- `attendance` `'ATTENDING'` or `'MAYBE'` (0032) requires `party_size` between 1 and 20; `attendance = 'NOT_ATTENDING'` requires `party_size = 0` — both directions enforced by a single hard `CHECK`;
 - `guest_id IS NOT NULL OR guest_display_name_snapshot IS NOT NULL`, enforced by a hard `CHECK`;
 - server validates Project/guest relationship;
 - all writes (personalized and non-personalized) go through the trusted server RSVP use case — never a direct client `INSERT`/`UPDATE`.

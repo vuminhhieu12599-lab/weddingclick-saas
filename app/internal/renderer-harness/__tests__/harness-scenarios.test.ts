@@ -47,6 +47,8 @@ describe("scenario set", () => {
       "cover-unavailable",
       "gallery-unavailable",
       "qr-unavailable",
+      "portrait-unavailable",
+      "gallery-many",
       "lunar-null",
       "sections-minimal",
       "music-resolved",
@@ -89,6 +91,45 @@ describe("scenario content", () => {
     expect((await data("groom")).viewModel.guest).toBeUndefined();
   });
 
+  // RF7 Product Owner amendment: the honest end-to-end portrait path (fixture rows → Snapshot refs →
+  // harness resolver → ViewModel slots) for the scenarios the visual Couple checkpoint will preview.
+  it("portraits: common-full / groom / bride resolve both fictional harness portraits; portrait-unavailable keeps the slot", async () => {
+    for (const id of ["common-full", "groom", "bride"] as const) {
+      const { viewModel } = await data(id);
+      expect(viewModel.media.portrait.groom, id).toMatchObject({
+        status: "RESOLVED",
+        mediaId: FIXTURE_MEDIA_IDS.PORTRAIT_GROOM,
+        url: `${HARNESS_MEDIA_BASE_PATH}portrait-groom.svg`,
+        width: 900,
+        height: 1200,
+      });
+      expect(viewModel.media.portrait.bride, id).toMatchObject({
+        status: "RESOLVED",
+        mediaId: FIXTURE_MEDIA_IDS.PORTRAIT_BRIDE,
+        url: `${HARNESS_MEDIA_BASE_PATH}portrait-bride.svg`,
+      });
+    }
+    const unavailable = (await data("portrait-unavailable")).viewModel.media.portrait;
+    expect(unavailable.groom).toStrictEqual({ status: "UNAVAILABLE", mediaId: FIXTURE_MEDIA_IDS.PORTRAIT_GROOM });
+    expect(unavailable.bride?.status).toBe("RESOLVED");
+    // Every other scenario keeps the pre-portrait data: no portrait rows, two absent slots.
+    for (const id of ["long-guest", "cover-unavailable", "lunar-null", "sections-minimal"] as const) {
+      expect((await data(id)).viewModel.media.portrait, id).toStrictEqual({});
+    }
+  });
+
+  it("[media-batch] common-full resolves the Photo Story and Love Story photo; gallery-many resolves all 25 gallery images", async () => {
+    const full = (await data("common-full")).viewModel.media;
+    expect(full.photoStory.map((item) => item.status)).toStrictEqual(Array(5).fill("RESOLVED"));
+    expect(full.photoStory.map((item) => (item.status === "RESOLVED" ? item.url : ""))).toStrictEqual(
+      [1, 2, 3, 4, 5].map((i) => `${HARNESS_MEDIA_BASE_PATH}photo-story-${i}.svg`),
+    );
+    expect(full.loveStoryPhoto).toMatchObject({ status: "RESOLVED", url: `${HARNESS_MEDIA_BASE_PATH}love-story.svg` });
+    const many = (await data("gallery-many")).viewModel.media.gallery;
+    expect(many).toHaveLength(25);
+    expect(many.every((item) => item.status === "RESOLVED")).toBe(true);
+  });
+
   it("media states match each scenario; audio is UNAVAILABLE outside music-resolved", async () => {
     const full = await data("common-full");
     expect(full.viewModel.media.cover).toMatchObject({ status: "RESOLVED", url: `${HARNESS_MEDIA_BASE_PATH}cover.svg` });
@@ -128,6 +169,9 @@ describe("scenario content", () => {
       gallery: false,
       music: false,
       gift: false,
+      timeline: false,
+      dressCode: false,
+      photoStory: false,
     });
   });
 });
@@ -189,16 +233,24 @@ describe("harness fixture images", () => {
     .filter((file) => file.endsWith(".svg"))
     .sort();
 
-  it("the directory is exactly the six fictional SVGs plus the RF-06D harness tone", () => {
+  it("the directory is exactly the fourteen fictional SVGs plus the RF-06D harness tone", () => {
     expect(readdirSync(PUBLIC_HARNESS_DIR).sort()).toStrictEqual([...files, "audio-tone.wav"].sort());
   });
 
-  it("are exactly the six fictional SVGs", () => {
+  it("are exactly the fourteen fictional SVGs", () => {
     expect(files).toStrictEqual([
       "cover.svg",
       "gallery-1.svg",
       "gallery-2.svg",
       "gallery-3.svg",
+      "love-story.svg",
+      "photo-story-1.svg",
+      "photo-story-2.svg",
+      "photo-story-3.svg",
+      "photo-story-4.svg",
+      "photo-story-5.svg",
+      "portrait-bride.svg",
+      "portrait-groom.svg",
       "qr-bride.svg",
       "qr-groom.svg",
     ]);

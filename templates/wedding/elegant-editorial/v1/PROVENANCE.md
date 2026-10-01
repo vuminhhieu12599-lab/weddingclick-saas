@@ -140,3 +140,77 @@ Common record:
 
 The source PNGs are not part of the production payload and are not kept in
 the repository.
+
+## Approved Task029 opening envelope rasters (Micro-Checkpoint 1B, 2026-10-01)
+
+Common record:
+
+- **Source:** the Product Owner-approved Task 029 prototype envelope assets
+  `envelope-body.png`, `envelope-flap.png` and `envelope-seal.png` from the
+  Task 029 prototype decor directory (commit
+  `03131816d7966ccd9fad0e135df37bd65af7ee99`), as layered by
+  `GreenIvoryEditorialPrototype`.
+- **Product Owner decision (2026-10-01):** the exact approved prototype /
+  design assets are authorized for production use. To stay within P6, the
+  Product Owner chose size-optimized copies of those exact pixels over
+  byte-identical copies (≈6.2 MB of source PNGs).
+- **Derived from Task 029 prototype pixels:** **YES.** Each file is the
+  approved source PNG, downscaled only. No redraw, recolour, crop, retouch
+  or other pixel edit.
+- **Processing in the repository:** the same pipeline as the botanical
+  rasters above: alpha values ≤ 8 set to 0; premultiplied Lanczos downscale
+  to 2× the largest Task 029 rendered CSS size (P6; envelope box at most
+  300×200 CSS px); colour under fully transparent pixels zeroed; lossy WebP
+  (quality 92) with lossless alpha. The final files carry no EXIF, XMP or
+  ICC chunks. Aspect ratio is unchanged.
+- **Allowed production use:** WeddingClick Elegant Editorial v1
+  (`wedding.elegant-editorial.v1`) public invitation rendering.
+- **Personal / customer data:** none; no people, text, logo or project data.
+- The engraved 囍 on the seal is not in any of these files: as in Task 029,
+  it is decorative system-font text drawn by `sections/decor.tsx`.
+
+| File | Purpose | Source PNG (SHA-256) | Source → final | Max CSS size (Task 029) |
+|---|---|---|---|---|
+| `opening-envelope-body.webp` | Opening envelope body (pocket), full 3:2 canvas | `f10cb9d92b47d67c7924be33ee71122f37fca3f54b9f1d5faabb42656b469cd6` | 1536×1024 → 600×400 | 300×200 px (2×) |
+| `opening-envelope-flap.webp` | Hinged envelope flap, same 3:2 canvas, rendered at 95.89% with the Task 029 offset | `d75b9c720574d14198544431a0ad89d627e7255afd2d00937f8274d36d3c51da` | 1536×1024 → 570×380 | 287.67×191.78 px (≈1.98×) |
+| `opening-envelope-seal.webp` | Gold wax seal (blank disc) on the flap tip | `c0e8e6d3d4a9dbaeeea1fc06df862b8e09e59582b5952a2d6fbcc48bf0ce54e2` | 1254×1254 → 132×132 | 66×66 px (2×) |
+
+The source PNGs stay in the prototype tree only; they are not part of the
+production payload. Since this checkpoint the renderer no longer references
+`opening-envelope-body.svg`, `opening-envelope-flap.svg`,
+`opening-envelope-liner.svg` or `opening-seal-double-happiness.svg`; those
+files are kept unchanged as tracked legacy production assets.
+
+## Approved Task029 calendar bouquets and couple divider (Micro-Checkpoint 4, 2026-10-01)
+
+Common record:
+
+- **Source:** `calendar-flower-top-left.png`, `calendar-flower-bottom-right.png`
+  and `portrait-divider-floral-strip.png` from the Task 029 prototype decor
+  directory (commit `03131816d7966ccd9fad0e135df37bd65af7ee99`), as used by
+  `GreenIvoryEditorialPrototype`.
+- **Product Owner decision (2026-10-01):** approved prototype / design assets
+  are authorized for production use; size-optimized copies are allowed when
+  the visual intent is unchanged (same record as the envelope rasters above).
+- **Derived from Task 029 prototype pixels:** **YES.** Each file is the
+  approved source PNG, downscaled only. No redraw, recolour, crop, retouch
+  or other pixel edit.
+- **Processing in the repository:** the same pipeline as the envelope
+  rasters above (alpha ≤ 8 set to 0; premultiplied Lanczos downscale to 2×
+  the largest Task 029 rendered CSS size; colour under fully transparent
+  pixels zeroed; lossy WebP quality 92 with lossless alpha; no EXIF, XMP or
+  ICC chunks). Aspect ratio is unchanged.
+- **Allowed production use:** WeddingClick Elegant Editorial v1
+  (`wedding.elegant-editorial.v1`) public invitation rendering.
+- **Personal / customer data:** none; no people, text, logo or project data.
+
+| File | Purpose | Source PNG (SHA-256) | Source → final | Max CSS size (Task 029) |
+|---|---|---|---|---|
+| `calendar-flower-top-left.webp` | Calendar card top-left bouquet (Task 029 `calendarFlowerTopLeft`) | `cebe0e41406d7a5119bb15275d4f54886972a862651633c89239753924de397e` | 1254×1254 → 256×256 | 128×128 px (2×) |
+| `calendar-flower-bottom-right.webp` | Calendar card bottom-right bouquet (Task 029 `calendarFlowerBottomRight`) | `370517c01fe04f50d9a24036cb1fdcd63347e1e75630dbb588635e08be2cb001` | 1254×1254 → 256×256 | 128×128 px (2×) |
+| `portrait-divider-floral-strip.webp` | Couple / story floral strip (Task 029 `portraitDivider`) | `4491d1df6fa2ef66d7f526fab1ea774da7c369fe29111273f1b1ad7ceb3ab283` | 2172×724 → 600×200 | 300×100 px (2×) |
+
+Since this checkpoint the renderer no longer references
+`calendar-botanical-top-left.webp`, `calendar-botanical-bottom-right.webp` or
+`couple-floral-divider.webp`; those files are kept unchanged as tracked
+legacy production assets.

@@ -12,18 +12,25 @@ import { SNAPSHOT_PAYLOAD_SCHEMA_VERSION, type SnapshotSections } from "./snapsh
  * renderer implementation and needs no database lookup.
  */
 
-/** R8: exactly the Snapshot Sections v1 keys, the only RF-04 visibility keys. */
+/**
+ * R8: exactly the Snapshot Sections v1 keys, the only RF-04 visibility keys.
+ * `timeline`, `dressCode` and `photoStory` are additive keys
+ * (docs/DECISIONS.md RF7 Timeline / Dress Code / Photo Story amendments, 2026-10-01).
+ */
 export const RENDERER_SECTION_KEYS = [
   "invitationMessage",
   "loveStory",
   "gallery",
   "music",
   "gift",
+  "timeline",
+  "dressCode",
+  "photoStory",
 ] as const satisfies readonly (keyof SnapshotSections)[];
 
 export type RendererSectionKey = (typeof RENDERER_SECTION_KEYS)[number];
 
-/** R7: exact closed boolean record over the five section keys. */
+/** R7: exact closed boolean record over the section keys. */
 export type RendererSectionCapabilities = { readonly [K in RendererSectionKey]: boolean };
 
 /** R5: the Snapshot payload-schema-version type; today only `1`. */
@@ -119,6 +126,9 @@ function projectSectionCapabilities(value: unknown, rendererKey: string): Render
     gallery: value.gallery as boolean,
     music: value.music as boolean,
     gift: value.gift as boolean,
+    timeline: value.timeline as boolean,
+    dressCode: value.dressCode as boolean,
+    photoStory: value.photoStory as boolean,
   };
 }
 

@@ -8,7 +8,10 @@ import type { SnapshotPayloadV1 } from "./snapshot-payload-types";
  * nothing is written here.
  *
  * Deterministic payload traversal order — cover, gallery (payload order),
- * audio, groom QR, bride QR — deduplicated by id, keeping the first
+ * audio, groom QR, bride QR, then the optional groom and bride portraits
+ * (RF7 Product Owner amendment), then the Photo Story ids in payload order
+ * and the Love Story photo (RF7 Photo Story amendment); all appended last so
+ * payloads without them keep their exact order — deduplicated by id, keeping the first
  * occurrence. `qr.commonMediaId` is absent in payload v1 (S9). Unreferenced
  * project media never appears because only the payload is read.
  */
@@ -20,6 +23,10 @@ export function extractSnapshotMediaRefs(payload: SnapshotPayloadV1): string[] {
     media.audioMediaId,
     media.qr.groomMediaId,
     media.qr.brideMediaId,
+    media.portrait?.groomMediaId,
+    media.portrait?.brideMediaId,
+    ...(media.photoStoryMediaIds ?? []),
+    media.loveStoryPhotoMediaId,
   ];
 
   const refs: string[] = [];

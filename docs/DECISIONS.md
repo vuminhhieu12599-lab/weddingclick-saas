@@ -413,6 +413,8 @@ Implementation: `app/internal/prototypes/invitation/{layout,page}.tsx`, `prototy
 
 **Event display order.** Visible events are ordered for display by `sort_order ASC`, then `starts_at ASC`, then `id ASC` as a deterministic tie-break. This display order is **not** the "earliest" order used by ceremony selection below; the two orderings are separate and must not be conflated. No event is ever duplicated, including `COMMON` events. Only the resolver owns this filtering and ordering. Templates receive the already-ordered visible events and the already-resolved ceremony event; they never decide which canonical events belong to a variant and never run either ordering or the ceremony-selection algorithm themselves.
 
+**Ceremony-card presentation (Product Owner ruling, 2026-10-01).** The Snapshot's canonical `events` stay complete and in the display order above; no canonical event is deleted, filtered out of persistence or reordered for presentation. The runtime RF-03 ViewModel additionally derives `ceremonyCards` (never persisted, `lib/invitation-rendering/ceremony-cards.ts`): exactly one card per operational side (RF4), always **GROOM before BRIDE** (COMMON: GROOM → BRIDE; GROOM / BRIDE: that side only), regardless of dates or staff `sort_order` between the sides. A side's card is its own rite only, from that side's single-side rule: GROOM-side `THANH_HON`, BRIDE-side `VU_QUY`. No `COMMON`-side event, other rite or other occasion is ever substituted; a side without a matching event has no card. Several same-side candidates resolve by the display order above (`sort_order` → `starts_at` → `id`). Each card carries the rite-derived RF3 business title ("Lễ Thành Hôn" / "Lễ Vu Quy") as its `title`; a template may instead show its own fixed, rite-derived card copy (Elegant Editorial v1, Product Owner ruling: "Tiệc mừng lễ thành hôn" / "Tiệc mừng lễ vu quy"). The event's own `title` is never changed and stays available to other surfaces (venue text such as "Tư gia nhà trai" stays in `venueName`). Templates render `ceremonyCards` as given and still never filter or re-sort `events` themselves. The main ceremony resolution (RF2 tiers, `ceremony`) is unchanged.
+
 **Ceremony event selection (product decision, RF-00 contract recovery).** This replaces §2.8's generic primary-event fallback for rendering purposes (`docs/PHYSICAL_DATABASE_PLAN.md` §2.8 [R21] carries a forward note to this rule). The ceremony event is chosen using both variant visibility and the required occasion type:
 
 | Variant | Required `occasion_type` | Ceremony candidates `C` |
@@ -466,7 +468,15 @@ Implementation: `app/internal/prototypes/invitation/{layout,page}.tsx`, `prototy
   - NULL is always preferred over an uncertain lunar date.
 
 **RF7. Content with no canonical home.** Customer-authored content is **never** hidden inside `designSettings`.
-- **Future schema/content task. Not persisted today, and RF-01+ must not invent storage for it:** dress code; love-story milestones/structured timeline (the canonical free-text `wedding_details.love_story` *does* exist and is used as-is); portrait-specific media roles; image focal points. Production V1 templates must work gracefully without these.
+- **Future schema/content task. Not persisted today, and RF-01+ must not invent storage for it:** love-story milestones (the canonical free-text `wedding_details.love_story` *does* exist and is used as-is); image focal points. Production V1 templates must work gracefully without these.
+- **Portrait media roles (Product Owner amendment, 2026-10-01).** Portrait-specific media roles were in the list above; the Product Owner has now explicitly approved exactly two: `PORTRAIT_GROOM` and `PORTRAIT_BRIDE` (`project_media.media_type`, migration 0028). Both are optional, and a Project without either stays fully valid. "At most one per side" is the *effective* rule, exactly like `COVER`: several rows of one role may exist, and the Snapshot uses only the first in RF11 rule C order (`sort_order`, then `id`). There is deliberately no uniqueness constraint, because a portrait referenced by a retained snapshot can be neither deleted nor re-pointed (0013b), so replacing it must stay possible by adding a new row. `COVER`/`GALLERY` are never reused as portraits, and no demo or substitute portrait is ever a production fallback. The payload carries them as an optional, additive `media.portrait: { groomMediaId?, brideMediaId? }` (ids only, never URLs) inside `payloadSchemaVersion: 1`: it is absent in payloads built before it and whenever no portrait exists, so every earlier v1 payload stays valid. Its ids are appended after the bride QR in the RF-02 media-ref extraction order and resolve through the existing injected `MediaResolver`; the RF-03 ViewModel exposes `media.portrait.{groom,bride}` slots (absent side = not referenced; present side = `RESOLVED` or `UNAVAILABLE`). No new `sections` key is added (RF-02 S1).
+- **Timeline (Product Owner amendment, 2026-10-01).** The Task029 Timeline / Lịch trình is an approved structured section. It is **not** derived from `project_events` (run-of-show steps such as "Đón khách" are not events) and nothing from events, gallery captions or other text is reused. Canonical home: the `project_timeline_items` table (migration 0029; `docs/PHYSICAL_DATABASE_PLAN.md` §2.9a): zero, one or many rows per Project with `time_of_day` (local wall-clock `TIME(0)`, minute precision, no date or timezone arithmetic), a plain-text `label` (non-blank, ≤ 200 characters) and a staff-authoritative `sort_order`. The Snapshot carries the ordered steps as `content.timeline: [{ id, time: "HH:mm", label }]` (order `sort_order`, then `id`; never by time) and `sections.timeline` = at least one step. Both are additive inside `payloadSchemaVersion: 1`: the builder always sets them, and a v1 payload built before them (no `content.timeline` / `sections.timeline`) stays valid and reads as `[]` / `false`. The ViewModel copies the steps unchanged and templates render them as given (no parsing, sorting or rebuilding). `timeline` is the additive sixth section key (supersedes the "five keys" wording of RF-02 S1, RF-04 R7/R8/R10/R17 and RF-06-0 P16/P19/P21): it flows through `sectionCapabilities`, `design.sectionSettings` (`timeline: false` hides it) and R9 effective visibility like the other five, so the section shows only when the renderer is capable, staff have not turned it off **and** at least one step exists. Elegant Editorial v1 renders it in the Task029 rhythm Events → ✦ → Timeline → tight ✦ → Countdown.
+- **Dress Code (Product Owner amendment, 2026-10-01).** The Task029 Dress Code is an approved structured section and configurable project data; it is never inferred from theme/palette settings or CSS, and the renderer never invents it. Canonical home (migration 0030; `docs/PHYSICAL_DATABASE_PLAN.md` §2.9b): at most one `project_dress_codes` row per Project (optional plain-text `description`, non-blank when present, ≤ 1000 characters) and its `project_dress_code_swatches` (zero, one or many; each an explicit canonical lowercase `#rrggbb` colour, so no CSS keyword, function, `url()`, `var()` or gradient can be stored; staff order `sort_order`, then `id`). Task029's four colours are fixture data only, never production defaults. The Snapshot carries `content.dressCode: { description, swatches: [{ id, color }] } | null` and `sections.dressCode` = a description or at least one swatch. Both are additive inside `payloadSchemaVersion: 1` (always set by the builder); a v1 payload built before them stays valid and reads as `null` / `false`. The ViewModel copies them and re-checks every colour against `#rrggbb`, because it becomes an inline CSS value. `dressCode` is the additive seventh section key (same supersession of the "five keys" wording as the Timeline amendment above): it shows only when the renderer is capable, staff have not set `dressCode: false` and useful content exists, so no empty band ever renders. Elegant Editorial v1 renders it after RSVP / Gift and before Gallery.
+- **Photo Story / Love Story photo / Gallery count (Product Owner amendment, 2026-10-01).** Two more `project_media.media_type` roles (migration 0031), both image roles under the existing upload/optimization pipeline:
+  - `PHOTO_STORY`: the Task029 editorial photo cluster as its own semantic role, independent from `GALLERY` (never fed by or feeding it, nor COVER/PORTRAIT_*). Many ordered rows (`sort_order`, then `id`); the Snapshot keeps all of them as optional, additive `media.photoStoryMediaIds` (absent when none). `photoStory` is an additive section key: content availability = at least one reference; it shows only when the renderer is capable, staff have not set `photoStory: false` and at least one photo resolves. Elegant Editorial v1 restores the approved Task029 Photo Story between the Countdown and the Love Story and displays up to its five-photo composition capacity (first five RESOLVED in order; fewer render only whole Task029 rows; none renders nothing). Extra rows stay valid project media for other/later renderers.
+  - `LOVE_STORY_PHOTO`: one optional effective photo like `COVER` (first by `sort_order`, then `id`; no uniqueness constraint, so a published one stays replaceable), carried as optional, additive `media.loveStoryPhotoMediaId`. It belongs to the existing `loveStory` section (no new key): with a RESOLVED photo the Task029 full-bleed photo-led Love Story renders; absent or UNAVAILABLE keeps the moss band. Never COVER/GALLERY.
+  - Both refs are ids only, appended after the portraits in the RF-02 extraction order, resolved through the injected `MediaResolver`; the ViewModel exposes `media.photoStory` (ordered slots, `[]` for older payloads) and `media.loveStoryPhoto`. Everything stays inside `payloadSchemaVersion: 1`; older v1 payloads remain valid.
+  - **Gallery count:** the album renders every GALLERY image the project has, in canonical order. Task029's ten photos are fixture data and its 10-slot arrangement is a repeating layout cycle (images 1–10, 11–20, …, with the existing lone-tail rule), never a business maximum.
 - **Fixed template copy (template-owned and versioned):** section headings; closing/thank-you copy; gift intro copy; default salutation; default generic guest label. This copy is part of the immutable renderer version (RF14), so changing it requires a new renderer/template version.
 - **Derived from canonical data:** the invitation body/message comes from `wedding_details.invitation_message`. No separate customer-authored "invitation wording template" may exist in `designSettings`. Templates may wrap canonical text in versioned fixed copy but never invent persisted customer content.
 
@@ -506,7 +516,8 @@ Implementation: `app/internal/prototypes/invitation/{layout,page}.tsx`, `prototy
   gift:      { groom?, bride? },                         // field set only: docs/PHYSICAL_DATABASE_PLAN.md §2.7 [R20];
              // side omission / meaningful content: RF-02 clarification S7/S8
   media:     { coverMediaId?, galleryMediaIds[], audioMediaId?,
-               qr: { groomMediaId?, brideMediaId?, commonMediaId? } },
+               qr: { groomMediaId?, brideMediaId?, commonMediaId? },
+               portrait?: { groomMediaId?, brideMediaId? } },   // optional, additive (RF7 PO amendment, 2026-10-01)
   sections:  { invitationMessage, loveStory, gallery, music, gift },
              // booleans = canonical content availability only (see "RF-02 Snapshot Sections Contract Clarification")
   design:    { paletteKey, fontPresetKey, effectPresetKey, sectionSettings, designSettings }
@@ -542,6 +553,7 @@ Payload rules:
 
 **RF15. Shared client capability boundaries.** (Refined, not reopened, by the RF-05 clarification K15–K25.)
 - **RSVP.** The prototype's three attendance options are **not** the persistence contract. Persisted attendance stays `RsvpAttendanceStatus` (`ATTENDING | NOT_ATTENDING`), with party size per `docs/PHYSICAL_DATABASE_PLAN.md` §2.20 (`ATTENDING` 1–20, `NOT_ATTENDING` 0). No `MAYBE` status is added. The RSVP UI does not own persistence: the renderer receives a submit capability/callback. Previews and harnesses never fake a successful persisted RSVP. Actual persistence is still Task 033.
+- **RSVP completion (Product Owner amendment, 2026-10-01).** Supersedes the two-status and personalized-null-name rules wherever they appear below (RF15 RSVP bullet, K15/K16, P7 RSVP row, P31, the RSVP baseline line). Attendance is now `ATTENDING | MAYBE | NOT_ATTENDING` (migration 0032; `MAYBE` visible copy "Sẽ cố gắng tham dự", shown between "Sẽ tham dự" and "Tiếc quá, không tham dự được"). Party size: `ATTENDING` and `MAYBE` 1–20, `NOT_ATTENDING` exactly 0. Every new submission, personalized or not, carries a typed response name (`guestName`: required, trimmed, non-blank, ≤ 200 code points), stored in the existing `rsvps.guest_display_name_snapshot` (no new column). The typed name is display data only and is **never** guest identity, which comes solely from the secure guest context (`guest_id`); personalized invitations no longer hide the name input (*amended by the Micro-Checkpoint 10 Product Owner ruling:* the input always starts empty, personalized or not, and is never pre-filled from guest data). The form order is name → attendance → party size (ATTENDING / MAYBE) → message (≤ 500 code points, unchanged) → submit. Rows stored before 0032 (`ATTENDING` / `NOT_ATTENDING`, personalized rows with a guest-display-name copy or NULL) remain valid and keep their meaning. No RSVP count/summary code exists yet; any future summary keeps the three categories separate.
 - **Music.** `AUDIO` media is the canonical input. With no audio, no music control is shown. A fake "playing" state without real playback is not acceptable for a certified template. Real shared playback is required before any template that claims music support is certified, but it does not block RF-01 to RF-04.
 - **Clipboard.** Success is shown only after the browser copy operation has actually succeeded. A failure is never swallowed and then presented as success. The shared production capability must fix the prototype's known false-positive path.
 
@@ -630,7 +642,7 @@ sections: {
 }
 ```
 
-This is the complete v1 set. No other key is added: not ceremony, events, families, countdown, calendar, directions, dressCode, portraitStory, structured love-story milestones, RSVP, or per-side gift booleans.
+This is the complete v1 set. No other key is added: not ceremony, events, families, countdown, calendar, directions, dressCode, portraitStory, structured love-story milestones, RSVP, or per-side gift booleans. *Amended 2026-10-01:* the optional, additive `timeline`, `dressCode` and `photoStory` keys (RF7 "Timeline" / "Dress Code" / "Photo Story" Product Owner amendments) are the approved additions.
 
 **S2. Meaning: canonical content availability.** Each boolean records only whether the canonical content that optional section needs is available in the payload, after variant filtering. It does **not** mean final renderer visibility, manifest capability, template support, the result of a staff toggle, or a section rendering decision.
 
@@ -820,7 +832,7 @@ Every key is required; no extra keys. RSVP, countdown, map, calendar, guest pers
 
 ### Effective section visibility
 
-**R8. Key vocabulary.** The RF-04 effective-section keys are exactly the Snapshot Sections v1 keys: `invitationMessage`, `loveStory`, `gallery`, `music`, `gift`. RF-04 never creates effective visibility for arbitrary manifest or `sectionSettings` keys.
+**R8. Key vocabulary.** The RF-04 effective-section keys are exactly the Snapshot Sections v1 keys: `invitationMessage`, `loveStory`, `gallery`, `music`, `gift`. RF-04 never creates effective visibility for arbitrary manifest or `sectionSettings` keys. *Amended 2026-10-01:* `timeline`, `dressCode` and `photoStory` are additive keys (RF7 "Timeline" / "Dress Code" / "Photo Story" Product Owner amendments).
 
 **R9. Formula (frozen).** For each of the five keys `k`:
 
@@ -1043,7 +1055,7 @@ RsvpCapabilityV1 {
 }
 
 RsvpSubmitInputV1 {
-  attendance: RsvpAttendanceStatus   // lib/domain/rsvp-attendance.ts: ATTENDING | NOT_ATTENDING
+  attendance: RsvpAttendanceStatus   // lib/domain/rsvp-attendance.ts: ATTENDING | MAYBE | NOT_ATTENDING (RSVP completion amendment)
   partySize:  number
   message:    string | null
   guestName:  string | null
@@ -1053,7 +1065,7 @@ RsvpSubmitInputV1 {
 Exactly these four input fields. `attendance` uses the canonical `RsvpAttendanceStatus`; there is no `MAYBE` (RF15). `message` and `guestName` are `string | null`; there is no `undefined`-based semantic distinction.
 
 **K16. Input rules.**
-- `ATTENDING`: `partySize` is an integer 1–20. `NOT_ATTENDING`: `partySize` is exactly 0 (`docs/PHYSICAL_DATABASE_PLAN.md` §2.20).
+- `ATTENDING` (and `MAYBE`, RSVP completion amendment): `partySize` is an integer 1–20. `NOT_ATTENDING`: `partySize` is exactly 0 (`docs/PHYSICAL_DATABASE_PLAN.md` §2.20). *Amended 2026-10-01:* `guestName` is a required trimmed non-blank string for every submission (RF15 "RSVP completion").
 - `message`: `null`, or a string of at most 500 characters (§2.20 `CHECK`).
 - `guestName`: when `viewModel.guest` exists (personalized), it may be `null`. When `viewModel.guest` is absent (non-personalized), it must be a non-null string that is non-blank after `trim()`, per the existing canonical rule that a non-personalized RSVP carries a manually entered name (§2.20 `guest_display_name_snapshot`). RF-05 adds no other length or format rule. `guestName` is never identity or authorization (K20).
 - A renderer may prevalidate for UX. The capability implementation is authoritative and must validate again.
@@ -1269,20 +1281,20 @@ RF-05 defines no template-level fallback renderer.
 |---|---|
 | Hero | Uses `viewModel.media.cover` when `RESOLVED`. When the cover is absent **or** `UNAVAILABLE`, it shows an honest typographic hero (names, ceremony title, date) with no image. No hard-coded location (the prototype's "Đà Nẵng" is removed) and no substitute media. |
 | Opening card / envelope | May reuse the same resolved cover. No second media role is invented. |
-| Portraits | No `groomPortrait`/`bridePortrait` role exists in v1 (RF7). Production uses a typographic couple block. No fake/demo portraits. |
+| Portraits | *Amended 2026-10-01 (RF7 Product Owner amendment):* the optional `media.portrait.groom` / `media.portrait.bride` slots carry the canonical `PORTRAIT_GROOM` / `PORTRAIT_BRIDE` media. Rendering them in the Task029 couple composition is a separate, later visual checkpoint. Without a `RESOLVED` portrait the typographic couple block stays. No fake/demo portraits. |
 | Editorial image cluster | Removed from v1 (no canonical media roles). |
-| Love story | Text-only, from `viewModel.content.loveStory`, rendered as text (line breaks preserved; never interpreted as HTML). No background media is invented. Shown only when `sections.loveStory`. |
-| Gallery | `viewModel.media.gallery` in canonical order, shown only when `sections.gallery`. An `UNAVAILABLE` item keeps its position as a neutral, non-interactive tile carrying fixed template copy saying the image is unavailable. It is never opened in the lightbox, removed, reordered or replaced (RF-03 M8, RF-04 R11). |
-| Timeline | Removed from v1 (no frozen canonical field; RF7). |
+| Love story | *Amended 2026-10-01 (RF7 "Photo Story / Love Story photo"):* with a RESOLVED `media.loveStoryPhoto` the Task029 full-bleed photo-led treatment renders; otherwise: Text-only, from `viewModel.content.loveStory`, rendered as text (line breaks preserved; never interpreted as HTML). No background media is invented. Shown only when `sections.loveStory`. |
+| Gallery | *Amended 2026-10-01:* every GALLERY image renders; the Task029 10-slot arrangement repeats as a layout cycle and is never a maximum. `viewModel.media.gallery` in canonical order, shown only when `sections.gallery`. An `UNAVAILABLE` item keeps its position as a neutral, non-interactive tile carrying fixed template copy saying the image is unavailable. It is never opened in the lightbox, removed, reordered or replaced (RF-03 M8, RF-04 R11). |
+| Timeline | *Amended 2026-10-01 (RF7 "Timeline (Product Owner amendment)"):* rendered from `viewModel.content.timeline` when `sections.timeline` is effective, in the Task029 rhythm between the Events ✦ and the tight ✦ (the Countdown now sits in the ceremony band, between the ceremony heading/date and the Calendar — Micro-Checkpoint 10 Product Owner ruling). Canonical steps only, never events. |
 | `threePhoto` | Removed from v1. |
-| `dressCode` | Removed from v1 (RF7). |
-| Invitation message | `viewModel.content.invitationMessage` rendered verbatim as text, only when `sections.invitationMessage`. No token substitution, no templating, no HTML. |
+| `dressCode` | *Amended 2026-10-01 (RF7 "Dress Code (Product Owner amendment)"):* rendered from `viewModel.content.dressCode` when `sections.dressCode` is effective, after RSVP / Gift and before Gallery. Canonical project data only. |
+| Invitation message | *Amended 2026-10-01 (Micro-Checkpoint 10 Product Owner ruling):* not rendered by v1; the manifest declares `sectionCapabilities.invitationMessage: false` (no setting key), so the effective section is always `false`. v1 shows only the two-line block "TRÂN TRỌNG KÍNH MỜI" + guest line (D1 amendment). Formerly: `viewModel.content.invitationMessage` rendered verbatim as text, only when `sections.invitationMessage`. No token substitution, no templating, no HTML. |
 | `additional_note` | Never rendered; it is not in the Snapshot or the ViewModel (RF8). |
 | Families | `viewModel.families.primary` then `.secondary` (RF4 display order, both shown). Only canonical fields are shown, and a null line is omitted. The side label ("Nhà Trai" / "Nhà Gái", fixed copy) is chosen by the family's explicit `side`, never by position (RF5). No invented address or content. |
 | Ceremony | Title is `viewModel.ceremony.title` verbatim (RF3). Date, weekday and time come only from the RF-05C presentation derivation of `ceremony.startsAt` + `ceremony.timezone`. |
-| Events | `viewModel.events` in the given order (RF2). Each shows canonical `title`/`venueName`/`address`, and date/time from RF-05C. A map CTA appears only when that event's `mapUrl` exists. No lunar text on non-ceremony events (RF6). |
+| Events | *Amended 2026-10-01 (RF2 "Ceremony-card presentation"):* `viewModel.ceremonyCards` in the given order (one per operational side, GROOM before BRIDE). Each shows the fixed v1 card title for its side's rite ("Tiệc mừng lễ thành hôn" / "Tiệc mừng lễ vu quy", Product Owner ruling 7A) and the card event's canonical `venueName`/`address`, and date/time from RF-05C. A map CTA appears only when that event's `mapUrl` exists. Other canonical events stay in `viewModel.events` and are not cards. No lunar text on non-ceremony events (RF6). |
 | Guest line | Personalized: `viewModel.guest.displayName`, shown as presentation text only, never identity or authorization (RF-03 V1, RF-05 K20). Unpersonalized: fixed template copy. |
-| RSVP | Attendance choices are `ATTENDING` and `NOT_ATTENDING` only; there is no `MAYBE` (RF15). Governed by P31–P33. |
+| RSVP | *Amended 2026-10-01 (RF15 "RSVP completion"):* choices `ATTENDING`, `MAYBE` ("Sẽ cố gắng tham dự"), `NOT_ATTENDING`; the name input is always visible and first. Governed by P31–P33 as amended. |
 | Lunar | `viewModel.ceremony.lunarDateDisplay` is shown verbatim, or the lunar line is omitted when it is null or empty (RF6, K32). A fixed label such as "Tức ngày" is allowed only as **separate** template copy placed beside it. The label never parses, alters, concatenates into or replaces the canonical string. |
 | Calendar | The RF-05C Monday-first 42-cell month grid is authoritative (K33). Column headers are fixed template copy in Monday → Sunday order. The renderer never computes its own month, weekday or day count. |
 | Countdown | RF-05C `deriveCeremonyCountdownV1` over `capabilities.clock` only (K27–K29). No countdown is shown without a clock. A passed ceremony shows fixed copy, never negative values. |
@@ -1368,7 +1380,7 @@ design: {
 }
 ```
 
-`sectionCapabilities` is all `true` because every one of the five sections is rendered by v1 (P7), including love story (text-only) and music (P35). `supportedVariants` uses the canonical `INVITATION_VARIANTS` order.
+`sectionCapabilities` is all `true` because every one of the five sections is rendered by v1 (P7), including love story (text-only) and music (P35). *Amended 2026-10-01 (Micro-Checkpoint 10 Product Owner ruling):* `invitationMessage` is now `false` and its `sectionSettingsSchema` key is removed, so v1 never renders the canonical message (the additive `timeline`, `dressCode` and `photoStory` keys are `true`). `supportedVariants` uses the canonical `INVITATION_VARIANTS` order.
 
 **P17. Placement.** The v1 manifest constant lives in `templates/wedding/elegant-editorial/v1/` in a module with no React import, no `"use client"`, no browser globals and no `lib/server/**` import, so both compositions (P27) can import it. The `RendererProductionManifestV1` type, its validator/projection and its error class live in `templates/core/`. None of them may be added to the RF-04/RF-05 files that the frozen static-boundary tests scan (`renderer-compatibility-manifest.ts`, `renderer-registry.ts`, `renderer-selection*.ts`, the RF-05A/B/C files). Those files must stay free of production keys and `TemplateDesignManifestV1`, and RF-06 must not weaken those tests. Exact file names follow repository conventions.
 
@@ -1456,7 +1468,7 @@ Both expose the **same** renderer key set. RF-06A/B tests assert exact key-set e
 - Later, Task 033 constructs the real capability **inside the client graph**, using its authorized client/API workflow.
 - No guest token, access token, guest id or `?guest=` value appears in renderer props or renderer UI (K20).
 
-**P31. RSVP UI semantics (RF-06D).** Choices are `ATTENDING` / `NOT_ATTENDING`. Party size is an integer 1–20 for `ATTENDING`; `NOT_ATTENDING` submits 0 with no party-size input. The message is optional, `null` when blank, and at most 500 characters. Personalized (`viewModel.guest` present; Product Owner APPROVED 2026-09-29): no guest-name input is rendered and the capability input sends `guestName: null`. `viewModel.guest.displayName` stays presentation-only and is never sent as, or used as, identity (K20). Non-personalized: a required name input, non-blank after `trim()` (K16). The renderer prevalidates for UX only.
+**P31. RSVP UI semantics (RF-06D).** *Amended 2026-10-01 by RF15 "RSVP completion": three choices, MAYBE takes party size 1–20, and every invitation shows the required name input first; the original text below is superseded where it differs.* Choices are `ATTENDING` / `NOT_ATTENDING`. Party size is an integer 1–20 for `ATTENDING`; `NOT_ATTENDING` submits 0 with no party-size input. The message is optional, `null` when blank, and at most 500 characters. Personalized (`viewModel.guest` present; Product Owner APPROVED 2026-09-29): no guest-name input is rendered and the capability input sends `guestName: null`. `viewModel.guest.displayName` stays presentation-only and is never sent as, or used as, identity (K20). Non-personalized: a required name input, non-blank after `trim()` (K16). The renderer prevalidates for UX only.
 
 **P32. RSVP state machine.** Idle → pending → one of success / invalid / unavailable / failed. Success UI appears only after a resolved `SUCCESS`. A rejected promise is shown as failure. Pending prevents duplicate submission. There is no prefill (K18).
 
@@ -1590,7 +1602,7 @@ Where Task029 and the frozen production contract can coexist, **Task029 wins vis
 - the approved production font families (P3);
 - no hard-coded "Đà Nẵng" (P7);
 - Hero media is the cover only, with the required typographic Hero fallback (P7, Design Baseline D4);
-- no groom/bride portrait media and no photo cluster (P7);
+- no photo cluster (P7); groom/bride portrait media only through the optional RF7-amended `media.portrait` slots (2026-10-01);
 - no Timeline and no Dress Code section (P7);
 - Love Story is text-only (P7, Design Baseline D8);
 - the canonical invitation message is rendered verbatim, and the guest line is separate (P7, Design Baseline D1);
@@ -1603,7 +1615,7 @@ Where Task029 and the frozen production contract can coexist, **Task029 wins vis
 - operational-side gift rules and no `QR_COMMON` (P7, RF13);
 - truthful clipboard behavior (P34, K22);
 - music is capability-gated, with no autoplay (P35, K24–K25);
-- RSVP is capability-gated; choices are `ATTENDING` / `NOT_ATTENDING` only (no `MAYBE`); party size is 1–20; personalized RSVP has no guest-name input; success appears only after an actual `SUCCESS` (P30–P33, K16–K19);
+- RSVP is capability-gated; *amended 2026-10-01 (RF15 "RSVP completion"): choices `ATTENDING` / `MAYBE` / `NOT_ATTENDING`; party size 1–20 for ATTENDING / MAYBE; every RSVP has the required name input first;* success appears only after an actual `SUCCESS` (P30–P33, K16–K19);
 - the opening is skippable and never permanently blocks content (P13);
 - the gift dialog is a bottom sheet on mobile and a modal on desktop (P13);
 - the production desktop column is about 480 px (P12);
@@ -1620,7 +1632,7 @@ Where Task029 and the frozen production contract can coexist, **Task029 wins vis
 3. **Hint copy.** "Chạm vào thiệp để mở".
 4. **Opening choreography.** Seal → flap → cover-photo card rise → dissolve. No-cover behavior follows Design Baseline D3. Skip follows Design Baseline D2.
 5. **Photo-led Hero.** "Save the date"; couple names on one line by default (Design Baseline D5); a small inline gold serif "&"; the dotted `DD.MM.YYYY` date, derived by RF-05C, with no location suffix (B4); no ceremony-title line when cover media is resolved. Fallback follows Design Baseline D4.
-6. **Couple / story.** The approved Great Vibes quote ("Hôn nhân là chuyện cả đời." / "Yêu người vừa ý, cưới người mình thương."); asymmetric left/right text plates (typographic, with no portrait media, B4); the floral divider (Design Baseline A1 artwork); no visible "Cô dâu & Chú rể" heading.
+6. **Couple / story.** The approved Great Vibes quote ("Hôn nhân là chuyện cả đời." / "Yêu người vừa ý, cưới người mình thương."); asymmetric left/right text plates (typographic without portrait media, B4; RF7 amendment 2026-10-01: the optional portrait slots may add the Task029 portraits in a later visual checkpoint); the floral divider (Design Baseline A1 artwork); no visible "Cô dâu & Chú rể" heading.
 7. **Families.** The line–❧–line ornament; two columns with a central divider; the approved side labels ("Nhà Trai" / "Nhà Gái", chosen by explicit `side`, P7); no visible section heading; no family address.
 8. **Invitation message.** No visible "Thư mời" heading; Task029 message typography. The guest line follows Design Baseline D1.
 9. **Ceremony.** The shared sage-gradient ceremony band; the approved two-part date composition; inline "Tức ngày" as separate label copy next to the verbatim `lunarDateDisplay` (P7, K32); `WEEKDAY · HH:mm` presentation from RF-05C.
@@ -1662,7 +1674,7 @@ Opening → Hero → Couple → Invitation message → Families → Ceremony →
 
 ### Product Owner rulings Design Baseline D1–D13 (all RESOLVED)
 
-**Design Baseline D1 — Guest line.** The separate guest line is exactly:
+**Design Baseline D1 — Guest line.** *Amended 2026-10-01 (Micro-Checkpoint 10 Product Owner ruling): v1 renders a two-line block, line 1 "TRÂN TRỌNG KÍNH MỜI", line 2 the trusted `viewModel.guest.displayName` or "Quý khách"; no invitation message follows (P7 invitation-message row). The original wording below is superseded where it differs.* The separate guest line is exactly:
 - **Personalized** (`viewModel.guest` present): **"Trân trọng kính mời {guest.displayName}"**. `{guest.displayName}` is the canonical runtime `viewModel.guest.displayName`, used as presentation only and never as identity or authorization (K20).
 - **Unpersonalized** (`viewModel.guest` absent): **"Trân trọng kính mời Quý khách"**.
 
@@ -1680,7 +1692,7 @@ Opening → Hero → Couple → Invitation message → Families → Ceremony →
 
 **Design Baseline D5 — Long names.** Names stay on one line by default. When they genuinely cannot fit at the supported width, they wrap naturally and keep the inline small serif "&". The current stacked-name composition is not forced. Names are never reduced below 18 px, and there is no horizontal overflow. This is a responsive exception, not a new composition.
 
-**Design Baseline D6 — Event side tag.** In `COMMON`, a side tag is shown only for events whose `side` is `GROOM` or `BRIDE`. There is no tag for `COMMON`-side events. In `GROOM` and `BRIDE`, no redundant side tags are added. (Task029 shows a tag only when more than one operational side exists, which never happens for a side-specific variant.)
+**Design Baseline D6 — Event side tag.** In `COMMON`, a side tag is shown only for events whose `side` is `GROOM` or `BRIDE`. There is no tag for `COMMON`-side events (since the 2026-10-01 ceremony-card amendment every card is a GROOM or BRIDE card, so each COMMON card carries its "Nhà Trai" / "Nhà Gái" tag). In `GROOM` and `BRIDE`, no redundant side tags are added. (Task029 shows a tag only when more than one operational side exists, which never happens for a side-specific variant.)
 Rule of Three: COMMON → tag on GROOM/BRIDE-side events only; GROOM → no tags; BRIDE → no tags.
 
 **Design Baseline D7 — Countdown passed state.** The exact passed-state copy is **"Ngày vui đã đến"**, in the approved countdown kicker typography and visual language. It is **not** Great Vibes. Live countdown values never return after the ceremony has passed, and negative values are never shown (P7, K28).

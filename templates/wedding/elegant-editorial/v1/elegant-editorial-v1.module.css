@@ -11,8 +11,10 @@
  * Tailwind, no runtime font import, no viewport-height dependency, no
  * review-frame width variable. RF-06B static rules come first and carry the
  * Task029 `GreenIvoryEditorialPrototype` values; the RF-06D interactive
- * rules follow at the end. RF-06D motion is CSS transitions only (no
- * keyframes, no infinite animation), and every transition is removed under
+ * rules follow at the end. RF-06D motion is CSS only: finite transitions and
+ * keyframes, plus exactly the three gentle Task029 loops (envelope float
+ * while sealed, calendar heart pulse, music pulse while PLAYING). Every
+ * RF-06D transition and animation is removed under
  * `prefers-reduced-motion: reduce` in the block at the very end.
  */
 
@@ -218,7 +220,10 @@
   position: relative;
   display: flex;
   align-items: flex-end;
+  /* Product Owner ruling: one full mobile viewport (small-viewport unit, so */
+  /* mobile browser chrome never pushes the names below the fold).          */
   min-height: 480px;
+  min-height: 100svh;
   overflow: hidden;
   background-color: var(--ee-accent-deep);
 }
@@ -317,7 +322,7 @@
 }
 
 /* Primary plate left, secondary plate right: the Task029 portrait-story
-   asymmetry kept without portrait media (P7). */
+   asymmetry for a side without a RESOLVED portrait. */
 .couplePlate {
   display: flex;
   flex-direction: column;
@@ -329,6 +334,49 @@
 .couplePlate[data-align="end"] {
   align-items: flex-end;
   padding: 4px 40px 30px;
+  text-align: right;
+}
+
+/*
+ * Task029 `portraitBlock` (RF7 Product Owner amendment): a RESOLVED portrait
+ * at 62% of the band, 3:4, with the label/name plate bottom-aligned beside
+ * it. The `end` (secondary) block mirrors it with right-aligned text. A side
+ * without a RESOLVED portrait keeps the typographic `couplePlate` above.
+ */
+.couplePortraitBlock {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding: 26px 24px 12px;
+}
+
+.couplePortraitBlock[data-align="end"] {
+  flex-direction: row-reverse;
+  padding: 4px 24px 30px;
+}
+
+.couplePortrait {
+  flex-shrink: 0;
+  width: 62%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  object-position: center;
+  box-shadow: 0 20px 36px -22px color-mix(in srgb, var(--ee-accent-deep) 50%, transparent);
+}
+
+.couplePortraitPlate {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 0 16px 18px;
+  text-align: left;
+}
+
+.couplePortraitBlock[data-align="end"] .couplePortraitPlate {
+  align-items: flex-end;
   text-align: right;
 }
 
@@ -350,10 +398,12 @@
   overflow-wrap: break-word;
 }
 
+/* Task029 `portraitDivider`: the strip's transparent padding is trimmed by */
+/* the negative margins so it sits close to the plates above and below.    */
 .coupleDivider {
   width: calc(100% - 48px);
   max-width: 300px;
-  margin: 0 auto;
+  margin: -6px auto -10px;
 }
 
 .coupleDividerImage {
@@ -368,23 +418,30 @@
 .messageBand {
   padding: 38px 30px 26px;
   background-color: var(--ee-background);
+  text-align: center;
 }
 
-.guestLine,
-.message {
+/* Two-line invitation block (Micro-Checkpoint 10): the section-kicker
+   language for "TRÂN TRỌNG KÍNH MỜI", then the guest line. */
+.guestKicker {
+  margin-bottom: 10px;
+  font-family: var(--ee-sans);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.3em;
+  color: var(--ee-bronze);
+}
+
+.guestLine {
   font-family: var(--ee-serif);
-  font-size: 15px;
-  line-height: 1.9;
-  color: var(--ee-muted);
+  font-size: 20px;
+  line-height: 1.5;
+  color: var(--ee-text);
   overflow-wrap: break-word;
 }
 
 .guestName {
   overflow-wrap: break-word;
-}
-
-.message {
-  white-space: pre-line;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -545,13 +602,14 @@
 }
 
 /* ---------------------------------------------------------------------- */
-/* Calendar — moss card with production corner bouquets                   */
+/* Calendar — moss card with the Task029 corner bouquets                  */
 /* ---------------------------------------------------------------------- */
 
 /*
- * The stage spans the full column (it cancels the band's side padding), so
- * each bouquet's straight source edge sits flush with the column edge and
- * reads as flowers continuing off the page, never as a cut. Bouquet size is
+ * Task029 `calendarCard` spacing: 34 px above, 44 px below (room for the
+ * bottom-right bouquet's overhang). The bouquets belong to the card: they
+ * are anchored to its corners and overhang it by the Task029 offsets
+ * (`calendarFlowerTopLeft` / `calendarFlowerBottomRight`). Bouquet size is
  * the Task029 clamp (at most 128 px, the P6 2x size of the 256 px files).
  */
 .calendarStage {
@@ -570,14 +628,15 @@
   user-select: none;
 }
 
+/* Task029 `calendarFlowerTopLeft` / `calendarFlowerBottomRight` offsets, on the approved Task029 bouquet art. */
 .calendarBotanicalStart {
-  top: -24px;
-  left: 0;
+  top: -58px;
+  left: -46px;
 }
 
 .calendarBotanicalEnd {
-  right: 0;
-  bottom: 6px;
+  right: -30px;
+  bottom: -38px;
 }
 
 .calendarCard {
@@ -619,22 +678,31 @@
   color: var(--ee-surface);
 }
 
+/*
+ * Task029 grid geometry: 24 px day cells with an 11 px gap between weeks and
+ * 6 px under the weekday row. Each week row is 35 px with its day centred,
+ * so half a gap (5.5 px) sits above the first week and below the last; the
+ * header line box and the table's bottom margin absorb those halves so the
+ * card height matches Task029 (weekday 13.5 + 6 − 5.5 ≈ 14 px).
+ */
 .calendarTable {
   width: 100%;
+  margin-bottom: -5.5px;
   border-collapse: collapse;
   table-layout: fixed;
   font-family: var(--ee-sans);
 }
 
 .calendarWeekday {
-  padding: 0 0 6px;
+  padding: 0;
+  line-height: 14px;
   font-size: 9px;
   font-weight: 400;
   letter-spacing: 0.04em;
   color: color-mix(in srgb, var(--ee-surface) 50%, transparent);
 }
 
-/* Task029 rhythm: 24 px day cells with an 11 px row gap. */
+/* Task029 rhythm: a 24 px day cell plus the 11 px week gap per row. */
 .calendarDay,
 .calendarCeremonyDay {
   position: relative;
@@ -691,9 +759,10 @@
   color: var(--ee-bronze);
 }
 
+/* Product Owner ruling (7A): the ceremony-card title one step larger than Task029's 12 px. */
 .eventTitle {
   font-family: var(--ee-sans);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.5;
   letter-spacing: 0.2em;
@@ -786,6 +855,91 @@
 }
 
 /* ---------------------------------------------------------------------- */
+/* Dress Code — Task029 sage band, kicker, text and swatches (RF7)        */
+/* ---------------------------------------------------------------------- */
+
+.dressCode {
+  padding: 36px 28px 40px;
+  background-color: var(--ee-surface-sage);
+  text-align: center;
+}
+
+.dressCodeText {
+  max-width: 300px;
+  margin: 0 auto 18px;
+  font-family: var(--ee-serif);
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--ee-muted);
+  white-space: pre-line;
+  overflow-wrap: break-word;
+}
+
+/* Any number of swatches: the centred row wraps instead of overflowing. */
+.dressCodeSwatches {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.dressCodeSwatch {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ee-accent-deep) 25%, transparent);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Timeline — Task029 run-of-show rows on the ivory band (RF7 amendment)  */
+/* ---------------------------------------------------------------------- */
+
+.timeline {
+  padding: 8px 28px 16px;
+  background-color: var(--ee-background);
+}
+
+.timelineList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.timelineRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.timelineTime {
+  flex-shrink: 0;
+  width: 46px;
+  font-family: var(--ee-sans);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--ee-bronze);
+}
+
+.timelineDot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--ee-accent);
+}
+
+.timelineLabel {
+  min-width: 0;
+  font-family: var(--ee-serif);
+  font-size: 14px;
+  color: var(--ee-text);
+  overflow-wrap: break-word;
+}
+
+/* ---------------------------------------------------------------------- */
 /* Love story — dark moss editorial band, text only                       */
 /* ---------------------------------------------------------------------- */
 
@@ -796,6 +950,92 @@
   padding: 44px 26px;
   background-color: var(--ee-accent-deep);
   background-image: linear-gradient(180deg, var(--ee-accent) 0%, var(--ee-accent-deep) 100%);
+}
+
+/*
+ * Task029 `sectionStory` with a RESOLVED LOVE_STORY_PHOTO (RF7 amendment):
+ * the full-bleed photo under the Task029 moss scrim, the text near the
+ * bottom, at least 420 px tall. Without one, the moss band above stays.
+ */
+.storyBand[data-photo="true"] {
+  position: relative;
+  min-height: 420px;
+  align-items: flex-end;
+  overflow: hidden;
+  padding: 0 26px 44px;
+}
+
+.storyPhoto {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.storyScrim {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ee-accent-deep) 5%, transparent) 0%,
+    color-mix(in srgb, var(--ee-accent-deep) 78%, transparent) 100%
+  );
+}
+
+.storyBand[data-photo="true"] .storyCard {
+  position: relative;
+  z-index: 2;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Photo Story — Task029 five-photo editorial cluster (RF7 amendment)     */
+/* ---------------------------------------------------------------------- */
+
+.photoStory {
+  padding: 10px 20px 14px;
+  background-color: var(--ee-surface);
+}
+
+.photoStoryGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.photoStoryAnchor {
+  grid-column: 1 / -1;
+  aspect-ratio: 4 / 5;
+}
+
+.photoStoryPairItem {
+  aspect-ratio: 4 / 5;
+}
+
+/* Same-height offset pair split 58 / 42 (Task029 `clusterOffsetRow`). */
+.photoStoryOffsetRow {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: 58fr 42fr;
+  gap: 10px;
+  aspect-ratio: 100 / 64;
+}
+
+.photoStoryOffsetWide,
+.photoStoryOffsetNarrow {
+  min-width: 0;
+  height: 100%;
+}
+
+.photoStoryImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  object-fit: cover;
+  object-position: center;
+  box-shadow: 0 12px 24px -18px color-mix(in srgb, var(--ee-accent-deep) 42%, transparent);
 }
 
 .storyCard {
@@ -1057,208 +1297,363 @@
 /* RF-06D opening island; its motion rules are in the RF-06D block)       */
 /* ---------------------------------------------------------------------- */
 
-/* The frozen Design Baseline A1 opening files, layered on the body canvas. */
+/* The approved Task029 body, flap and seal art, layered on the body canvas. */
 .envelopeCardClip,
 .envelopeCard,
 .envelopeBody,
-.envelopeLiner,
-.envelopeFlapFace {
+.envelopeFlapFace,
+.envelopeSealFace {
   pointer-events: none;
 }
 
-/* Task029 depth: the flap and the wax seal cast a soft shadow. */
+/* Task029 depth: the flap and the wax seal cast the Task029 0 6px 8px      */
+/* shadow (22% / 30% strength), tinted with the palette's deepest moss.     */
 .envelopeFlap {
-  filter: drop-shadow(0 3px 4px color-mix(in srgb, var(--ee-accent-deep) 35%, transparent));
+  filter: drop-shadow(0 6px 8px color-mix(in srgb, var(--ee-accent-deep) 22%, transparent));
 }
 
 .envelopeSeal {
-  filter: drop-shadow(0 3px 4px color-mix(in srgb, var(--ee-accent-deep) 45%, transparent));
+  filter: drop-shadow(0 6px 8px color-mix(in srgb, var(--ee-accent-deep) 30%, transparent));
 }
 
 /* ====================================================================== */
-/* RF-06D interactive islands                                             */
+/* RF-06D interactive islands (Task029 interaction language, Design       */
+/* Baseline B5 items 2–4, 10, 12, 15, 16, 18–20; Design Baseline D2, D3,  */
+/* D7, D10–D12). Everything below is RF-06D-owned: island selectors, and  */
+/* motion or in-dialog presentation layered on static classes.            */
 /* ====================================================================== */
 
-/* Opening envelope (interactive/opening-interaction.tsx) ---------------- */
+/* Opening (interactive/opening-interaction.tsx) ------------------------- */
 
 .openingStage {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
 }
 
+/* The envelope itself is the primary tap target (B5 item 2). */
+.openingEnvelopeButton {
+  position: relative;
+  display: block;
+  width: min(300px, 100%);
+  margin: 26px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.openingEnvelopeButton[aria-disabled="true"] {
+  cursor: default;
+}
+
+.openingEnvelopeButton:focus-visible {
+  outline: 1px solid var(--ee-gold);
+  outline-offset: 6px;
+}
+
+/* Task029 "resting on air" float while sealed; it stops once opening. */
+.openingEnvelopeFloat {
+  position: relative;
+  display: block;
+  animation: ee-envelope-float 4.5s ease-in-out infinite;
+}
+
+.openingStage:not([data-opening="sealed"]) .openingEnvelopeFloat {
+  animation: none;
+}
+
 .openingStage .openingEnvelope {
-  margin-top: 64px;
+  width: 100%;
+  margin: 0;
   overflow: visible;
+}
+
+/* Seal lifts away, flap swings open on its hinge: the flap art's fold line, */
+/* 14.65% down the flap box (Task029), which sits on the body's top edge.   */
+.openingStage .envelopeSeal {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  transition:
+    opacity 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .openingStage .envelopeFlap {
   transform-box: fill-box;
-  transform-origin: 50% 0%;
-  transition: transform 900ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  transform-origin: 50% 14.65%;
+  transition: transform 850ms cubic-bezier(0.45, 0, 0.2, 1);
 }
 
-.openingStage .envelopeSeal,
-.openingStage .envelopeSealRing,
-.openingStage .envelopeSealLeaf,
-.openingStage .envelopeSealStem {
-  transition: opacity 420ms ease-out;
+.openingStage:not([data-opening="sealed"]) .envelopeSeal {
+  opacity: 0;
+  transform: scale(1.18);
 }
 
-.openingStage[data-opening="opened"] .envelopeFlap {
-  transform: scaleY(-0.6);
+.openingStage:not([data-opening="sealed"]) .envelopeFlap {
+  transform: scaleY(-1);
 }
 
-.openingStage[data-opening="opened"] .envelopeSeal,
-.openingStage[data-opening="opened"] .envelopeSealRing,
-.openingStage[data-opening="opened"] .envelopeSealLeaf,
-.openingStage[data-opening="opened"] .envelopeSealStem {
+/*
+ * The cover card rises out of the pocket: it is drawn over the artwork but
+ * clipped at the pocket opening (y 45 of the 200-unit canvas, 77.5% up from
+ * the bottom), so it is only ever seen above the pocket, in front of the
+ * opened flap. It exists only with a RESOLVED media.cover (Design Baseline D3).
+ */
+.openingCardClip {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  clip-path: inset(-400% -20% 77.5% -20%);
+  pointer-events: none;
+}
+
+.openingCard {
+  position: absolute;
+  top: 26%;
+  left: 15.333%;
+  width: 69.333%;
+  aspect-ratio: 208 / 277;
+  padding: 7px;
+  border-radius: 4px;
+  background-color: var(--ee-surface);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--ee-gold) 55%, transparent),
+    0 18px 34px -14px color-mix(in srgb, var(--ee-accent-deep) 70%, transparent);
   opacity: 0;
 }
 
-/* "Skip" reaches the opened state with no transition at all. */
-.openingStage[data-motion="instant"] .envelopeFlap,
-.openingStage[data-motion="instant"] .envelopeSeal,
-.openingStage[data-motion="instant"] .envelopeSealRing,
-.openingStage[data-motion="instant"] .envelopeSealLeaf,
-.openingStage[data-motion="instant"] .envelopeSealStem {
-  transition: none;
-}
-
-.openingLetter {
+.openingCardPhoto {
   width: 100%;
+  height: 100%;
+  border-radius: 2px;
+  object-fit: cover;
 }
 
-.openingLetter:focus {
+.openingStage[data-opening="opening"] .openingCard {
+  animation: ee-opening-card-rise 1200ms cubic-bezier(0.22, 1, 0.36, 1) 560ms both;
+}
+
+/* The Task029 cover label, names and date fade as the envelope opens. */
+.opening .openingLabel,
+.opening .openingNames,
+.opening .openingDate {
+  transition: opacity 400ms ease-out;
+}
+
+.opening:has(.openingStage[data-opening="opening"]) .openingLabel,
+.opening:has(.openingStage[data-opening="opening"]) .openingNames,
+.opening:has(.openingStage[data-opening="opening"]) .openingDate {
+  opacity: 0;
+}
+
+/*
+ * The cover dissolves once the card has risen (or once the flap is open when
+ * there is no card). The stage's own settle animation runs on the same
+ * timeline; its animationend is the only thing that settles the opening.
+ */
+.opening:has(.openingStage[data-opening="opening"]) {
+  animation: ee-opening-dissolve 600ms cubic-bezier(0.4, 0, 0.2, 1) 2260ms both;
+}
+
+.opening:has(.openingStage[data-opening="opening"][data-card="none"]) {
+  animation-delay: 900ms;
+}
+
+.openingStage[data-opening="opening"] {
+  animation: ee-opening-settle 600ms linear 2260ms both;
+}
+
+.openingStage[data-opening="opening"][data-card="none"] {
+  animation-delay: 900ms;
+}
+
+/*
+ * Opened: the cover is removed visually but stays in the document (its
+ * heading remains for assistive technology); the invitation continues at
+ * the Hero, which fades in after the choreography.
+ */
+.opening:has(.openingStage[data-opening="opened"]) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.opening:has(.openingStage[data-opening="opened"]) + .hero {
+  animation: ee-opening-hero-in 600ms ease-out 100ms both;
+}
+
+.hero:focus {
   outline: none;
 }
 
-.openingLetter:focus-visible {
-  outline: 1px dashed var(--ee-gold);
-  outline-offset: 6px;
+.hero:focus-visible {
+  outline: 1px solid var(--ee-gold);
+  outline-offset: -8px;
 }
 
-.openingControls {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-  width: 100%;
-  margin-top: 28px;
-}
-
-.openingButton,
-.openingSkip {
-  min-height: 44px;
-  margin: 0;
+/* Task029 hint. */
+.openingHint {
+  margin-top: 14px;
   font-family: var(--ee-sans);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
+  font-size: 10px;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  cursor: pointer;
+  color: var(--ee-surface-sage);
+  opacity: 0.8;
 }
 
-.openingButton {
-  padding: 0 28px;
-  border: 1px solid var(--ee-gold);
-  border-radius: 999px;
-  background-color: var(--ee-on-accent);
-  color: var(--ee-accent-deep);
-  transition: background-color 160ms ease, color 160ms ease;
+@keyframes ee-envelope-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
 }
 
-.openingButton:hover {
-  background-color: var(--ee-gold);
-  color: var(--ee-on-accent);
+@keyframes ee-opening-card-rise {
+  from {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-77.5%);
+    opacity: 1;
+  }
 }
 
-.openingSkip {
-  padding: 0 16px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background-color: transparent;
-  color: var(--ee-on-accent);
-  text-decoration: underline;
-  text-underline-offset: 4px;
+@keyframes ee-opening-dissolve {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.03);
+  }
 }
 
-.openingButton:focus-visible,
-.openingSkip:focus-visible {
-  outline: 2px solid var(--ee-gold);
-  outline-offset: 3px;
+/* Visual no-op carrying the choreography's end (animationend) to the island. */
+@keyframes ee-opening-settle {
+  from {
+    visibility: visible;
+  }
+  to {
+    visibility: visible;
+  }
+}
+
+@keyframes ee-opening-hero-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* Countdown (interactive/countdown.tsx) -------------------------------- */
 
 .countdown {
-  padding: 40px var(--ee-gutter);
-  background-color: var(--ee-surface-sage);
+  padding: 4px var(--ee-gutter) 34px;
+  background-color: var(--ee-background);
 }
 
-.countdownHeading {
-  margin-bottom: 18px;
+.countdownKicker {
+  margin-bottom: 22px;
   font-family: var(--ee-sans);
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 400;
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--ee-bronze);
 }
 
-.countdownParts {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+/* Micro-Checkpoint 10: inside the ceremony sage band, above the Calendar. */
+.ceremonyBand .countdown {
+  padding: 16px 0 26px;
+  background-color: transparent;
 }
 
-.countdownPart {
+.countdown[data-countdown="passed"] .countdownKicker {
+  margin-bottom: 0;
+}
+
+.countdownRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.countdownCell {
   display: flex;
   flex-direction: column;
   align-items: center;
   min-width: 0;
-  padding: 12px 4px;
-  border: 1px solid var(--ee-border);
-  border-radius: 6px;
-  background-color: var(--ee-surface);
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--ee-gold) 50%, transparent);
 }
 
 .countdownValue {
   font-family: var(--ee-serif);
-  font-size: 28px;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-  color: var(--ee-accent-deep);
-  overflow-wrap: anywhere;
+  font-size: 20px;
+  line-height: 1.4;
+  color: var(--ee-accent);
 }
 
-.countdownUnit {
-  margin-top: 6px;
+.countdownLabel {
   font-family: var(--ee-sans);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.18em;
+  font-size: 9px;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--ee-muted);
+  color: var(--ee-bronze);
 }
 
-.countdownPassed {
-  font-family: var(--ee-script);
-  font-size: 30px;
-  line-height: 1.3;
-  color: var(--ee-accent-deep);
+/* Calendar heart pulse (static heart: sections/calendar.tsx) ------------- */
+
+.calendarHeart {
+  animation: ee-calendar-heart-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes ee-calendar-heart-pulse {
+  0%,
+  100% {
+    scale: 1;
+    opacity: 0.8;
+  }
+  50% {
+    scale: 1.14;
+    opacity: 1;
+  }
 }
 
 /* Music control (interactive/music-control.tsx) ------------------------ */
 
 .music {
   position: fixed;
+  top: 16px;
   right: max(16px, calc(50% - 224px));
-  bottom: 16px;
   z-index: 10;
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
   align-items: flex-end;
   gap: 8px;
   max-width: calc(100% - 32px);
@@ -1269,22 +1664,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   margin: 0;
   padding: 0;
   border: 1px solid var(--ee-gold);
   border-radius: 50%;
-  background-color: var(--ee-accent);
-  color: var(--ee-on-accent);
-  box-shadow: 0 10px 24px -14px var(--ee-accent-deep);
+  background-color: color-mix(in srgb, var(--ee-surface) 92%, transparent);
+  box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--ee-accent-deep) 40%, transparent);
   cursor: pointer;
   pointer-events: auto;
-  transition: background-color 160ms ease;
 }
 
 .musicButton[aria-pressed="true"] {
-  background-color: var(--ee-accent-deep);
+  border-color: var(--ee-accent);
+  background-color: var(--ee-accent);
 }
 
 .musicButton:focus-visible {
@@ -1293,165 +1687,224 @@
 }
 
 .musicGlyph {
-  width: 22px;
-  height: 22px;
-  fill: currentColor;
+  font-family: var(--ee-serif);
+  font-size: 16px;
+  line-height: 1;
+  color: var(--ee-bronze);
+}
+
+.musicButton[aria-pressed="true"] .musicGlyph {
+  color: var(--ee-on-accent);
+}
+
+/* The pulse runs only while the authoritative status is PLAYING. */
+.music[data-music-status="playing"] .musicGlyph {
+  animation: ee-music-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes ee-music-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+  }
 }
 
 .musicNote {
   max-width: 280px;
   padding: 8px 12px;
-  border: 1px solid var(--ee-border);
-  border-radius: 6px;
-  background-color: var(--ee-surface);
+  border: 1px solid color-mix(in srgb, var(--ee-gold) 60%, transparent);
+  background-color: var(--ee-background);
   font-family: var(--ee-sans);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.45;
   text-align: left;
   color: var(--ee-text);
   pointer-events: auto;
 }
 
-/* Gift dialog and copy control (interactive/gift-dialog.tsx, copy-account-button.tsx) */
+/* Gift CTA, dialog and copy control (interactive/gift-dialog.tsx, copy-account-button.tsx) */
 
-.giftOpen,
-.giftDialogClose,
-.copyButton {
-  margin: 0;
+.giftOpen {
+  min-height: 44px;
+  margin: 16px 0 0;
+  padding: 12px 26px;
+  border: 1px solid var(--ee-accent);
+  border-radius: 0;
+  background-color: var(--ee-accent);
+  color: var(--ee-on-accent);
   font-family: var(--ee-sans);
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 400;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background-color 160ms ease, color 160ms ease;
 }
 
-.giftOpen {
-  min-height: 48px;
-  margin-top: 24px;
-  padding: 0 28px;
-  border: 1px solid var(--ee-accent);
-  border-radius: 999px;
-  background-color: var(--ee-accent);
-  color: var(--ee-on-accent);
-  font-size: 12px;
+.giftOpen:active,
+.rsvpSubmit:active {
+  transform: scale(0.98);
 }
 
-.giftOpen:hover {
-  background-color: var(--ee-accent-deep);
-}
-
+/* Task029 sheet: bottom sheet on mobile, centered modal at ≥ 768 px (P13). */
 .giftDialog {
   width: 100%;
-  max-width: 100%;
+  max-width: 420px;
   max-height: calc(100% - 24px);
   max-height: calc(100dvh - 24px);
   margin: auto auto 0;
   padding: 0;
-  border: 1px solid var(--ee-border);
-  border-bottom: 0;
-  border-radius: 16px 16px 0 0;
+  border: 0;
+  border-radius: 0;
   background-color: var(--ee-background);
+  box-shadow: 0 -20px 50px color-mix(in srgb, var(--ee-accent-deep) 30%, transparent);
   color: var(--ee-text);
   overflow: auto;
   overscroll-behavior: contain;
 }
 
-.giftDialog[open] {
-  transform: none;
-  opacity: 1;
-  transition: transform 260ms ease-out, opacity 200ms ease-out;
-}
-
-@starting-style {
-  .giftDialog[open] {
-    transform: translateY(24px);
-    opacity: 0;
-  }
-}
-
 .giftDialog::backdrop {
-  background-color: color-mix(in srgb, var(--ee-accent-deep) 60%, transparent);
+  background-color: color-mix(in srgb, var(--ee-text) 55%, transparent);
 }
 
 @media (min-width: 768px) {
   .giftDialog {
-    max-width: 440px;
     margin: auto;
-    border-bottom: 1px solid var(--ee-border);
-    border-radius: 16px;
+    box-shadow: 0 20px 50px color-mix(in srgb, var(--ee-accent-deep) 30%, transparent);
   }
 }
 
-.giftDialogHeader {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 12px 12px var(--ee-gutter);
-  border-bottom: 1px solid var(--ee-border);
-  background-color: var(--ee-background);
-}
-
-.giftDialogTitle {
-  min-width: 0;
-  font-family: var(--ee-sans);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.24em;
+.giftDialogContent {
+  position: relative;
+  padding: 24px 22px 28px;
   text-align: left;
-  text-transform: uppercase;
-  color: var(--ee-bronze);
 }
 
 .giftDialogClose {
-  flex: none;
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 44px;
   min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--ee-border);
-  border-radius: 999px;
-  background-color: var(--ee-surface);
-  color: var(--ee-accent-deep);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--ee-sans);
+  font-size: 14px;
+  line-height: 1;
+  color: var(--ee-text);
+  cursor: pointer;
+}
+
+/*
+ * Task029 `modalTabs` spacing (6 px under the 24 px content padding). The
+ * 44 × 44 close button (top 8, right 10) would cover the last tab there, so
+ * the row stops 6 px short of it: 10 + 44 − 22 (content padding) + 6 = 38 px.
+ */
+.giftTabs {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 20px;
+  padding-right: 38px;
+}
+
+.giftTab {
+  flex: 1;
+  min-height: 40px;
+  margin: 0;
+  border: 1px solid var(--ee-accent);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ee-accent);
+  font-family: var(--ee-sans);
   font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
 }
 
-.giftDialogContent {
-  padding: 20px var(--ee-gutter) 28px;
+.giftTab[aria-pressed="true"] {
+  background-color: var(--ee-accent);
+  color: var(--ee-on-accent);
 }
 
-.giftDialogContent .giftSides {
+/* In the sheet, the static gift side becomes the Task029 panel: no card chrome. */
+.giftPanel .giftSide {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.giftPanel .giftQr {
+  width: 128px;
+  height: 128px;
+  margin: 4px auto 20px;
+  padding: 0;
+  border: 1px solid var(--ee-accent);
+}
+
+.giftPanel .giftLines {
+  gap: 0;
   margin-top: 0;
 }
 
-.giftLineAction {
-  margin-top: 8px;
+.giftPanel .giftLine {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ee-gold) 40%, transparent);
 }
 
+.giftPanel .giftLineLabel {
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+}
+
+.giftPanel .giftLineValue,
+.giftPanel .giftAccountNumber {
+  margin: 0;
+  font-family: var(--ee-serif);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: var(--ee-text);
+}
+
+.giftPanel .giftQrUnavailable {
+  text-align: center;
+}
+
+/* The copy control and its note join the row grid: control at the end, note below. */
+.giftLineAction,
 .copyControl {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
+  display: contents;
 }
 
 .copyButton {
-  min-height: 44px;
-  padding: 0 20px;
+  min-height: 36px;
+  margin: 0;
+  padding: 0 12px;
   border: 1px solid var(--ee-accent);
-  border-radius: 999px;
-  background-color: var(--ee-surface);
+  border-radius: 0;
+  background: transparent;
   color: var(--ee-accent);
-  font-size: 11px;
-}
-
-.copyButton:hover {
-  background-color: var(--ee-accent);
-  color: var(--ee-on-accent);
+  font-family: var(--ee-sans);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .copyButton[aria-disabled="true"] {
@@ -1460,6 +1913,8 @@
 }
 
 .copyFeedback {
+  grid-column: 1 / -1;
+  margin-top: 6px;
   font-family: var(--ee-sans);
   font-size: 12px;
   line-height: 1.45;
@@ -1469,53 +1924,83 @@
 
 .giftOpen:focus-visible,
 .giftDialogClose:focus-visible,
+.giftTab:focus-visible,
 .copyButton:focus-visible {
   outline: 2px solid var(--ee-accent-deep);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
 /* RSVP (interactive/rsvp.tsx) ------------------------------------------ */
 
+.rsvpSection {
+  padding: 6px 26px 40px;
+  background-color: var(--ee-background);
+}
+
+/*
+ * Task029 keeps RSVP and Gift in one `sectionDetails` band: the gift block
+ * sits 12 px under the RSVP card and the band's 40 px bottom padding closes
+ * it. Layout only, when the Gift section directly follows RSVP; a
+ * standalone Gift keeps its own 18 px (Task029 6 + 12) top spacing.
+ */
+.rsvpSection:has(+ .giftBlock) {
+  padding-bottom: 0;
+}
+
+.rsvpSection + .giftBlock {
+  padding-top: 12px;
+}
+
+.rsvpCard {
+  padding: 28px 22px;
+  border: 1px solid var(--ee-gold);
+}
+
+.rsvpHeading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 0 0 22px;
+  font-family: var(--ee-serif);
+  font-size: 21px;
+  line-height: 1.35;
+  color: var(--ee-accent);
+}
+
+.rsvpHeadingLine {
+  white-space: nowrap;
+}
+
+.rsvpHeadingAmp {
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 17px;
+  color: var(--ee-gold);
+}
+
 .rsvpForm {
-  display: grid;
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   text-align: left;
 }
 
-.rsvpIntro {
-  font-size: 15px;
-  line-height: 1.7;
-  text-align: center;
-  color: var(--ee-muted);
-}
-
-.rsvpField,
-.rsvpFieldset {
-  display: grid;
+.rsvpField {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
 }
 
-.rsvpLabel {
-  padding: 0;
-  font-family: var(--ee-sans);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--ee-accent-deep);
-}
-
+/* Design Baseline D12: 16 px fields (no iOS focus zoom); square Task029 fields. */
 .rsvpInput,
 .rsvpTextarea {
   width: 100%;
-  min-height: 44px;
   margin: 0;
   padding: 10px 12px;
-  border: 1px solid var(--ee-border);
-  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--ee-gold) 60%, transparent);
+  border-radius: 0;
   background-color: var(--ee-surface);
   color: var(--ee-text);
   font-family: var(--ee-serif);
@@ -1523,116 +2008,182 @@
   line-height: 1.5;
 }
 
+.rsvpInput {
+  min-height: 44px;
+}
+
 .rsvpTextarea {
+  min-height: 80px;
   resize: vertical;
 }
 
-.rsvpChoice {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 48px;
-  padding: 10px 14px;
-  border: 1px solid var(--ee-border);
-  border-radius: 6px;
+.rsvpSelectLabel {
+  font-family: var(--ee-sans);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ee-bronze);
+}
+
+.rsvpSelect {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 36px 0 14px;
+  border: 1px solid var(--ee-accent);
+  border-radius: 0;
   background-color: var(--ee-surface);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ee-accent) 50%),
+    linear-gradient(135deg, var(--ee-accent) 50%, transparent 50%);
+  background-position:
+    calc(100% - 19px) 50%,
+    calc(100% - 14px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  color: var(--ee-text);
+  font-family: var(--ee-serif);
   font-size: 16px;
+  appearance: none;
   cursor: pointer;
 }
 
-.rsvpChoice:has(:checked) {
-  border-color: var(--ee-accent);
-  background-color: var(--ee-surface-sage);
-}
-
-.rsvpRadio {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  accent-color: var(--ee-accent);
-}
-
-.rsvpHint {
+.rsvpHint,
+.rsvpError {
   font-family: var(--ee-sans);
   font-size: 12px;
-  color: var(--ee-muted);
-}
-
-.rsvpHint[data-over-limit="true"],
-.rsvpError {
-  color: var(--ee-heart);
-}
-
-.rsvpError {
-  font-family: var(--ee-sans);
-  font-size: 13px;
   line-height: 1.45;
+  color: var(--ee-heart);
 }
 
 .rsvpSubmit {
   width: 100%;
-  min-height: 48px;
+  min-height: 44px;
   margin: 0;
   border: 1px solid var(--ee-accent);
-  border-radius: 999px;
+  border-radius: 0;
   background-color: var(--ee-accent);
   color: var(--ee-on-accent);
   font-family: var(--ee-sans);
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
+  font-weight: 400;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background-color 160ms ease;
-}
-
-.rsvpSubmit:hover {
-  background-color: var(--ee-accent-deep);
 }
 
 .rsvpSubmit[aria-disabled="true"] {
   cursor: progress;
-  opacity: 0.7;
+  opacity: 0.4;
+}
+
+.rsvpResult,
+.rsvpFeedback {
+  margin-top: 14px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ee-muted);
+}
+
+.rsvpConfirm {
+  text-align: center;
+}
+
+.rsvpMessageRecap {
+  margin-top: 10px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--ee-muted);
+  overflow-wrap: anywhere;
+}
+
+.rsvpEditButton {
+  margin: 10px 0 0;
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+  font-family: var(--ee-serif);
+  font-size: 12px;
+  color: var(--ee-bronze);
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .rsvpInput:focus-visible,
 .rsvpTextarea:focus-visible,
-.rsvpRadio:focus-visible,
-.rsvpSubmit:focus-visible {
+.rsvpSelect:focus-visible,
+.rsvpSubmit:focus-visible,
+.rsvpEditButton:focus-visible {
   outline: 2px solid var(--ee-accent-deep);
   outline-offset: 2px;
 }
 
-.rsvpResult {
-  margin-top: 20px;
-  padding: 14px 16px;
-  border: 1px solid var(--ee-border);
-  border-radius: 6px;
-  background-color: var(--ee-surface-sage);
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--ee-accent-deep);
+/* Section reveal (interactive/section-reveal.tsx) ---------------------- */
+
+/*
+ * Marks exist only after hydration, set by the reveal island; server markup
+ * never carries them, so content is visible without JavaScript. `translate`
+ * (not `transform`) keeps any static transform untouched.
+ */
+.column [data-ee-reveal="rise"] {
+  opacity: 0;
+  translate: 0 22px;
+}
+
+.column [data-ee-reveal="fade"] {
+  opacity: 0;
+}
+
+.column [data-ee-reveal="shown"] {
+  opacity: 1;
+  translate: none;
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    translate 700ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* ---------------------------------------------------------------------- */
-/* Reduced motion: every RF-06D transition above is removed, so opening,  */
-/* dialog, buttons and status changes are immediate and never wait.       */
+/* Reduced motion: every RF-06D transition and animation above is removed */
+/* (the opening settles at once, with no card rise), reveals never hide   */
+/* content, and nothing loops.                                            */
 /* ---------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .openingStage .envelopeFlap,
   .openingStage .envelopeSeal,
-  .openingStage .envelopeSealRing,
-  .openingStage .envelopeSealLeaf,
-  .openingStage .envelopeSealStem,
-  .openingButton,
-  .musicButton,
-  .giftOpen,
-  .giftDialogClose,
-  .copyButton,
-  .giftDialog[open],
-  .rsvpSubmit {
+  .openingStage .envelopeFlap,
+  .opening .openingLabel,
+  .opening .openingNames,
+  .opening .openingDate,
+  .column [data-ee-reveal="shown"] {
     transition: none;
+  }
+
+  .openingEnvelopeFloat,
+  .openingStage[data-opening="opening"] .openingCard,
+  .opening:has(.openingStage[data-opening="opening"]),
+  .opening:has(.openingStage[data-opening="opening"][data-card="none"]),
+  .opening:has(.openingStage[data-opening="opened"]) + .hero,
+  .calendarHeart,
+  .music[data-music-status="playing"] .musicGlyph {
+    animation: none;
+  }
+
+  /* The settle marker still fires, immediately: no delayed choreography. */
+  .openingStage[data-opening="opening"],
+  .openingStage[data-opening="opening"][data-card="none"] {
+    animation-duration: 1ms;
+    animation-delay: 0s;
+  }
+
+  .column [data-ee-reveal="rise"],
+  .column [data-ee-reveal="fade"],
+  .column [data-ee-reveal="shown"] {
+    opacity: 1;
+    translate: none;
+  }
+
+  .giftOpen:active,
+  .rsvpSubmit:active {
+    transform: none;
   }
 }

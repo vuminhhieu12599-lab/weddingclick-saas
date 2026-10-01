@@ -13,10 +13,9 @@ import styles from "../elegant-editorial-v1.module.css";
 
 /** Exact public paths of the frozen decor files that sections render as images. */
 const DECOR_ASSET_SRC = Object.freeze({
-  "calendar-botanical-bottom-right.webp": "/renderers/wedding/elegant-editorial/v1/calendar-botanical-bottom-right.webp",
-  "calendar-botanical-top-left.webp": "/renderers/wedding/elegant-editorial/v1/calendar-botanical-top-left.webp",
+  "calendar-flower-bottom-right.webp": "/renderers/wedding/elegant-editorial/v1/calendar-flower-bottom-right.webp",
+  "calendar-flower-top-left.webp": "/renderers/wedding/elegant-editorial/v1/calendar-flower-top-left.webp",
   "calendar-heart.svg": "/renderers/wedding/elegant-editorial/v1/calendar-heart.svg",
-  "couple-floral-divider.webp": "/renderers/wedding/elegant-editorial/v1/couple-floral-divider.webp",
   "ornament-fleuron.svg": "/renderers/wedding/elegant-editorial/v1/ornament-fleuron.svg",
   "ornament-sparkle.svg": "/renderers/wedding/elegant-editorial/v1/ornament-sparkle.svg",
 } as const);
@@ -46,18 +45,30 @@ export function CoupleAmpersand({ className }: DecorProps) {
   return <span className={classes(styles.amp, className)}> &amp; </span>;
 }
 
+/** Task029 `envelopeSealMark` font stack: system CJK serif faces only, no font download. */
+const SEAL_MARK_FONT_FAMILY =
+  '"Songti SC", "STSong", "Noto Serif CJK SC", "Noto Serif SC", "Source Han Serif SC", "SimSun", serif';
+
 /**
- * The Task029 opening envelope, assembled from the frozen Design Baseline A1
- * opening files on the 300×200 body canvas (Design Baseline B5 item 1):
- * moss body with the ivory/gold liner frame, the hinged moss flap (its ivory
- * liner face underneath it), and the gold 囍 wax seal on the flap tip. The
- * ivory cover-card frame sits tucked inside the pocket, occluded by the body
- * and clipped at the body's bottom edge, ready to rise; the runtime
- * `media.cover` photograph is never part of this artwork.
+ * The Task029 opening envelope (Design Baseline B5 item 1), assembled exactly
+ * as `GreenIvoryEditorialPrototype` layers its approved body, flap and seal
+ * art on one 3:2 canvas (300×200 here, 1536×1024 in Task029). The three
+ * rasters are size-optimized copies of the Product Owner-approved Task029
+ * PNGs (P6; see ../PROVENANCE.md):
+ *
+ * - body: the full canvas;
+ * - flap: the Task029 offset (2.08%, −7.32%) at 95.89%, so its fold line
+ *   lands on the body's top edge; the hinge is 14.65% down the flap box;
+ * - seal: 22% of the canvas width, centred at 50% / 71%, with the Task029
+ *   engraved 囍 as decorative system-font text (two hard 1 px shadows).
+ *
+ * The ivory cover-card frame sits tucked inside the pocket, occluded by the
+ * body and clipped at the body's bottom edge; the runtime `media.cover`
+ * photograph is never part of this artwork.
  *
  * Static artwork only: it is not a control and has no opening behavior. The
  * RF-06D opening island renders this motif and animates its hook classes
- * (`envelopeFlap` on the flap group, hinged at its top edge; `envelopeSeal`).
+ * (`envelopeFlap` on the flap group, hinged on its fold line; `envelopeSeal`).
  */
 export function EnvelopeMotif({ className }: DecorProps) {
   return (
@@ -74,42 +85,49 @@ export function EnvelopeMotif({ className }: DecorProps) {
       </svg>
       <image
         className={styles.envelopeBody}
-        href="/renderers/wedding/elegant-editorial/v1/opening-envelope-body.svg"
+        href="/renderers/wedding/elegant-editorial/v1/opening-envelope-body.webp"
         x="0"
         y="0"
         width="300"
         height="200"
       />
-      {/* Flap and liner span the body silhouette (x 11–289), not the full canvas,
-          so the flap edges stay flush with the pocket; hinge stays on y 13. */}
       <g className={styles.envelopeFlap}>
         <image
-          className={styles.envelopeLiner}
-          href="/renderers/wedding/elegant-editorial/v1/opening-envelope-liner.svg"
-          x="11"
-          y="13"
-          width="278"
-          height="150"
-          preserveAspectRatio="none"
-        />
-        <image
           className={styles.envelopeFlapFace}
-          href="/renderers/wedding/elegant-editorial/v1/opening-envelope-flap.svg"
-          x="11"
-          y="13"
-          width="278"
-          height="150"
-          preserveAspectRatio="none"
+          href="/renderers/wedding/elegant-editorial/v1/opening-envelope-flap.webp"
+          x="6.24"
+          y="-14.64"
+          width="287.67"
+          height="191.78"
         />
       </g>
-      <image
-        className={styles.envelopeSeal}
-        href="/renderers/wedding/elegant-editorial/v1/opening-seal-double-happiness.svg"
-        x="117"
-        y="110"
-        width="66"
-        height="66"
-      />
+      <g className={styles.envelopeSeal}>
+        <image
+          className={styles.envelopeSealFace}
+          href="/renderers/wedding/elegant-editorial/v1/opening-envelope-seal.webp"
+          x="117"
+          y="109"
+          width="66"
+          height="66"
+        />
+        <g
+          fontFamily={SEAL_MARK_FONT_FAMILY}
+          fontSize="21.6"
+          textAnchor="middle"
+          dominantBaseline="central"
+          opacity="0.9"
+        >
+          <text x="150" y="143" fill="#ffecbe" fillOpacity="0.55">
+            囍
+          </text>
+          <text x="150" y="141" fill="#46300c" fillOpacity="0.35">
+            囍
+          </text>
+          <text x="150" y="142" fill="#7a5a24">
+            囍
+          </text>
+        </g>
+      </g>
     </svg>
   );
 }

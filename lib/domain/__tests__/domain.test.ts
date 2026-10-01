@@ -102,7 +102,8 @@ describe("IntakeSubmissionStatus", () => {
 
 describe("RsvpAttendanceStatus", () => {
   it("matches the exact set in docs/DATABASE.md §21", () => {
-    expect(RSVP_ATTENDANCE_STATUSES).toEqual(["ATTENDING", "NOT_ATTENDING"]);
+    // RSVP completion amendment (migration 0032): MAYBE between the two original statuses.
+    expect(RSVP_ATTENDANCE_STATUSES).toEqual(["ATTENDING", "MAYBE", "NOT_ATTENDING"]);
   });
 });
 
@@ -120,7 +121,18 @@ describe("ProjectTaskStatus", () => {
 
 describe("MediaType", () => {
   it("matches the exact set in docs/PHYSICAL_DATABASE_PLAN.md §2.9", () => {
-    expect(MEDIA_TYPES).toEqual(["COVER", "GALLERY", "AUDIO", "QR_GROOM", "QR_BRIDE", "QR_COMMON"]);
+    expect(MEDIA_TYPES).toEqual([
+      "COVER",
+      "GALLERY",
+      "AUDIO",
+      "QR_GROOM",
+      "QR_BRIDE",
+      "QR_COMMON",
+      "PORTRAIT_GROOM",
+      "PORTRAIT_BRIDE",
+      "PHOTO_STORY",
+      "LOVE_STORY_PHOTO",
+    ]);
   });
 });
 
@@ -148,7 +160,7 @@ describe("MediaUploadPolicy", () => {
     expect(PROJECT_MEDIA_BUCKET_MAX_BYTES).toBe(20971520);
   });
 
-  const imageMediaTypes: MediaType[] = ["COVER", "GALLERY", "QR_GROOM", "QR_BRIDE", "QR_COMMON"];
+  const imageMediaTypes: MediaType[] = ["COVER", "GALLERY", "QR_GROOM", "QR_BRIDE", "QR_COMMON", "PORTRAIT_GROOM", "PORTRAIT_BRIDE", "PHOTO_STORY", "LOVE_STORY_PHOTO"];
 
   it.each(imageMediaTypes)("%s maps to the IMAGE MIME allow-list and 10 MiB limit", (mediaType) => {
     expect(allowedMimeTypesForMediaType(mediaType)).toEqual(IMAGE_MEDIA_MIME_TYPES);

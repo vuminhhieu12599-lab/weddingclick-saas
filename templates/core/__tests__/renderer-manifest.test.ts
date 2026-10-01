@@ -16,6 +16,9 @@ import {
 } from "../renderer-manifest";
 import { ECHO_SENTINEL, manifestCopy, type MutableManifest } from "./renderer-manifest-fixtures";
 
+/** The sections the Elegant Editorial v1 fixture manifest is capable of (Micro-Checkpoint 10: not invitationMessage). */
+const CAPABLE_SECTION_KEYS = RENDERER_SECTION_KEYS.filter((key) => ELEGANT_EDITORIAL_V1_MANIFEST.compatibility.sectionCapabilities[key]);
+
 /**
  * RF-06A full production manifest contract (docs/DECISIONS.md "RF-06-0 …"
  * P15, P18–P21): closed shape, identity, key composition, design
@@ -70,7 +73,9 @@ describe("valid manifest", () => {
       "sectionSettingsSchema",
       "designSettingsSchema",
     ]);
-    for (const key of RENDERER_SECTION_KEYS) {
+    // Settings exist exactly for the capable sections (v1 is not capable of invitationMessage).
+    expect(Object.keys(result.design.sectionSettingsSchema)).toEqual(CAPABLE_SECTION_KEYS);
+    for (const key of CAPABLE_SECTION_KEYS) {
       expect(Object.keys(result.design.sectionSettingsSchema[key] ?? {})).toEqual(["type"]);
     }
     expect(JSON.stringify(result)).toBe(JSON.stringify(ELEGANT_EDITORIAL_V1_MANIFEST));
@@ -464,7 +469,7 @@ describe("P19 step 6 — section settings schema vs renderer sections", () => {
     );
   });
 
-  it.each(RENDERER_SECTION_KEYS)("rejects a missing section setting %s while the section is capable", (key) => {
+  it.each(CAPABLE_SECTION_KEYS)("rejects a missing section setting %s while the section is capable", (key) => {
     expectRf06(
       validateWith((m) => {
         delete m.design.sectionSettingsSchema[key];
@@ -501,7 +506,7 @@ describe("P19 step 6 — section settings schema vs renderer sections", () => {
     m.compatibility.sectionCapabilities.music = false;
     delete m.design.sectionSettingsSchema.music;
     const result = validateRendererProductionManifest(m);
-    expect(Object.keys(result.design.sectionSettingsSchema)).toEqual(["invitationMessage", "loveStory", "gallery", "gift"]);
+    expect(Object.keys(result.design.sectionSettingsSchema)).toEqual(["loveStory", "gallery", "gift", "timeline", "dressCode", "photoStory"]);
   });
 });
 

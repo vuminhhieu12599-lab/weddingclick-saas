@@ -4,6 +4,7 @@ import { ELEGANT_EDITORIAL_V1_COPY } from "../copy";
 import styles from "../elegant-editorial-v1.module.css";
 import { formatDottedDate } from "./date-text";
 import { CoupleAmpersand, decorAssetSrc } from "./decor";
+import { formatCoupleDisplayName } from "./display-name";
 
 const COPY = ELEGANT_EDITORIAL_V1_COPY.closing;
 
@@ -38,9 +39,9 @@ export function Closing({ people, ceremonyDate }: ClosingProps) {
       </h2>
       <p className={styles.closingLine}>{COPY.line}</p>
       <p className={styles.closingNames}>
-        <span className={styles.name}>{people.primary.name}</span>
+        <span className={styles.name}>{formatCoupleDisplayName(people.primary.name)}</span>
         <CoupleAmpersand />
-        <span className={styles.name}>{people.secondary.name}</span>
+        <span className={styles.name}>{formatCoupleDisplayName(people.secondary.name)}</span>
       </p>
       <p className={styles.closingDate}>{formatDottedDate(ceremonyDate)}</p>
     </footer>

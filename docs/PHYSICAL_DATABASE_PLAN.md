@@ -378,7 +378,7 @@ Purpose: normalized media inventory for a Project.
 |---|---|---|---|---|
 | `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
 | `project_id` | `UUID` | NOT NULL | *(none)* | `REFERENCES projects(id) ON DELETE CASCADE` |
-| `media_type` | `TEXT` | NOT NULL | *(none)* | `CHECK (media_type IN ('COVER','GALLERY','AUDIO','QR_GROOM','QR_BRIDE','QR_COMMON'))` |
+| `media_type` | `TEXT` | NOT NULL | *(none)* | `CHECK (media_type IN ('COVER','GALLERY','AUDIO','QR_GROOM','QR_BRIDE','QR_COMMON','PORTRAIT_GROOM','PORTRAIT_BRIDE','PHOTO_STORY','LOVE_STORY_PHOTO'))` — portrait values added by migration 0028; PHOTO_STORY / LOVE_STORY_PHOTO by migration 0031 (`project_media_media_type_check` redefined; docs/DECISIONS.md RF7 Product Owner amendment) |
 | `storage_bucket` | `TEXT` | NOT NULL | *(none)* | New V2-only bucket (e.g. `project-media`), never V1's `wedding-photos` (§O) |
 | `storage_path` | `TEXT` | NOT NULL | *(none)* | Non-guessable object key (includes `project_id` + a random segment) |
 | `mime_type` | `TEXT` | NULL | *(none)* | |
@@ -395,12 +395,56 @@ Constraints: `UNIQUE (storage_bucket, storage_path)` — no two rows may claim t
 
 Indexes: `(project_id, media_type, sort_order)`.
 
+Portrait roles (migration 0028): `PORTRAIT_GROOM` / `PORTRAIT_BRIDE` are optional. "At most one per side" is an effective rule, like `COVER`: the Snapshot builder uses the first row of each role by `sort_order`, `id`. There is deliberately no uniqueness constraint, so a portrait referenced by a retained snapshot (undeletable, asset identity frozen; see the trigger below) can still be replaced by a new row.
+
+Photo Story / Love Story photo roles (migration 0031): `PHOTO_STORY` keeps many ordered rows (`sort_order`, `id`), a separate role from `GALLERY`; `LOVE_STORY_PHOTO` has one effective row like `COVER` (first by `sort_order`, `id`). No uniqueness constraint for either.
+
 Triggers — **[R16], placement per [F16]**:
 - `guard_project_media_asset_immutability()` — `BEFORE UPDATE ON project_media FOR EACH ROW WHEN (NEW.storage_bucket <> OLD.storage_bucket OR NEW.storage_path <> OLD.storage_path)`: raises an exception if `EXISTS (SELECT 1 FROM invitation_version_media WHERE project_media_id = OLD.id)`. Once any immutable snapshot references this row, its asset identity (bucket/path) can never change in place — replacing an asset means uploading a new object and creating a **new** `project_media` row, then (if desired) pointing future drafts at the new row. Other fields (`alt_text`, `sort_order`, `media_type`) remain editable regardless of reference state. **[F16], decided (no longer "create now or defer"): this trigger's function body is created in migration `0013b`, the same migration that creates `invitation_version_media` — not in the migration that creates this table (`0007`, per the corrected order in §16/[F7]) — because the function body's `EXISTS` check queries `invitation_version_media`, which does not exist yet at `0007`. See §16 for the exact migration placement.**
 
 Deletion (**[R15]**, cross-referenced from §K): a `project_media` row is deletable only when **no current incoming RESTRICT foreign-key reference** exists. Three such references exist today, none enforced by a bespoke trigger here — each is a plain `ON DELETE RESTRICT` FK: `invitation_version_media_project_media_fkey` (§2.15), protecting media needed by **any** retained snapshot (current published, superseded published, or review), not only the currently-live published one (§22); and `wedding_details`' `groom_bank_qr_media_id`/`bride_bank_qr_media_id` composite FKs (§2.7), each also toward `project_media`. Task 024's `DELETE` use case maps a resulting `23503` from any of these three to a generic `409 CONFLICT` ("This media item is still in use and cannot be deleted") without distinguishing which reference blocked the delete — a media row can be "still in use" via a snapshot reference or via either wedding_details bank-QR field alike.
 
 RLS: enabled + forced. SELECT/INSERT/UPDATE/DELETE: `is_staff()` (DELETE additionally gated by the RESTRICT FK described above). Anonymous: signed-URL issuance for published media happens server-side (`service_role`), never a direct anon table/bucket read. Guest/customer token: none via RLS.
+
+### 2.9a `project_timeline_items` — migration 0029 (docs/DECISIONS.md RF7 "Timeline (Product Owner amendment)")
+
+| Column | Type | Null | Default | Notes |
+|---|---|---|---|---|
+| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
+| `project_id` | `UUID` | NOT NULL | *(none)* | FK `projects(id)` `ON DELETE CASCADE` |
+| `time_of_day` | `TIME(0)` | NOT NULL | *(none)* | `CHECK (EXTRACT(SECOND FROM time_of_day) = 0)` — local wall-clock, minute precision; the Snapshot carries it as `HH:mm` |
+| `label` | `TEXT` | NOT NULL | *(none)* | `CHECK (btrim(label) <> '' AND char_length(label) <= 200)` — plain text |
+| `sort_order` | `INTEGER` | NOT NULL | `0` | staff-authoritative order, then `id` |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | |
+| `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | `set_updated_at()` trigger |
+
+Indexes: `(project_id, sort_order, id)`. No maximum row count. Not derived from `project_events`.
+
+RLS: enabled + forced. SELECT/INSERT/UPDATE/DELETE for `authenticated` only through `is_staff()` (mirrors `project_media`); no anon access, no service-role business path. Published output reads the Snapshot copy only.
+
+### 2.9b `project_dress_codes` / `project_dress_code_swatches` — migration 0030 (docs/DECISIONS.md RF7 "Dress Code (Product Owner amendment)")
+
+`project_dress_codes` (at most one row per Project):
+
+| Column | Type | Null | Default | Notes |
+|---|---|---|---|---|
+| `project_id` | `UUID` | NOT NULL | *(none)* | PK; FK `projects(id)` `ON DELETE CASCADE` |
+| `description` | `TEXT` | NULL | *(none)* | `CHECK (description IS NULL OR (btrim(description) <> '' AND char_length(description) <= 1000))` — plain text |
+| `created_at` / `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | `set_updated_at()` trigger |
+
+`project_dress_code_swatches`:
+
+| Column | Type | Null | Default | Notes |
+|---|---|---|---|---|
+| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
+| `project_id` | `UUID` | NOT NULL | *(none)* | FK `project_dress_codes(project_id)` `ON DELETE CASCADE` |
+| `color` | `TEXT` | NOT NULL | *(none)* | `CHECK (color ~ '^#[0-9a-f]{6}$')` — canonical lowercase hex only |
+| `sort_order` | `INTEGER` | NOT NULL | `0` | staff order, then `id` |
+| `created_at` / `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | `set_updated_at()` trigger |
+
+Indexes: `(project_id, sort_order, id)` on swatches. No fixed swatch count; Task029's four colours are fixture data only.
+
+RLS: enabled + forced on both tables. SELECT/INSERT/UPDATE/DELETE for `authenticated` only through `is_staff()` (mirrors `project_media`); no anon access, no service-role business path. Published output reads the Snapshot copy only.
 
 ### 2.10 `templates`
 
@@ -701,8 +745,8 @@ Purpose: attendance response, personalized or not.
 | `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
 | `project_id` | `UUID` | NOT NULL | *(none)* | `REFERENCES projects(id) ON DELETE CASCADE` |
 | `guest_id` | `UUID` | NULL | *(none)* | `REFERENCES guests(id) ON DELETE SET NULL` — plain (non-composite) FK. See §11-A for why a composite FK isn't used here. |
-| `guest_display_name_snapshot` | `TEXT` | NULL | *(none)* | Required (see `CHECK` below) when `guest_id IS NULL` (non-personalized flow's manually entered name); for personalized flow, a copy of `guests.display_name` at submission time so the response stays legible even if the guest row is later deleted |
-| `attendance` | `TEXT` | NOT NULL | *(none)* | `CHECK (attendance IN ('ATTENDING','NOT_ATTENDING'))` |
+| `guest_display_name_snapshot` | `TEXT` | NULL | *(none)* | Required (see `CHECK` below) when `guest_id IS NULL` (non-personalized flow's manually entered name); for personalized flow, a copy of `guests.display_name` at submission time so the response stays legible even if the guest row is later deleted *Since 0032:* every new RSVP stores the typed response name here (display data only, never identity); older rows keep their value. |
+| `attendance` | `TEXT` | NOT NULL | *(none)* | `CHECK (attendance IN ('ATTENDING','MAYBE','NOT_ATTENDING'))` — MAYBE added by migration 0032 (`rsvps_attendance_check` redefined) |
 | `party_size` | `INTEGER` | NOT NULL | `0` | See combined `CHECK` below — **[R12]** |
 | `message` | `TEXT` | NULL | *(none)* | `CHECK (message IS NULL OR char_length(message) <= 500)` |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | |
@@ -710,7 +754,7 @@ Purpose: attendance response, personalized or not.
 
 Constraints:
 - `CHECK (guest_id IS NOT NULL OR guest_display_name_snapshot IS NOT NULL)`
-- `CHECK ( (attendance = 'ATTENDING' AND party_size BETWEEN 1 AND 20) OR (attendance = 'NOT_ATTENDING' AND party_size = 0) )` — **[R12]**, corrected from Revision 1: `ATTENDING` now requires `party_size >= 1` (Revision 1 incorrectly allowed `ATTENDING` with `party_size = 0`).
+- `CHECK ( (attendance IN ('ATTENDING','MAYBE') AND party_size BETWEEN 1 AND 20) OR (attendance = 'NOT_ATTENDING' AND party_size = 0) )` — MAYBE added by migration 0032 — **[R12]**, corrected from Revision 1: `ATTENDING` now requires `party_size >= 1` (Revision 1 incorrectly allowed `ATTENDING` with `party_size = 0`).
 - Partial unique index: `CREATE UNIQUE INDEX ON rsvps (guest_id) WHERE guest_id IS NOT NULL` — one current RSVP per personalized guest (resubmission is an `UPDATE` of that row, never a second `INSERT`).
 - Non-personalized flow (`guest_id IS NULL`) intentionally has **no** uniqueness constraint — multiple genuine submissions from different anonymous people are expected and not deduplicated. This is an accepted, documented limitation (§R12), not resolved further in this task.
 
@@ -796,12 +840,12 @@ Unchanged general rule from Revision 1: `TEXT` + `CHECK` for controlled vocabula
 | InvitationVariant | `project_invitations.variant`, `guests.invitation_variant` | CHECK | `COMMON, GROOM, BRIDE` | Foundational, but CHECK's flexibility costs nothing |
 | AccessLinkType | `project_access_links.link_type` | CHECK | `INTAKE, REVIEW, PORTAL` | Stable capability set |
 | PaymentStatus | `projects.payment_status` | CHECK | `UNPAID, PAID` | Room for richer statuses later |
-| MediaType | `project_media.media_type` | CHECK | `COVER, GALLERY, AUDIO, QR_GROOM, QR_BRIDE, QR_COMMON` | Anticipated future types |
+| MediaType | `project_media.media_type` | CHECK | `COVER, GALLERY, AUDIO, QR_GROOM, QR_BRIDE, QR_COMMON, PORTRAIT_GROOM, PORTRAIT_BRIDE, PHOTO_STORY, LOVE_STORY_PHOTO` | Portrait values added by migration 0028, PHOTO_STORY / LOVE_STORY_PHOTO by 0031; anticipated future types |
 | ProjectAddon status | *(none — revocation via `revoked_at`, §2.6)* | N/A | N/A | Entitlement = non-revoked row existence |
 | Review feedback type | `review_feedback.feedback_type` | CHECK | `COMMENT, REVISION_REQUEST, APPROVAL` | Stable event-type tag |
 | IntakeSubmissionStatus | `intake_submissions.status` | CHECK | `PENDING, APPLIED, REJECTED` | |
 | StaffRole | `profiles.role` | CHECK | `ADMIN, STAFF` | More roles may come later |
-| RSVP attendance status | `rsvps.attendance` | CHECK | `ATTENDING, NOT_ATTENDING` | Self-documenting; room for a future `MAYBE` without a type migration |
+| RSVP attendance status | `rsvps.attendance` | CHECK | `ATTENDING, MAYBE, NOT_ATTENDING` (MAYBE: migration 0032) | Self-documenting; room for a future `MAYBE` without a type migration |
 | Invitation version lifecycle | `invitation_versions.version_type` | CHECK | `REVIEW, PUBLISHED` | |
 | **Task status** | `project_tasks.status` | CHECK | `TODO, IN_PROGRESS, DONE, CANCELLED` | **[R19]** — new this revision; kept minimal per "V1 should remain lightweight" |
 

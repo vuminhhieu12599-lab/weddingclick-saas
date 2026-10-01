@@ -2,6 +2,7 @@ import { MEDIA_TYPES } from "../domain";
 import type { ProjectEventRecord } from "../server/project-events/project-events-types";
 import { resolveWeddingDomain } from "./resolve-wedding-domain";
 import {
+  DRESS_CODE_SWATCH_COLOR_PATTERN,
   SNAPSHOT_PAYLOAD_SCHEMA_VERSION,
   type BuildSnapshotPayloadInput,
   type BuildSnapshotPayloadResult,
@@ -15,8 +16,14 @@ import {
   type SnapshotMediaSource,
   type SnapshotPayloadIssue,
   type SnapshotPayloadV1,
+  type SnapshotPortraitMedia,
   type SnapshotQrMedia,
   type SnapshotSections,
+  type SnapshotTimelineItem,
+  type SnapshotTimelineSource,
+  type SnapshotDressCode,
+  type SnapshotDressCodeSource,
+  type SnapshotDressCodeSwatchSource,
   type SnapshotWeddingDetailsSource,
 } from "./snapshot-payload-types";
 import type { CoupleSide, ResolvedWeddingDomain } from "./wedding-domain-types";
@@ -48,7 +55,8 @@ export class SnapshotPayloadInvariantError extends Error {
  * selection, sides and ceremony title; this builder only consumes it.
  */
 export function buildSnapshotPayload(input: BuildSnapshotPayloadInput): BuildSnapshotPayloadResult {
-  const { project, variant, weddingDetails, events, media, design, templateVersion } = input;
+  const { project, variant, weddingDetails, events, media, timelineItems, dressCode, dressCodeSwatches, design, templateVersion } =
+    input;
 
   assertSourceInvariants(input);
 
@@ -90,6 +98,8 @@ export function buildSnapshotPayload(input: BuildSnapshotPayloadInput): BuildSna
   const content = {
     invitationMessage: weddingDetails.invitationMessage,
     loveStory: weddingDetails.loveStory,
+    timeline: projectTimeline(timelineItems),
+    dressCode: projectDressCode(dressCode, dressCodeSwatches),
   };
   const snapshotMedia = projectMedia(media, qr);
 
@@ -156,7 +166,7 @@ function validateNames(details: SnapshotWeddingDetailsSource): SnapshotBuilderIs
 }
 
 function assertSourceInvariants(input: BuildSnapshotPayloadInput): void {
-  const { project, weddingDetails, events, media, design, templateVersion } = input;
+  const { project, weddingDetails, events, media, timelineItems, dressCode, dressCodeSwatches, design, templateVersion } = input;
 
   if (typeof project.projectCode !== "string" || project.projectCode.length === 0) {
     throw new SnapshotPayloadInvariantError("Project code must be a non-empty string");
@@ -189,6 +199,99 @@ function assertSourceInvariants(input: BuildSnapshotPayloadInput): void {
   }
 
   assertCanonicalMedia(media, project.id);
+  assertCanonicalTimeline(timelineItems, project.id);
+  assertCanonicalDressCode(dressCode, dressCodeSwatches, project.id);
+}
+
+/** Plain-text Dress Code description limit, mirroring the 0030 CHECK. */
+const DRESS_CODE_DESCRIPTION_MAX_LENGTH = 1000;
+
+function assertCanonicalDressCode(
+  dressCode: SnapshotDressCodeSource | null,
+  swatches: readonly SnapshotDressCodeSwatchSource[],
+  projectId: string,
+): void {
+  if (!Array.isArray(swatches)) {
+    throw new SnapshotPayloadInvariantError("Project dress code swatches must be an array");
+  }
+  if (dressCode === null) {
+    if (swatches.length > 0) {
+      throw new SnapshotPayloadInvariantError("Project dress code swatches exist without a dress code");
+    }
+    return;
+  }
+  if (dressCode.projectId !== projectId) {
+    throw new SnapshotPayloadInvariantError("Project dress code belongs to a different Project");
+  }
+  const { description } = dressCode;
+  if (
+    description !== null &&
+    (typeof description !== "string" ||
+      description.trim().length === 0 ||
+      description.length > DRESS_CODE_DESCRIPTION_MAX_LENGTH)
+  ) {
+    throw new SnapshotPayloadInvariantError("Project dress code has an invalid description");
+  }
+
+  const seenIds = new Set<string>();
+  for (const swatch of swatches) {
+    if (typeof swatch.id !== "string" || swatch.id.length === 0) {
+      throw new SnapshotPayloadInvariantError("Project dress code swatch id must be a non-empty string");
+    }
+    if (seenIds.has(swatch.id)) {
+      throw new SnapshotPayloadInvariantError(`Duplicate project dress code swatch id: ${swatch.id}`);
+    }
+    seenIds.add(swatch.id);
+    if (swatch.projectId !== projectId) {
+      throw new SnapshotPayloadInvariantError(`Project dress code swatch ${swatch.id} belongs to a different Project`);
+    }
+    if (typeof swatch.color !== "string" || !DRESS_CODE_SWATCH_COLOR_PATTERN.test(swatch.color)) {
+      throw new SnapshotPayloadInvariantError(`Project dress code swatch ${swatch.id} is not a #rrggbb colour`);
+    }
+    if (!Number.isInteger(swatch.sortOrder)) {
+      throw new SnapshotPayloadInvariantError(`Project dress code swatch ${swatch.id} has a non-integer sortOrder`);
+    }
+  }
+}
+
+/** Minute-precision local wall-clock time, exactly `HH:mm` (TIME(0), migration 0029). */
+const TIMELINE_TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Plain-text label limit, mirroring the 0029 CHECK. */
+const TIMELINE_LABEL_MAX_LENGTH = 200;
+
+function assertCanonicalTimeline(items: readonly SnapshotTimelineSource[], projectId: string): void {
+  if (!Array.isArray(items)) {
+    throw new SnapshotPayloadInvariantError("Project timeline items must be an array");
+  }
+  const seenIds = new Set<string>();
+
+  for (const item of items) {
+    if (typeof item.id !== "string" || item.id.length === 0) {
+      throw new SnapshotPayloadInvariantError("Project timeline item id must be a non-empty string");
+    }
+    if (seenIds.has(item.id)) {
+      throw new SnapshotPayloadInvariantError(`Duplicate project timeline item id: ${item.id}`);
+    }
+    seenIds.add(item.id);
+
+    if (item.projectId !== projectId) {
+      throw new SnapshotPayloadInvariantError(`Project timeline item ${item.id} belongs to a different Project`);
+    }
+    if (typeof item.time !== "string" || !TIMELINE_TIME_PATTERN.test(item.time)) {
+      throw new SnapshotPayloadInvariantError(`Project timeline item ${item.id} has a time that is not HH:mm`);
+    }
+    if (
+      typeof item.label !== "string" ||
+      item.label.trim().length === 0 ||
+      item.label.length > TIMELINE_LABEL_MAX_LENGTH
+    ) {
+      throw new SnapshotPayloadInvariantError(`Project timeline item ${item.id} has an invalid label`);
+    }
+    if (!Number.isInteger(item.sortOrder)) {
+      throw new SnapshotPayloadInvariantError(`Project timeline item ${item.id} has a non-integer sortOrder`);
+    }
+  }
 }
 
 function assertCanonicalMedia(media: readonly SnapshotMediaSource[], projectId: string): void {
@@ -309,6 +412,36 @@ function projectGiftAndQr(
   return { gift, qr };
 }
 
+/**
+ * Timeline (RF7 Timeline amendment): canonical rows only, never events.
+ * Staff order is authoritative: sortOrder ASC, then id ASC (code-unit);
+ * never by time. Values are copied unchanged (label is stored text, time is
+ * already `HH:mm`).
+ */
+function projectTimeline(items: readonly SnapshotTimelineSource[]): SnapshotTimelineItem[] {
+  return [...items]
+    .sort((a, b) => a.sortOrder - b.sortOrder || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .map((item) => ({ id: item.id, time: item.time, label: item.label }));
+}
+
+/**
+ * Dress Code (RF7 Dress Code amendment): the canonical row and its swatches,
+ * copied unchanged; swatches in staff order (sortOrder ASC, then id ASC).
+ * `null` when the Project has no Dress Code. Never inferred from design.
+ */
+function projectDressCode(
+  dressCode: SnapshotDressCodeSource | null,
+  swatches: readonly SnapshotDressCodeSwatchSource[],
+): SnapshotDressCode | null {
+  if (dressCode === null) return null;
+  return {
+    description: dressCode.description,
+    swatches: [...swatches]
+      .sort((a, b) => a.sortOrder - b.sortOrder || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+      .map((swatch) => ({ id: swatch.id, color: swatch.color })),
+  };
+}
+
 /** RF11 rule C canonical media order: sortOrder ASC, then id ASC (code-unit compare). */
 function compareMedia(a: SnapshotMediaSource, b: SnapshotMediaSource): number {
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
@@ -320,11 +453,21 @@ function compareMedia(a: SnapshotMediaSource, b: SnapshotMediaSource): number {
 /**
  * RF11 rule C: cover/audio = first COVER/AUDIO row, gallery = all GALLERY
  * rows, in canonical order. QR rows are never read here (S9).
+ *
+ * Portraits (RF7 Product Owner amendment): one effective portrait per side,
+ * the first PORTRAIT_GROOM / PORTRAIT_BRIDE row in the same canonical order
+ * (several rows may exist so a published portrait stays replaceable).
+ * `portrait` is emitted only when at least one side has one, so a Project
+ * without portraits builds exactly the payload it built before.
  */
 function projectMedia(media: readonly SnapshotMediaSource[], qr: SnapshotQrMedia): SnapshotMedia {
   const ordered = [...media].sort(compareMedia);
   const cover = ordered.find((item) => item.mediaType === "COVER");
   const audio = ordered.find((item) => item.mediaType === "AUDIO");
+  const groomPortrait = ordered.find((item) => item.mediaType === "PORTRAIT_GROOM");
+  const photoStory = ordered.filter((item) => item.mediaType === "PHOTO_STORY").map((item) => item.id);
+  const loveStoryPhoto = ordered.find((item) => item.mediaType === "LOVE_STORY_PHOTO");
+  const bridePortrait = ordered.find((item) => item.mediaType === "PORTRAIT_BRIDE");
 
   const result: SnapshotMedia = {
     galleryMediaIds: ordered.filter((item) => item.mediaType === "GALLERY").map((item) => item.id),
@@ -332,6 +475,15 @@ function projectMedia(media: readonly SnapshotMediaSource[], qr: SnapshotQrMedia
   };
   if (cover !== undefined) result.coverMediaId = cover.id;
   if (audio !== undefined) result.audioMediaId = audio.id;
+  if (groomPortrait !== undefined || bridePortrait !== undefined) {
+    const portrait: SnapshotPortraitMedia = {};
+    if (groomPortrait !== undefined) portrait.groomMediaId = groomPortrait.id;
+    if (bridePortrait !== undefined) portrait.brideMediaId = bridePortrait.id;
+    result.portrait = portrait;
+  }
+  // RF7 Photo Story / Love Story photo amendment: own roles only, emitted only when present.
+  if (photoStory.length > 0) result.photoStoryMediaIds = photoStory;
+  if (loveStoryPhoto !== undefined) result.loveStoryPhotoMediaId = loveStoryPhoto.id;
   return result;
 }
 
@@ -347,6 +499,13 @@ function projectSections(
     gallery: media.galleryMediaIds.length > 0,
     music: media.audioMediaId !== undefined,
     gift: gift.groom !== undefined || gift.bride !== undefined,
+    timeline: (content.timeline ?? []).length > 0,
+    photoStory: (media.photoStoryMediaIds ?? []).length > 0,
+    // Useful Dress Code content: a description or at least one swatch.
+    dressCode:
+      content.dressCode !== undefined &&
+      content.dressCode !== null &&
+      (content.dressCode.description !== null || content.dressCode.swatches.length > 0),
   };
 }
 

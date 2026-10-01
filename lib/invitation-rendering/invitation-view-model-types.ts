@@ -8,8 +8,10 @@ import type {
   SnapshotPerson,
   SnapshotSections,
   SnapshotDesign,
+  SnapshotTimelineItem,
+  SnapshotDressCode,
 } from "./snapshot-payload-types";
-import type { CoupleSide } from "./wedding-domain-types";
+import type { CeremonyTitle, CoupleSide } from "./wedding-domain-types";
 
 /**
  * Invitation Rendering Foundation RF-03 — InvitationViewModel core types
@@ -87,7 +89,14 @@ export type ViewModelPerson = SnapshotPerson;
 export type ViewModelFamily = SnapshotFamily;
 export type ViewModelCeremony = SnapshotCeremony;
 export type ViewModelEvent = SnapshotEvent;
-export type ViewModelSections = SnapshotSections;
+/** Snapshot sections with `timeline` always resolved (`false` for payloads built before it). */
+export type ViewModelSections = Required<SnapshotSections>;
+
+/** One ordered Timeline step, copied unchanged from the Snapshot (RF7 Timeline amendment). */
+export type ViewModelTimelineItem = SnapshotTimelineItem;
+
+/** The Project's Dress Code, copied from the Snapshot with re-validated `#rrggbb` swatches (RF7 Dress Code amendment). */
+export type ViewModelDressCode = SnapshotDressCode;
 export type ViewModelDesign = SnapshotDesign;
 
 /**
@@ -115,6 +124,32 @@ export interface ViewModelMedia {
     groom?: MediaResolution;
     bride?: MediaResolution;
   };
+  /**
+   * Portrait slots (RF7 Product Owner amendment), from the optional Snapshot
+   * `media.portrait` refs only: an absent side means "no portrait referenced"
+   * (always valid); a present side is RESOLVED or UNAVAILABLE. Never filled
+   * from COVER/GALLERY and never with substitute media.
+   */
+  portrait: {
+    groom?: MediaResolution;
+    bride?: MediaResolution;
+  };
+  /** PHOTO_STORY slots in Snapshot order, all of them (`[]` for older payloads). Never GALLERY. */
+  photoStory: MediaResolution[];
+  /** The Love Story photo slot; absent when not referenced. Never COVER/GALLERY. */
+  loveStoryPhoto?: MediaResolution;
+}
+
+/**
+ * One runtime-only ceremony card (docs/DECISIONS.md RF2 "Ceremony-card
+ * presentation"): the side's own rite event, a copy of the canonical entry
+ * in `events`, with the rite-derived presentation `title`. Never persisted.
+ */
+export interface ViewModelCeremonyCard {
+  side: CoupleSide;
+  /** "Lễ Thành Hôn" (GROOM) / "Lễ Vu Quy" (BRIDE); `event.title` is untouched. */
+  title: CeremonyTitle;
+  event: ViewModelEvent;
 }
 
 export interface InvitationViewModel {
@@ -142,10 +177,19 @@ export interface InvitationViewModel {
   };
   /** Canonical `startsAt`/`timezone`/`lunarDateDisplay` only; no formatted fields (V4). */
   ceremony: ViewModelCeremony;
-  /** Snapshot order, unchanged. */
+  /** Snapshot order, unchanged: the complete canonical event list. */
   events: ViewModelEvent[];
+  /** Derived presentation only: one card per operational side, GROOM before BRIDE. */
+  ceremonyCards: ViewModelCeremonyCard[];
   operationalSides: CoupleSide[];
-  content: SnapshotPayloadV1["content"];
+  /** `timeline` is always an array here (`[]` for payloads built before it). */
+  content: {
+    invitationMessage: string | null;
+    loveStory: string | null;
+    timeline: ViewModelTimelineItem[];
+    /** `null` without a Dress Code (and for payloads built before it). */
+    dressCode: ViewModelDressCode | null;
+  };
   gift: ViewModelGift;
   media: ViewModelMedia;
   /** Canonical content availability, copied unchanged (V6). Not effective visibility. */
