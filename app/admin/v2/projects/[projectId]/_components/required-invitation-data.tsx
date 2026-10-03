@@ -115,13 +115,20 @@ export function RequiredInvitationDataEditor({ projectId, initialDetails, initia
   const [savedAny, setSavedAny] = useState(false);
 
   async function saveNames() {
-    const built = buildWeddingDetailsSaveBody(details, names);
-    if (!built.ok) {
-      setNamesStatus({ kind: "ERROR", message: built.error });
+    const validated = buildWeddingDetailsSaveBody(details, names);
+    if (!validated.ok) {
+      setNamesStatus({ kind: "ERROR", message: validated.error });
       return;
     }
     setNamesStatus({ kind: "SAVING" });
     try {
+      // The PUT is a full replace: rebuild from the latest saved row so fields
+      // edited elsewhere on this page (Gift / Love Story) are never reverted.
+      const built = buildWeddingDetailsSaveBody(await fetchWeddingDetails(projectId), names);
+      if (!built.ok) {
+        setNamesStatus({ kind: "ERROR", message: built.error });
+        return;
+      }
       const result = await saveWeddingDetails(projectId, built.body);
       setDetails(result.weddingDetails);
       setNames(coupleNamesFormFrom(result.weddingDetails));

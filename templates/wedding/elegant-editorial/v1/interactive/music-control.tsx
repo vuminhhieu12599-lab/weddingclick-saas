@@ -34,6 +34,22 @@ export async function runMusicToggle(music: MusicCapabilityV1): Promise<MusicCom
   }
 }
 
+/**
+ * PO amendment to P35 (2026-10-03): the explicit "Mở thiệp" envelope
+ * activation is an approved user gesture that may start the existing music.
+ * Returns the hook the opening runs synchronously in that click: unless the
+ * authoritative status is already `PLAYING` (never restarted), it makes one
+ * `play()` attempt through the same toggle path as the music button, so
+ * `BLOCKED` / `ERROR` and their explicit retry behave exactly as before. No
+ * timer, no retry, no second controller; rejections are absorbed.
+ */
+export function startMusicOnOpen(music: MusicCapabilityV1): () => void {
+  return () => {
+    if (music.status === "PLAYING") return;
+    void runMusicToggle(music);
+  };
+}
+
 /** Fixed note for the current status, or `null` when the pressed state says enough. */
 export function musicStatusNote(status: MusicPlaybackStatusV1, faulted: boolean): string | null {
   if (faulted) return COPY.commandFailed;

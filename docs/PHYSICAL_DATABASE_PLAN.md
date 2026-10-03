@@ -379,7 +379,7 @@ Purpose: normalized media inventory for a Project.
 |---|---|---|---|---|
 | `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
 | `project_id` | `UUID` | NOT NULL | *(none)* | `REFERENCES projects(id) ON DELETE CASCADE` |
-| `media_type` | `TEXT` | NOT NULL | *(none)* | `CHECK (media_type IN ('COVER','GALLERY','AUDIO','QR_GROOM','QR_BRIDE','QR_COMMON','PORTRAIT_GROOM','PORTRAIT_BRIDE','PHOTO_STORY','LOVE_STORY_PHOTO'))` — portrait values added by migration 0028; PHOTO_STORY / LOVE_STORY_PHOTO by migration 0031 (`project_media_media_type_check` redefined; docs/DECISIONS.md RF7 Product Owner amendment) |
+| `media_type` | `TEXT` | NOT NULL | *(none)* | `CHECK (media_type IN ('COVER','GALLERY','AUDIO','QR_GROOM','QR_BRIDE','QR_COMMON','PORTRAIT_GROOM','PORTRAIT_BRIDE','PHOTO_STORY','LOVE_STORY_PHOTO','SOCIAL_SHARE_COVER'))` — portrait values added by migration 0028; PHOTO_STORY / LOVE_STORY_PHOTO by migration 0031; SOCIAL_SHARE_COVER by migration 0035 (`project_media_media_type_check` redefined; docs/DECISIONS.md RF7 Product Owner amendment) |
 | `storage_bucket` | `TEXT` | NOT NULL | *(none)* | New V2-only bucket (e.g. `project-media`), never V1's `wedding-photos` (§O) |
 | `storage_path` | `TEXT` | NOT NULL | *(none)* | Non-guessable object key (includes `project_id` + a random segment) |
 | `mime_type` | `TEXT` | NULL | *(none)* | |
@@ -398,7 +398,7 @@ Indexes: `(project_id, media_type, sort_order)`.
 
 Portrait roles (migration 0028): `PORTRAIT_GROOM` / `PORTRAIT_BRIDE` are optional. "At most one per side" is an effective rule, like `COVER`: the Snapshot builder uses the first row of each role by `sort_order`, `id`. There is deliberately no uniqueness constraint, so a portrait referenced by a retained snapshot (undeletable, asset identity frozen; see the trigger below) can still be replaced by a new row.
 
-Photo Story / Love Story photo roles (migration 0031): `PHOTO_STORY` keeps many ordered rows (`sort_order`, `id`), a separate role from `GALLERY`; `LOVE_STORY_PHOTO` has one effective row like `COVER` (first by `sort_order`, `id`). No uniqueness constraint for either.
+Photo Story / Love Story photo roles (migration 0031): `PHOTO_STORY` keeps many ordered rows (`sort_order`, `id`), a separate role from `GALLERY`; `LOVE_STORY_PHOTO` has one effective row like `COVER` (first by `sort_order`, `id`). No uniqueness constraint for either. `SOCIAL_SHARE_COVER` (migration 0035) has one effective row the same way; it is publication metadata and never enters the Snapshot.
 
 Triggers — **[R16], placement per [F16]**:
 - `guard_project_media_asset_immutability()` — `BEFORE UPDATE ON project_media FOR EACH ROW WHEN (NEW.storage_bucket <> OLD.storage_bucket OR NEW.storage_path <> OLD.storage_path)`: raises an exception if `EXISTS (SELECT 1 FROM invitation_version_media WHERE project_media_id = OLD.id)`. Once any immutable snapshot references this row, its asset identity (bucket/path) can never change in place — replacing an asset means uploading a new object and creating a **new** `project_media` row, then (if desired) pointing future drafts at the new row. Other fields (`alt_text`, `sort_order`, `media_type`) remain editable regardless of reference state. **[F16], decided (no longer "create now or defer"): this trigger's function body is created in migration `0013b`, the same migration that creates `invitation_version_media` — not in the migration that creates this table (`0007`, per the corrected order in §16/[F7]) — because the function body's `EXISTS` check queries `invitation_version_media`, which does not exist yet at `0007`. See §16 for the exact migration placement.**
@@ -841,7 +841,7 @@ Unchanged general rule from Revision 1: `TEXT` + `CHECK` for controlled vocabula
 | InvitationVariant | `project_invitations.variant`, `guests.invitation_variant` | CHECK | `COMMON, GROOM, BRIDE` | Foundational, but CHECK's flexibility costs nothing |
 | AccessLinkType | `project_access_links.link_type` | CHECK | `INTAKE, REVIEW, PORTAL` | Stable capability set |
 | PaymentStatus | `projects.payment_status` | CHECK | `UNPAID, PAID` | Room for richer statuses later |
-| MediaType | `project_media.media_type` | CHECK | `COVER, GALLERY, AUDIO, QR_GROOM, QR_BRIDE, QR_COMMON, PORTRAIT_GROOM, PORTRAIT_BRIDE, PHOTO_STORY, LOVE_STORY_PHOTO` | Portrait values added by migration 0028, PHOTO_STORY / LOVE_STORY_PHOTO by 0031; anticipated future types |
+| MediaType | `project_media.media_type` | CHECK | `COVER, GALLERY, AUDIO, QR_GROOM, QR_BRIDE, QR_COMMON, PORTRAIT_GROOM, PORTRAIT_BRIDE, PHOTO_STORY, LOVE_STORY_PHOTO, SOCIAL_SHARE_COVER` | Portrait values added by migration 0028, PHOTO_STORY / LOVE_STORY_PHOTO by 0031, SOCIAL_SHARE_COVER by 0035; anticipated future types |
 | ProjectAddon status | *(none — revocation via `revoked_at`, §2.6)* | N/A | N/A | Entitlement = non-revoked row existence |
 | Review feedback type | `review_feedback.feedback_type` | CHECK | `COMMENT, REVISION_REQUEST, APPROVAL` | Stable event-type tag |
 | IntakeSubmissionStatus | `intake_submissions.status` | CHECK | `PENDING, APPLIED, REJECTED` | |
@@ -1357,6 +1357,7 @@ Both 0021 and 0022 are privilege/workflow tightening only, not schema shape chan
 | `0029_project_timeline_items` | `project_timeline_items` table (§2.9a) | committed, authored; **not applied** by the authoring workflow |
 | `0030_project_dress_codes` | `project_dress_codes` / `project_dress_code_swatches` tables (§2.9b) | committed, authored; **not applied** by the authoring workflow |
 | `0031_project_media_story_types` | `PHOTO_STORY` / `LOVE_STORY_PHOTO` media roles (§2.9) | committed, authored; **not applied** by the authoring workflow |
+| `0035_project_media_social_share_cover_type` | `SOCIAL_SHARE_COVER` media role (§2.9; docs/DECISIONS.md "Social Share Cover") | authored; **not applied**, to be pushed by the Product Owner |
 | `0032_rsvps_maybe_and_response_name` | RSVP `MAYBE` + typed response-name semantics (§2.20) | committed, authored; **not applied** by the authoring workflow |
 
 No production-database application of any migration is recorded in this document.

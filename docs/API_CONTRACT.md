@@ -89,6 +89,7 @@ Audit fires on the explicit staff Save/domain mutation, never on intermediate ke
 Storage and Postgres are not one ACID transaction. Later media implementation (Task 024) must define explicit ordering/compensation rather than claim false cross-system atomicity:
 
 - **Creation order:** upload the Storage object first, then insert the `project_media` row. A failure after upload but before the row insert leaves an orphaned Storage object (safe: wasted storage, cleanable later) rather than a DB row pointing at nothing. **No-Cleanup Rule (frozen):** if the `project_media` INSERT itself fails for any reason — a duplicate/unique-constraint conflict, an ambiguous transport/network outcome, or a definite non-duplicate DB error — Task 024 performs no synchronous Storage removal. An ownership re-check followed by `Storage.remove` is an unavoidable TOCTOU race: a concurrent finalize request can commit a valid `project_media` row between the re-check and the removal, causing a valid row's object to be deleted. A safe orphaned Storage object is the accepted outcome instead; no age-based sweeper/maintenance job exists in Task 024, and this documentation does not imply one does.
+- **Image dimensions (adaptive Photo Story, PO-approved 2026-10-03):** `POST …/media/finalize` additionally accepts optional `width` / `height`: the image's natural pixel size, decoded locally by the staff browser with EXIF orientation applied. They are both-or-neither, integers from 1 to 20000, and image roles only (rejected on `AUDIO`). They are stored in the existing nullable `project_media.width` / `height` columns, so no migration is needed. They are presentation metadata only, never used for authorization, storage, or the MIME/size policy, which stays Storage-authoritative. Rows uploaded earlier keep `null`.
 - **Deletion order:** delete the `project_media` row first, then delete the Storage object (matches `PHYSICAL_DATABASE_PLAN.md` §K's already-frozen rationale) — a failure after the DB delete leaves an orphaned object, never a dangling DB reference to already-missing storage.
 - The browser never independently deletes a Storage object and a DB row as two separate unguarded client actions.
 - `invitation_version_media`'s `ON DELETE RESTRICT` toward `project_media` and `guard_project_media_asset_immutability()` remain the enforcement backstop; the trusted server workflow must respect both (a referenced asset cannot be deleted or have its identity changed in place — replacing it means a new object + new row).
@@ -756,3 +757,32 @@ Success (200): `{ "data": { "status": "READY", "rendererKey", "viewModel", "sect
 
 - Every response carries `Cache-Control: no-store`.
 - No `service_role`, no write of any kind, no `invitation_versions`, no publish, no token or public link.
+
+## 15. Staff Optional Content (Timeline / Dress Code) HTTP Contract
+
+Staff-only draft-data CRUD that populates the optional content the frozen Snapshot builder already consumes (`docs/DECISIONS.md` RF7 Timeline and Dress Code amendments). Every route runs `requireStaff` and then one plain staff-RLS statement on the 0029/0030 tables, scoped by the URL `project_id` (and row id). This is safe structured content with no activity type in the frozen Activity Union (§6), so it stays on the direct-RLS path (§3.1). Media for the same editor reuses the Task 024 endpoints unchanged (§3.2), and Gift bank/QR plus Love Story text reuse the Task 022 `PUT …/wedding-details` full-replace save.
+
+| Route | Body | Success |
+|---|---|---|
+| `GET …/projects/[id]/timeline` | — | 200 `{ data: ProjectTimelineItemRecord[] }` (sort_order, then id; `time` is `HH:mm`) |
+| `POST …/projects/[id]/timeline` | `{ time: "HH:mm", label, sortOrder }` (all required) | 201 `{ data }` |
+| `PATCH …/projects/[id]/timeline/[itemId]` | any non-empty subset of `time`/`label`/`sortOrder` | 200 `{ data }` |
+| `DELETE …/projects/[id]/timeline/[itemId]` | — | 200 `{ deleted: true }` |
+| `GET …/projects/[id]/dress-code` | — | 200 `{ data: { dressCode, swatches } \| null }` |
+| `PUT …/projects/[id]/dress-code` | `{ description: string \| null }` (blank → `null`) | 200 `{ data: ProjectDressCodeRecord }` (creates or updates the one row) |
+| `POST …/projects/[id]/dress-code/swatches` | `{ color: "#rrggbb", sortOrder }` | 201 `{ data }` |
+| `PATCH …/projects/[id]/dress-code/swatches/[swatchId]` | any non-empty subset of `color`/`sortOrder` | 200 `{ data }` |
+| `DELETE …/projects/[id]/dress-code/swatches/[swatchId]` | — | 200 `{ deleted: true }` |
+
+Validation: strict allow-listed bodies (unknown keys are rejected); `time` is a 24-hour `HH:mm` (stored as TIME(0), seconds zero); `label` is trimmed, non-blank, at most 200 characters; `description` is trimmed, at most 1000 characters; `color` is strict lowercase `#rrggbb` and is never normalized server-side; `sortOrder` is an int4 integer. No default time, label, description or colour is ever invented.
+
+| Condition | Kind | HTTP |
+|---|---|---|
+| Missing/malformed Authorization, invalid/expired token | `UNAUTHENTICATED` | 401 |
+| Authenticated, not active STAFF/ADMIN | `FORBIDDEN` | 403 |
+| Malformed project/item/swatch id, invalid body | `BAD_REQUEST` | 400 |
+| Project not visible; item/swatch not in this Project | `NOT_FOUND` | 404 |
+| Swatch created before the Project's Dress Code row exists | `CONFLICT` | 409 |
+| Unexpected DB failure / malformed row | `INTERNAL` | 500 (generic body) |
+
+- No `service_role`, no RPC, no activity logging, no `invitation_versions`, no publish, no token or public link. Timeline is never derived from `project_events`.

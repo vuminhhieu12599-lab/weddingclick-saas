@@ -125,10 +125,11 @@ describe("Task 024 Phase 2 static/security review", () => {
     expect(contents).toMatch(/sizeBytes:\s*info\.sizeBytes/);
   });
 
-  it("project-media-repository.ts always inserts width/height as a literal null, never from input", () => {
+  it("project-media-repository.ts inserts width/height only from the validated insert row (adaptive Photo Story)", () => {
     const contents = read("lib/server/supabase/project-media-repository.ts");
-    expect(contents).toMatch(/width:\s*null/);
-    expect(contents).toMatch(/height:\s*null/);
+    expect(contents).toMatch(/width:\s*row\.width/);
+    expect(contents).toMatch(/height:\s*row\.height/);
+    expect(read("lib/server/media/finalize-media.ts")).toMatch(/width:\s*input\.width,\s*height:\s*input\.height/);
   });
 
   it.each(FEATURE_FILES)(

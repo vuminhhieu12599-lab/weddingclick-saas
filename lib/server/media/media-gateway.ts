@@ -16,6 +16,9 @@ export interface InsertProjectMediaRow {
   altText: string | null;
   sortOrder: number;
   createdBy: string;
+  /** Validated natural image dimensions, or null. */
+  width: number | null;
+  height: number | null;
 }
 
 /**

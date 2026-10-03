@@ -17,6 +17,8 @@ const validRow: InsertProjectMediaRow = {
   altText: null,
   sortOrder: 0,
   createdBy: "staff-1",
+  width: 1200,
+  height: 1800,
 };
 
 const successMediaRow = {
@@ -107,8 +109,8 @@ describe("supabaseProjectMediaGateway.insertProjectMedia", () => {
       storage_path: validRow.storagePath,
       mime_type: validRow.mimeType,
       size_bytes: validRow.sizeBytes,
-      width: null,
-      height: null,
+      width: 1200,
+      height: 1800,
       alt_text: validRow.altText,
       sort_order: validRow.sortOrder,
       created_by: validRow.createdBy,

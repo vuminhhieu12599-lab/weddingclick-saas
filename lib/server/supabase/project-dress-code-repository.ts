@@ -9,6 +9,10 @@ import type {
   ProjectDressCodeRecord,
   ProjectDressCodeSwatchRecord,
 } from "../project-dress-code/project-dress-code-types";
+import type {
+  ProjectDressCodeSwatchPatch,
+  ProjectDressCodeWriteGateway,
+} from "../project-dress-code/project-dress-code-write-gateway";
 import { isValidTimestamptz } from "../validation/timestamptz";
 import { isValidUuid } from "../validation/uuid";
 
@@ -104,5 +108,83 @@ export const supabaseProjectDressCodeGateway: ProjectDressCodeGateway<SupabaseCl
       dressCode,
       swatches: swatchResult.data.map((row: unknown) => toSwatchRecord(row, projectId)),
     };
+  },
+};
+
+/** Postgres foreign_key_violation: the swatch's parent Dress Code row is missing. */
+const FOREIGN_KEY_VIOLATION = "23503";
+
+function toSwatchRowPatch(patch: ProjectDressCodeSwatchPatch): Record<string, string | number> {
+  const row: Record<string, string | number> = {};
+  if (patch.color !== undefined) row.color = patch.color;
+  if (patch.sortOrder !== undefined) row.sort_order = patch.sortOrder;
+  return row;
+}
+
+/**
+ * Production ProjectDressCodeWriteGateway: one plain RLS statement per write
+ * (staff-scoped client only), each scoped by `project_id`; returned rows go
+ * through the same validation as reads.
+ */
+export const supabaseProjectDressCodeWriteGateway: ProjectDressCodeWriteGateway<SupabaseClient> = {
+  async projectExists(client, projectId) {
+    const { data, error } = await client.from("projects").select("id").eq("id", projectId).maybeSingle();
+    if (error) {
+      throw new Error("Failed to query project");
+    }
+    return data !== null;
+  },
+
+  async upsertDressCode(client, projectId, description) {
+    const { data, error } = await client
+      .from("project_dress_codes")
+      .upsert({ project_id: projectId, description }, { onConflict: "project_id" })
+      .select(DRESS_CODE_COLUMNS)
+      .single();
+    if (error) {
+      throw new Error("Failed to save project dress code");
+    }
+    return toDressCodeRecord(data, projectId);
+  },
+
+  async insertSwatch(client, projectId, input) {
+    const { data, error } = await client
+      .from("project_dress_code_swatches")
+      .insert({ project_id: projectId, ...toSwatchRowPatch(input) })
+      .select(SWATCH_COLUMNS)
+      .single();
+    if (error) {
+      if (error.code === FOREIGN_KEY_VIOLATION) return null;
+      throw new Error("Failed to insert project dress code swatch");
+    }
+    return toSwatchRecord(data, projectId);
+  },
+
+  async updateSwatch(client, projectId, swatchId, patch) {
+    const { data, error } = await client
+      .from("project_dress_code_swatches")
+      .update(toSwatchRowPatch(patch))
+      .eq("project_id", projectId)
+      .eq("id", swatchId)
+      .select(SWATCH_COLUMNS)
+      .maybeSingle();
+    if (error) {
+      throw new Error("Failed to update project dress code swatch");
+    }
+    return data === null ? null : toSwatchRecord(data, projectId);
+  },
+
+  async deleteSwatch(client, projectId, swatchId) {
+    const { data, error } = await client
+      .from("project_dress_code_swatches")
+      .delete()
+      .eq("project_id", projectId)
+      .eq("id", swatchId)
+      .select("id");
+    if (error) {
+      throw new Error("Failed to delete project dress code swatch");
+    }
+    if (!Array.isArray(data)) fail();
+    return data.length > 0;
   },
 };

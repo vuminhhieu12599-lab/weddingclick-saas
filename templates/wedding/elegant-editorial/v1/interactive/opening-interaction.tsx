@@ -5,7 +5,7 @@ import { ELEGANT_EDITORIAL_V1_COPY } from "../copy";
 import styles from "../elegant-editorial-v1.module.css";
 import { EnvelopeMotif } from "../sections/decor";
 import { MediaImage } from "../sections/media-image";
-import { INITIAL_OPENING_STATE, openingReducer, type OpeningState } from "./opening-state";
+import { activateOpening, INITIAL_OPENING_STATE, openingReducer, type OpeningState } from "./opening-state";
 
 const COPY = ELEGANT_EDITORIAL_V1_COPY.opening;
 
@@ -19,6 +19,12 @@ const PHASE_ATTRIBUTE: Readonly<Record<OpeningState["phase"], string>> = Object.
 interface OpeningInteractionProps {
   /** `viewModel.media.cover` as given: only a `RESOLVED` cover ever rises on the card (Design Baseline D3). */
   cover: InvitationViewModel["media"]["cover"];
+  /**
+   * Run once, synchronously, by the explicit envelope activation while sealed
+   * (PO amendment to P35): the root passes the existing music start here when
+   * a music capability exists. The island itself knows nothing about music.
+   */
+  onOpen?: () => void;
 }
 
 /**
@@ -49,12 +55,13 @@ function focusHero(stage: HTMLElement | null): void {
  *
  * The invitation is always rendered below the cover in normal flow and is
  * never hidden or blocked. Nothing opens on a timer, nothing is remembered
- * across reloads, and opening never touches music or any other capability.
+ * across reloads, and the island touches no capability itself: its only
+ * outward effect is the optional `onOpen` hook of the explicit activation.
  * A guest may scroll past without opening. The artwork stays decorative:
  * the only tab stop is the envelope button while sealed, and none once
  * opened.
  */
-export function OpeningInteraction({ cover }: OpeningInteractionProps) {
+export function OpeningInteraction({ cover, onOpen }: OpeningInteractionProps) {
   const [state, dispatch] = useReducer(openingReducer, INITIAL_OPENING_STATE);
   const stageRef = useRef<HTMLDivElement>(null);
   const sealed = state.phase === "SEALED";
@@ -99,7 +106,7 @@ export function OpeningInteraction({ cover }: OpeningInteractionProps) {
           className={styles.openingEnvelopeButton}
           aria-label={COPY.openEnvelope}
           aria-disabled={sealed ? undefined : true}
-          onClick={() => dispatch("OPEN")}
+          onClick={() => activateOpening(state.phase, onOpen, dispatch)}
         >
           {artwork}
         </button>

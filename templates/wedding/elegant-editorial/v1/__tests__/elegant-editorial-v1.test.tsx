@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { INVITATION_VARIANTS, type InvitationVariant } from "../../../../../lib/domain";
 import type { InvitationRendererCapabilitiesV1 } from "../../../../../lib/invitation-rendering/renderer-capabilities";
 import type { RendererEffectiveSections } from "../../../../../lib/invitation-rendering/renderer-selection";
-import type { InvitationViewModel, MediaResolution } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
+import type { InvitationViewModel } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
 import type { BuildSnapshotPayloadInput } from "../../../../../lib/invitation-rendering/snapshot-payload-types";
 import { deriveCeremonyMonthGridV1 } from "../../../../../lib/invitation-rendering/ceremony-month-grid";
 import { createFixtureMediaResolver, fixtureMediaUrl } from "../../../../core/fixtures/fixture-media-resolver";
@@ -706,28 +706,26 @@ describe("section gating (props sections are the only authority)", () => {
   });
 
   // Media batch (RF7 Photo Story / Love Story photo amendment).
-  it("[media-batch] Photo Story: Task029 five-photo cluster after the Countdown ✦, before the Love Story", async () => {
+  it("[media-batch] Photo Story: five orientation-aware tiles after the Countdown ✦, before the Love Story", async () => {
     const { html } = await renderFixture({ variant: "COMMON", photoStory: "PRESENT" });
     const section = block(html, 'aria-labelledby="ee-photo-story-heading"');
-    const tiles = [...section.matchAll(/<div class="([^"]*)"><img [^>]*src="([^"]*)"/g)].map((m) => [m[1].replace(/^[^_]*_+|_.*$/g, ""), m[2]]);
+    const tiles = [...section.matchAll(/<div class="([^"]*)"[^>]*><img [^>]*src="([^"]*)"/g)].map((m) => [m[1].replace(/^[^_]*_+|_.*$/g, ""), m[2]]);
     expect(tiles.map(([, src]) => src)).toStrictEqual(FIXTURE_PHOTO_STORY_IDS.map((id) => fixtureMediaUrl(id)));
-    expect(section).toMatch(/photoStoryAnchor[\s\S]*photoStoryPairItem[\s\S]*photoStoryPairItem[\s\S]*photoStoryOffsetRow[\s\S]*photoStoryOffsetWide[\s\S]*photoStoryOffsetNarrow/);
+    // PO two-column correction: one uniform tile class, no anchor / pair / offset slots.
+    expect(section.match(/<div class="[^"]*photoStoryTile[^"]*"[^>]*><img /g)).toHaveLength(5);
+    expect(section).not.toMatch(/photoStory(Anchor|PairItem|OffsetRow|OffsetWide|OffsetNarrow)/);
     expect(html.indexOf('data-tight="true"')).toBeLessThan(html.indexOf("ee-photo-story-heading"));
     expect(html.indexOf("ee-photo-story-heading")).toBeLessThan(html.indexOf("ee-story-heading"));
     for (const id of [FIXTURE_MEDIA_IDS.GALLERY_1, FIXTURE_MEDIA_IDS.COVER]) expect(section).not.toContain(fixtureMediaUrl(id));
   });
 
-  it.each([
-    [4, ["photoStoryPairItem", "photoStoryPairItem", "photoStoryOffsetWide", "photoStoryOffsetNarrow"]],
-    [3, ["photoStoryAnchor", "photoStoryPairItem", "photoStoryPairItem"]],
-    [2, ["photoStoryPairItem", "photoStoryPairItem"]],
-    [1, ["photoStoryAnchor"]],
-  ] as const)("[media-batch] Photo Story with %i usable photos renders only whole Task029 rows", async (n, expected) => {
+  it.each([4, 3, 2, 1])("[media-batch] Photo Story with %i usable photos renders exactly that many tiles, in order", async (n) => {
     const unavailableMediaIds = FIXTURE_PHOTO_STORY_IDS.slice(n);
     const { html } = await renderFixture({ variant: "COMMON", photoStory: "PRESENT", unavailableMediaIds });
     const section = block(html, 'aria-labelledby="ee-photo-story-heading"');
-    const slots = [...section.matchAll(/<div class="[^"]*(photoStory(?:Anchor|PairItem|OffsetWide|OffsetNarrow))[^"]*"><img /g)].map((m) => m[1]);
-    expect(slots).toStrictEqual([...expected]);
+    const tiles = [...section.matchAll(/<div class="[^"]*(photoStory[A-Za-z]+)[^"]*"[^>]*><img [^>]*src="([^"]*)"/g)];
+    expect(tiles.map((m) => m[1])).toStrictEqual(Array.from({ length: n }, () => "photoStoryTile"));
+    expect(tiles.map((m) => m[2])).toStrictEqual(FIXTURE_PHOTO_STORY_IDS.slice(0, n).map((id) => fixtureMediaUrl(id)));
   });
 
   it("[media-batch] Photo Story with no usable photo, or none at all, renders nothing", async () => {
@@ -750,7 +748,7 @@ describe("section gating (props sections are the only authority)", () => {
     }
   });
 
-  it.each([0, 1, 3, 10, 11, 17, 25])("[media-batch] Gallery renders every one of %i images in order (10-slot rhythm repeats)", async (n) => {
+  it.each([0, 1, 2, 3, 4, 10, 11, 23])("[media-batch] Gallery renders every one of %i images in order as uniform tiles (no cap)", async (n) => {
     const input = buildRendererFixtureSourceInput({ variant: "COMMON", galleryCount: Math.max(n, 3) });
     input.media = input.media.filter((item) => item.mediaType !== "GALLERY" || item.sortOrder <= n).filter((item) => n > 0 || item.mediaType !== "GALLERY");
     const { html, viewModel } = await renderSource(input);
@@ -760,18 +758,24 @@ describe("section gating (props sections are the only authority)", () => {
       return;
     }
     const gallery = block(html, 'aria-labelledby="ee-gallery-heading"');
-    const items = [...gallery.matchAll(/<li [^>]*data-slot="(\d)"[^>]*><img [^>]*src="([^"]*)"/g)];
+    const items = [...gallery.matchAll(/<li class="([^"]*)"[^>]*><img [^>]*src="([^"]*)"/g)];
     expect(items.map((m) => m[2])).toStrictEqual(viewModel.media.gallery.map((item) => fixtureMediaUrl(item.mediaId)));
-    expect(items.map((m) => Number(m[1]))).toStrictEqual(Array.from({ length: n }, (_, i) => i % 10));
+    // PO two-column correction: one tile class for every item, no slot/span geometry.
+    expect(new Set(items.map((m) => m[1])).size).toBe(1);
+    expect(gallery).not.toMatch(/data-slot|data-span/);
   });
 
-  it("[media-batch] Photo Story and Love Story photo CSS: Task029 values", () => {
+  it("[media-batch] Photo Story and Love Story photo CSS: Task029 values (PO-corrected Photo Story frames)", () => {
     const css = readFileSync(join(__dirname, "..", "elegant-editorial-v1.module.css"), "utf8");
     expect(css).toMatch(/\.photoStory \{\s*padding: 10px 20px 14px;\s*background-color: var\(--ee-surface\);/);
     expect(css).toMatch(/\.photoStoryGrid \{\s*display: grid;\s*grid-template-columns: 1fr 1fr;\s*gap: 10px;/);
-    expect(css).toMatch(/\.photoStoryAnchor \{\s*grid-column: 1 \/ -1;\s*aspect-ratio: 4 \/ 5;/);
-    expect(css).toMatch(/\.photoStoryPairItem \{\s*aspect-ratio: 4 \/ 5;/);
-    expect(css).toMatch(/\.photoStoryOffsetRow \{[^}]*grid-template-columns: 58fr 42fr;\s*gap: 10px;\s*aspect-ratio: 100 \/ 64;/);
+    // PO two-column correction: every tile 4:5; an odd last tile stays one column wide, centred.
+    expect(css).toMatch(/\.photoStoryTile \{\s*min-width: 0;\s*aspect-ratio: 4 \/ 5;\s*\}/);
+    expect(css).toMatch(
+      /\.photoStoryTile\[data-placement="center"\] \{\s*grid-column: 1 \/ -1;\s*justify-self: center;\s*width: calc\(\(100% - 10px\) \/ 2\);\s*\}/,
+    );
+    expect(css).toMatch(/\.photoStoryTile\[data-placement="wide"\] \{\s*grid-column: 1 \/ -1;\s*aspect-ratio: 3 \/ 2;\s*\}/);
+    expect(css).not.toMatch(/photoStory(Anchor|PairItem|OffsetRow|OffsetWide|OffsetNarrow)|58fr 42fr|aspect-ratio: 100 \/ 64/);
     expect(css).toMatch(/\.photoStoryImage \{[^}]*border-radius: 6px;\s*object-fit: cover;/);
     expect(css).toMatch(/\.storyBand\[data-photo="true"\] \{\s*position: relative;\s*min-height: 420px;\s*align-items: flex-end;\s*overflow: hidden;\s*padding: 0 26px 44px;/);
   });
@@ -877,30 +881,20 @@ describe("media states", () => {
     expect(gallery).toContain(COPY.gallery.unavailable);
     expect(gallery).not.toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.GALLERY_2));
     expect(count(gallery, "<img")).toBe(2);
-    // The UNAVAILABLE item keeps its canonical Task029 slot.
-    expect([...gallery.matchAll(/data-slot="(\d)"/g)].map((match) => match[1])).toStrictEqual(["0", "1", "2"]);
+    // The UNAVAILABLE item keeps its canonical position as a same-shape tile.
+    expect(count(gallery, "<li ")).toBe(3);
   });
 
-  it("gallery: Task029 10-slot cycle by canonical index, with the Design Baseline D9 lone-tail rule", async () => {
-    const { viewModel, selection } = await buildRendererFixture({ variant: "COMMON" });
-    const sections = selection.effectiveSections;
-    const slotsFor = (total: number): string[] => {
-      // Repeating the three fixture items is enough here: only slot assignment is under test.
-      const gallery = Array.from({ length: total }, (_, index) => viewModel.media.gallery[index % 3] as MediaResolution);
-      const html = render({ ...viewModel, media: { ...viewModel.media, gallery } }, sections);
-      return [...block(html, 'aria-labelledby="ee-gallery-heading"').matchAll(/data-slot="(\d)"( data-span="full")?/g)].map(
-        (match) => `${match[1]}${match[2] === undefined ? "" : "F"}`,
-      );
-    };
-    expect(slotsFor(1)).toStrictEqual(["0"]);
-    expect(slotsFor(2)).toStrictEqual(["0", "1F"]);
-    expect(slotsFor(3)).toStrictEqual(["0", "1", "2"]);
-    expect(slotsFor(4)).toStrictEqual(["0", "1", "2", "3F"]);
-    expect(slotsFor(8)).toStrictEqual(["0", "1", "2", "3", "4", "5", "6", "7F"]);
-    expect(slotsFor(12)).toStrictEqual(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "1F"]);
+  it("gallery CSS: two equal columns of 4:5 tiles; an odd last tile stays one column wide, centred; no mosaic", () => {
     const css = readFileSync(join(__dirname, "..", "elegant-editorial-v1.module.css"), "utf8");
-    expect(css).toMatch(/\.gallery \{[^}]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);[^}]*grid-auto-rows: 44px;/);
-    expect(css).not.toMatch(/grid-auto-flow:\s*dense/);
+    expect(css).toMatch(/\.gallery \{\s*display: grid;\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);\s*gap: 8px;\s*\}/);
+    expect(css).toMatch(/\.galleryItem \{[^}]*aspect-ratio: 4 \/ 5;[^}]*overflow: hidden;/);
+    expect(css).toMatch(
+      /\.galleryItem:last-child:nth-child\(odd\) \{\s*grid-column: 1 \/ -1;\s*justify-self: center;\s*width: calc\(\(100% - 8px\) \/ 2\);\s*\}/,
+    );
+    expect(css).not.toMatch(/galleryItem\[data-(slot|span)|grid-auto-rows: 44px|grid-row: span|grid-auto-flow:\s*dense/);
+    const gallerySource = readFileSync(join(__dirname, "..", "sections", "gallery.tsx"), "utf8");
+    expect(gallerySource).not.toMatch(/GALLERY_CYCLE|LONE_TAIL|% 10|data-slot|data-span/);
   });
 
   it("emits only ViewModel media URLs plus the frozen Design Baseline A1 decor files", async () => {

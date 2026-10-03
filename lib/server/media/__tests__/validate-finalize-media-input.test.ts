@@ -27,8 +27,6 @@ describe("validateFinalizeMediaInput — unknown/forbidden fields", () => {
     "storageBucket",
     "projectId",
     "createdBy",
-    "width",
-    "height",
     "id",
     "createdAt",
     "updatedAt",
@@ -184,5 +182,41 @@ describe("validateFinalizeMediaInput — sortOrder", () => {
         projectId,
       ).sortOrder,
     ).toBe(-2147483648);
+  });
+});
+
+describe("validateFinalizeMediaInput — natural image dimensions (adaptive Photo Story)", () => {
+  it.each([
+    [1200, 1800],
+    [1800, 1200],
+    [1500, 1500],
+  ])("accepts %i × %i for an image role", (width, height) => {
+    const input = validateFinalizeMediaInput({ mediaType: "PHOTO_STORY", storagePath, width, height }, projectId);
+    expect([input.width, input.height]).toEqual([width, height]);
+  });
+
+  it("absent or explicit null dimensions stay null (legacy-compatible)", () => {
+    expect(validateFinalizeMediaInput({ mediaType: "GALLERY", storagePath }, projectId)).toMatchObject({ width: null, height: null });
+    expect(validateFinalizeMediaInput({ mediaType: "GALLERY", storagePath, width: null, height: null }, projectId)).toMatchObject({
+      width: null,
+      height: null,
+    });
+  });
+
+  it.each([
+    [{ width: 1200 }],
+    [{ height: 1800 }],
+    [{ width: 0, height: 10 }],
+    [{ width: -5, height: 10 }],
+    [{ width: 12.5, height: 10 }],
+    [{ width: "1200", height: "1800" }],
+    [{ width: 20001, height: 10 }],
+  ])("rejects invalid dimensions %j", (dimensions) => {
+    expectBadRequest({ mediaType: "COVER", storagePath, ...dimensions });
+  });
+
+  it("rejects dimensions on AUDIO; AUDIO without dimensions is unaffected", () => {
+    expectBadRequest({ mediaType: "AUDIO", storagePath, width: 10, height: 10 });
+    expect(validateFinalizeMediaInput({ mediaType: "AUDIO", storagePath }, projectId)).toMatchObject({ width: null, height: null });
   });
 });

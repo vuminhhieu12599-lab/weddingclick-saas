@@ -27,6 +27,13 @@
   --ee-sans: var(--ee-font-sans), "Helvetica Neue", "Arial", sans-serif;
   --ee-script: var(--ee-font-script), "Georgia", cursive;
   --ee-gutter: 24px;
+  /*
+   * Photo framing (PO correction): people photos in cover-fit frames keep the
+   * upper part (faces, heads) instead of a centre crop. No focal-point or
+   * orientation data exists, so one deterministic top bias serves portrait
+   * and landscape uploads alike (landscape photos crop sideways, unaffected).
+   */
+  --ee-photo-focus: 50% 22%;
 
   min-height: 100%;
   margin: 0;
@@ -361,7 +368,7 @@
   height: auto;
   aspect-ratio: 3 / 4;
   object-fit: cover;
-  object-position: center;
+  object-position: var(--ee-photo-focus);
   box-shadow: 0 20px 36px -22px color-mix(in srgb, var(--ee-accent-deep) 50%, transparent);
 }
 
@@ -971,7 +978,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center;
+  object-position: var(--ee-photo-focus);
 }
 
 .storyScrim {
@@ -1004,28 +1011,32 @@
   gap: 10px;
 }
 
-.photoStoryAnchor {
-  grid-column: 1 / -1;
-  aspect-ratio: 4 / 5;
-}
-
-.photoStoryPairItem {
-  aspect-ratio: 4 / 5;
-}
-
-/* Same-height offset pair split 58 / 42 (Task029 `clusterOffsetRow`). */
-.photoStoryOffsetRow {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: 58fr 42fr;
-  gap: 10px;
-  aspect-ratio: 100 / 64;
-}
-
-.photoStoryOffsetWide,
-.photoStoryOffsetNarrow {
+/*
+ * PO two-column + adaptive-orientation corrections: tiles are laid out by
+ * the photo's real orientation (sections/photo-story.tsx), in source order
+ * with normal (never dense) placement. Portrait and (near-)square photos use
+ * one 4:5 column each, two per row; a lone one keeps the one-column width,
+ * centred; a landscape photo takes its own full-width 3:2 row with a centred
+ * focus. Same 10 px gap, radius and shadow.
+ */
+.photoStoryTile {
   min-width: 0;
-  height: 100%;
+  aspect-ratio: 4 / 5;
+}
+
+.photoStoryTile[data-placement="center"] {
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: calc((100% - 10px) / 2);
+}
+
+.photoStoryTile[data-placement="wide"] {
+  grid-column: 1 / -1;
+  aspect-ratio: 3 / 2;
+}
+
+.photoStoryTile[data-placement="wide"] .photoStoryImage {
+  object-position: 50% 50%;
 }
 
 .photoStoryImage {
@@ -1034,7 +1045,7 @@
   height: 100%;
   border-radius: 6px;
   object-fit: cover;
-  object-position: center;
+  object-position: var(--ee-photo-focus);
   box-shadow: 0 12px 24px -18px color-mix(in srgb, var(--ee-accent-deep) 42%, transparent);
 }
 
@@ -1161,69 +1172,38 @@
 }
 
 /* Sparse auto-placement only: canonical media order is never changed. */
+/*
+ * PO two-column correction: a uniform grid of two equal columns (mobile and
+ * desktop alike, inside the 480 px invitation column) with one 4:5 portrait
+ * tile per item, replacing the Task029 10-slot mosaic. Same 8 px gap.
+ */
 .gallery {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-auto-rows: 44px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
 .galleryItem {
   position: relative;
   min-width: 0;
+  aspect-ratio: 4 / 5;
   overflow: hidden;
   background-color: var(--ee-surface-sage);
   box-shadow: 0 10px 20px -16px color-mix(in srgb, var(--ee-accent-deep) 40%, transparent);
 }
 
-/* Task029 GALLERY_LAYOUT spans (columns × 44 px rows), one rule per slot. */
-.galleryItem[data-slot="0"] {
-  grid-column: span 4;
-  grid-row: span 7;
-}
-
-.galleryItem[data-slot="1"],
-.galleryItem[data-slot="2"] {
-  grid-column: span 2;
-  grid-row: span 5;
-}
-
-.galleryItem[data-slot="3"] {
-  grid-column: span 2;
-  grid-row: span 8;
-}
-
-.galleryItem[data-slot="4"],
-.galleryItem[data-slot="5"] {
-  grid-column: span 2;
-  grid-row: span 4;
-}
-
-.galleryItem[data-slot="6"] {
-  grid-column: span 4;
-  grid-row: span 4;
-}
-
-.galleryItem[data-slot="7"],
-.galleryItem[data-slot="8"] {
-  grid-column: span 2;
-  grid-row: span 6;
-}
-
-.galleryItem[data-slot="9"] {
-  grid-column: span 4;
-  grid-row: span 5;
-}
-
-/* Design Baseline D9: a final lone half-width tile spans the full width. */
-.galleryItem[data-span="full"] {
-  grid-column: span 4;
+/* An odd last tile stays one column wide (4:5), centred in its row. */
+.galleryItem:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: calc((100% - 8px) / 2);
 }
 
 .galleryImage {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: var(--ee-photo-focus);
 }
 
 .galleryUnavailable {
@@ -1938,6 +1918,23 @@
 }
 
 /*
+ * Love Story → RSVP breathing room (PO spacing correction): only when the
+ * RSVP directly follows the Love Story band. The margin shows the same page
+ * background as the RSVP section, so it reads as extra space before the card
+ * (6 px padding + one gutter ≈ 30 px on mobile, ≈ 42 px on desktop). No
+ * internal padding of either section changes.
+ */
+.storyBand + .rsvpSection {
+  margin-top: var(--ee-gutter);
+}
+
+@media (min-width: 768px) {
+  .storyBand + .rsvpSection {
+    margin-top: calc(var(--ee-gutter) * 1.5);
+  }
+}
+
+/*
  * Task029 keeps RSVP and Gift in one `sectionDetails` band: the gift block
  * sits 12 px under the RSVP card and the band's 40 px bottom padding closes
  * it. Layout only, when the Gift section directly follows RSVP; a
@@ -2121,25 +2118,217 @@
 /* Section reveal (interactive/section-reveal.tsx) ---------------------- */
 
 /*
+ * Motion timing (PO-approved motion pass, strengthened by the PO motion
+ * correction): four durations, one stagger step (applied by the island)
+ * and one editorial ease-out curve, never linear and never overshooting.
+ */
+.root {
+  --ee-motion-fast: 520ms;
+  --ee-motion-base: 850ms;
+  --ee-motion-slow: 1150ms;
+  --ee-motion-cinematic: 1500ms;
+  --ee-motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/*
  * Marks exist only after hydration, set by the reveal island; server markup
- * never carries them, so content is visible without JavaScript. `translate`
- * (not `transform`) keeps any static transform untouched.
+ * never carries them, so content is visible without JavaScript. Only
+ * opacity and the individual `translate` / `scale` / `rotate` / `clip-path`
+ * properties move (never `transform`, so any static transform stays
+ * untouched, and never anything that affects layout): the hidden and
+ * settled states share one layout footprint. The pending value is the bare
+ * variant; the settled value is `<variant> shown`.
  */
 .column [data-ee-reveal="rise"] {
   opacity: 0;
-  translate: 0 22px;
+  translate: 0 40px;
+}
+
+.column [data-ee-reveal="headline"] {
+  opacity: 0;
+  translate: 0 34px;
+  scale: 0.96;
+}
+
+.column [data-ee-reveal="card"] {
+  opacity: 0;
+  translate: 0 56px;
+  scale: 0.94;
 }
 
 .column [data-ee-reveal="fade"] {
   opacity: 0;
 }
 
-.column [data-ee-reveal="shown"] {
+.column [data-ee-reveal="left"] {
+  opacity: 0;
+  translate: -60px 0;
+  scale: 1.03;
+}
+
+.column [data-ee-reveal="right"] {
+  opacity: 0;
+  translate: 60px 0;
+  scale: 1.03;
+}
+
+.column [data-ee-reveal="scale"] {
+  opacity: 0;
+  scale: 0.8;
+}
+
+.column [data-ee-reveal="pop"] {
+  opacity: 0;
+  scale: 0.55;
+}
+
+.column [data-ee-reveal="image"] {
+  opacity: 0;
+  clip-path: inset(14% 10% 14% 10%);
+}
+
+/* Only for images inside an `overflow: hidden` frame (gallery, love story). */
+.column [data-ee-reveal="zoom"] {
+  opacity: 0;
+  scale: 1.14;
+}
+
+/* Corner bouquets drift in from their own outside corner with a slight turn. */
+.column [data-ee-reveal="bloom-start"] {
+  opacity: 0;
+  translate: -36px -36px;
+  rotate: -10deg;
+  scale: 0.86;
+}
+
+.column [data-ee-reveal="bloom-end"] {
+  opacity: 0;
+  translate: 36px 36px;
+  rotate: 10deg;
+  scale: 0.86;
+}
+
+.column [data-ee-reveal~="shown"] {
   opacity: 1;
   translate: none;
-  transition:
-    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
-    translate 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  scale: none;
+  rotate: none;
+  transition-property: opacity, translate, scale, rotate, clip-path;
+  transition-duration: var(--ee-reveal-duration, var(--ee-motion-base));
+  transition-timing-function: var(--ee-motion-ease);
+  transition-delay: var(--ee-reveal-delay, 0ms);
+}
+
+/* Only the `image` variant ever clips, and only its own box (never decoration). */
+.column [data-ee-reveal="image shown"] {
+  clip-path: inset(0 0 0 0);
+}
+
+/* Tempo by variant: markers are quick, headlines and pictures take their time. */
+.column :is([data-ee-reveal~="pop"], [data-ee-reveal~="fade"]) {
+  --ee-reveal-duration: var(--ee-motion-fast);
+}
+
+.column :is([data-ee-reveal~="headline"], [data-ee-reveal~="card"], [data-ee-reveal~="image"]) {
+  --ee-reveal-duration: var(--ee-motion-slow);
+}
+
+.column :is([data-ee-reveal~="left"], [data-ee-reveal~="right"], [data-ee-reveal~="zoom"]),
+.column :is([data-ee-reveal~="bloom-start"], [data-ee-reveal~="bloom-end"]),
+.column .closing [data-ee-reveal] {
+  --ee-reveal-duration: var(--ee-motion-cinematic);
+}
+
+/*
+ * Gift dialog: its panel fades in and the QR scales up from slightly small
+ * each time it opens (CSS only; nothing grows past its box, so the dialog's
+ * own scroll area never changes).
+ */
+.giftDialog[open] .giftPanel {
+  animation: ee-reveal-fade-in var(--ee-motion-base) var(--ee-motion-ease) both;
+}
+
+.giftDialog[open] .giftQr {
+  animation: ee-reveal-pop var(--ee-motion-slow) var(--ee-motion-ease) 150ms both;
+}
+
+@keyframes ee-reveal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ee-reveal-pop {
+  from {
+    opacity: 0;
+    scale: 0.8;
+  }
+  to {
+    opacity: 1;
+    scale: none;
+  }
+}
+
+/*
+ * Hero: choreographed once the opening has opened (the Hero is behind the
+ * envelope until then, so an observer would fire unseen). Kicker, names,
+ * ceremony and date rise in sequence; the cover settles from 1.08 inside
+ * the Hero's own `overflow: hidden` frame.
+ */
+.opening:has(.openingStage[data-opening="opened"]) + .hero .heroImage {
+  animation: ee-hero-image-settle 2200ms var(--ee-motion-ease) both;
+}
+
+.opening:has(.openingStage[data-opening="opened"]) + .hero .heroKicker {
+  animation: ee-reveal-rise var(--ee-motion-base) var(--ee-motion-ease) 200ms both;
+}
+
+.opening:has(.openingStage[data-opening="opened"]) + .hero .heroNames {
+  animation: ee-hero-names-in var(--ee-motion-cinematic) var(--ee-motion-ease) 320ms both;
+}
+
+.opening:has(.openingStage[data-opening="opened"]) + .hero .heroCeremony {
+  animation: ee-reveal-rise var(--ee-motion-base) var(--ee-motion-ease) 480ms both;
+}
+
+.opening:has(.openingStage[data-opening="opened"]) + .hero .heroDate {
+  animation: ee-reveal-rise var(--ee-motion-base) var(--ee-motion-ease) 600ms both;
+}
+
+@keyframes ee-reveal-rise {
+  from {
+    opacity: 0;
+    translate: 0 28px;
+  }
+  to {
+    opacity: 1;
+    translate: none;
+  }
+}
+
+@keyframes ee-hero-names-in {
+  from {
+    opacity: 0;
+    translate: 0 36px;
+    scale: 0.96;
+  }
+  to {
+    opacity: 1;
+    translate: none;
+    scale: none;
+  }
+}
+
+@keyframes ee-hero-image-settle {
+  from {
+    scale: 1.08;
+  }
+  to {
+    scale: none;
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -2163,6 +2352,7 @@
   .opening:has(.openingStage[data-opening="opening"]),
   .opening:has(.openingStage[data-opening="opening"][data-card="none"]),
   .opening:has(.openingStage[data-opening="opened"]) + .hero,
+  .opening:has(.openingStage[data-opening="opened"]) + .hero :is(.heroImage, .heroKicker, .heroNames, .heroCeremony, .heroDate),
   .calendarHeart,
   .music[data-music-status="playing"] .musicGlyph {
     animation: none;
@@ -2175,11 +2365,17 @@
     animation-delay: 0s;
   }
 
-  .column [data-ee-reveal="rise"],
-  .column [data-ee-reveal="fade"],
-  .column [data-ee-reveal="shown"] {
+  .column [data-ee-reveal] {
     opacity: 1;
     translate: none;
+    scale: none;
+    rotate: none;
+    clip-path: none;
+    transition: none;
+  }
+
+  .giftDialog[open] :is(.giftPanel, .giftQr) {
+    animation: none;
   }
 
   .giftOpen:active,

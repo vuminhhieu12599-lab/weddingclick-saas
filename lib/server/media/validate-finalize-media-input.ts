@@ -18,10 +18,17 @@ const INT4_MAX = 2147483647;
  * Strict allow-list (Task 024 Phase 2 §2): `mimeType`/`sizeBytes` are
  * deliberately never accepted here (Storage's own reported metadata is
  * authoritative — see finalize-media.ts), and every DB-owned field
- * (`storageBucket`, `projectId`, `createdBy`, `width`, `height`, `id`,
- * `createdAt`, `updatedAt`) is rejected as unknown.
+ * (`storageBucket`, `projectId`, `createdBy`, `id`, `createdAt`,
+ * `updatedAt`) is rejected as unknown. `width`/`height` (PO adaptive Photo
+ * Story task) are the image's natural dimensions as decoded by the staff
+ * browser: optional, both-or-neither, image roles only, bounded positive
+ * integers. Presentation metadata only — never used for authorization,
+ * storage or MIME/size policy.
  */
-const ACCEPTED_FIELDS = new Set(["mediaType", "storagePath", "altText", "sortOrder"]);
+const ACCEPTED_FIELDS = new Set(["mediaType", "storagePath", "altText", "sortOrder", "width", "height"]);
+
+/** Generous upper bound for a natural image side in pixels (defensive, not a product limit). */
+export const MAX_IMAGE_DIMENSION = 20000;
 
 const UUID_SEGMENT = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 
@@ -53,8 +60,9 @@ export function validateFinalizeMediaInput(
   const storagePath = parseStoragePath(record, canonicalProjectId);
   const altText = parseNullableAltText(record);
   const sortOrder = parseSortOrder(record);
+  const { width, height } = parseDimensions(record, mediaType);
 
-  return { mediaType, storagePath, altText, sortOrder };
+  return { mediaType, storagePath, altText, sortOrder, width, height };
 }
 
 function requireKey(record: Record<string, unknown>, fieldName: string): unknown {
@@ -139,4 +147,38 @@ function parseSortOrder(record: Record<string, unknown>): number {
   }
 
   return value;
+}
+
+/**
+ * Optional natural image dimensions: absent/null for both means "unknown".
+ * Exactly one present, a non-integer, non-positive or oversized value, or
+ * any value on AUDIO is rejected.
+ */
+function parseDimensions(
+  record: Record<string, unknown>,
+  mediaType: MediaType,
+): { width: number | null; height: number | null } {
+  const width = record.width ?? null;
+  const height = record.height ?? null;
+
+  if (width === null && height === null) {
+    return { width: null, height: null };
+  }
+
+  if (mediaType === "AUDIO") {
+    throw new ApiError("BAD_REQUEST", `"width"/"height" are only accepted for image media types`);
+  }
+
+  if (!isImageDimension(width) || !isImageDimension(height)) {
+    throw new ApiError(
+      "BAD_REQUEST",
+      `"width" and "height" must both be integers from 1 to ${MAX_IMAGE_DIMENSION}`,
+    );
+  }
+
+  return { width, height };
+}
+
+function isImageDimension(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 && value <= MAX_IMAGE_DIMENSION;
 }

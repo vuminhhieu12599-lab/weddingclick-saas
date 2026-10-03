@@ -179,6 +179,8 @@ describe("finalizeMedia — successful insert", () => {
       altText: null,
       sortOrder: 0,
       createdBy: staff.userId,
+      width: null,
+      height: null,
     });
   });
 
@@ -207,19 +209,20 @@ describe("finalizeMedia — successful insert", () => {
     expect(received?.sortOrder).toBe(3);
   });
 
-  it("width/height are never part of the insert row (always server-owned null in the repository)", async () => {
-    let received: Parameters<MediaGateway<FakeClient>["insertProjectMedia"]>[1] | undefined;
+  it("width/height in the insert row come only from the validated body (null when not reported)", async () => {
+    const rows: Parameters<MediaGateway<FakeClient>["insertProjectMedia"]>[1][] = [];
     const gateway = baseGateway({
       async insertProjectMedia(_client, row) {
-        received = row;
+        rows.push(row);
         return { kind: "INSERTED", media: insertedRecord };
       },
     });
 
     await finalizeMedia(projectId, validBody, staff, gateway);
+    await finalizeMedia(projectId, { ...validBody, width: 1200, height: 1800 }, staff, gateway);
 
-    expect(received).not.toHaveProperty("width");
-    expect(received).not.toHaveProperty("height");
+    expect([rows[0]?.width, rows[0]?.height]).toEqual([null, null]);
+    expect([rows[1]?.width, rows[1]?.height]).toEqual([1200, 1800]);
   });
 
   it("createdBy is always staff.userId, derived only from the authenticated staff context", async () => {

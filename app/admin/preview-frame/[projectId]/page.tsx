@@ -5,8 +5,8 @@ import { Suspense } from "react";
 
 import { fetchStaffInvitationPreview } from "../../../../lib/admin/admin-api-client";
 import { useAdminQuery } from "../../../../lib/admin/use-admin-query";
-import { InvitationRendererHost } from "../../../../templates/core/invitation-renderer-host";
 import { loadPreviewState, parsePreviewVariant } from "../../v2/projects/[projectId]/preview/_components/preview-state";
+import { StaffPreviewRenderer } from "../staff-preview-renderer";
 
 function FrameMessage({ text }: { text: string }) {
   return (
@@ -38,7 +38,8 @@ function PreviewFrame() {
   if (data.status !== "READY") {
     return <FrameMessage text="Không thể hiển thị bản xem trước. Xem thông báo ở trang quản trị." />;
   }
-  return <InvitationRendererHost rendererKey={data.rendererKey} viewModel={data.viewModel} sections={data.sections} />;
+  // Staff-only: RSVP is shown with the honest UNAVAILABLE capability (P30 amendment); it never submits.
+  return <StaffPreviewRenderer rendererKey={data.rendererKey} viewModel={data.viewModel} sections={data.sections} />;
 }
 
 export default function PreviewFramePage() {

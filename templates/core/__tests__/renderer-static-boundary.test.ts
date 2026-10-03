@@ -487,7 +487,13 @@ const RF06B_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06B_CODE_FILES)[number], 
   [`${V1}/sections/invitation-message.tsx`]: SECTION_COMMON,
   // Media batch: the RESOLVED Love Story photo renders through the shared MediaImage.
   [`${V1}/sections/love-story.tsx`]: [`${LIB}/invitation-view-model-types`, ...SECTION_COMMON, `${V1}/sections/media-image`],
-  [`${V1}/sections/photo-story.tsx`]: [`${LIB}/invitation-view-model-types`, ...SECTION_COMMON, `${V1}/sections/media-image`],
+  // Adaptive Photo Story (PO): the pure shared orientation helper (RF-03 M13 shared-presentation fallback).
+  [`${V1}/sections/photo-story.tsx`]: [
+    `${LIB}/invitation-view-model-types`,
+    `${LIB}/media-orientation`,
+    ...SECTION_COMMON,
+    `${V1}/sections/media-image`,
+  ],
   [`${V1}/sections/timeline.tsx`]: [`${LIB}/invitation-view-model-types`, ...SECTION_COMMON],
   [`${V1}/sections/dress-code.tsx`]: [`${LIB}/invitation-view-model-types`, ...SECTION_COMMON],
   [`${V1}/sections/media-image.tsx`]: [`${LIB}/invitation-view-model-types`],
@@ -1021,6 +1027,8 @@ const HARNESS_ROOT = "app/internal/renderer-harness";
 const HARNESS_GATE = `${HARNESS_ROOT}/layout.tsx`;
 const HARNESS_PAGE = `${HARNESS_ROOT}/page.tsx`;
 const HARNESS_WRAPPER = `${HARNESS_ROOT}/renderer-harness-client.tsx`;
+/** P30 amendment (Staff Preview RSVP): the staff preview frame's UNAVAILABLE-only wrapper. */
+const STAFF_PREVIEW_WRAPPER = "app/admin/preview-frame/staff-preview-renderer.tsx";
 const HARNESS_SCENARIOS = `${HARNESS_ROOT}/harness-scenarios.ts`;
 const HARNESS_FILES = [HARNESS_GATE, HARNESS_PAGE, HARNESS_WRAPPER, HARNESS_SCENARIOS] as const;
 /** RF-06D: provenance note for the harness-only audio tone (not code). */
@@ -1423,11 +1431,11 @@ describe("RF-06C boundaries across the repository", () => {
   const appSources = nonTestSources("app");
   const productionSources = [...nonTestSources("templates"), ...nonTestSources("lib"), ...appSources];
 
-  it("only the production host and the harness wrapper render the host core", () => {
+  it("only the production host, the harness wrapper and the staff preview wrapper render the host core", () => {
     const importers = productionSources.filter((file) =>
       resolvedImportsOf(file).includes(RF06C_HOST_CORE_MODULE.replace(/\.tsx$/, "")),
     );
-    expect(importers.sort()).toStrictEqual([HARNESS_WRAPPER, HOST_MODULE].sort());
+    expect(importers.sort()).toStrictEqual([HARNESS_WRAPPER, HOST_MODULE, STAFF_PREVIEW_WRAPPER].sort());
     for (const importer of importers) expect(readRepoFile(importer).startsWith('"use client";\n'), importer).toBe(true);
   });
 
@@ -1449,11 +1457,14 @@ describe("RF-06C boundaries across the repository", () => {
     }
   });
 
-  it("an RSVP capability is constructed only in the harness client wrapper", () => {
+  it("an RSVP capability is constructed only in the harness and staff preview wrappers, and only as UNAVAILABLE", () => {
     for (const file of productionSources) {
       const constructs = /:\s*RsvpCapabilityV1\s*=/.test(codeOf(file));
-      expect(constructs, file).toBe(file === HARNESS_WRAPPER);
+      expect(constructs, file).toBe(file === HARNESS_WRAPPER || file === STAFF_PREVIEW_WRAPPER);
     }
+    const staffPreview = codeOf(STAFF_PREVIEW_WRAPPER);
+    expect(staffPreview).toMatch(/Object\.freeze\(\{ status: "UNAVAILABLE" \}\)/);
+    expect(staffPreview).not.toMatch(/"SUCCESS"|fetch\(|supabase|"rsvps"|method:/i);
   });
 
   it("no server-safe registry, manifest or fixture module reaches an RF-06C module", () => {

@@ -8,6 +8,7 @@ import { getPaymentStatusLabel } from "../../../../../../lib/presentation/paymen
 import { getAddonLabel, getPackageLabel } from "../../../../../../lib/presentation/service-catalog-labels";
 import type { ProjectSummary } from "../../../../../../lib/server/projects/project-types";
 import { ErrorState, LoadingState } from "../../../_components/page-states";
+import { OptionalInvitationContent } from "./optional-invitation-content";
 import { RequiredInvitationData } from "./required-invitation-data";
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
@@ -80,6 +81,8 @@ export function DataTab({ project }: { project: ProjectSummary }) {
       </section>
 
       <RequiredInvitationData projectId={project.id} />
+
+      <OptionalInvitationContent projectId={project.id} />
     </div>
   );
 }

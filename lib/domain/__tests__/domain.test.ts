@@ -132,6 +132,7 @@ describe("MediaType", () => {
       "PORTRAIT_BRIDE",
       "PHOTO_STORY",
       "LOVE_STORY_PHOTO",
+      "SOCIAL_SHARE_COVER",
     ]);
   });
 });
@@ -160,7 +161,7 @@ describe("MediaUploadPolicy", () => {
     expect(PROJECT_MEDIA_BUCKET_MAX_BYTES).toBe(20971520);
   });
 
-  const imageMediaTypes: MediaType[] = ["COVER", "GALLERY", "QR_GROOM", "QR_BRIDE", "QR_COMMON", "PORTRAIT_GROOM", "PORTRAIT_BRIDE", "PHOTO_STORY", "LOVE_STORY_PHOTO"];
+  const imageMediaTypes: MediaType[] = ["COVER", "GALLERY", "QR_GROOM", "QR_BRIDE", "QR_COMMON", "PORTRAIT_GROOM", "PORTRAIT_BRIDE", "PHOTO_STORY", "LOVE_STORY_PHOTO", "SOCIAL_SHARE_COVER"];
 
   it.each(imageMediaTypes)("%s maps to the IMAGE MIME allow-list and 10 MiB limit", (mediaType) => {
     expect(allowedMimeTypesForMediaType(mediaType)).toEqual(IMAGE_MEDIA_MIME_TYPES);

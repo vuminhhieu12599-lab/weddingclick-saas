@@ -277,7 +277,7 @@ Suggested fields:
 
 - `id`.
 - `project_id` FK.
-- `media_type` — `COVER`, `GALLERY`, `AUDIO`, `QR_GROOM`, `QR_BRIDE`, `QR_COMMON`, `PORTRAIT_GROOM`, `PORTRAIT_BRIDE` (optional portrait roles: migration 0028), `PHOTO_STORY` (ordered editorial photo cluster, separate from `GALLERY`) and `LOVE_STORY_PHOTO` (one effective Love Story photo) (migration 0031; docs/DECISIONS.md RF7 Product Owner amendments). `GALLERY` has no maximum count.
+- `media_type` — `COVER`, `GALLERY`, `AUDIO`, `QR_GROOM`, `QR_BRIDE`, `QR_COMMON`, `PORTRAIT_GROOM`, `PORTRAIT_BRIDE` (optional portrait roles: migration 0028), `PHOTO_STORY` (ordered editorial photo cluster, separate from `GALLERY`) and `LOVE_STORY_PHOTO` (one effective Love Story photo) (migration 0031; docs/DECISIONS.md RF7 Product Owner amendments) and `SOCIAL_SHARE_COVER` (one effective social-share / Open Graph image, independent of `COVER`, never in the Snapshot; migration 0035, docs/DECISIONS.md "Social Share Cover"). `GALLERY` has no maximum count.
 - `storage_bucket`.
 - `storage_path`.
 - `mime_type` optional.

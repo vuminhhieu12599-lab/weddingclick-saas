@@ -5,7 +5,7 @@ import { ELEGANT_EDITORIAL_V1_COPY } from "./copy";
 import styles from "./elegant-editorial-v1.module.css";
 import { ELEGANT_EDITORIAL_V1_FONT_VARIABLES_CLASS_NAME } from "./fonts";
 import { Countdown } from "./interactive/countdown";
-import { MusicControl } from "./interactive/music-control";
+import { MusicControl, startMusicOnOpen } from "./interactive/music-control";
 import { Rsvp } from "./interactive/rsvp";
 import { SectionReveal } from "./interactive/section-reveal";
 import { ELEGANT_EDITORIAL_V1_PALETTE_STYLE } from "./palette";
@@ -72,6 +72,8 @@ export function ElegantEditorialV1({ viewModel, sections, capabilities }: Invita
   // `sections.*` alone decides visibility. The null check below only narrows
   // the type: RF-04 R9 makes a visible section with null content impossible.
   const loveStory = sections.loveStory ? content.loveStory : null;
+  // PO amendment to P35: "Mở thiệp" may start the existing music, only where the music control itself may exist.
+  const onOpen = sections.music && capabilities.music !== undefined ? startMusicOnOpen(capabilities.music) : undefined;
 
   return (
     <div
@@ -81,7 +83,7 @@ export function ElegantEditorialV1({ viewModel, sections, capabilities }: Invita
       data-variant={viewModel.variant}
     >
       <main className={styles.column}>
-        <OpeningCover people={people} ceremonyDate={ceremonyDate} cover={media.cover} />
+        <OpeningCover people={people} ceremonyDate={ceremonyDate} cover={media.cover} onOpen={onOpen} />
         <Hero people={people} ceremony={ceremony} cover={media.cover} ceremonyDate={ceremonyDate} />
         <Couple people={people} portrait={media.portrait} />
         <InvitationMessage guestDisplayName={viewModel.guest?.displayName} />
@@ -103,7 +105,7 @@ export function ElegantEditorialV1({ viewModel, sections, capabilities }: Invita
         {sections.dressCode && content.dressCode !== null ? <DressCode dressCode={content.dressCode} /> : null}
         {sections.gallery ? <Gallery gallery={media.gallery} coupleText={coupleText} /> : null}
         <Closing people={people} ceremonyDate={ceremonyDate} />
-        <SectionReveal />
+        <SectionReveal hasCountdown={capabilities.clock !== undefined} />
       </main>
       {sections.music && capabilities.music !== undefined ? <MusicControl music={capabilities.music} /> : null}
     </div>

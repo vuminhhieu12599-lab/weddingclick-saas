@@ -7,8 +7,10 @@ import type { PROJECT_MEDIA_BUCKET } from "./media-constants";
  * `UploadIntentInput`/`FinalizeMediaInput` are the validated, camelCase
  * request shapes the use cases work with — never the raw request body.
  * `ProjectMediaRecord` mirrors migration 0007_project_media.sql exactly —
- * no invented fields. `width`/`height` are always `null` in Phase 2 (no
- * image-dimension processing — see finalize-media.ts).
+ * no invented fields. `width`/`height` are the image's natural pixel
+ * dimensions reported by the uploading staff browser and validated at
+ * finalize (PO adaptive Photo Story task), or `null` (audio, legacy rows, or
+ * not reported). They are presentation metadata only.
  */
 export interface UploadIntentInput {
   mediaType: MediaType;
@@ -27,6 +29,9 @@ export interface FinalizeMediaInput {
   storagePath: string;
   altText: string | null;
   sortOrder: number;
+  /** Natural image dimensions (both or neither; never for AUDIO). */
+  width: number | null;
+  height: number | null;
 }
 
 export interface ProjectMediaRecord {

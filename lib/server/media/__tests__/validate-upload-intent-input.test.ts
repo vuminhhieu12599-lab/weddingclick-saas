@@ -19,6 +19,7 @@ const IMAGE_MEDIA_TYPES: MediaType[] = [
   "PORTRAIT_BRIDE",
   "PHOTO_STORY",
   "LOVE_STORY_PHOTO",
+  "SOCIAL_SHARE_COVER",
 ];
 
 function expectBadRequest(body: unknown) {

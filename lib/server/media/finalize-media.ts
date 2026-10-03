@@ -84,6 +84,8 @@ export async function finalizeMedia<TClient>(
     altText: input.altText,
     sortOrder: input.sortOrder,
     createdBy: staff.userId,
+    width: input.width,
+    height: input.height,
   });
 
   if (outcome.kind === "INSERTED") {

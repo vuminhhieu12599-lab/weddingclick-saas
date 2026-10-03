@@ -3,7 +3,9 @@
  * PORTRAIT_BRIDE: optional portrait roles (docs/DECISIONS.md RF7 Product
  * Owner amendment, migration 0028). PHOTO_STORY (many, ordered) and
  * LOVE_STORY_PHOTO (one effective): RF7 Photo Story / Love Story photo
- * amendment, migration 0031.
+ * amendment, migration 0031. SOCIAL_SHARE_COVER (one effective, image): the
+ * staff-chosen social-share / Open Graph image, independent of COVER and never
+ * part of the invitation body (Product Owner decision, migration 0035).
  */
 export const MEDIA_TYPES = [
   "COVER",
@@ -16,6 +18,7 @@ export const MEDIA_TYPES = [
   "PORTRAIT_BRIDE",
   "PHOTO_STORY",
   "LOVE_STORY_PHOTO",
+  "SOCIAL_SHARE_COVER",
 ] as const;
 
 export type MediaType = (typeof MEDIA_TYPES)[number];

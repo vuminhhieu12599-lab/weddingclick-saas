@@ -40,3 +40,19 @@ export function openingReducer(state: OpeningState, action: OpeningAction): Open
   if (state.phase === "SEALED") return action === "OPEN" ? OPENING : state;
   return action === "SETTLED" ? OPENED : state;
 }
+
+/**
+ * The envelope activation ("Mở thiệp"; PO amendment to P35, 2026-10-03): the
+ * caller's `onOpen` runs synchronously inside the same click, only while
+ * `SEALED`, so it fires at most once per opening and stays within the
+ * browser's user gesture; then `OPEN` is dispatched. Without `onOpen` the
+ * opening is exactly as before.
+ */
+export function activateOpening(
+  phase: OpeningPhase,
+  onOpen: (() => void) | undefined,
+  dispatch: (action: OpeningAction) => void,
+): void {
+  if (phase === "SEALED") onOpen?.();
+  dispatch("OPEN");
+}

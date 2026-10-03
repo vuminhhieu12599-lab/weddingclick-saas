@@ -13,6 +13,8 @@ interface OpeningCoverProps {
   ceremonyDate: EventDateTimePresentationV1;
   /** Passed through untouched to the RF-06D island, whose card rises only with a `RESOLVED` cover. */
   cover: InvitationViewModel["media"]["cover"];
+  /** Passed through untouched to the RF-06D island's explicit envelope activation. */
+  onOpen?: () => void;
 }
 
 /**
@@ -28,7 +30,7 @@ interface OpeningCoverProps {
  * on the opening (Design Baseline D1): it renders before the invitation
  * message.
  */
-export function OpeningCover({ people, ceremonyDate, cover }: OpeningCoverProps) {
+export function OpeningCover({ people, ceremonyDate, cover, onOpen }: OpeningCoverProps) {
   return (
     <header className={styles.opening}>
       <div className={styles.openingFrame} aria-hidden="true" />
@@ -38,7 +40,7 @@ export function OpeningCover({ people, ceremonyDate, cover }: OpeningCoverProps)
         <span className={styles.name}>{formatCoupleDisplayName(people.secondary.name)}</span>
       </h1>
       <p className={styles.openingDate}>{formatDottedDate(ceremonyDate)}</p>
-      <OpeningInteraction cover={cover} />
+      <OpeningInteraction cover={cover} onOpen={onOpen} />
     </header>
   );
 }

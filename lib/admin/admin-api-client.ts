@@ -1,4 +1,17 @@
-import type { InvitationVariant, ProjectStatus } from "../domain";
+import type { InvitationVariant, MediaType, ProjectStatus } from "../domain";
+import type {
+  FinalizeMediaResult,
+  ProjectMediaRecord,
+  UpdateProjectMediaResult,
+  UploadIntentResult,
+} from "../server/media/media-types";
+import type { ProjectDressCodeWithSwatches } from "../server/project-dress-code/project-dress-code-gateway";
+import type {
+  ProjectDressCodeRecord,
+  ProjectDressCodeSwatchRecord,
+} from "../server/project-dress-code/project-dress-code-types";
+import type { ProjectTimelineItemRecord } from "../server/project-timeline/project-timeline-types";
+
 import type { CustomerRecord } from "../server/customers/customer-types";
 import type { ProjectDesignRecord } from "../server/project-design/project-design-types";
 import type {
@@ -18,6 +31,8 @@ import type {
 } from "../server/wedding-details/wedding-details-types";
 import { AdminApiError } from "./admin-api-error";
 import type { DesignAssignmentBody } from "./design-assignment";
+import { readImageDimensions } from "./image-dimensions";
+import { uploadToSignedMediaPath } from "./signed-media-upload";
 import { getStaffAccessToken } from "./staff-session-client";
 
 /**
@@ -50,18 +65,20 @@ async function requireAccessToken(): Promise<string> {
 async function requestJson<T>(
   path: string,
   accessToken: string,
-  write?: { method: "PUT" | "POST"; body: unknown },
+  write?: { method: "PUT" | "POST" | "PATCH" | "DELETE"; body?: unknown },
 ): Promise<T> {
   let response: Response;
   try {
     response = await fetch(
       path,
       write
-        ? {
-            method: write.method,
-            headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
-            body: JSON.stringify(write.body),
-          }
+        ? write.body === undefined
+          ? { method: write.method, headers: { authorization: `Bearer ${accessToken}` } }
+          : {
+              method: write.method,
+              headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
+              body: JSON.stringify(write.body),
+            }
         : { headers: { authorization: `Bearer ${accessToken}` } },
     );
   } catch {
@@ -223,5 +240,183 @@ export async function updateProjectEvent(
     `/api/v2/internal/projects/${encodeURIComponent(projectId)}/events/${encodeURIComponent(eventId)}`,
     token,
     { method: "PUT", body: input },
+  );
+}
+
+function projectPath(projectId: string, suffix: string): string {
+  return `/api/v2/internal/projects/${encodeURIComponent(projectId)}/${suffix}`;
+}
+
+// ---------------------------------------------------------------------------
+// Project media (Task 024 trusted workflow — reused, never duplicated)
+// ---------------------------------------------------------------------------
+
+export async function fetchProjectMedia(projectId: string): Promise<ProjectMediaRecord[]> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: ProjectMediaRecord[] }>(projectPath(projectId, "media"), token);
+  return body.data;
+}
+
+/**
+ * The existing Task 024 upload sequence: server upload-intent (server-owned
+ * path + signed-upload token) → the browser's own direct upload to that
+ * signed path → server finalize (Storage metadata re-verified server-side,
+ * row inserted under staff RLS). Image roles also send their natural
+ * dimensions, decoded locally; the server validates them. Never a client-chosen path, never an
+ * elevated credential. Resolves only once the row is confirmed.
+ */
+export async function uploadProjectMedia(
+  projectId: string,
+  mediaType: MediaType,
+  file: File,
+  sortOrder: number,
+): Promise<ProjectMediaRecord> {
+  const token = await requireAccessToken();
+  // Image roles only: real natural dimensions drive orientation-aware layouts (never AUDIO).
+  const dimensions = mediaType === "AUDIO" ? null : await readImageDimensions(file);
+  const intent = await requestJson<UploadIntentResult>(projectPath(projectId, "media/upload-intent"), token, {
+    method: "POST",
+    body: { mediaType, mimeType: file.type, sizeBytes: file.size },
+  });
+
+  if (!(await uploadToSignedMediaPath(intent.bucket, intent.storagePath, intent.token, file))) {
+    throw new AdminApiError(0, "Tải tệp lên kho lưu trữ thất bại");
+  }
+
+  const finalized = await requestJson<FinalizeMediaResult>(projectPath(projectId, "media/finalize"), token, {
+    method: "POST",
+    body: {
+      mediaType,
+      storagePath: intent.storagePath,
+      altText: null,
+      sortOrder,
+      ...(dimensions === null ? {} : { width: dimensions.width, height: dimensions.height }),
+    },
+  });
+  return finalized.media;
+}
+
+export async function updateProjectMediaSortOrder(
+  projectId: string,
+  mediaId: string,
+  sortOrder: number,
+): Promise<ProjectMediaRecord> {
+  const token = await requireAccessToken();
+  const body = await requestJson<UpdateProjectMediaResult>(
+    projectPath(projectId, `media/${encodeURIComponent(mediaId)}`),
+    token,
+    { method: "PATCH", body: { sortOrder } },
+  );
+  return body.media;
+}
+
+export async function deleteProjectMedia(projectId: string, mediaId: string): Promise<void> {
+  const token = await requireAccessToken();
+  await requestJson<{ deleted: true }>(projectPath(projectId, `media/${encodeURIComponent(mediaId)}`), token, {
+    method: "DELETE",
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Timeline
+// ---------------------------------------------------------------------------
+
+export interface TimelineItemBody {
+  time: string;
+  label: string;
+  sortOrder: number;
+}
+
+export async function fetchProjectTimeline(projectId: string): Promise<ProjectTimelineItemRecord[]> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: ProjectTimelineItemRecord[] }>(projectPath(projectId, "timeline"), token);
+  return body.data;
+}
+
+export async function createProjectTimelineItem(
+  projectId: string,
+  input: TimelineItemBody,
+): Promise<ProjectTimelineItemRecord> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: ProjectTimelineItemRecord }>(projectPath(projectId, "timeline"), token, {
+    method: "POST",
+    body: input,
+  });
+  return body.data;
+}
+
+export async function updateProjectTimelineItem(
+  projectId: string,
+  itemId: string,
+  patch: Partial<TimelineItemBody>,
+): Promise<ProjectTimelineItemRecord> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: ProjectTimelineItemRecord }>(
+    projectPath(projectId, `timeline/${encodeURIComponent(itemId)}`),
+    token,
+    { method: "PATCH", body: patch },
+  );
+  return body.data;
+}
+
+export async function deleteProjectTimelineItem(projectId: string, itemId: string): Promise<void> {
+  const token = await requireAccessToken();
+  await requestJson<{ deleted: true }>(projectPath(projectId, `timeline/${encodeURIComponent(itemId)}`), token, {
+    method: "DELETE",
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Dress Code
+// ---------------------------------------------------------------------------
+
+export async function fetchProjectDressCode(projectId: string): Promise<ProjectDressCodeWithSwatches | null> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: ProjectDressCodeWithSwatches | null }>(projectPath(projectId, "dress-code"), token);
+  return body.data;
+}
+
+export async function saveProjectDressCode(projectId: string, description: string | null): Promise<ProjectDressCodeRecord> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: ProjectDressCodeRecord }>(projectPath(projectId, "dress-code"), token, {
+    method: "PUT",
+    body: { description },
+  });
+  return body.data;
+}
+
+export async function createDressCodeSwatch(
+  projectId: string,
+  input: { color: string; sortOrder: number },
+): Promise<ProjectDressCodeSwatchRecord> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: ProjectDressCodeSwatchRecord }>(
+    projectPath(projectId, "dress-code/swatches"),
+    token,
+    { method: "POST", body: input },
+  );
+  return body.data;
+}
+
+export async function updateDressCodeSwatch(
+  projectId: string,
+  swatchId: string,
+  patch: { color?: string; sortOrder?: number },
+): Promise<ProjectDressCodeSwatchRecord> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: ProjectDressCodeSwatchRecord }>(
+    projectPath(projectId, `dress-code/swatches/${encodeURIComponent(swatchId)}`),
+    token,
+    { method: "PATCH", body: patch },
+  );
+  return body.data;
+}
+
+export async function deleteDressCodeSwatch(projectId: string, swatchId: string): Promise<void> {
+  const token = await requireAccessToken();
+  await requestJson<{ deleted: true }>(
+    projectPath(projectId, `dress-code/swatches/${encodeURIComponent(swatchId)}`),
+    token,
+    { method: "DELETE" },
   );
 }

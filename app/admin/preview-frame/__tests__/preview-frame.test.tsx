@@ -37,8 +37,8 @@ vi.mock("../../../../lib/admin/use-admin-query", () => ({
   },
 }));
 
-vi.mock("../../../../templates/core/invitation-renderer-host", () => ({
-  InvitationRendererHost: (props: InvitationRendererHostProps) => {
+vi.mock("../staff-preview-renderer", () => ({
+  StaffPreviewRenderer: (props: InvitationRendererHostProps) => {
     hostProps.push(props);
     return <div data-host="spy" />;
   },
@@ -58,7 +58,7 @@ beforeEach(() => {
 });
 
 describe("preview frame document", () => {
-  it("READY renders the frozen host with exactly the backend renderer key, ViewModel and sections", () => {
+  it("READY renders the staff preview wrapper with exactly the backend renderer key, ViewModel and sections", () => {
     queryResult = { data: READY, loading: false };
     renderToStaticMarkup(<PreviewFramePage />);
     expect(hostProps).toEqual([{ rendererKey: "wedding.backend-chosen.v3", viewModel, sections }]);
