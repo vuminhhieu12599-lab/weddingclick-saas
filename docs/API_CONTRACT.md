@@ -786,3 +786,88 @@ Validation: strict allow-listed bodies (unknown keys are rejected); `time` is a 
 | Unexpected DB failure / malformed row | `INTERNAL` | 500 (generic body) |
 
 - No `service_role`, no RPC, no activity logging, no `invitation_versions`, no publish, no token or public link. Timeline is never derived from `project_events`.
+
+## 16. Task 030 — Staff Review Snapshot HTTP Contract
+
+Staff-only (Path A: Bearer → `requireStaff` → staff-scoped client → RLS). No `service_role`. Every response carries `Cache-Control: no-store`.
+
+**Lifecycle.** Draft → immutable REVIEW version → customer approval → (Task 031) publish. REVIEW versions are append-only: a new review never edits an older one, and `published_version_id` is never touched here. Publish remains Task 031.
+
+**Required variants (canonical).** `projects.package_code_snapshot`: `COMMON` → `COMMON`; `SEPARATE` → `GROOM` + `BRIDE`. Any other code has no policy and fails closed. TypeScript `lib/domain/invitation-variant-policy.ts`, enforced again in the database by `create_review_version` (migration 0036).
+
+### 16.1 `POST /api/v2/internal/projects/[id]/review/versions`
+
+Body (strict allow-list, any other key → 400): `{ "variant": "COMMON"|"GROOM"|"BRIDE", "expectedCurrentReviewVersionId": uuid | null }`. The browser never sends a Snapshot, renderer key, template version or media list.
+
+The server builds the Snapshot from the CURRENT draft through the same pipeline as Staff Preview (`loadStaffDraftSnapshot` → `buildSnapshotPayload`), proves the exact pinned renderer can serve it (no fallback), asserts it contains no storage/signed URL, extracts media refs with the frozen extractor, then calls `create_review_version` (one atomic, audited transaction; see `docs/PHYSICAL_DATABASE_PLAN.md` §2.14). The persisted payload is the URL-free Snapshot Payload v1; runtime media URLs are resolved only at render time.
+
+`expectedCurrentReviewVersionId` is a compare-and-set token: it must equal the invitation's `current_review_version_id` (`null` = none yet). A double-click or concurrent duplicate carrying the same expectation creates exactly one version; the other gets 409.
+
+**Status side effect (Task 030B, migration 0037).** In the same transaction, a successful creation recomputes and saves the aggregate review outcome over all required current variants. The new version is unapproved, so this is `CUSTOMER_REVIEW` (including after `REVISION_REQUIRED` or `APPROVED`) unless another required variant still has an unreplaced revision request (`REVISION_REQUIRED`). A Project in `PUBLISHED` / `COMPLETED` / `ARCHIVED` is rejected with 409 (RV010) and nothing is written. Payment status is never changed.
+
+| Condition | Kind | HTTP |
+|---|---|---|
+| Created | — | 201 `{ data: { id, invitationId, projectId, variant, versionNumber, templateVersionId, rendererKeySnapshot, createdAt } }` |
+| Canonical data BLOCKED (nothing written) | — | 422 `{ error, issues: SnapshotPayloadIssue[] }` |
+| Missing/invalid token | `UNAUTHENTICATED` | 401 |
+| Not active STAFF/ADMIN | `FORBIDDEN` | 403 |
+| Malformed id/body/JSON, unknown body key | `BAD_REQUEST` | 400 |
+| Project not visible | `NOT_FOUND` | 404 |
+| No design; design/binding changed; stale `expectedCurrentReviewVersionId`; media changed; Project already PUBLISHED/COMPLETED/ARCHIVED | `CONFLICT` | 409 |
+| Variant not required by the package; package has no policy; pinned renderer cannot serve the Snapshot | `INVARIANT` | 422 |
+| Unexpected DB/loader/invariant failure | `INTERNAL` | 500 (generic body) |
+
+### 16.2 `GET /api/v2/internal/projects/[id]/review`
+
+200 `{ data: ProjectReviewState }`: `requiredVariants` (or `null` without a policy), per required variant its `invitationId`, current REVIEW version (number, created time, pinned template version / renderer key) `approvalState` (`AWAITING_FEEDBACK` | `REVISION_REQUESTED` | `APPROVED`; a revision request outranks an approval on the same version), `approved`, `revisionRequested` and that version's `feedback` (type, customer message, time), plus `projectStatus` (persisted), `allRequiredVariantsApproved` and `reviewOutcome` (`CUSTOMER_REVIEW` | `REVISION_REQUIRED` | `APPROVED` by the owner precedence, `null` with no policy or no review yet). A variant is approved only when an `APPROVAL` row exists for **its own current** review version: approving review N never approves N+1, and COMMON never approves GROOM/BRIDE (`[R-Q2]`). Task 031 publish eligibility consumes this read model; it is never true without a policy.
+
+### 16.3 `GET /api/v2/internal/projects/[id]/review/versions/[versionId]/preview`
+
+200 `{ data: { status: "READY", version, rendererKey, viewModel, sections } }`. Renders only the persisted REVIEW Snapshot with its pinned binding. It never loads or rebuilds the mutable draft and never falls back to draft preview. A stored payload that disagrees with its row is a 500. Unknown version → 404. The staff UI opens it through `/admin/preview-frame/[projectId]?reviewVersionId=…`.
+
+### 16.4 Not in this task
+
+No PUBLISHED version, no `published_version_id`, no public `/i/[slug]`, no Open Graph, no guest token and no RSVP. Customer review is §17.
+
+## 17. Task 030B — Customer REVIEW Contract (Path B)
+
+Customer REVIEW uses the existing Task 026 REVIEW access link: Project-scoped, live across revision rounds (`[R-Q2]`), opaque 43-character token, SHA-256 hash lookup, 404 for malformed/unknown/wrong-purpose, 410 for revoked/expired, `last_used_at` on success. The raw token never reaches the database; only the resolved `{ projectId, accessLinkId }` does. Both customer RPCs (migration 0037, `EXECUTE` for `service_role` only) re-validate that context first. No email identity, no `?guest=`, no Project-id or version-id authorization.
+
+### 17.1 Page `GET /review/[token]`
+
+Server-rendered, dynamic, `noindex`, `referrer: no-referrer`. This is not the public invitation route. Flow: `resolveAccessLink(REVIEW)` → `get_customer_review` → for each required variant's **current** REVIEW version, the integrity gate (stored payload must match its row's variant, template version and renderer key) → runtime media signing → `buildInvitationViewModel` → exact pinned renderer (no fallback) → `InvitationRendererHost` (production host: no RSVP capability). It never loads or rebuilds the mutable draft. SEPARATE projects switch variants with `?v=GROOM|BRIDE`; `v` is display selection only, never authorization. Invalid link → "Không tìm thấy bản duyệt"; revoked/expired → "Link duyệt đã hết hiệu lực"; no review yet → "Bản duyệt chưa sẵn sàng". No token, Project or DB detail is echoed.
+
+**Media.** Only `project_media` rows pinned to that exact version through `invitation_version_media` are returned, and only those the persisted Snapshot references (in the `project-media` bucket) are signed, through `lib/server/supabase/customer-review-media-signer.ts` (CUSTOMER REVIEW MEDIA SIGNING ONLY, 1 hour). Anything else is `UNAVAILABLE`. Signed URLs live only in the rendered ViewModel and are never persisted. `SOCIAL_SHARE_COVER` is never pinned in a REVIEW, so it is never signed here.
+
+### 17.2 `POST /api/v2/public/review-feedback`
+
+`Authorization: Bearer <raw REVIEW token>` (never a Supabase session). The body is read only after token resolution. Strict body (unknown key → 400): `{ "invitationVersionId": uuid, "feedbackType": "COMMENT"|"REVISION_REQUEST"|"APPROVAL", "message"?: string|null }`. `message` is trimmed; required for COMMENT and REVISION_REQUEST, optional for APPROVAL; at most 2000 characters. The browser never sends a status, Project id or access-link id. One call to `submit_review_feedback` does everything in one transaction (see `PHYSICAL_DATABASE_PLAN.md` §2.18). Every response is `no-store`.
+
+| Condition | HTTP |
+|---|---|
+| Recorded | 201 `{ data: { id, invitationVersionId, feedbackType, createdAt, projectStatus } }` |
+| No bearer token | 401 |
+| Malformed body / invalid type or message (incl. RV014) | 400 |
+| Malformed / unknown / wrong-purpose token; version not a REVIEW of a required variant (RV011/RV015) | 404 |
+| Revoked / expired link (incl. race, RV012/RV013) | 410 |
+| Version superseded (RV016) | 409 `{ error, reason: "REVIEW_SUPERSEDED" }` |
+| Project status not open for feedback (RV017) | 409 `{ error, reason: "REVIEW_CLOSED" }` |
+| Decision already recorded on this version: APPROVAL after any decision, or REVISION_REQUEST after APPROVAL (RV018) | 409 `{ error, reason: "ALREADY_DECIDED" }` |
+| Anything else | 500 (generic body) |
+
+### 17.3 Review status lifecycle (Product Owner decisions)
+
+| Event | `projects.status` |
+|---|---|
+| New current REVIEW created (any required variant, including after `REVISION_REQUIRED` or `APPROVED`) | recomputed aggregate: `CUSTOMER_REVIEW` unless another required variant still has an unreplaced revision request (`REVISION_REQUIRED`) |
+| COMMENT | unchanged |
+| REVISION_REQUEST on a required variant's current review | `REVISION_REQUIRED` |
+| APPROVAL, then recompute over all required variants' current reviews | any revision request → `REVISION_REQUIRED`; else all approved → `APPROVED`; else `CUSTOMER_REVIEW` |
+| Any feedback on a superseded version | rejected (409); status unchanged |
+| REVISION_REQUEST after APPROVAL on the same version | rejected (409); status unchanged. APPROVAL is final for that version; changes need a new REVIEW version |
+
+Customer feedback is accepted only while the status is `CUSTOMER_REVIEW`, `REVISION_REQUIRED` or `APPROVED`. Approving COMMON never approves GROOM/BRIDE, approving GROOM never approves BRIDE, and approving review N never approves N+1. `APPROVED` does not mean `PAID`, `READY_TO_PUBLISH` or `PUBLISHED`. The Task 025 graph (`APPROVED → AWAITING_PAYMENT → READY_TO_PUBLISH` only when PAID) is unchanged. Publication is Task 031.
+
+### 17.4 Staff UI
+
+The Duyệt tab shows the persisted project status, the review outcome, each required variant's current review with its customer feedback, "Tạo bản duyệt mới", and "Tạo link duyệt", which uses the existing Task 026 issue route and shows the `/review/<token>` URL once. No publish action.

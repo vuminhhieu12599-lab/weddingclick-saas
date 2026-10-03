@@ -66,29 +66,31 @@ function isInvitationVariant(value: unknown): value is InvitationVariant {
   return typeof value === "string" && (INVITATION_VARIANTS as readonly string[]).includes(value);
 }
 
+/** The canonical draft produced a Snapshot (in memory only; nothing persisted here). */
+export interface StaffDraftSnapshotSuccess {
+  status: "SUCCESS";
+  snapshot: SnapshotPayloadV1;
+}
+
+export type StaffDraftSnapshotResult = StaffDraftSnapshotSuccess | StaffInvitationPreviewBlocked;
+
+/** Renderer-ready output for an already-built (draft or persisted) Snapshot. */
+export type StaffInvitationRender = Omit<StaffInvitationPreviewReady, "status" | "snapshot">;
+
 /**
- * Staff preview use case: composes the frozen pipeline over real Project
- * data for one variant —
- *
- * canonical loads (staff RLS) → `loadSnapshotPayloadInput` (media, Timeline,
- * Dress Code) → `buildSnapshotPayload` (in memory) → media refs → injected
- * staff-scoped MediaResolver → `buildInvitationViewModel` →
- * `selectRendererCompatibility` (fail-closed).
- *
- * Preview only: nothing is written (no `invitation_versions`, no publish),
- * and the Snapshot is never persisted. The renderer key comes only from the
- * `template_versions` row the design pins — never inferred, defaulted or
- * substituted. Every staff-scoped read runs under RLS, so a caller who
- * cannot read the Project sees NOT_FOUND. Load, resolver, consistency and
- * renderer-selection failures propagate unchanged and are never turned
- * into empty preview data.
+ * Canonical draft → Snapshot half of the staff pipeline (shared by staff
+ * preview and Task 030 review creation, so Snapshot business logic exists
+ * once): canonical loads (staff RLS) → `loadSnapshotPayloadInput` (media,
+ * Timeline, Dress Code) → `buildSnapshotPayload`. The renderer key comes
+ * only from the `template_versions` row the design pins — never inferred,
+ * defaulted or substituted. Writes nothing.
  */
-export async function buildStaffInvitationPreview<TClient>(
+export async function loadStaffDraftSnapshot<TClient>(
   rawProjectId: string,
   rawVariant: string,
   staff: StaffContext<TClient>,
   deps: StaffInvitationPreviewDependencies<TClient>,
-): Promise<StaffInvitationPreviewResult> {
+): Promise<StaffDraftSnapshotResult> {
   if (!isValidUuid(rawProjectId)) {
     throw new ApiError("BAD_REQUEST", "Project id must be a valid UUID");
   }
@@ -145,18 +147,53 @@ export async function buildStaffInvitationPreview<TClient>(
   if (built.status !== "SUCCESS") {
     return { status: "BLOCKED", issues: built.issues };
   }
-  const snapshot = built.payload;
+  return { status: "SUCCESS", snapshot: built.payload };
+}
 
+/**
+ * Snapshot → renderer-ready half: media refs → injected staff-scoped
+ * MediaResolver (runtime-only URLs) → `buildInvitationViewModel` →
+ * `selectRendererCompatibility` (fail-closed, exact key). Used for the
+ * mutable draft and for a persisted, immutable REVIEW Snapshot alike.
+ */
+export async function composeStaffInvitationRender<TClient>(
+  snapshot: SnapshotPayloadV1,
+  projectId: string,
+  client: TClient,
+  deps: Pick<StaffInvitationPreviewDependencies<TClient>, "createMediaResolver" | "rendererRegistry">,
+): Promise<StaffInvitationRender> {
   const resolver = await deps.createMediaResolver(client, projectId, extractSnapshotMediaRefs(snapshot));
   const mediaResolutions = await resolveSnapshotMedia(snapshot, resolver);
   const viewModel = buildInvitationViewModel({ snapshot, mediaResolutions });
   const selection = selectRendererCompatibility({ snapshot, viewModel, registry: deps.rendererRegistry });
 
   return {
-    status: "READY",
-    snapshot,
     viewModel,
     rendererKey: selection.rendererKey,
     sections: selection.effectiveSections,
   };
+}
+
+/**
+ * Staff preview use case: composes the frozen pipeline over real Project
+ * data for one variant — `loadStaffDraftSnapshot` → `composeStaffInvitationRender`.
+ *
+ * Preview only: nothing is written (no `invitation_versions`, no publish),
+ * and the Snapshot is never persisted. Every staff-scoped read runs under
+ * RLS, so a caller who cannot read the Project sees NOT_FOUND. Load,
+ * resolver, consistency and renderer-selection failures propagate
+ * unchanged and are never turned into empty preview data.
+ */
+export async function buildStaffInvitationPreview<TClient>(
+  rawProjectId: string,
+  rawVariant: string,
+  staff: StaffContext<TClient>,
+  deps: StaffInvitationPreviewDependencies<TClient>,
+): Promise<StaffInvitationPreviewResult> {
+  const draft = await loadStaffDraftSnapshot(rawProjectId, rawVariant, staff, deps);
+  if (draft.status !== "SUCCESS") {
+    return draft;
+  }
+  const render = await composeStaffInvitationRender(draft.snapshot, rawProjectId, staff.supabase, deps);
+  return { status: "READY", snapshot: draft.snapshot, ...render };
 }

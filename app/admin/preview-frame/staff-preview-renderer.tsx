@@ -13,6 +13,8 @@ import { InvitationRendererHostCore } from "../../../templates/core/client/invit
  * RSVP section. Submitting always resolves `UNAVAILABLE`: nothing is sent or
  * persisted, no guest identity exists, and `SUCCESS` is never returned. The
  * public production host still supplies no RSVP capability until Task 033.
+ * Also reused, unchanged, by the customer REVIEW frame (Task 030B,
+ * app/review/[token]/frame/page.tsx) for the same visual-only RSVP.
  */
 
 const STAFF_PREVIEW_RSVP_UNAVAILABLE_RESULT: RsvpSubmitResultV1 = Object.freeze({ status: "UNAVAILABLE" });

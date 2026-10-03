@@ -23,6 +23,15 @@ const RESOLUTION_REPOSITORY_PATH = "lib/server/supabase/access-link-resolution-r
  * for that isolation check.
  */
 const INTAKE_SUBMIT_REPOSITORY_PATH = "lib/server/supabase/intake-submit-repository.ts";
+/**
+ * Task 030B compatibility addition (Product Owner decision A): the customer
+ * REVIEW path needs (1) its own narrow RPC repository for the two
+ * service_role-only 0037 RPCs and (2) the CUSTOMER REVIEW MEDIA SIGNING ONLY
+ * Storage signer. Both are isolated from the resolution repository and from
+ * each other — see lib/server/customer-review/__tests__/customer-review-static-security.test.ts.
+ */
+const CUSTOMER_REVIEW_REPOSITORY_PATH = "lib/server/supabase/customer-review-repository.ts";
+const CUSTOMER_REVIEW_MEDIA_SIGNER_PATH = "lib/server/supabase/customer-review-media-signer.ts";
 
 const PHASE_2_PRODUCTION_FILES = [
   "lib/server/auth/access-token-crypto.ts",
@@ -209,12 +218,17 @@ describe("Task 026 Phase 2 — service-role client import boundary (§7)", () =>
    * RPC"). The allowlist below is an exact two-file list — never a blanket
    * exemption — so a THIRD future service-role importer remains caught.
    */
-  it("only the resolution repository and the exact, authorized Task 027 intake-submit repository import service-role-client.ts", () => {
+  it("only the resolution repository, the Task 027 intake-submit repository and the two Task 030B customer-review modules import service-role-client.ts", () => {
     const importers = ALL_PRODUCTION_FILES.filter(
       (f) => f !== SERVICE_ROLE_CLIENT_PATH && IMPORT_PATTERN.test(readFile(f)),
     );
     expect(importers.sort()).toEqual(
-      [RESOLUTION_REPOSITORY_PATH, INTAKE_SUBMIT_REPOSITORY_PATH].sort(),
+      [
+        RESOLUTION_REPOSITORY_PATH,
+        INTAKE_SUBMIT_REPOSITORY_PATH,
+        CUSTOMER_REVIEW_REPOSITORY_PATH,
+        CUSTOMER_REVIEW_MEDIA_SIGNER_PATH,
+      ].sort(),
     );
   });
 
@@ -451,12 +465,17 @@ describe("Task 026 Phase 2 — indirect (transitive) client-reachability to serv
    * Narrowed by Task 027 Phase 2 — same exact two-file allowlist as the
    * import-boundary describe block above.
    */
-  it("the resolution repository and the intake-submit repository are the only nodes with a direct edge to service-role-client.ts, across the whole graph", () => {
+  it("the resolution repository, the intake-submit repository and the two Task 030B customer-review modules are the only nodes with a direct edge to service-role-client.ts, across the whole graph", () => {
     const directImporters = ALL_PRODUCTION_FILES.filter((file) =>
       (importGraph.get(file) ?? []).includes(SERVICE_ROLE_CLIENT_PATH),
     );
     expect(directImporters.sort()).toEqual(
-      [RESOLUTION_REPOSITORY_PATH, INTAKE_SUBMIT_REPOSITORY_PATH].sort(),
+      [
+        RESOLUTION_REPOSITORY_PATH,
+        INTAKE_SUBMIT_REPOSITORY_PATH,
+        CUSTOMER_REVIEW_REPOSITORY_PATH,
+        CUSTOMER_REVIEW_MEDIA_SIGNER_PATH,
+      ].sort(),
     );
   });
 });

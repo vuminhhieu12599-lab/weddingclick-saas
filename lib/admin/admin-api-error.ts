@@ -7,11 +7,14 @@
  */
 export class AdminApiError extends Error {
   readonly status: number;
+  /** The parsed error body, for callers that render structured server issues (e.g. Task 030 BLOCKED). */
+  readonly body: unknown;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, body?: unknown) {
     super(message);
     this.name = "AdminApiError";
     this.status = status;
+    this.body = body;
   }
 }
 

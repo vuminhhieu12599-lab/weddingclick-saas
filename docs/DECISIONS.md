@@ -1922,3 +1922,55 @@ Architecture may leave room for these later, but they must not delay V1.
 - It is publication metadata, not invitation-body content. It never enters the Snapshot, the `InvitationViewModel` or any renderer. The Snapshot builder accepts the row and does not project it.
 - The future publish / public metadata layer resolves `SOCIAL_SHARE_COVER` → a runtime-signed absolute URL → the Open Graph / social image at metadata-generation time. Nothing is signed or stored at draft time (accessor: `lib/server/media/social-share-cover.ts`).
 - When none is chosen, staff see "Chưa chọn ảnh chia sẻ". No fallback (for example to `COVER` or a Gallery image) is decided. That policy belongs to the future public-metadata task.
+
+## Task 030 — Review Snapshot Foundation (2026-10-03)
+
+Product Owner chose Option A: Draft → Review Snapshot → Customer Approval → Ready for Publish → Published. There is no Draft → PUBLISHED shortcut.
+
+- **Required variants** come from the already-approved package rule (above, "Commercial Packages"; `docs/PHYSICAL_DATABASE_PLAN.md` §2.18 [R-Q2]): `COMMON` → `{COMMON}`, `SEPARATE` → `{GROOM, BRIDE}`, keyed by `projects.package_code_snapshot`. An unknown code fails closed. Rows for other variants are ignored by the read model and are never changed.
+- **REVIEW is immutable and server-generated.** `create_review_version` (migration 0036) persists the URL-free Snapshot Payload v1 built by the Staff Preview pipeline from the current draft, with the exact `template_version_id` / renderer key the design pins. It pins exactly the extracted media refs and moves `current_review_version_id` to the newest review atomically. Older reviews are never edited.
+- **Approval belongs to the exact REVIEW version.** A new review supersedes the pointer, so it needs its own approval (the 0016 `guard_approval_targets_current_review` already rejects approving a non-current version).
+- **Double-submit:** compare-and-set on `current_review_version_id`; a duplicate gets 409 and creates nothing.
+- **SOCIAL_SHARE_COVER** stays outside the review Snapshot and is not pinned (unchanged "Social Share Cover" decision).
+- **Formerly open, now resolved** (both owner decisions are recorded in "Task 030B" below): customer review rendering/media signing, and the project status lifecycle.
+
+## Task 030B — Customer Review, Approval and Review Status Lifecycle (2026-10-03)
+
+Product Owner decisions, authoritative. Implemented by migration `0037_customer_review_feedback.sql`. Migration 0036 is not edited. Wire contract: `docs/API_CONTRACT.md` §17.
+
+**A. Customer review media access: narrow service_role signing exception.** The customer REVIEW page uses the documented REVIEW access-link Path B. A server-side `service_role` Storage signer is approved **only** for runtime signing of review media **after** the opaque REVIEW token is validated:
+
+```text
+customer review token
+→ Task 026 resolveAccessLink (REVIEW; 404 / 410; last_used_at)
+→ get_customer_review (service_role-only SECURITY DEFINER RPC; re-validates the link)
+→ only the required variants' CURRENT REVIEW versions
+→ only project_media pinned to those exact versions via invitation_version_media
+→ only rows the persisted Snapshot references, in the project-media bucket
+→ CUSTOMER REVIEW MEDIA SIGNING ONLY signer (lib/server/supabase/customer-review-media-signer.ts)
+→ short-lived runtime URLs → InvitationViewModel (never persisted)
+```
+
+This is **not** a general service_role business-data path. The signer never runs before token validation, never lists or queries arbitrary media, never reads tables, never reaches browser code, templates, domain logic, admin UI or staff paths, and is never sent in a URL. Static tests pin its single caller chain. Staff preview stays service_role-free (unchanged). `review_feedback` gets **no** service_role table grant. The 0016 `INSERT` grant is revoked, and the customer reads and writes feedback only through the two 0037 RPCs.
+
+**Review status lifecycle (exact):**
+
+- **The saved `projects.status` always equals the aggregate review outcome** over all required variants' CURRENT reviews (any unreplaced REVISION_REQUEST → `REVISION_REQUIRED`; else all approved → `APPROVED`; else `CUSTOMER_REVIEW`). It is recomputed in the same transaction on review creation and on every state-changing feedback.
+- `CUSTOMER_REVIEW`: a current review is awaiting the customer's decision. A new current REVIEW version is unapproved, so creating one (including after `REVISION_REQUIRED` or `APPROVED`) results in `CUSTOMER_REVIEW` unless another required variant still has an unreplaced revision request. The new version must be approved again.
+- `REVISION_REQUIRED`: a required variant's current review has a requested revision.
+- `APPROVED`: every required variant's CURRENT review is approved.
+- COMMENT never changes status. After an APPROVAL, all required variants are recomputed: any current revision request → `REVISION_REQUIRED`; else all current reviews approved → `APPROVED`; else `CUSTOMER_REVIEW`. Approving COMMON never approves GROOM/BRIDE, and approving GROOM never approves BRIDE.
+- Feedback against a superseded REVIEW version never changes status. State-changing feedback against it is rejected (409). An old review URL can never approve a newer review.
+- `APPROVED` does not imply `PAID`, `READY_TO_PUBLISH` or `PUBLISHED`. Task 025 payment/status rules are unchanged. Publication is Task 031.
+
+Feedback insertion and the resulting status change happen in one transaction (`submit_review_feedback`). Review creation, the current pointer and `CUSTOMER_REVIEW` also happen in one transaction (`create_review_version` replacement).
+
+**Implementation choices (fail closed, within the decisions above):**
+
+1. Every customer feedback type, COMMENT included, must target the CURRENT review version of a required variant.
+2. Customer feedback is accepted only while the status is `CUSTOMER_REVIEW`, `REVISION_REQUIRED` or `APPROVED`. A customer can never move a Project out of `AWAITING_PAYMENT` / `READY_TO_PUBLISH` or any other state.
+3. **The first decision on a review version is final.** A REVISION_REQUEST means the version requires replacement, so an APPROVAL after it is rejected. **APPROVAL is final for that exact version**: a later REVISION_REQUEST or second APPROVAL on it is rejected (409, RV018). There is no approval withdrawal. Changes after an approval require staff to create a NEW REVIEW version, which needs fresh approval. COMMENT stays allowed on the current version and never changes status.
+4. COMMENT and REVISION_REQUEST require a message. APPROVAL's message is optional.
+5. `create_review_version` rejects `PUBLISHED` / `COMPLETED` / `ARCHIVED` Projects (RV010). Post-publication re-review is Task 031's decision.
+6. Review creation persists the recomputed aggregate outcome (see above), so the saved status and the read model's `reviewOutcome` never intentionally disagree.
+7. Activity: REVISION_REQUEST → `REVISION_REQUESTED`, APPROVAL → `CUSTOMER_APPROVED`, status change → `PROJECT_STATUS_CHANGED` (actor `CUSTOMER` for feedback, `STAFF` for review creation). Metadata holds ids only. COMMENT logs nothing (no union type).

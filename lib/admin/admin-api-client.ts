@@ -21,7 +21,9 @@ import type {
   UpdateProjectEventResult,
 } from "../server/project-events/project-events-types";
 import type { ProjectSummary } from "../server/projects/project-types";
+import type { CreatedReviewVersion, ProjectReviewState } from "../server/invitation-review/invitation-review-types";
 import type { StaffInvitationPreviewBody } from "../server/routes/invitation-preview";
+import type { ReviewVersionPreviewBody } from "../server/routes/invitation-review";
 import type { StaffMeSuccessBody } from "../server/routes/staff-me";
 import type { TemplateCatalogEntry } from "../server/templates/templates-types";
 import type {
@@ -97,7 +99,7 @@ async function requestJson<T>(
       body && typeof body === "object" && "error" in body && typeof body.error === "string"
         ? body.error
         : "Đã xảy ra lỗi không xác định";
-    throw new AdminApiError(response.status, message);
+    throw new AdminApiError(response.status, message, body);
   }
 
   return body as T;
@@ -148,6 +150,60 @@ export async function fetchStaffInvitationPreview(
   const params = new URLSearchParams({ variant });
   const body = await requestJson<{ data: StaffInvitationPreviewBody }>(
     `/api/v2/internal/projects/${encodeURIComponent(projectId)}/preview?${params.toString()}`,
+    token,
+  );
+  return body.data;
+}
+
+/** Task 030 staff review read model: required variants, current REVIEW versions, approval state. */
+export async function fetchProjectReviewState(projectId: string): Promise<ProjectReviewState> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: ProjectReviewState }>(
+    `/api/v2/internal/projects/${encodeURIComponent(projectId)}/review`,
+    token,
+  );
+  return body.data;
+}
+
+/**
+ * Creates one immutable REVIEW version from the server's current draft.
+ * Sends only the variant and the compare-and-set token; a 422 carries the
+ * BLOCKED issues on `AdminApiError.body`.
+ */
+export async function createInvitationReviewVersion(
+  projectId: string,
+  variant: InvitationVariant,
+  expectedCurrentReviewVersionId: string | null,
+): Promise<CreatedReviewVersion> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: CreatedReviewVersion }>(
+    `/api/v2/internal/projects/${encodeURIComponent(projectId)}/review/versions`,
+    token,
+    { method: "POST", body: { variant, expectedCurrentReviewVersionId } },
+  );
+  return body.data;
+}
+
+/**
+ * Issues one new customer REVIEW access link through the existing Task 026
+ * staff route. The raw token is returned exactly once (no-store) and is
+ * never persisted client-side; the caller shows it to staff to send.
+ */
+export async function issueReviewAccessLink(projectId: string): Promise<{ id: string; token: string }> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: { id: string; token: string } }>(
+    `/api/v2/internal/projects/${encodeURIComponent(projectId)}/access-links`,
+    token,
+    { method: "POST", body: { linkType: "REVIEW" } },
+  );
+  return { id: body.data.id, token: body.data.token };
+}
+
+/** Staff render of a persisted REVIEW Snapshot; runtime media URLs are never stored. */
+export async function fetchReviewVersionPreview(projectId: string, versionId: string): Promise<ReviewVersionPreviewBody> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: ReviewVersionPreviewBody }>(
+    `/api/v2/internal/projects/${encodeURIComponent(projectId)}/review/versions/${encodeURIComponent(versionId)}/preview`,
     token,
   );
   return body.data;

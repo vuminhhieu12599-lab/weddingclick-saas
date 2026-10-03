@@ -3,9 +3,9 @@
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
-import { fetchStaffInvitationPreview } from "../../../../lib/admin/admin-api-client";
+import { fetchReviewVersionPreview, fetchStaffInvitationPreview } from "../../../../lib/admin/admin-api-client";
 import { useAdminQuery } from "../../../../lib/admin/use-admin-query";
-import { loadPreviewState, parsePreviewVariant } from "../../v2/projects/[projectId]/preview/_components/preview-state";
+import { loadPreviewState, parsePreviewVariant, previewErrorState, type PreviewState } from "../../v2/projects/[projectId]/preview/_components/preview-state";
 import { StaffPreviewRenderer } from "../staff-preview-renderer";
 
 function FrameMessage({ text }: { text: string }) {
@@ -25,11 +25,17 @@ function FrameMessage({ text }: { text: string }) {
 function PreviewFrame() {
   const params = useParams<{ projectId: string }>();
   const projectId = params.projectId;
-  const variant = parsePreviewVariant(useSearchParams().get("variant"));
+  const searchParams = useSearchParams();
+  const variant = parsePreviewVariant(searchParams.get("variant"));
+  // Task 030: `?reviewVersionId=` renders that persisted, immutable REVIEW Snapshot — never the draft, no fallback.
+  const reviewVersionId = searchParams.get("reviewVersionId");
 
-  const { data, loading } = useAdminQuery(
-    () => loadPreviewState(projectId, variant, fetchStaffInvitationPreview),
-    [projectId, variant],
+  const { data, loading } = useAdminQuery<PreviewState>(
+    () =>
+      reviewVersionId === null
+        ? loadPreviewState(projectId, variant, fetchStaffInvitationPreview)
+        : fetchReviewVersionPreview(projectId, reviewVersionId).catch(previewErrorState),
+    [projectId, variant, reviewVersionId],
   );
 
   if (loading || data === null) {
