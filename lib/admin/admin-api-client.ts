@@ -22,6 +22,7 @@ import type {
 } from "../server/project-events/project-events-types";
 import type { ProjectSummary } from "../server/projects/project-types";
 import type { CreatedReviewVersion, ProjectReviewState } from "../server/invitation-review/invitation-review-types";
+import type { ProjectPublishState, PublishedInvitationVersion } from "../server/invitation-publish/invitation-publish-types";
 import type { StaffInvitationPreviewBody } from "../server/routes/invitation-preview";
 import type { ReviewVersionPreviewBody } from "../server/routes/invitation-review";
 import type { StaffMeSuccessBody } from "../server/routes/staff-me";
@@ -205,6 +206,37 @@ export async function fetchReviewVersionPreview(projectId: string, versionId: st
   const body = await requestJson<{ data: ReviewVersionPreviewBody }>(
     `/api/v2/internal/projects/${encodeURIComponent(projectId)}/review/versions/${encodeURIComponent(versionId)}/preview`,
     token,
+  );
+  return body.data;
+}
+
+/** Task 031 staff publish read model: per required variant, approved current review, current publication, blocker. */
+export async function fetchProjectPublishState(projectId: string): Promise<ProjectPublishState> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: ProjectPublishState }>(
+    `/api/v2/internal/projects/${encodeURIComponent(projectId)}/publish`,
+    token,
+  );
+  return body.data;
+}
+
+/**
+ * Publishes one required variant's approved current REVIEW as a new
+ * immutable PUBLISHED version. Sends only the variant and the two
+ * compare-and-set tokens; a 409 carries the stable `reason` on
+ * `AdminApiError.body`.
+ */
+export async function publishInvitationVariant(
+  projectId: string,
+  variant: InvitationVariant,
+  expectedCurrentReviewVersionId: string,
+  expectedPublishedVersionId: string | null,
+): Promise<PublishedInvitationVersion> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: PublishedInvitationVersion }>(
+    `/api/v2/internal/projects/${encodeURIComponent(projectId)}/publish`,
+    token,
+    { method: "POST", body: { variant, expectedCurrentReviewVersionId, expectedPublishedVersionId } },
   );
   return body.data;
 }

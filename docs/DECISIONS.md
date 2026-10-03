@@ -1974,3 +1974,16 @@ Feedback insertion and the resulting status change happen in one transaction (`s
 5. `create_review_version` rejects `PUBLISHED` / `COMPLETED` / `ARCHIVED` Projects (RV010). Post-publication re-review is Task 031's decision.
 6. Review creation persists the recomputed aggregate outcome (see above), so the saved status and the read model's `reviewOutcome` never intentionally disagree.
 7. Activity: REVISION_REQUEST → `REVISION_REQUESTED`, APPROVAL → `CUSTOMER_APPROVED`, status change → `PROJECT_STATUS_CHANGED` (actor `CUSTOMER` for feedback, `STAFF` for review creation). Metadata holds ids only. COMMENT logs nothing (no union type).
+
+## Task 031 — Publish Approved Review (2026-10-03)
+
+Implemented by migration `0038_publish_invitation.sql` (`publish_invitation`), `POST|GET /api/v2/internal/projects/[id]/publish` and the Xuất bản tab. See `docs/API_CONTRACT.md` §18.
+
+1. **Publication source is the exact approved REVIEW.** A PUBLISHED version copies the approved current REVIEW row's payload, template version and renderer key verbatim and copies its media pins. The draft is never rebuilt at publish time. `SOCIAL_SHARE_COVER` is not added.
+2. **PUBLISHED versions are immutable.** Republishing appends a new PUBLISHED row from a newer approved REVIEW and moves `published_version_id`. Older REVIEW and PUBLISHED rows are never changed.
+3. **Publication is per required variant.** Publishing one variant never publishes another.
+4. **Lifecycle prerequisite.** Publish requires `READY_TO_PUBLISH` and `payment_status = PAID`. Approval alone never reaches `READY_TO_PUBLISH`. The Task 025 graph (`APPROVED → AWAITING_PAYMENT → READY_TO_PUBLISH` only when PAID) is unchanged.
+5. **Aggregate PUBLISHED.** The Project becomes `PUBLISHED` only when every required variant's current publication is sourced from its current review. For SEPARATE that means both GROOM and BRIDE. An obsolete invitation row for an unrequired variant neither blocks nor satisfies this.
+6. **Concurrency.** Compare-and-set on both `current_review_version_id` and `published_version_id`, under the Project and invitation row locks. A double submit creates one PUBLISHED row; the second gets 409 `STALE_PUBLISHED_VERSION`. Republishing the same review is 409 `ALREADY_PUBLISHED`.
+7. **Open owner decision (not implemented here):** once a Project is `PUBLISHED`, `create_review_version` still rejects a new review (0037 RV010), so a fully published Project cannot be revised and republished yet. Re-opening review after publication needs a Product Owner decision on the status path.
+8. The public invitation route `/i/[slug]`, Open Graph metadata, guest tokens and RSVP persistence remain future tasks.

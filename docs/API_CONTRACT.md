@@ -871,3 +871,45 @@ Customer feedback is accepted only while the status is `CUSTOMER_REVIEW`, `REVIS
 ### 17.4 Staff UI
 
 The Duyệt tab shows the persisted project status, the review outcome, each required variant's current review with its customer feedback, "Tạo bản duyệt mới", and "Tạo link duyệt", which uses the existing Task 026 issue route and shows the `/review/<token>` URL once. No publish action.
+
+## 18. Task 031 — Staff Publish HTTP Contract
+
+Path A (Bearer → `requireStaff` → staff-scoped client → RLS). Every response is `Cache-Control: no-store`. There is no public publish endpoint and no `service_role` path.
+
+**Publication source.** A PUBLISHED version is always a verbatim copy of the invitation's **approved current REVIEW** version: `payload`, `template_version_id` and `renderer_key_snapshot` are copied inside `publish_invitation` (migration 0038) with `INSERT … SELECT` from that REVIEW row, `source_review_version_id` points to it, and its `invitation_version_media` pins are copied from that REVIEW. The mutable draft is never read or rebuilt during publish, and no signed URL is stored.
+
+### 18.1 `POST /api/v2/internal/projects/[id]/publish`
+
+Body (strict allow-list; any other key → 400): `{ variant, expectedCurrentReviewVersionId, expectedPublishedVersionId }`. `expectedCurrentReviewVersionId` is required (UUID); `expectedPublishedVersionId` is a UUID or `null` (never published). The browser never sends a Snapshot, renderer key, template version, version number, media ids or a status target.
+
+In one transaction `publish_invitation` locks the Project (`FOR NO KEY UPDATE`) and the invitation row (`FOR UPDATE`), then requires: project status `READY_TO_PUBLISH` **and** `payment_status = PAID` (Task 025 graph; never faked); the variant is required by the package policy; the invitation's `current_review_version_id` and `published_version_id` equal the two expected values (compare-and-set); the current review is a REVIEW row of this invitation with an `APPROVAL`, no `REVISION_REQUEST`, and an aggregate review outcome of `APPROVED`; and the current publication (if any) is not already sourced from this review. It then appends one PUBLISHED row (`version_number` = invitation max + 1 under the row lock — REVIEW and PUBLISHED share one per-invitation sequence), copies the media pins, advances `published_version_id`, logs `INVITATION_PUBLISHED` (first publication) or `INVITATION_REPUBLISHED`, and sets the Project to `PUBLISHED` (logging `PROJECT_STATUS_CHANGED`) only when **every required variant's** current publication is sourced from its current review. Rows for variants the package does not require are ignored.
+
+| Result | Kind | HTTP | `reason` |
+|---|---|---|---|
+| PUBLISHED version created | — | 201 `{ data: PublishedInvitationVersion }` | — |
+| Missing/invalid bearer; not active staff | — | 401 / 403 | — |
+| Malformed body / id / extra key | `BAD_REQUEST` | 400 | — |
+| Project not found | `NOT_FOUND` | 404 | — |
+| Variant not required; no package policy | `INVARIANT` | 422 | — |
+| Status not `READY_TO_PUBLISH` | `CONFLICT` | 409 | `LIFECYCLE_NOT_READY` |
+| `payment_status` not `PAID` | `CONFLICT` | 409 | `PAYMENT_NOT_READY` |
+| Project `PUBLISHED` / `COMPLETED` / `ARCHIVED` | `CONFLICT` | 409 | `PROJECT_CLOSED` |
+| No current review; not approved; revision requested; aggregate not approved | `CONFLICT` | 409 | `NOT_APPROVED` |
+| Stale `expectedCurrentReviewVersionId` | `CONFLICT` | 409 | `STALE_REVIEW` |
+| Stale `expectedPublishedVersionId` (incl. a double submit) | `CONFLICT` | 409 | `STALE_PUBLISHED_VERSION` |
+| Current review already published | `CONFLICT` | 409 | `ALREADY_PUBLISHED` |
+| Integrity fault / anything else | — | 500 (generic) | — |
+
+A double submit with the same expected pointers creates exactly one PUBLISHED row; the second request is 409 `STALE_PUBLISHED_VERSION`.
+
+### 18.2 `GET /api/v2/internal/projects/[id]/publish`
+
+200 `{ data: ProjectPublishState }`: `projectStatus`, `paymentStatus`, `requiredVariants`, `projectBlocker` (`PROJECT_CLOSED` | `PAYMENT_NOT_READY` | `LIFECYCLE_NOT_READY` | `null`, in that order), `allRequiredVariantsPublished`, and per required variant its current review (number, approval state), its current publication (number, source review number, `publishedAt`), `upToDate`, `canPublish` and the first `blocker`. Direct RLS reads only. The RPC remains the authority.
+
+### 18.3 Staff UI
+
+The Xuất bản tab shows, per required variant, the current review and its approval, the current publication, the first blocker and a publish action with an inline confirmation (the approved review is frozen as a published version; later draft edits do not change it; a newer approved review can later be published as another version).
+
+### 18.4 Not in this task
+
+No public `/i/[slug]` rendering, no public media resolver, no Open Graph / `SOCIAL_SHARE_COVER` metadata, no guest token, no RSVP persistence, no QR/share/analytics, no rollback/unpublish.
