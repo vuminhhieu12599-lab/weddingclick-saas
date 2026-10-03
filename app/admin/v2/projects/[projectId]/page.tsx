@@ -1,17 +1,19 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 import { fetchProjectById } from "../../../../../lib/admin/admin-api-client";
 import { useAdminQuery } from "../../../../../lib/admin/use-admin-query";
 import { ErrorState, LoadingState } from "../../_components/page-states";
 import { Lifecycle } from "./_components/lifecycle";
 import { ProjectHeader } from "./_components/project-header";
-import { WorkspaceTabs } from "./_components/workspace-tabs";
+import { parseWorkspaceTab, WorkspaceTabs } from "./_components/workspace-tabs";
 
-export default function ProjectDetailPage() {
+function ProjectDetail() {
   const params = useParams<{ projectId: string }>();
   const projectId = params.projectId;
+  const initialTab = parseWorkspaceTab(useSearchParams().get("tab"));
 
   const {
     data: project,
@@ -38,7 +40,15 @@ export default function ProjectDetailPage() {
       <div className="mt-6">
         <Lifecycle status={project.status} />
       </div>
-      <WorkspaceTabs project={project} />
+      <WorkspaceTabs project={project} initialTab={initialTab} />
     </div>
+  );
+}
+
+export default function ProjectDetailPage() {
+  return (
+    <Suspense fallback={<LoadingState label="Đang tải dự án..." />}>
+      <ProjectDetail />
+    </Suspense>
   );
 }

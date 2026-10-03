@@ -736,3 +736,23 @@ Error table:
 - No `service_role`, no RPC, no activity logging (no activity type exists for design changes in the frozen Activity Union, §6), no project lifecycle mutation, no `invitation_versions`/`project_invitations` access.
 - No template catalog seeding, no renderer/UI implementation — both remain Task 029+ scope.
 - See `docs/TEMPLATE_SYSTEM.md` §6 for the full `TemplateDesignManifestV1`/`ManifestSettingSpec` contract this feature validates against, and `docs/DECISIONS.md` "Task 028 — Project Design APIs" for the full decision record and DEV/STAGING verification evidence.
+
+## 14. Staff Invitation Preview HTTP Contract
+
+### 14.1 `GET /api/v2/internal/projects/[id]/preview?variant=COMMON|GROOM|BRIDE`
+
+Staff-only, read-only. It runs `requireStaff` and then the frozen `buildStaffInvitationPreview` over the staff-scoped production wiring (`docs/ARCHITECTURE.md`). An absent `variant` means `COMMON`. Any other value is rejected by the use case. The page that calls it is `/admin/v2/projects/[projectId]/preview`. The variant lives only in that page's URL and is never persisted.
+
+Success (200): `{ "data": { "status": "READY", "rendererKey", "viewModel", "sections" } | { "status": "BLOCKED", "issues": SnapshotPayloadIssue[] } }`. The in-memory Snapshot is not returned. `viewModel` carries runtime-only signed media URLs.
+
+| Condition | Kind | HTTP |
+|---|---|---|
+| Missing/malformed Authorization, invalid/expired token | `UNAUTHENTICATED` | 401 |
+| Authenticated, not active STAFF/ADMIN | `FORBIDDEN` | 403 |
+| Malformed project id / invalid `variant` | `BAD_REQUEST` | 400 |
+| Project not visible | `NOT_FOUND` | 404 |
+| Project has no design configured | `CONFLICT` | 409 |
+| Invariant, load, media-resolver or renderer-selection failure | `INTERNAL` | 500 (generic body) |
+
+- Every response carries `Cache-Control: no-store`.
+- No `service_role`, no write of any kind, no `invitation_versions`, no publish, no token or public link.

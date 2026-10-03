@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { getAssignedStaffLabel } from "../../../../../../lib/presentation/assigned-staff";
 import { formatDateVi } from "../../../../../../lib/presentation/format-date";
 import { formatVnd } from "../../../../../../lib/presentation/format-vnd";
@@ -22,7 +24,15 @@ export function ProjectHeader({ project }: { project: ProjectSummary }) {
           <p className="text-xs uppercase tracking-wide text-slate-400">Mã dự án</p>
           <h1 className="text-lg font-semibold text-slate-900">{project.projectCode}</h1>
         </div>
-        <StatusBadge status={project.status} />
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/admin/v2/projects/${encodeURIComponent(project.id)}/preview`}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Xem trước thiệp
+          </Link>
+          <StatusBadge status={project.status} />
+        </div>
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">

@@ -15,10 +15,15 @@ const TABS = [
   { key: "PUBLISH", label: "Xuất bản" },
 ] as const;
 
-type TabKey = (typeof TABS)[number]["key"];
+export type TabKey = (typeof TABS)[number]["key"];
 
-export function WorkspaceTabs({ project }: { project: ProjectSummary }) {
-  const [active, setActive] = useState<TabKey>("DATA");
+/** `?tab=` deep link (e.g. from the preview no-design state); anything unknown → DATA. */
+export function parseWorkspaceTab(raw: string | null): TabKey {
+  return TABS.find((tab) => tab.key === raw)?.key ?? "DATA";
+}
+
+export function WorkspaceTabs({ project, initialTab = "DATA" }: { project: ProjectSummary; initialTab?: TabKey }) {
+  const [active, setActive] = useState<TabKey>(initialTab);
 
   return (
     <div className="mt-6">
@@ -41,7 +46,7 @@ export function WorkspaceTabs({ project }: { project: ProjectSummary }) {
 
       <div className="mt-5">
         {active === "DATA" && <DataTab project={project} />}
-        {active === "DESIGN" && <DesignTab />}
+        {active === "DESIGN" && <DesignTab project={project} />}
         {active === "REVIEW" && <ReviewTab project={project} />}
         {active === "PUBLISH" && <PublishTab project={project} />}
       </div>

@@ -7,7 +7,8 @@ import { formatVnd } from "../../../../../../lib/presentation/format-vnd";
 import { getPaymentStatusLabel } from "../../../../../../lib/presentation/payment-status-labels";
 import { getAddonLabel, getPackageLabel } from "../../../../../../lib/presentation/service-catalog-labels";
 import type { ProjectSummary } from "../../../../../../lib/server/projects/project-types";
-import { EmptyState, ErrorState, LoadingState } from "../../../_components/page-states";
+import { ErrorState, LoadingState } from "../../../_components/page-states";
+import { RequiredInvitationData } from "./required-invitation-data";
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
@@ -78,13 +79,7 @@ export function DataTab({ project }: { project: ProjectSummary }) {
         )}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h3 className="mb-2 text-sm font-semibold text-slate-700">Thông tin cưới</h3>
-        <EmptyState
-          title="Thông tin cưới sẽ hiển thị ở đây"
-          description="Chức năng đọc Wedding Details chưa được triển khai trong checkpoint UI-001."
-        />
-      </section>
+      <RequiredInvitationData projectId={project.id} />
     </div>
   );
 }
