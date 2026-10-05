@@ -1,5 +1,5 @@
 import { INVITATION_VARIANTS, SERVICE_ADDON_CODES, type InvitationVariant } from "../../domain";
-import type { PortalGuestGateway, PortalGuestRecord, PortalGuestState } from "../customer-portal/portal-guest-types";
+import type { PortalGuestGateway, PortalGuestLinkGateway, PortalGuestRecord, PortalGuestState } from "../customer-portal/portal-guest-types";
 import { isValidUuid } from "../validation/uuid";
 import { toPostgresByteaHexLiteral } from "./postgres-bytea";
 import { createServiceRoleSupabaseClient } from "./service-role-client";
@@ -19,6 +19,7 @@ import { createServiceRoleSupabaseClient } from "./service-role-client";
  * at insert and never selected; `token_hint`, `phone`, `note`, `group_name`
  * are never read or written; `token_issued_at` is reduced to a boolean
  * here. A fresh client per call. Nothing is logged; errors carry no detail.
+ * Task 033E-B adds the Project-pinned issuance gateway at the end of this file.
  */
 
 const PERSONALIZED_GUEST_ADDON_CODE = SERVICE_ADDON_CODES[0];
@@ -191,6 +192,112 @@ export function getServiceRolePortalGuestGateway(): PortalGuestGateway {
       const row = await client.from("guests").select(GUEST_COLUMNS).eq("id", guestId).eq("project_id", projectId).maybeSingle();
       if (row.error) fail();
       return row.data === null ? null : toGuestState(toPortalGuestRecord(row.data, projectId));
+    },
+  };
+}
+
+/**
+ * Task 033E-B — the Portal's Project-pinned implementation of the shared
+ * 033B1 `GuestLinkGateway`, used only by `issuePortalGuestLink` after PORTAL
+ * resolution. Its "client" is the resolved Project; any call for another
+ * Project fails closed. Same reads/writes as the staff gateway, with two
+ * Portal-specific rules:
+ *   - the slug is returned only while that variant's invitation has a valid
+ *     PUBLISHED pointer (a link is never manufactured for an unpublished
+ *     side; a pointer integrity fault is a generic failure);
+ *   - the rotation is the same single conditional UPDATE (project, id,
+ *     active, expected `token_issued_at` state, expected `invitation_variant`).
+ * `token_hash` is written, never selected; nothing is logged.
+ */
+export function getServiceRolePortalGuestLinkGateway(): PortalGuestLinkGateway {
+  const pinned = (client: { projectId: string }, projectId: string) => {
+    if (!isValidUuid(projectId) || client.projectId !== projectId) fail();
+  };
+
+  return {
+    async hasPersonalizedGuestEntitlement(client, projectId) {
+      pinned(client, projectId);
+      const addons = await createServiceRoleSupabaseClient()
+        .from("project_addons")
+        .select("id")
+        .eq("project_id", projectId)
+        .eq("addon_code_snapshot", PERSONALIZED_GUEST_ADDON_CODE)
+        .is("revoked_at", null)
+        .limit(1);
+      if (addons.error || !Array.isArray(addons.data)) fail();
+      return addons.data.length === 1;
+    },
+
+    async getGuestLinkTarget(client, projectId, guestId) {
+      pinned(client, projectId);
+      if (!isValidUuid(guestId)) return null;
+      const supabase = createServiceRoleSupabaseClient();
+      const row = await supabase.from("guests").select(GUEST_COLUMNS).eq("id", guestId).eq("project_id", projectId).maybeSingle();
+      if (row.error) fail();
+      if (row.data === null) return null;
+      const record = toPortalGuestRecord(row.data, projectId);
+
+      const project = await supabase.from("projects").select("package_code_snapshot").eq("id", projectId).maybeSingle();
+      if (project.error || project.data === null || typeof project.data.package_code_snapshot !== "string") fail();
+      return {
+        invitationVariant: record.invitationVariant,
+        hasIssuedLink: record.linkIssued,
+        revoked: record.revoked,
+        packageCode: project.data.package_code_snapshot,
+      };
+    },
+
+    async getInvitationSlug(client, projectId, variant) {
+      pinned(client, projectId);
+      const supabase = createServiceRoleSupabaseClient();
+      const invitation = await supabase
+        .from("project_invitations")
+        .select("id, public_slug, published_version_id")
+        .eq("project_id", projectId)
+        .eq("variant", variant)
+        .maybeSingle();
+      if (invitation.error) fail();
+      if (invitation.data === null || invitation.data.published_version_id === null) return null;
+      const { id, public_slug: slug, published_version_id: versionId } = invitation.data;
+      if (typeof slug !== "string" || slug.length === 0 || typeof versionId !== "string") fail();
+
+      const version = await supabase
+        .from("invitation_versions")
+        .select("id, invitation_id, project_id, version_type")
+        .eq("id", versionId)
+        .maybeSingle();
+      if (version.error) fail();
+      if (
+        version.data === null ||
+        version.data.invitation_id !== id ||
+        version.data.project_id !== projectId ||
+        version.data.version_type !== "PUBLISHED"
+      ) {
+        fail();
+      }
+      return slug;
+    },
+
+    async replaceGuestToken(client, params) {
+      pinned(client, params.projectId);
+      if (!isValidUuid(params.guestId) || params.tokenHash.length !== 32) fail();
+      const base = createServiceRoleSupabaseClient()
+        .from("guests")
+        .update({
+          token_hash: toPostgresByteaHexLiteral(params.tokenHash),
+          token_hint: params.tokenHint,
+          token_issued_at: new Date().toISOString(),
+        })
+        .eq("id", params.guestId)
+        .eq("project_id", params.projectId)
+        .is("revoked_at", null);
+      const issuance = params.expectIssued ? base.not("token_issued_at", "is", null) : base.is("token_issued_at", null);
+      // 033B1 race fix: the side the slug was resolved from must still be stored.
+      const variant = params.expectedInvitationVariant;
+      const guarded = variant === null ? issuance.is("invitation_variant", null) : issuance.eq("invitation_variant", variant);
+      const updated = await guarded.select("id");
+      if (updated.error || !Array.isArray(updated.data) || updated.data.length > 1) fail();
+      return updated.data.length === 1;
     },
   };
 }

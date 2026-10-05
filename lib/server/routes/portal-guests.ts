@@ -1,7 +1,8 @@
 import { parseBearerToken } from "../auth/bearer-token";
-import type { CustomerPortalGuestRow, PortalGuestConflictReason } from "../customer-portal/portal-guest-types";
+import type { CustomerPortalGuestRow, PortalGuestConflictReason, PortalIssuedGuestLink } from "../customer-portal/portal-guest-types";
 import {
   createPortalGuest,
+  issuePortalGuestLink,
   PortalGuestConflictError,
   revokePortalGuest,
   updatePortalGuest,
@@ -15,11 +16,15 @@ import { ApiError, apiErrorStatus } from "../errors/api-error";
  * the Project comes only from the resolved token). Mirrors
  * lib/server/routes/customer-review.ts: no-store on every response, fixed
  * generic 500, never raw DB/token detail, fixed-string logging only. A 409
- * carries a stable `reason` for the customer UI.
+ * carries a stable `reason` for the customer UI. A 422 (Task 033E-B) means
+ * the guest's invitation side is not issuable (unresolved or unpublished).
  */
 export interface PortalGuestApiResult {
-  status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 410 | 500;
-  body: { data: CustomerPortalGuestRow } | { error: string } | { error: string; reason: PortalGuestConflictReason };
+  status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 410 | 422 | 500;
+  body:
+    | { data: CustomerPortalGuestRow | PortalIssuedGuestLink }
+    | { error: string }
+    | { error: string; reason: PortalGuestConflictReason };
   headers: Record<string, string>;
 }
 
@@ -32,7 +37,7 @@ function result(status: PortalGuestApiResult["status"], body: PortalGuestApiResu
 async function handle(
   authorizationHeader: string | null,
   successStatus: 200 | 201,
-  run: (token: string) => Promise<CustomerPortalGuestRow>,
+  run: (token: string) => Promise<CustomerPortalGuestRow | PortalIssuedGuestLink>,
 ): Promise<PortalGuestApiResult> {
   const token = parseBearerToken(authorizationHeader);
   if (!token) {
@@ -46,7 +51,7 @@ async function handle(
     }
     if (error instanceof ApiError) {
       const status = apiErrorStatus(error.kind);
-      if (status === 400 || status === 403 || status === 404 || status === 410) {
+      if (status === 400 || status === 403 || status === 404 || status === 410 || status === 422) {
         return result(status, { error: error.message });
       }
     }
@@ -78,4 +83,14 @@ export function handleRevokePortalGuestRequest(
   deps: PortalGuestToolDependencies,
 ): Promise<PortalGuestApiResult> {
   return handle(authorizationHeader, 200, (token) => revokePortalGuest(token, guestId, deps));
+}
+
+/** Task 033E-B — the success body carries the raw-token path once (`no-store`). */
+export function handleIssuePortalGuestLinkRequest(
+  authorizationHeader: string | null,
+  guestId: string,
+  readBody: () => Promise<unknown>,
+  deps: PortalGuestToolDependencies,
+): Promise<PortalGuestApiResult> {
+  return handle(authorizationHeader, 200, (token) => issuePortalGuestLink(token, guestId, readBody, deps));
 }

@@ -3,12 +3,21 @@ import { join } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { generateAccessToken } from "../../auth/access-token-crypto";
+import { execFileSync } from "node:child_process";
+
+import { generateAccessToken, hashAccessToken } from "../../auth/access-token-crypto";
+import { issueGuestLink } from "../../guest-links/issue-guest-link";
+import { supabaseGuestLinkStaffGateway } from "../../supabase/guest-link-staff-repository";
 import type { AccessLinkResolutionRepository, ResolvedAccessLinkRow } from "../../supabase/access-link-resolution-repository";
-import { getServiceRolePortalGuestGateway, toPortalGuestRecord } from "../../supabase/portal-guest-repository";
-import { handleCreatePortalGuestRequest, handleRevokePortalGuestRequest, handleUpdatePortalGuestRequest } from "../../routes/portal-guests";
+import { getServiceRolePortalGuestGateway, getServiceRolePortalGuestLinkGateway, toPortalGuestRecord } from "../../supabase/portal-guest-repository";
+import {
+  handleCreatePortalGuestRequest,
+  handleIssuePortalGuestLinkRequest,
+  handleRevokePortalGuestRequest,
+  handleUpdatePortalGuestRequest,
+} from "../../routes/portal-guests";
 import { loadCustomerPortal } from "../load-customer-portal";
-import { createPortalGuest, revokePortalGuest, updatePortalGuest, type PortalGuestToolDependencies } from "../portal-guest-tool";
+import { createPortalGuest, issuePortalGuestLink, revokePortalGuest, updatePortalGuest, type PortalGuestToolDependencies } from "../portal-guest-tool";
 
 /**
  * Task 033E-A — Portal Guest Tool foundation. The REAL service_role
@@ -40,7 +49,7 @@ let db: Record<string, Row[]>;
 let writes: { table: string; op: "insert" | "update" | "delete"; payload: Row }[];
 let idSeq = 0;
 
-function seed(opts: { packageA?: string; entitledA?: boolean; publishedA?: boolean } = {}) {
+function seed(opts: { packageA?: string; entitledA?: boolean; publishedA?: boolean; publishedBrideA?: boolean } = {}) {
   const issuedAt = "2026-10-04T00:00:00Z";
   db = {
     projects: [
@@ -48,12 +57,20 @@ function seed(opts: { packageA?: string; entitledA?: boolean; publishedA?: boole
       { id: PROJECT_B, package_code_snapshot: "COMMON" },
     ],
     project_invitations: [
-      { id: "11111111-0000-4000-8000-000000000001", project_id: PROJECT_A, published_version_id: opts.publishedA === false ? null : "22222222-0000-4000-8000-000000000001" },
-      { id: "11111111-0000-4000-8000-000000000002", project_id: PROJECT_B, published_version_id: "22222222-0000-4000-8000-000000000002" },
+      { id: "11111111-0000-4000-8000-000000000001", project_id: PROJECT_A, variant: "GROOM", public_slug: "wc-a-groom", published_version_id: opts.publishedA === false ? null : "22222222-0000-4000-8000-000000000001" },
+      { id: "11111111-0000-4000-8000-000000000002", project_id: PROJECT_B, variant: "COMMON", public_slug: "wc-b-common", published_version_id: "22222222-0000-4000-8000-000000000002" },
+      {
+        id: "11111111-0000-4000-8000-000000000003",
+        project_id: PROJECT_A,
+        variant: "BRIDE",
+        public_slug: "wc-a-bride",
+        published_version_id: opts.publishedA === false || opts.publishedBrideA === false ? null : "22222222-0000-4000-8000-000000000003",
+      },
     ],
     invitation_versions: [
       { id: "22222222-0000-4000-8000-000000000001", invitation_id: "11111111-0000-4000-8000-000000000001", project_id: PROJECT_A, version_type: "PUBLISHED" },
       { id: "22222222-0000-4000-8000-000000000002", invitation_id: "11111111-0000-4000-8000-000000000002", project_id: PROJECT_B, version_type: "PUBLISHED" },
+      { id: "22222222-0000-4000-8000-000000000003", invitation_id: "11111111-0000-4000-8000-000000000003", project_id: PROJECT_A, version_type: "PUBLISHED" },
     ],
     project_addons: [
       ...(opts.entitledA === false ? [] : [{ id: "33333333-0000-4000-8000-000000000001", project_id: PROJECT_A, addon_code_snapshot: "PERSONALIZED_GUEST", revoked_at: null }]),
@@ -196,7 +213,11 @@ function resolution(): AccessLinkResolutionRepository {
   };
 }
 
-const deps = (): PortalGuestToolDependencies => ({ resolution: resolution(), guests: getServiceRolePortalGuestGateway() });
+const deps = (): PortalGuestToolDependencies => ({
+  resolution: resolution(),
+  guests: getServiceRolePortalGuestGateway(),
+  guestLinks: getServiceRolePortalGuestLinkGateway(),
+});
 const body = (value: unknown) => async () => value;
 const guest = (id: string) => db.guests.find((row) => row.id === id) as Row;
 
@@ -383,14 +404,18 @@ describe("033E-A AG–AO: boundaries and UI", () => {
     "lib/server/routes/portal-guests.ts",
     "lib/server/auth/dormant-guest-token.ts",
   ];
-  const ROUTES = ["app/api/v2/public/portal/guests/route.ts", "app/api/v2/public/portal/guests/[guestId]/route.ts", "app/api/v2/public/portal/guests/[guestId]/revoke/route.ts"];
+  const ROUTES = [
+    "app/api/v2/public/portal/guests/route.ts",
+    "app/api/v2/public/portal/guests/[guestId]/route.ts",
+    "app/api/v2/public/portal/guests/[guestId]/revoke/route.ts",
+    "app/api/v2/public/portal/guests/[guestId]/access-link/route.ts",
+  ];
   const CLIENT = "app/portal/[token]/portal-guest-tool.tsx";
 
-  it("AG/AH/AN/AD/AL: no restore/ISSUE/REGENERATE/delete; 033B1 issuance untouched; service_role only in the repository; routes only use the wiring", () => {
+  // Amended by Task 033E-B: ISSUE / REGENERATE now exist (shared issueGuestLink) and the 033B1 replaceGuestToken carries the variant predicate.
+  it("AG/AH/AN/AD/AL: no restore/delete; service_role only in the repository; routes only use the wiring", () => {
     const code = [...NEW_SERVER, ...ROUTES, CLIENT].map((f) => strip(read(f))).join("\n");
-    expect(code).not.toMatch(/unrevoke|restore|issueGuestLink|replaceGuestToken|REGENERATE|"ISSUE"|\.delete\(|\.rpc\(|from\("rsvps"\)|localStorage|sessionStorage|indexedDB|document\.cookie/);
-    const staffRepo = strip(read("lib/server/supabase/guest-link-staff-repository.ts"));
-    expect(staffRepo.slice(staffRepo.indexOf("async replaceGuestToken"))).not.toMatch(/invitation_variant/);
+    expect(code).not.toMatch(/unrevoke|restore|\.delete\(|\.rpc\(|from\("rsvps"\)|localStorage|sessionStorage|indexedDB|document\.cookie/);
     for (const f of [...NEW_SERVER.filter((f) => !f.endsWith("portal-guest-repository.ts")), ...ROUTES, CLIENT]) {
       expect(read(f), f).not.toMatch(/service-role-client|SUPABASE_SERVICE_ROLE_KEY|createServiceRole/);
     }
@@ -430,7 +455,8 @@ describe("033E-A AG–AO: boundaries and UI", () => {
     errorSpy.mockRestore();
   });
 
-  it("AO: active / revoked / empty states; COMMON has no side picker; issued SEPARATE guest shows link state, no ISSUE/copy controls", async () => {
+  // Amended by Task 033E-B: active rows now carry "Tạo link" / "Tạo lại link"; a raw link / copy control never comes from server props.
+  it("AO: active / revoked / empty states; COMMON has no side picker; link actions per state, no raw link or copy control from props", async () => {
     const { PortalGuestTool } = await import("../../../../app/portal/[token]/portal-guest-tool");
     const rows = [
       { guestId: GUEST_A1, displayName: "Anh Hiếu và gia đình", invitationVariant: "GROOM" as const, status: "ACTIVE" as const, linkStatus: "NOT_ISSUED" as const },
@@ -440,9 +466,271 @@ describe("033E-A AG–AO: boundaries and UI", () => {
     const html = renderToStaticMarkup(<PortalGuestTool token="t" mode="GROOM_OR_BRIDE" guests={rows} />);
     for (const text of ["Danh sách khách mời", "Thêm khách", "Thiệp nhà trai · Chưa cấp link", "Thiệp nhà gái · Đã cấp link", "Sửa", "Thu hồi", "Đã thu hồi — link không còn hiệu lực"]) expect(html).toContain(text);
     expect(html.match(/>Thu hồi</g)).toHaveLength(2);
-    expect(html).not.toMatch(/Cấp link|Tạo lại|Sao chép|Khôi phục|Xoá khách|QR|Excel|CSV/);
+    expect(html).not.toMatch(/Sao chép|\/g\/|Khôi phục|Xoá khách|QR|Excel|CSV/);
+    expect(html.match(/>Tạo link</g)).toHaveLength(1);
+    expect(html.match(/>Tạo lại link</g)).toHaveLength(1);
     const empty = renderToStaticMarkup(<PortalGuestTool token="t" mode="COMMON_ONLY" guests={[]} />);
     expect(empty).toContain("Chưa có khách mời nào.");
     expect(empty).not.toMatch(/Nhà trai|Nhà gái|type="radio"/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 033E-B — Portal personalized guest link ISSUE / REGENERATE
+// ---------------------------------------------------------------------------
+
+const LINK = /^\/i\/([a-z0-9-]+)\/g\/([A-Za-z0-9_-]{43})$/;
+const action = (value: string) => body({ action: value });
+const issuePortal = (token: string, guestId: string, act: string, d = deps()) => issuePortalGuestLink(token, guestId, action(act), d);
+const tokenOf = (path: string) => LINK.exec(path)![2];
+const tokenWrites = () => writes.filter((w) => "token_hash" in w.payload);
+
+/** Mirrors 0042 resolve_public_guest: published slug, issued hash, same Project, permitted variant, active. */
+function resolvesTo(path: string): string | null {
+  const match = LINK.exec(path);
+  if (match === null) return null;
+  const inv = db.project_invitations.find((row) => row.public_slug === match[1] && row.published_version_id !== null);
+  if (inv === undefined) return null;
+  const hash = "\\x" + hex(hashAccessToken(match[2]));
+  const g = db.guests.find((row) => row.token_hash === hash && row.token_issued_at !== null);
+  if (g === undefined || g.project_id !== inv.project_id || g.revoked_at !== null) return null;
+  const pkg = db.projects.find((p) => p.id === g.project_id)?.package_code_snapshot;
+  const variant = g.invitation_variant ?? (pkg === "COMMON" ? "COMMON" : null);
+  return variant === inv.variant ? (g.id as string) : null;
+}
+
+describe("033E-B A–U: Portal ISSUE / REGENERATE", () => {
+  it("A/Q/R/U: entitled Portal ISSUEs a dormant guest: fresh hash + hint + issued_at, raw token only in the response URL", async () => {
+    const before = guest(GUEST_A1).token_hash;
+    const issued = await issuePortal(PORTAL_A.rawToken, GUEST_A1, "ISSUE");
+    expect(Object.keys(issued).sort()).toEqual(["linkStatus", "personalizedUrl"]);
+    expect(issued.linkStatus).toBe("ISSUED");
+    expect(LINK.exec(issued.personalizedUrl)?.[1]).toBe("wc-a-groom");
+    const raw = tokenOf(issued.personalizedUrl);
+    expect(guest(GUEST_A1)).toMatchObject({ token_hash: "\\x" + hex(hashAccessToken(raw)), token_hint: raw.slice(-8) });
+    expect(guest(GUEST_A1).token_hash).not.toBe(before);
+    expect(guest(GUEST_A1).token_issued_at).not.toBeNull();
+    expect(JSON.stringify(db)).not.toContain(raw);
+    expect(JSON.stringify(writes)).not.toContain(raw);
+    expect(JSON.stringify(issued)).not.toMatch(UUID);
+    expect(JSON.stringify(issued)).not.toMatch(/hash|hint|issued_at|project/i);
+    expect(resolvesTo(issued.personalizedUrl)).toBe(GUEST_A1);
+  });
+
+  it("B/D: without PERSONALIZED_GUEST both ISSUE and REGENERATE are 403 and nothing is written", async () => {
+    seed({ entitledA: false });
+    await expect(issuePortal(PORTAL_A.rawToken, GUEST_A1, "ISSUE")).rejects.toMatchObject({ kind: "FORBIDDEN" });
+    await expect(issuePortal(PORTAL_A.rawToken, GUEST_A2, "REGENERATE")).rejects.toMatchObject({ kind: "FORBIDDEN" });
+    expect(writes).toEqual([]);
+  });
+
+  it("C/S/T: REGENERATE replaces hash/hint/issued_at; the old link stops resolving at once, the new one resolves", async () => {
+    const first = await issuePortal(PORTAL_A.rawToken, GUEST_A1, "ISSUE");
+    const firstHash = guest(GUEST_A1).token_hash;
+    const second = await issuePortal(PORTAL_A.rawToken, GUEST_A1, "REGENERATE");
+    expect(second.personalizedUrl).not.toBe(first.personalizedUrl);
+    expect(guest(GUEST_A1).token_hash).not.toBe(firstHash);
+    expect(guest(GUEST_A1).token_hint).toBe(tokenOf(second.personalizedUrl).slice(-8));
+    expect(resolvesTo(first.personalizedUrl)).toBeNull();
+    expect(resolvesTo(second.personalizedUrl)).toBe(GUEST_A1);
+    expect(db.guests.filter((g) => g.id === GUEST_A1)).toHaveLength(1);
+  });
+
+  it("E: a revoked guest can neither ISSUE nor REGENERATE (409 GUEST_REVOKED, nothing rotated)", async () => {
+    guest(GUEST_A1).revoked_at = "2026-10-05T00:00:00Z";
+    guest(GUEST_A2).revoked_at = "2026-10-05T00:00:00Z";
+    await expect(issuePortal(PORTAL_A.rawToken, GUEST_A1, "ISSUE")).rejects.toMatchObject({ kind: "CONFLICT", reason: "GUEST_REVOKED" });
+    await expect(issuePortal(PORTAL_A.rawToken, GUEST_A2, "REGENERATE")).rejects.toMatchObject({ kind: "CONFLICT", reason: "GUEST_REVOKED" });
+    expect(tokenWrites()).toEqual([]);
+  });
+
+  it("F/G: Project A token + Project B guest (or malformed id) is 404; a browser projectId is rejected, never consulted", async () => {
+    await expect(issuePortal(PORTAL_A.rawToken, GUEST_B1, "ISSUE")).rejects.toMatchObject({ kind: "NOT_FOUND" });
+    await expect(issuePortal(PORTAL_A.rawToken, "not-a-uuid", "ISSUE")).rejects.toMatchObject({ kind: "NOT_FOUND" });
+    for (const extra of [{ projectId: PROJECT_B }, { projectId: PROJECT_A }, { guestId: GUEST_B1 }]) {
+      await expect(issuePortalGuestLink(PORTAL_A.rawToken, GUEST_A1, body({ action: "ISSUE", ...extra }), deps())).rejects.toMatchObject({ kind: "BAD_REQUEST" });
+    }
+    expect(issuePortalGuestLink.length).toBe(4);
+    expect(tokenWrites()).toEqual([]);
+  });
+
+  it("H: REVIEW token, unknown token and a guest's own issued token are not Portal auth (404)", async () => {
+    const issued = await issuePortal(PORTAL_A.rawToken, GUEST_A1, "ISSUE");
+    writes = [];
+    for (const bad of [REVIEW_A.rawToken, generateAccessToken().rawToken, tokenOf(issued.personalizedUrl)]) {
+      await expect(issuePortal(bad, GUEST_A1, "REGENERATE")).rejects.toMatchObject({ kind: "NOT_FOUND" });
+    }
+    expect(tokenWrites()).toEqual([]);
+  });
+
+  it("I/J: ISSUE only while not issued, REGENERATE only once issued; the stale action is 409 from DB state", async () => {
+    await expect(issuePortal(PORTAL_A.rawToken, GUEST_A2, "ISSUE")).rejects.toMatchObject({ kind: "CONFLICT", reason: "CONCURRENT_CHANGE" });
+    await expect(issuePortal(PORTAL_A.rawToken, GUEST_A1, "REGENERATE")).rejects.toMatchObject({ kind: "CONFLICT", reason: "CONCURRENT_CHANGE" });
+    await expect(issuePortal(PORTAL_A.rawToken, GUEST_A1, "RESET")).rejects.toMatchObject({ kind: "BAD_REQUEST" });
+    expect(tokenWrites()).toEqual([]);
+    expect(guest(GUEST_A2).token_hint).toBe("hint1234");
+  });
+
+  it("K: both gateways rotate in ONE conditional UPDATE that also pins invitation_variant; the use case passes the stored variant", () => {
+    for (const f of ["lib/server/supabase/guest-link-staff-repository.ts", "lib/server/supabase/portal-guest-repository.ts"]) {
+      const src = strip(read(f));
+      const replace = src.slice(src.lastIndexOf("async replaceGuestToken"));
+      expect(replace, f).toMatch(/\.is\("revoked_at", null\)/);
+      expect(replace, f).toMatch(/variant === null \? issuance\.is\("invitation_variant", null\) : issuance\.eq\("invitation_variant", variant\)/);
+      expect(replace.match(/\.update\(/g), f).toHaveLength(1);
+    }
+    expect(strip(read("lib/server/guest-links/issue-guest-link.ts"))).toMatch(/expectedInvitationVariant: target\.invitationVariant/);
+  });
+
+  it("L: a side change between read and rotation → 409, nothing written, no dead link (Portal and staff gateways)", async () => {
+    const portal = getServiceRolePortalGuestLinkGateway();
+    const racing = { ...deps(), guestLinks: { ...portal, getInvitationSlug: async (...a: Parameters<typeof portal.getInvitationSlug>) => {
+      guest(GUEST_A1).invitation_variant = "BRIDE";
+      return portal.getInvitationSlug(...a);
+    } } };
+    await expect(issuePortal(PORTAL_A.rawToken, GUEST_A1, "ISSUE", racing)).rejects.toMatchObject({ kind: "CONFLICT", reason: "CONCURRENT_CHANGE" });
+    expect(guest(GUEST_A1)).toMatchObject({ token_issued_at: null, token_hint: null });
+
+    const client = fakeClient();
+    const staff = { ...supabaseGuestLinkStaffGateway, getInvitationSlug: async (...a: Parameters<typeof supabaseGuestLinkStaffGateway.getInvitationSlug>) => {
+      guest(GUEST_A2).invitation_variant = "GROOM";
+      return supabaseGuestLinkStaffGateway.getInvitationSlug(...a);
+    } };
+    await expect(issueGuestLink(PROJECT_A, GUEST_A2, { action: "REGENERATE" }, client as never, staff)).rejects.toMatchObject({ kind: "CONFLICT" });
+    expect(guest(GUEST_A2).token_hint).toBe("hint1234");
+  });
+
+  it("M/N/O: COMMON → COMMON slug (also NULL variant on a COMMON package); GROOM → groom slug; BRIDE → bride slug", async () => {
+    const common = await issuePortal(PORTAL_B.rawToken, GUEST_B1, "ISSUE");
+    expect(LINK.exec(common.personalizedUrl)?.[1]).toBe("wc-b-common");
+    guest(GUEST_B1).invitation_variant = null;
+    const nullCommon = await issuePortal(PORTAL_B.rawToken, GUEST_B1, "REGENERATE");
+    expect(LINK.exec(nullCommon.personalizedUrl)?.[1]).toBe("wc-b-common");
+    expect(resolvesTo(nullCommon.personalizedUrl)).toBe(GUEST_B1);
+    expect(LINK.exec((await issuePortal(PORTAL_A.rawToken, GUEST_A1, "ISSUE")).personalizedUrl)?.[1]).toBe("wc-a-groom");
+    const bride = await issuePortal(PORTAL_A.rawToken, GUEST_A2, "REGENERATE");
+    expect(LINK.exec(bride.personalizedUrl)?.[1]).toBe("wc-a-bride");
+    expect(resolvesTo(bride.personalizedUrl)).toBe(GUEST_A2);
+    expect(bride.personalizedUrl).not.toMatch(/\?guest=|f0000000/);
+  });
+
+  it("P: the guest's own variant must be PUBLISHED (422, no fallback); a pointer integrity fault is a fixed 500", async () => {
+    seed({ publishedBrideA: false });
+    await expect(issuePortal(PORTAL_A.rawToken, GUEST_A2, "REGENERATE")).rejects.toMatchObject({ kind: "INVARIANT" });
+    guest(GUEST_A1).invitation_variant = null;
+    await expect(issuePortal(PORTAL_A.rawToken, GUEST_A1, "ISSUE")).rejects.toMatchObject({ kind: "INVARIANT" });
+    expect(tokenWrites()).toEqual([]);
+    seed();
+    db.invitation_versions[2].version_type = "REVIEW";
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await handleIssuePortalGuestLinkRequest(`Bearer ${PORTAL_A.rawToken}`, GUEST_A2, action("REGENERATE"), deps());
+    expect(res).toMatchObject({ status: 500, body: { error: "Internal server error" } });
+    expect(errorSpy).toHaveBeenCalledWith("[handlePortalGuestRequest] Unexpected error");
+    errorSpy.mockRestore();
+    expect(tokenWrites()).toEqual([]);
+  });
+
+  it("route handler: 200 { data: { personalizedUrl, linkStatus } } no-store; 401 without Bearer; 409 reason; 422 unpublished", async () => {
+    const auth = `Bearer ${PORTAL_A.rawToken}`;
+    const ok = await handleIssuePortalGuestLinkRequest(auth, GUEST_A1, action("ISSUE"), deps());
+    expect(ok).toMatchObject({ status: 200, headers: { "Cache-Control": "no-store" } });
+    expect(Object.keys((ok.body as { data: object }).data).sort()).toEqual(["linkStatus", "personalizedUrl"]);
+    expect((await handleIssuePortalGuestLinkRequest(null, GUEST_A1, action("REGENERATE"), deps())).status).toBe(401);
+    expect(await handleIssuePortalGuestLinkRequest(auth, GUEST_A1, action("ISSUE"), deps())).toMatchObject({ status: 409, body: { reason: "CONCURRENT_CHANGE" } });
+    seed({ publishedBrideA: false });
+    expect((await handleIssuePortalGuestLinkRequest(auth, GUEST_A2, action("REGENERATE"), deps())).status).toBe(422);
+    const route = strip(read("app/api/v2/public/portal/guests/[guestId]/access-link/route.ts"));
+    expect(route).toMatch(/handleIssuePortalGuestLinkRequest\(\s*request\.headers\.get\("authorization"\),\s*guestId,/);
+    expect(route).not.toMatch(/projectId|\bid\b:/);
+  });
+});
+
+describe("033E-B AG–AI: staff path, resolver and RSVP preserved", () => {
+  it("AG: real staff gateway still ISSUEs / REGENERATEs (no publish requirement), blocks revoked, rejects stale actions", async () => {
+    seed({ publishedBrideA: false });
+    const client = fakeClient() as never;
+    const run = (guestId: string, act: string) => issueGuestLink(PROJECT_A, guestId, { action: act }, client, supabaseGuestLinkStaffGateway);
+    const issued = await run(GUEST_A1, "ISSUE");
+    expect(LINK.exec(issued.invitationPath)?.[1]).toBe("wc-a-groom");
+    expect(issued).toMatchObject({ guestId: GUEST_A1, projectId: PROJECT_A, invitationVariant: "GROOM" });
+    const regen = await run(GUEST_A2, "REGENERATE");
+    expect(LINK.exec(regen.invitationPath)?.[1]).toBe("wc-a-bride");
+    await expect(run(GUEST_A1, "ISSUE")).rejects.toMatchObject({ kind: "CONFLICT" });
+    guest(GUEST_A1).revoked_at = "2026-10-05T00:00:00Z";
+    await expect(run(GUEST_A1, "REGENERATE")).rejects.toMatchObject({ kind: "CONFLICT" });
+    db.project_addons = db.project_addons.filter((a) => a.project_id !== PROJECT_A);
+    await expect(run(GUEST_A2, "REGENERATE")).rejects.toMatchObject({ kind: "FORBIDDEN" });
+    expect(strip(read("lib/server/routes/guest-links.ts"))).toMatch(/requireStaff\(token, authGateway\)[\s\S]*issueGuestLink\(projectId, guestId, body, staff\.supabase, guestLinkGateway\)/);
+  });
+
+  it("AH/AI: 0042, the personalized page/loader and personalized RSVP code are byte-identical to the frozen baseline", () => {
+    const frozen = [
+      "supabase/migrations/20260911041202_0042_personalized_guest_link.sql",
+      "app/i/[slug]/g/[token]/page.tsx",
+      "lib/server/public-guest",
+      "lib/server/public-rsvp",
+      "lib/server/supabase/public-guest-repository.ts",
+      "app/api/v2/public/rsvp",
+    ];
+    expect(execFileSync("git", ["diff", "--name-only", "HEAD", "--", ...frozen], { cwd: ROOT, encoding: "utf8" })).toBe("");
+    expect(readdirMigrations().at(-1)).toMatch(/_0042_/);
+  });
+});
+
+function readdirMigrations(): string[] {
+  return execFileSync("git", ["ls-files", "--others", "--cached", "--exclude-standard", "supabase/migrations"], { cwd: ROOT, encoding: "utf8" }).trim().split("\n").sort();
+}
+
+describe("033E-B V–AF: Portal UI", () => {
+  const CLIENT_SRC = "app/portal/[token]/portal-guest-tool.tsx";
+
+  it("V/W/X/Y/AA/AE/AF: actions per state; in-page regenerate confirmation; no confirm(), storage, query param, QR/import/messaging", async () => {
+    const { PortalGuestTool } = await import("../../../../app/portal/[token]/portal-guest-tool");
+    const rows = [
+      { guestId: GUEST_A1, displayName: "A", invitationVariant: "GROOM" as const, status: "ACTIVE" as const, linkStatus: "NOT_ISSUED" as const },
+      { guestId: GUEST_A2, displayName: "B", invitationVariant: "BRIDE" as const, status: "ACTIVE" as const, linkStatus: "ISSUED" as const },
+      { guestId: GUEST_B1, displayName: "C", invitationVariant: null, status: "ACTIVE" as const, linkStatus: "NOT_ISSUED" as const },
+    ];
+    const html = renderToStaticMarkup(<PortalGuestTool token="t" mode="GROOM_OR_BRIDE" guests={rows} />);
+    expect(html.match(/>Tạo link</g)).toHaveLength(1);
+    expect(html.match(/>Tạo lại link</g)).toHaveLength(1);
+    expect(html).not.toMatch(/\/g\/|Sao chép|data-portal-guest-issued-link/);
+    const src = strip(read(CLIENT_SRC));
+    expect(src).toMatch(/Tạo lại link sẽ làm link cũ không còn hiệu lực\./);
+    expect(src).toMatch(/setConfirmRegenerate\(guest\.guestId\)[\s\S]*submitLink\(guest, "ISSUE"\)/);
+    expect(src).toMatch(/onClick=\{\(\) => submitLink\(guest, "REGENERATE"\)\}[^>]*>\s*Xác nhận tạo lại/);
+    expect(src).not.toMatch(/\bconfirm\(|window\.confirm|localStorage|sessionStorage|indexedDB|document\.cookie|searchParams|history\.|\?link=|QR|qrcode|sms:|zalo|mailto:|csv|xlsx/i);
+    expect(src).toMatch(/\/access-link`, "POST", \{ action \}, okText\)/);
+    expect(src).not.toMatch(/projectId/);
+  });
+
+  it("Z/AD: the one-time panel shows the URL, the one-time warning, copy + close; every new control is ≥44px (min-h-11)", async () => {
+    const { IssuedLinkPanel } = await import("../../../../app/portal/[token]/portal-guest-tool");
+    const path = `/i/wc-a-groom/g/${"x".repeat(43)}`;
+    const html = renderToStaticMarkup(<IssuedLinkPanel link={{ guestId: GUEST_A1, path, regenerated: false }} onClose={() => {}} />);
+    expect(html).toContain(`value="${path}"`);
+    expect(html).toContain("Link này chỉ hiển thị một lần. Hãy sao chép và gửi cho khách mời.");
+    expect(html).not.toContain("Đã sao chép");
+    const regen = renderToStaticMarkup(<IssuedLinkPanel link={{ guestId: GUEST_A1, path, regenerated: true }} onClose={() => {}} />);
+    expect(regen).toContain("Link cũ không còn hiệu lực");
+    const src = read(CLIENT_SRC);
+    for (const label of ["Sao chép link", "Đóng", "Xác nhận tạo lại", "Tạo lại link\" : \"Tạo link"]) {
+      const at = src.indexOf(label);
+      expect(at, label).toBeGreaterThan(0);
+      const opening = src.lastIndexOf("<button", at);
+      expect(src.slice(opening, at), label).toMatch(/min-h-11/);
+    }
+    const regenerateCancel = src.slice(src.indexOf("data-portal-guest-regenerate-confirm"), src.indexOf(") : confirmRevoke ==="));
+    expect(regenerateCancel).toMatch(/<button [^\n]*min-h-11[^\n]*>\s*Huỷ/);
+  });
+
+  it("AB/AC: copy reports COPIED only after the clipboard write resolved; a rejection or missing API is FAILED", async () => {
+    const { copyPersonalizedLink } = await import("../../../../app/portal/[token]/portal-guest-tool");
+    const written: string[] = [];
+    expect(await copyPersonalizedLink(async (text) => void written.push(text), "https://x/i/s/g/t")).toBe("COPIED");
+    expect(written).toEqual(["https://x/i/s/g/t"]);
+    expect(await copyPersonalizedLink(() => Promise.reject(new Error("denied")), "u")).toBe("FAILED");
+    expect(await copyPersonalizedLink(undefined, "u")).toBe("FAILED");
+    expect(strip(read(CLIENT_SRC))).toMatch(/copy === "COPIED" \? "Đã sao chép" : copy === "FAILED"/);
   });
 });

@@ -1,4 +1,5 @@
 import type { InvitationVariant } from "../../domain";
+import type { GuestLinkGateway } from "../guest-links/guest-link-types";
 
 /**
  * Task 033E-A — Customer Portal Guest Tool foundation (list / create /
@@ -89,6 +90,28 @@ export interface CustomerPortalGuestTool {
   mode: PortalGuestToolMode;
   /** Active guests first, then revoked; each group in the repository's order. */
   guests: CustomerPortalGuestRow[];
+}
+
+/**
+ * Task 033E-B — the "client" handed to the shared `issueGuestLink` by the
+ * Portal: the PORTAL-resolved Project the gateway is pinned to. Every
+ * gateway call fails closed unless its `projectId` equals this one.
+ */
+export interface PortalPinnedProject {
+  readonly projectId: string;
+}
+
+/** Server-only, Project-pinned (service_role) implementation of the shared 033B1 issuance seam. */
+export type PortalGuestLinkGateway = GuestLinkGateway<PortalPinnedProject>;
+
+/**
+ * Successful Portal ISSUE / REGENERATE. `personalizedUrl` is the relative
+ * `/i/<slug>/g/<raw token>` path — the raw token's only appearance, returned
+ * once and never stored. No Project/guest id, hash, hint or timestamp.
+ */
+export interface PortalIssuedGuestLink {
+  personalizedUrl: string;
+  linkStatus: "ISSUED";
 }
 
 /** Stable 409 reason for the customer UI. */

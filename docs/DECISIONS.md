@@ -2070,3 +2070,15 @@ Implemented by `app/portal/[token]/portal-guest-tool.tsx`, `app/api/v2/public/po
 5. **Link state is read-only** in 033E-A. There is no ISSUE/REGENERATE.
 6. **Carry-forward to 033E-B (Owner Option A).** The 033B1 ISSUE-vs-side-change race is fail-closed (at worst a dead link) and accepted here. 033E-B must add an `invitation_variant` predicate, or equivalent race-safe protection, to the issuance replacement write. `replaceGuestToken` is unchanged in 033E-A.
 7. **Unchanged deferrals.** The policy for issued links after the add-on is revoked; PORTAL link listing/revoke (pre-production); rate limiting (Task 035).
+
+## Task 033E-B — Portal Personalized Guest Link ISSUE / REGENERATE (2026-10-05)
+
+Implemented by `app/api/v2/public/portal/guests/[guestId]/access-link/route.ts`, `issuePortalGuestLink` (`lib/server/customer-portal/portal-guest-tool.ts`), `getServiceRolePortalGuestLinkGateway` (`lib/server/supabase/portal-guest-repository.ts`) and the Guest Tool UI. No migration. See `docs/API_CONTRACT.md` §26.
+
+1. **Shared use case.** The Portal reuses the actor-neutral 033B1 `issueGuestLink` with its own Project-pinned service_role gateway; no issuance rule is duplicated in the Portal route. The staff support route is unchanged apart from the race predicate.
+2. **Authorization.** PORTAL token → resolved Project → publication + PERSONALIZED_GUEST gate (re-checked every request) → guest proved inside that Project. The browser sends only `{ action }`; ISSUE vs REGENERATE validity comes from `token_issued_at`.
+3. **Published requirement.** The Portal issues a link only for the guest's own variant invitation when it is validly PUBLISHED (422 otherwise, no fallback). The staff path keeps its frozen "publication not required" rule.
+4. **One-time raw link.** Returned once as a relative `/i/<slug>/g/<token>`; never stored, logged or recoverable. REGENERATE invalidates the previous link immediately; one active token, no history table.
+5. **033B1 race fixed.** `ReplaceGuestTokenParams.expectedInvitationVariant` is enforced by both gateways in the same single conditional UPDATE. A concurrent side change → 409, never a dead link (closes the 033E-A carry-forward).
+6. **UI.** "Tạo link" / "Tạo lại link" (in-page confirmation), a one-time panel with copy that reports success only after the clipboard write resolved. Side locked after issuance (§25).
+7. **Unchanged deferrals.** Already-issued links after add-on revocation keep resolving (owner decision deferred); QR, messaging, import, bulk actions; PORTAL link listing/revoke; rate limiting (Task 035).

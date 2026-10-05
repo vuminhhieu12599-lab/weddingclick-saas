@@ -14,6 +14,9 @@ const VARIANT_LABELS: Readonly<Record<InvitationVariant, string>> = {
 
 type Side = "GROOM" | "BRIDE";
 type Notice = { tone: "ok" | "error"; text: string };
+/** Task 033E-B — the one-time raw link, in component memory only (never storage, URL or metadata). */
+type IssuedLink = { guestId: string; path: string; regenerated: boolean };
+type CopyState = "IDLE" | "COPIED" | "FAILED";
 
 /** Fixed Vietnamese messages; server text is never shown to the customer. */
 export function guestToolErrorNotice(status: number, reason: unknown): Notice {
@@ -25,6 +28,9 @@ export function guestToolErrorNotice(status: number, reason: unknown): Notice {
   }
   if (status === 409) {
     return { tone: "error", text: "Danh sách vừa thay đổi. Trang đã được tải lại, vui lòng thử lại." };
+  }
+  if (status === 422) {
+    return { tone: "error", text: "Thiệp của khách này chưa sẵn sàng để tạo link. Vui lòng liên hệ WeddingClick." };
   }
   if (status === 400) {
     return { tone: "error", text: `Thông tin chưa hợp lệ. Tên khách cần từ 1 đến ${GUEST_DISPLAY_NAME_MAX_LENGTH} ký tự.` };
@@ -64,13 +70,73 @@ interface PortalGuestToolProps {
   readonly guests: readonly CustomerPortalGuestRow[];
 }
 
+/** Relative `/i/<slug>/g/<token>` from the server → absolute with this origin (no SITE_URL exists). */
+function absoluteLink(path: string): string {
+  return typeof window === "undefined" ? path : `${window.location.origin}${path}`;
+}
+
+/** "COPIED" only after the clipboard write resolved; any failure (or no clipboard API) is "FAILED". */
+export async function copyPersonalizedLink(writeText: ((text: string) => Promise<void>) | undefined, url: string): Promise<CopyState> {
+  try {
+    if (writeText === undefined) return "FAILED";
+    await writeText(url);
+    return "COPIED";
+  } catch {
+    return "FAILED";
+  }
+}
+
+/**
+ * One-time personalized link panel (Task 033E-B). On a copy failure the link
+ * stays visible for manual copy.
+ */
+export function IssuedLinkPanel({ link, onClose }: { link: IssuedLink; onClose: () => void }) {
+  const [copy, setCopy] = useState<CopyState>("IDLE");
+  const url = absoluteLink(link.path);
+
+  async function handleCopy() {
+    const clipboard = typeof navigator === "undefined" ? undefined : navigator.clipboard;
+    setCopy(await copyPersonalizedLink(clipboard === undefined ? undefined : (text) => clipboard.writeText(text), url));
+  }
+
+  return (
+    <div className="mt-2 space-y-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900" data-portal-guest-issued-link>
+      <p className="font-medium">{link.regenerated ? "Đã tạo link mới. Link cũ không còn hiệu lực." : "Đã tạo link riêng cho khách."}</p>
+      <p className="text-xs">Link này chỉ hiển thị một lần. Hãy sao chép và gửi cho khách mời.</p>
+      <input
+        readOnly
+        aria-label="Link riêng của khách"
+        value={url}
+        onFocus={(event) => event.currentTarget.select()}
+        className="min-h-11 w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm text-stone-800"
+      />
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => void handleCopy()} className="min-h-11 rounded-lg bg-stone-900 px-3 py-1.5 text-sm font-medium text-white">
+          Sao chép link
+        </button>
+        <button type="button" onClick={onClose} className="min-h-11 rounded-lg border border-emerald-300 px-3 py-1.5 text-sm text-emerald-900">
+          Đóng
+        </button>
+        <span role="status" className="text-xs">
+          {copy === "COPIED" ? "Đã sao chép" : copy === "FAILED" ? "Không sao chép được. Hãy chọn link ở ô trên và sao chép thủ công." : ""}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Task 033E-A Guest Tool (Customer Portal). Sends only { displayName[,
  * invitationVariant] } with the PORTAL token as Bearer; the server binds the
  * Project and re-checks the add-on. The token lives only in this component's
  * props (no browser storage). One synchronous pending guard for every action;
  * success only after the server confirmed, then the list re-renders from the
- * server. No link ISSUE / REGENERATE, restore or delete.
+ * server. No restore or delete.
+ *
+ * Task 033E-B: "Tạo link" (ISSUE) / "Tạo lại link" (REGENERATE, after an
+ * in-page confirmation) send only `{ action }`; the server decides validity
+ * from canonical state. The returned raw link is shown once from component
+ * memory and dropped on close, on a later issue, on revoke and on reload.
  */
 export function PortalGuestTool({ token, mode, guests }: PortalGuestToolProps) {
   const router = useRouter();
@@ -82,9 +148,12 @@ export function PortalGuestTool({ token, mode, guests }: PortalGuestToolProps) {
   const [newSide, setNewSide] = useState<Side | null>(null);
   const [editing, setEditing] = useState<{ guestId: string; name: string; side: Side | null } | null>(null);
   const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null);
+  const [confirmRegenerate, setConfirmRegenerate] = useState<string | null>(null);
+  const [issuedLink, setIssuedLink] = useState<IssuedLink | null>(null);
 
-  async function send(path: string, method: "POST" | "PATCH", body: unknown, okText: string): Promise<boolean> {
-    if (inFlight.current) return false;
+  /** The parsed 2xx body, or `null` after a failure notice. */
+  async function send(path: string, method: "POST" | "PATCH", body: unknown, okText: string): Promise<{ payload: unknown } | null> {
+    if (inFlight.current) return null;
     inFlight.current = true;
     setPending(true);
     setNotice(null);
@@ -96,18 +165,19 @@ export function PortalGuestTool({ token, mode, guests }: PortalGuestToolProps) {
         cache: "no-store",
       });
       if (response.ok) {
+        const payload: unknown = await response.json().catch(() => null);
         setNotice({ tone: "ok", text: okText });
         router.refresh();
-        return true;
+        return { payload };
       }
       const payload: unknown = await response.json().catch(() => null);
       const reason = typeof payload === "object" && payload !== null && "reason" in payload ? payload.reason : undefined;
       setNotice(guestToolErrorNotice(response.status, reason));
       if (response.status === 409) router.refresh();
-      return false;
+      return null;
     } catch {
       setNotice(guestToolErrorNotice(0, undefined));
-      return false;
+      return null;
     } finally {
       inFlight.current = false;
       setPending(false);
@@ -147,7 +217,24 @@ export function PortalGuestTool({ token, mode, guests }: PortalGuestToolProps) {
   async function submitRevoke(guest: CustomerPortalGuestRow) {
     if (await send(`/api/v2/public/portal/guests/${encodeURIComponent(guest.guestId)}/revoke`, "POST", undefined, "Đã thu hồi khách.")) {
       setConfirmRevoke(null);
+      setIssuedLink((current) => (current?.guestId === guest.guestId ? null : current));
     }
+  }
+
+  async function submitLink(guest: CustomerPortalGuestRow, action: "ISSUE" | "REGENERATE") {
+    // Any previously shown raw link is dropped before a new request.
+    setIssuedLink(null);
+    const okText = action === "ISSUE" ? "Đã tạo link." : "Đã tạo lại link.";
+    const sent = await send(`/api/v2/public/portal/guests/${encodeURIComponent(guest.guestId)}/access-link`, "POST", { action }, okText);
+    setConfirmRegenerate(null);
+    if (sent === null) return;
+    const data = typeof sent.payload === "object" && sent.payload !== null && "data" in sent.payload ? sent.payload.data : null;
+    const path = typeof data === "object" && data !== null && "personalizedUrl" in data ? data.personalizedUrl : null;
+    if (typeof path !== "string" || !path.startsWith("/i/")) {
+      setNotice({ tone: "error", text: "Link đã được tạo nhưng không hiển thị được. Vui lòng bấm Tạo lại link." });
+      return;
+    }
+    setIssuedLink({ guestId: guest.guestId, path, regenerated: action === "REGENERATE" });
   }
 
   const active = guests.filter((guest) => guest.status === "ACTIVE");
@@ -259,7 +346,20 @@ export function PortalGuestTool({ token, mode, guests }: PortalGuestToolProps) {
                       {guest.invitationVariant === null ? "Chưa chọn nhà trai/nhà gái" : VARIANT_LABELS[guest.invitationVariant]} ·{" "}
                       {guest.linkStatus === "ISSUED" ? "Đã cấp link" : "Chưa cấp link"}
                     </p>
-                    {confirmRevoke === guest.guestId ? (
+                    {issuedLink?.guestId === guest.guestId && <IssuedLinkPanel key={issuedLink.path} link={issuedLink} onClose={() => setIssuedLink(null)} />}
+                    {confirmRegenerate === guest.guestId ? (
+                      <div className="mt-2 rounded-lg bg-amber-50 p-2 text-sm text-amber-900" data-portal-guest-regenerate-confirm>
+                        <p>Tạo lại link sẽ làm link cũ không còn hiệu lực. Khách sẽ cần link mới để mở thiệp.</p>
+                        <div className="mt-2 flex gap-2">
+                          <button type="button" disabled={pending} onClick={() => submitLink(guest, "REGENERATE")} className="min-h-11 rounded-lg bg-stone-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
+                            Xác nhận tạo lại
+                          </button>
+                          <button type="button" disabled={pending} onClick={() => setConfirmRegenerate(null)} className="min-h-11 rounded-lg border border-amber-200 px-3 py-1.5 text-sm disabled:opacity-50">
+                            Huỷ
+                          </button>
+                        </div>
+                      </div>
+                    ) : confirmRevoke === guest.guestId ? (
                       <div className="mt-2 rounded-lg bg-red-50 p-2 text-sm text-red-800">
                         <p>Thu hồi khách này? Link riêng (nếu có) sẽ ngừng hoạt động ngay. Phản hồi tham dự đã gửi vẫn được giữ.</p>
                         <div className="mt-2 flex gap-2">
@@ -272,13 +372,33 @@ export function PortalGuestTool({ token, mode, guests }: PortalGuestToolProps) {
                         </div>
                       </div>
                     ) : (
-                      <div className="-ml-2 mt-1 flex gap-1">
+                      <div className="-ml-2 mt-1 flex flex-wrap gap-1">
+                        {guest.invitationVariant !== null && (
+                          <button
+                            type="button"
+                            disabled={pending}
+                            onClick={() => {
+                              setConfirmRevoke(null);
+                              setEditing(null);
+                              setNotice(null);
+                              if (guest.linkStatus === "ISSUED") {
+                                setConfirmRegenerate(guest.guestId);
+                              } else {
+                                void submitLink(guest, "ISSUE");
+                              }
+                            }}
+                            className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-sm font-medium text-stone-900 underline disabled:opacity-50"
+                          >
+                            {guest.linkStatus === "ISSUED" ? "Tạo lại link" : "Tạo link"}
+                          </button>
+                        )}
                         <button
                           type="button"
                           disabled={pending}
                           onClick={() => {
                             setEditing({ guestId: guest.guestId, name: guest.displayName, side: guest.invitationVariant === "GROOM" || guest.invitationVariant === "BRIDE" ? guest.invitationVariant : null });
                             setConfirmRevoke(null);
+                            setConfirmRegenerate(null);
                             setNotice(null);
                           }}
                           className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-sm text-stone-700 underline disabled:opacity-50"
@@ -290,6 +410,7 @@ export function PortalGuestTool({ token, mode, guests }: PortalGuestToolProps) {
                           disabled={pending}
                           onClick={() => {
                             setConfirmRevoke(guest.guestId);
+                            setConfirmRegenerate(null);
                             setEditing(null);
                             setNotice(null);
                           }}

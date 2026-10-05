@@ -15,8 +15,8 @@ import { GUEST_LINK_ACTIONS, type GuestLinkAction, type GuestLinkGateway, type I
  *
  * Actor-neutral: the caller has already authorized access to this Project
  * and passes the matching data client + gateway (today: the staff support
- * route after `requireStaff`; later: the Customer Portal after PORTAL
- * link resolution, with a Project-pinned gateway). Both paths share every
+ * route after `requireStaff`; the Customer Portal Guest Tool after PORTAL
+ * link resolution, with a Project-pinned gateway — Task 033E-B). Both paths share every
  * rule below, including the PERSONALIZED_GUEST entitlement gate (403 when
  * absent). The gate applies to new ISSUE/REGENERATE only; already-issued
  * links are not affected here (owner decision deferred).
@@ -31,7 +31,10 @@ import { GUEST_LINK_ACTIONS, type GuestLinkAction, type GuestLinkGateway, type I
  * without a resolvable invitation variant (§7.3) is 422.
  *
  * The fresh raw token (32 CSPRNG bytes, base64url) exists only in the
- * returned path, after the conditional UPDATE confirmed one row.
+ * returned path, after the conditional UPDATE confirmed one row. That
+ * UPDATE also requires the guest's stored `invitation_variant` to still be
+ * the one the slug was resolved from (Task 033E-B race fix): a concurrent
+ * side change makes it match nothing → 409, never a dead link.
  */
 
 function parseAction(rawBody: unknown): GuestLinkAction {
@@ -90,6 +93,7 @@ export async function issueGuestLink<TClient>(
     projectId: rawProjectId,
     guestId: rawGuestId,
     expectIssued,
+    expectedInvitationVariant: target.invitationVariant,
     tokenHash: generated.tokenHash,
     tokenHint: generated.tokenHint,
   });

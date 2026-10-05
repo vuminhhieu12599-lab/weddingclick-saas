@@ -99,7 +99,10 @@ export const supabaseGuestLinkStaffGateway: GuestLinkGateway<SupabaseClient> = {
       .eq("id", params.guestId)
       .eq("project_id", params.projectId)
       .is("revoked_at", null);
-    const guarded = params.expectIssued ? base.not("token_issued_at", "is", null) : base.is("token_issued_at", null);
+    const issuance = params.expectIssued ? base.not("token_issued_at", "is", null) : base.is("token_issued_at", null);
+    // Task 033E-B: the side the slug was resolved from must still be stored.
+    const variant = params.expectedInvitationVariant;
+    const guarded = variant === null ? issuance.is("invitation_variant", null) : issuance.eq("invitation_variant", variant);
     const { data, error } = await guarded.select("id");
     if (error) {
       throw new Error("Failed to update guest link");

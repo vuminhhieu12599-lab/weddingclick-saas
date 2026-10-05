@@ -7,9 +7,9 @@ import type { InvitationVariant } from "../../domain";
  * data client + gateway; it does not authenticate anyone itself. Today the
  * only implementation is the staff SUPPORT/back-office gateway (staff
  * session, direct RLS on `guests`, docs/API_CONTRACT.md §7.5, no
- * activity-log event). The primary customer flow is the future Customer
- * Portal Guest Tool (PORTAL access link, entitlement-gated), which will
- * supply its own Project-pinned gateway. A gateway never reads or returns
+ * activity-log event). The primary customer flow is the Customer Portal
+ * Guest Tool (Task 033E-B: PORTAL access link, entitlement-gated), which
+ * supplies its own Project-pinned service_role gateway. A gateway never reads or returns
  * `token_hash`.
  */
 
@@ -32,6 +32,13 @@ export interface ReplaceGuestTokenParams {
   guestId: string;
   /** ISSUE: only while `token_issued_at IS NULL`; REGENERATE: only while it is set. Both set it to now. */
   expectIssued: boolean;
+  /**
+   * Task 033E-B race fix: the stored `guests.invitation_variant` (NULL kept as
+   * NULL) the issued path's slug was resolved from. The write matches only
+   * while it is unchanged, so a concurrent side change can never leave a
+   * dead link for the old side.
+   */
+  expectedInvitationVariant: InvitationVariant | null;
   tokenHash: Uint8Array;
   tokenHint: string;
 }
@@ -49,8 +56,9 @@ export interface GuestLinkGateway<TClient> {
   getInvitationSlug(client: TClient, projectId: string, variant: InvitationVariant): Promise<string | null>;
   /**
    * Conditional in-place rotation (`UPDATE guests SET token_hash, token_hint,
-   * token_issued_at` guarded on project, active guest and the expected
-   * `token_issued_at` state).
+   * token_issued_at` guarded on project, active guest, the expected
+   * `token_issued_at` state and, since Task 033E-B, the expected
+   * `invitation_variant` — one atomic statement).
    * `false` = no row matched (concurrent change) — nothing written.
    */
   replaceGuestToken(client: TClient, params: ReplaceGuestTokenParams): Promise<boolean>;

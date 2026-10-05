@@ -2,13 +2,16 @@ import { requiredInvitationVariantsForPackage, resolveGuestInvitationVariant, no
 import { resolveAccessLink } from "../access-links/resolve-access-link";
 import { generateDormantGuestTokenHash } from "../auth/dormant-guest-token";
 import { ApiError } from "../errors/api-error";
+import { issueGuestLink } from "../guest-links/issue-guest-link";
 import type { AccessLinkResolutionRepository } from "../supabase/access-link-resolution-repository";
 import { isValidUuid } from "../validation/uuid";
 import type {
   CustomerPortalGuestRow,
   PortalGuestConflictReason,
   PortalGuestGateway,
+  PortalGuestLinkGateway,
   PortalGuestRecord,
+  PortalIssuedGuestLink,
   PortalGuestToolMode,
   UpdatePortalGuestParams,
 } from "./portal-guest-types";
@@ -26,12 +29,15 @@ import type {
  *
  * The browser never supplies a Project id. A guest id only targets a row of
  * the resolved Project; a foreign or unknown id is 404 (no oracle). No
- * personalized link ISSUE / REGENERATE, restore or delete exists here.
+ * restore or delete exists here. Personalized link ISSUE / REGENERATE (Task
+ * 033E-B) delegates to the shared 033B1 `issueGuestLink` with a gateway
+ * pinned to the resolved Project.
  */
 
 export interface PortalGuestToolDependencies {
   resolution: AccessLinkResolutionRepository;
   guests: PortalGuestGateway;
+  guestLinks: PortalGuestLinkGateway;
   now?: () => Date;
 }
 
@@ -229,4 +235,45 @@ export async function revokePortalGuest(
     throw new PortalGuestConflictError("ALREADY_REVOKED", "Guest is already revoked");
   }
   throw new PortalGuestConflictError("CONCURRENT_CHANGE", "Guest changed concurrently; reload and retry");
+}
+
+/**
+ * POST /api/v2/public/portal/guests/[guestId]/access-link (Task 033E-B) —
+ * body `{ action: "ISSUE" | "REGENERATE" }`. After the Portal gate (PORTAL
+ * token → Project, published, entitled), the shared `issueGuestLink` runs
+ * with the Project-pinned gateway: it re-checks the entitlement, decides
+ * ISSUE vs REGENERATE validity from `token_issued_at` (never the browser),
+ * refuses revoked guests, resolves the variant (§7.3) and the PUBLISHED slug,
+ * and rotates the token in one conditional UPDATE that also pins the
+ * variant. A 409 is classified read-only into a stable reason.
+ */
+export async function issuePortalGuestLink(
+  rawToken: string,
+  rawGuestId: string,
+  readBody: () => Promise<unknown>,
+  deps: PortalGuestToolDependencies,
+): Promise<PortalIssuedGuestLink> {
+  const { projectId } = await authorizeGuestTool(rawToken, deps);
+  const guestId = targetGuestId(rawGuestId);
+  let body: unknown;
+  try {
+    body = await readBody();
+  } catch {
+    throw new ApiError("BAD_REQUEST", "Request body must be { action }");
+  }
+
+  try {
+    const issued = await issueGuestLink(projectId, guestId, body, { projectId }, deps.guestLinks);
+    return { personalizedUrl: issued.invitationPath, linkStatus: "ISSUED" };
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.kind !== "CONFLICT") throw error;
+    const state = await deps.guests.getGuestState(projectId, guestId);
+    if (state === null) {
+      throw new ApiError("NOT_FOUND", "Guest not found");
+    }
+    if (state.revoked) {
+      throw new PortalGuestConflictError("GUEST_REVOKED", "Guest is revoked");
+    }
+    throw new PortalGuestConflictError("CONCURRENT_CHANGE", "Guest changed concurrently; reload and retry");
+  }
 }

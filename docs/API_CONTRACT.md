@@ -1021,7 +1021,7 @@ Staff support path: staff Bearer session + `requireStaff` (auth before validatio
 | `ISSUE` | `revoked_at IS NULL` and `token_issued_at IS NULL` | in-place replacement of the dormant `token_hash`/`token_hint` (§2.19 [R14]); `token_issued_at` = now |
 | `REGENERATE` | `revoked_at IS NULL` and `token_issued_at IS NOT NULL` | same replacement, `token_issued_at` = now; the previous token stops resolving immediately |
 
-The UPDATE is conditional on project, `revoked_at IS NULL` and the expected `token_issued_at` state, so concurrent calls cannot both succeed. `token_issued_at` is the issuing server's clock (PostgREST cannot send `now()`). No token history, one active token per guest.
+The UPDATE is conditional on project, `revoked_at IS NULL` and the expected `token_issued_at` state, so concurrent calls cannot both succeed. *Task 033E-B:* it is also conditional on the guest's stored `invitation_variant` being the one the slug was resolved from (`expectedInvitationVariant`; NULL matched with `IS NULL`), so a concurrent side change yields 409 instead of a dead link (§26). `token_issued_at` is the issuing server's clock (PostgREST cannot send `now()`). No token history, one active token per guest.
 
 | Condition | HTTP |
 |---|---|
@@ -1160,6 +1160,48 @@ Errors: 400 malformed body / name / side; 401 no Bearer; 403 not entitled (or no
 
 **Boundary.** `lib/server/supabase/portal-guest-repository.ts` (service_role, server-only, the only new service_role importer) is wired by `lib/server/customer-portal/portal-guest-supabase.ts` (routes) and `customer-portal-supabase.ts` (page). The client component `app/portal/[token]/portal-guest-tool.tsx` keeps the token only in props/memory (no browser storage) and uses a synchronous pending guard against double submits. It shows success only after a 2xx and then calls `router.refresh()`. Revoke uses an in-page confirmation, not `confirm()`.
 
-**Known carry-forward (Owner Option A).** Frozen 033B1 `replaceGuestToken` does not condition on `invitation_variant`. A staff ISSUE racing a customer side change (both legal while `token_issued_at IS NULL`) can issue a link for the old side's slug, which never resolves. This fails closed: no cross-Project access or data exposure. Accepted for 033E-A; **Task 033E-B must add an `invitation_variant` predicate (or equivalent) to issuance replacement.**
+**Known carry-forward (Owner Option A) — fixed in Task 033E-B (§26).** Frozen 033B1 `replaceGuestToken` did not condition on `invitation_variant`. A staff ISSUE racing a customer side change (both legal while `token_issued_at IS NULL`) can issue a link for the old side's slug, which never resolves. This fails closed: no cross-Project access or data exposure. Accepted for 033E-A; **Task 033E-B must add an `invitation_variant` predicate (or equivalent) to issuance replacement.**
 
-**Still deferred.** ISSUE/REGENERATE from the Portal (033E-B); the policy for already-issued links after the add-on itself is revoked (separate deferred decision; guest-level revoke above is distinct and immediate); PORTAL link listing/revoke (§23, pre-production); rate limiting (Task 035, pre-production).
+**Still deferred.** ISSUE/REGENERATE from the Portal (033E-B — now §26); the policy for already-issued links after the add-on itself is revoked (separate deferred decision; guest-level revoke above is distinct and immediate); PORTAL link listing/revoke (§23, pre-production); rate limiting (Task 035, pre-production).
+
+## 26. Task 033E-B — Portal personalized guest link ISSUE / REGENERATE
+
+**Scope.** Inside the §25 Guest Tool, an entitled couple can ISSUE the first personalized link of an active guest and REGENERATE an issued one. The raw link is shown once. No QR, SMS/Zalo/email sending, import, bulk issue/regenerate, restore, delete, customer login or RSVP mutation. **No migration** (0042 columns and the existing service_role grants on `guests` suffice).
+
+**Route.** `POST /api/v2/public/portal/guests/[guestId]/access-link`, `Authorization: Bearer <raw PORTAL token>`, body exactly `{ "action": "ISSUE" | "REGENERATE" }`. No Project id in path or body; any extra key is 400.
+
+**Authorization and flow.** raw PORTAL token → `resolveAccessLink({ expectedLinkType: "PORTAL" })` → resolved `projectId` → §25 gate (valid publication + active PERSONALIZED_GUEST, re-checked per request; 403 otherwise) → guest id shape (malformed = 404) → the **shared 033B1 `issueGuestLink`** with the Portal's Project-pinned gateway (`getServiceRolePortalGuestLinkGateway`, service_role, server-only; its "client" is `{ projectId }` and every call for another Project fails closed). The use case re-checks the entitlement, requires the guest to exist in that Project (a Project-B guest id under a Project-A token is 404), refuses revoked guests, decides ISSUE vs REGENERATE validity from `token_issued_at` (never the browser), resolves the variant (§7.3) and slug, and rotates the token. REVIEW/INTAKE links, guest tokens, slugs and UUIDs are not Portal auth (404).
+
+| Action | Allowed when | Effect |
+|---|---|---|
+| `ISSUE` | active and `token_issued_at IS NULL` | fresh 32-byte token; `token_hash` = SHA-256, `token_hint` = last 8 chars, `token_issued_at` = now |
+| `REGENERATE` | active and `token_issued_at IS NOT NULL` | same in-place replacement; the previous token stops resolving immediately (one active token, no history) |
+
+**Published requirement (Portal gateway).** The slug is returned only when the guest's own variant invitation has a valid PUBLISHED pointer (pointer → `invitation_versions` row of the same invitation and Project, `version_type = 'PUBLISHED'`). Unpublished → 422, no fallback to another variant; a pointer integrity fault → fixed 500. The staff support path (§22.1) keeps its frozen rule (issuance does not require publication).
+
+**Variant.** COMMON guest (or NULL on a COMMON package) → the COMMON invitation's slug; SEPARATE GROOM → GROOM slug; BRIDE → BRIDE slug. Never guessed. URL format stays `/i/[slug]/g/[raw token]`; never `?guest=` or a guest id.
+
+**033B1 race fix.** Both gateways (staff and Portal) rotate in ONE conditional UPDATE on `id`, `project_id`, `revoked_at IS NULL`, the expected `token_issued_at` state **and `invitation_variant = <variant read by the use case>`** (`IS NULL` when NULL). PostgreSQL re-evaluates the WHERE clause under the row lock, so a concurrent §25 side change either lands first (the rotation matches 0 rows → 409, nothing written, no dead link) or lands after (it then hits the §25 side lock → 409 `SIDE_LOCKED`). The client never picks another variant.
+
+| Condition | HTTP |
+|---|---|
+| Success | 200 `{ data: { personalizedUrl, linkStatus: "ISSUED" } }` — `personalizedUrl` is the relative `/i/<slug>/g/<token>`, returned once |
+| No Bearer | 401 |
+| Not entitled / no valid publication | 403 |
+| Bad body / unknown action / extra key | 400 |
+| Guest not in this Project, malformed id, non-PORTAL or unknown token | 404 |
+| Revoked guest | 409 `reason: "GUEST_REVOKED"` |
+| ISSUE when issued, REGENERATE before ISSUE, lost race (incl. side change) | 409 `reason: "CONCURRENT_CHANGE"` |
+| Revoked/expired PORTAL link | 410 |
+| Variant unresolvable or its invitation not published | 422 |
+| Unexpected | fixed 500, fixed log `[handlePortalGuestRequest] Unexpected error` |
+
+Never serialized: Project id, guest id, `token_hash`, `token_hint`, `token_issued_at`, staff metadata. Every response is `no-store`. No absolute URL is built on the server (no SITE_URL); the browser prefixes its own origin.
+
+**Raw-token safety.** The raw token exists only in the success response. It is never stored, logged, put in metadata, docs or browser storage, and cannot be recovered later (the hint is 8 of 43 chars and is never returned to the Portal). After a reload only "Đã cấp link" remains.
+
+**Portal UI.** Active rows show **Tạo link** (NOT_ISSUED) or **Tạo lại link** (ISSUED); hidden while a SEPARATE guest has no side. REGENERATE needs an in-page confirmation ("Tạo lại link sẽ làm link cũ không còn hiệu lực."; **Xác nhận tạo lại** / **Huỷ**), never `confirm()`. After success a one-time panel shows the absolute URL in a read-only field, "Link này chỉ hiển thị một lần…", **Sao chép link** and **Đóng**; after REGENERATE it also says the old link no longer works. "Đã sao chép" appears only after `navigator.clipboard.writeText` resolved; on failure a message asks for a manual copy and the URL stays visible. The raw link lives only in React memory and is dropped on close, on the next issue, on that guest's revoke and on reload. Every new control is ≥ 44 px (`min-h-11`). Once issued, a SEPARATE guest's side stays locked (§25).
+
+**Entitlement vs already-issued links (unchanged, deferred).** The add-on gates only new ISSUE/REGENERATE. If PERSONALIZED_GUEST is revoked after a link was issued, that link keeps resolving under frozen 0042; what should happen is still an open owner decision. Guest-level revoke (§25) is distinct and invalidates the link immediately.
+
+**Unchanged.** Staff support route §22.1 (product behavior; only the race predicate added), 0042 resolution, personalized page and RSVP (§22.2–§22.3), §24 RSVP owner-read.
