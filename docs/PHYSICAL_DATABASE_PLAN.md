@@ -574,6 +574,8 @@ Purpose: stable, fully immutable Review/Published snapshots.
 
 **Public RSVP write (Task 033A, migration 0040):** `submit_public_rsvp(public_slug, attendance, party_size, message, guest_name)` (`SECURITY DEFINER`, `SET search_path = ''`, `EXECUTE` for `service_role` only) re-validates the RSVP input (`RS001`), resolves the slug to its current `PUBLISHED` version exactly as 0039 (`PI001` on mismatch) and inserts one non-personalized `rsvps` row (§2.20: `guest_id` NULL, typed name in `guest_display_name_snapshot`) for that Project. Unknown slug or `published_version_id IS NULL` → `NULL`, nothing written. It never reads `rsvps`, `guests`, review pointers or draft tables.
 
+**Public social-share cover read (Task 032B, migration 0041):** `get_public_social_share_cover(public_slug)` (`STABLE SECURITY DEFINER`, `SET search_path = ''`, `EXECUTE` for `service_role` only, writes nothing) requires the slug's current `PUBLISHED` version exactly as 0039 (`PI001` on mismatch), derives the Project and returns `{"cover": …|null}` with only the effective `SOCIAL_SHARE_COVER` row's storage bucket/path, MIME type, width, height and alt text (`sort_order`, then `id`). It is never pinned to a version and never falls back to `COVER`. Unknown slug or `published_version_id IS NULL` → `NULL`.
+
 `media_refs UUID[]` from Revision 1 is **removed** — replaced entirely by the `invitation_version_media` junction table (§2.15, §R15).
 
 Constraints:
@@ -1374,6 +1376,7 @@ Both 0021 and 0022 are privilege/workflow tightening only, not schema shape chan
 | `0038_publish_invitation` | Task 031: `publish_invitation` audited staff RPC — copy-on-publish of the approved current REVIEW (payload/binding/media pins), compare-and-set on both pointers, `published_version_id` advance, aggregate `PUBLISHED` status (§2.14, §8 F) — no table shape change | authored; **not applied**, to be pushed by the Product Owner |
 | `0039_public_invitation_read` | Task 032A: read-only, service_role-only `get_public_invitation(public_slug)` — resolves `project_invitations.public_slug` to the exact PUBLISHED row referenced by `published_version_id` (same invitation + Project, else `PI001`) and returns its persisted payload, pinned template/renderer binding and only its `invitation_version_media` storage references; unknown/unpublished → NULL, no REVIEW fallback (§2.13–§2.15) — no table shape change, no table grant | authored; **not applied**, to be pushed by the Product Owner |
 | `0040_submit_public_rsvp` | Task 033A: service_role-only `submit_public_rsvp(...)` — slug → current PUBLISHED version (same invitation + Project, else `PI001`) → one non-personalized `rsvps` insert (`guest_id` NULL); invalid input `RS001`; unknown/unpublished → NULL (§2.20) — no table shape change, no table grant | authored; **not applied**, to be pushed by the Product Owner |
+| `0041_public_social_share_cover` | Task 032B: read-only, service_role-only `get_public_social_share_cover(public_slug)` — current PUBLISHED version required (same invitation + Project, else `PI001`) → the Project's effective `SOCIAL_SHARE_COVER` storage reference only (§2.9); no COVER fallback — no table shape change, no table grant | authored; **not applied**, to be pushed by the Product Owner |
 
 No production-database application of any migration is recorded in this document.
 

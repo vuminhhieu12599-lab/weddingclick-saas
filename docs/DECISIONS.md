@@ -1921,7 +1921,7 @@ Architecture may leave room for these later, but they must not delay V1.
 - One effective row is chosen like every single role (`sort_order`, then `id`); older rows stay so it remains replaceable. It is uploaded, replaced and deleted only through the existing Task 024 media workflow.
 - It is publication metadata, not invitation-body content. It never enters the Snapshot, the `InvitationViewModel` or any renderer. The Snapshot builder accepts the row and does not project it.
 - The future publish / public metadata layer resolves `SOCIAL_SHARE_COVER` → a runtime-signed absolute URL → the Open Graph / social image at metadata-generation time. Nothing is signed or stored at draft time (accessor: `lib/server/media/social-share-cover.ts`).
-- When none is chosen, staff see "Chưa chọn ảnh chia sẻ". No fallback (for example to `COVER` or a Gallery image) is decided. That policy belongs to the future public-metadata task.
+- When none is chosen, staff see "Chưa chọn ảnh chia sẻ". No fallback (for example to `COVER` or a Gallery image) is decided. That policy belongs to the future public-metadata task. *Decided by Task 032B: no fallback — no `og:image` when none is chosen.*
 
 ## Task 030 — Review Snapshot Foundation (2026-10-03)
 
@@ -2010,3 +2010,16 @@ Implemented by migration `0040_submit_public_rsvp.sql` (`submit_public_rsvp`), `
 5. **No fake success.** `SUCCESS` only after a 201 confirming the persisted row; 400 → `INVALID`, 404 → `UNAVAILABLE`, anything else → `FAILED`.
 6. **Containment.** One new `service_role` module (the RPC repository), imported only by the route wiring. `EXECUTE` for `service_role` only; no table grant or RLS policy changed.
 7. **Unchanged.** Staff Preview and Customer Review stay UNAVAILABLE-only (no write). `InvitationRendererHost` is unchanged and still supplies no RSVP; only the public wrapper does. Elegant Editorial v1 is visually untouched. Open Graph remains Task 032B; rate limiting remains the Task 035 pre-production gate.
+
+## Task 032B — Open Graph + Social Share Cover (2026-10-05)
+
+Implemented by migration `0041_public_social_share_cover.sql` (`get_public_social_share_cover`) and `generateMetadata` on `app/i/[slug]/page.tsx`. See `docs/API_CONTRACT.md` §21.
+
+1. **`SOCIAL_SHARE_COVER` is project-level publication metadata**, independent of `COVER`, the Snapshot, the ViewModel, `invitation_version_media` and every renderer. Staff can change it without republishing; metadata reads the current effective row (`sort_order`, `id`) at request time.
+2. **No fallback.** If none is chosen (or the effective row is not an image), the metadata has no `og:image`. `COVER` or Gallery images are never used.
+3. **Only a published slug exposes metadata.** The RPC requires the current PUBLISHED version and derives the Project; anything else gets the generic title only.
+4. **Runtime signing only.** Exactly the one returned object is signed (1 hour). The URL is never persisted or logged.
+5. **Title/description.** Couple names in the canonical primary → secondary order from the PUBLISHED Snapshot, plus a fixed generic Vietnamese description. No `og:url` (no trusted site-URL configuration).
+6. **`noindex` stays.** Invitations remain unindexed; Open Graph previews are unaffected.
+7. **Crawler validation** needs a public HTTPS deployment. Facebook's crawler gets blocking `<head>` metadata by Next.js default; Zalo's is not in the default HTML-limited bot list, which must be verified then.
+8. **Unchanged:** Task 032A rendering, Task 033A RSVP, Elegant Editorial v1, the staff "Ảnh chia sẻ mạng xã hội" control.

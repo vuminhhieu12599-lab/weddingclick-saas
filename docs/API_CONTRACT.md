@@ -931,7 +931,7 @@ Server-rendered page `app/i/[slug]/page.tsx`. No staff session, no customer toke
 | Invitation with `published_version_id IS NULL` | not-found (404) — never REVIEW or draft |
 | Pointer/Snapshot binding mismatch (`PI001` or TS gate), unregistered renderer, media-signing failure, any other fault | fixed safe message "Chưa thể hiển thị thiệp"; no slug, id or database detail is shown or logged |
 
-**Caching.** `export const dynamic = "force-dynamic"`: every request re-resolves the current `published_version_id` (a later republish moves the slug immediately) and signs fresh URLs. Metadata is a fixed title with `noindex` until Task 032B.
+**Caching.** `export const dynamic = "force-dynamic"`: every request re-resolves the current `published_version_id` (a later republish moves the slug immediately) and signs fresh URLs. Metadata is a fixed title with `noindex` until Task 032B. *Superseded by Task 032B (§21): metadata is generated per request, still `noindex`.*
 
 **Not in this task.** Open Graph / `SOCIAL_SHARE_COVER` metadata (Task 032B), RSVP persistence (Task 033), guest tokens/personalization, QR/share/analytics, republish lifecycle changes, rollback/unpublish.
 
@@ -967,3 +967,26 @@ Every response is `Cache-Control: no-store`. No database detail is returned; not
 **Client capability.** `app/i/[slug]/public-invitation-renderer.tsx` (client) builds the RSVP capability in the client graph and passes it to the host core. Mapping: 201 with `recorded: true` → `SUCCESS`; 400 → `INVALID`; 404 → `UNAVAILABLE`; any other status, unexpected body or network error → `FAILED`. Staff Preview and Customer Review keep the UNAVAILABLE-only wrapper and never write.
 
 **Not in this task.** Personalized guest tokens / guest resolve (no issuance or resolution contract exists yet; Task 032/033 guest workflow), RSVP read/portal/summary, rate limiting (Task 035 pre-production gate), Open Graph (Task 032B), analytics, republish lifecycle.
+
+## 21. Task 032B — Open Graph + Social Share Cover for `/i/[slug]`
+
+`generateMetadata` on `app/i/[slug]/page.tsx`, resolved per request (the page is `force-dynamic`). Invitation rendering and the Task 033A RSVP path are unchanged; one React `cache()` shares the single Task 032A PUBLISHED load between metadata and page.
+
+**Sources.**
+- **Title:** `"<primary> & <secondary> — Thiệp cưới"`, from the PUBLISHED Snapshot's ViewModel in the canonical variant order (`people.primary` → `people.secondary`: GROOM → groom first, BRIDE → bride first, COMMON → the resolver's order). Never the mutable draft.
+- **Description:** fixed generic text "Trân trọng kính mời bạn đến chung vui cùng chúng tôi." The Snapshot has no canonical description field.
+- **Image:** the Project's CURRENT effective `SOCIAL_SHARE_COVER`, read through `get_public_social_share_cover` (migration 0041, `STABLE SECURITY DEFINER`, `SET search_path = ''`, `EXECUTE` for `service_role` only). The RPC requires the slug's current PUBLISHED version (else NULL, or `PI001` on pointer mismatch), derives the Project, and returns only the `(sort_order, id)`-first `SOCIAL_SHARE_COVER` row's storage reference. It is image only (a non-image MIME is ignored; legacy NULL MIME is accepted) and must be in the `project-media` bucket. `lib/server/supabase/public-social-share-repository.ts` signs exactly that one object (`createSignedUrl`, 1 hour = the shared runtime media TTL). The URL is never persisted.
+
+**Emitted fields.** `title`, `description`, `robots: noindex, nofollow`, `og:type=website`, `og:locale=vi_VN`, `og:title`, `og:description`, and — only when a cover exists — `og:image` (+ `og:image:width`/`height` when stored, `og:image:alt` = the media's alt text or the title). No `og:url` and no `metadataBase`: there is no trusted public site-URL configuration, and request headers are not trusted.
+
+| Condition | Metadata |
+|---|---|
+| Published, cover chosen | full set including `og:image` |
+| Published, no cover (or non-image / signing failure) | full set without `og:image` — never a `COVER` fallback |
+| Malformed / unknown / unpublished slug, or load failure | generic title "Thiệp cưới — WeddingClick" + `noindex` only; no project data |
+
+**Freshness.** Staff can replace `SOCIAL_SHARE_COVER` without republishing; every request re-reads the effective row and signs a fresh URL. No cache invalidation infrastructure.
+
+**Crawlers.** `noindex` stays: it does not block Open Graph previews. Next.js 16 streams metadata to normal browsers but renders it blocking in `<head>` for its default HTML-limited bot list, which includes `facebookexternalhit`. Zalo's crawler is not in that list. Real Facebook/Zalo validation needs a public HTTPS deployment; localhost can only be checked by inspecting the generated HTML.
+
+**Not in this task.** Facebook/Zalo SDKs, tracking, analytics, `og:url`/site-URL config, `htmlLimitedBots` override, guest personalization, RSVP changes, republish lifecycle.

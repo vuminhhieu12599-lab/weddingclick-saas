@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
 import { loadPublicInvitation } from "../../../lib/server/public-invitation/load-public-invitation";
+import { buildPublicInvitationMetadata } from "../../../lib/server/public-invitation/public-invitation-metadata";
 import { createPublicInvitationPageDependencies } from "../../../lib/server/public-invitation/public-invitation-supabase";
+import { createPublicSocialShareCoverGateway } from "../../../lib/server/public-invitation/public-social-share-supabase";
+import type { SignedSocialShareCover } from "../../../lib/server/public-invitation/public-social-share-types";
 import type { PublicInvitationView } from "../../../lib/server/public-invitation/public-invitation-types";
 import { PublicInvitationRenderer } from "./public-invitation-renderer";
 
@@ -13,11 +17,40 @@ import { PublicInvitationRenderer } from "./public-invitation-renderer";
  */
 export const dynamic = "force-dynamic";
 
-/** Open Graph / share metadata is Task 032B; until then, minimal and not indexed. */
-export const metadata: Metadata = {
-  title: "Thiệp cưới — WeddingClick",
-  robots: { index: false, follow: false },
-};
+/**
+ * One PUBLISHED read per request, shared by `generateMetadata` and the page
+ * (React request memoization); the Task 032A use case itself is unchanged.
+ */
+const loadPublishedInvitation = cache((slug: string) => loadPublicInvitation(slug, createPublicInvitationPageDependencies()));
+
+/**
+ * Task 032B social metadata, resolved per request (force-dynamic). Couple
+ * names come from the PUBLISHED Snapshot's ViewModel; `og:image` is the
+ * Project's CURRENT effective SOCIAL_SHARE_COVER, signed at request time,
+ * and is omitted when none is chosen (never a COVER fallback). Unknown,
+ * unpublished or failing invitations expose only the generic title. Always
+ * `noindex`.
+ */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  let view: PublicInvitationView | null;
+  try {
+    view = await loadPublishedInvitation(slug);
+  } catch {
+    view = null;
+  }
+  if (view === null) {
+    return buildPublicInvitationMetadata(null, null);
+  }
+
+  let cover: SignedSocialShareCover | null = null;
+  try {
+    cover = await createPublicSocialShareCoverGateway().getSignedSocialShareCover(slug);
+  } catch {
+    console.error("[PublicInvitationPage] Failed to resolve social share cover");
+  }
+  return buildPublicInvitationMetadata(view.viewModel, cover);
+}
 
 function PublicInvitationUnavailable() {
   return (
@@ -47,7 +80,7 @@ export default async function PublicInvitationPage({ params }: { params: Promise
 
   let view: PublicInvitationView | null;
   try {
-    view = await loadPublicInvitation(slug, createPublicInvitationPageDependencies());
+    view = await loadPublishedInvitation(slug);
   } catch {
     console.error("[PublicInvitationPage] Failed to render published invitation");
     return <PublicInvitationUnavailable />;
