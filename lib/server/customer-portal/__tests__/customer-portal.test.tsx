@@ -73,6 +73,7 @@ async function projectRecord(variants: InvitationVariant[], overrides: Partial<P
   const pubs = await Promise.all(variants.map((v) => publication(v)));
   return {
     projectCode: (await buildRendererFixture({ variant: "COMMON" })).snapshot.project.code,
+    packageCode: "COMMON",
     invitations: pubs.map((p) => p.invitation),
     versions: pubs.map((p) => p.version),
     personalizedGuestEntitled: false,
@@ -93,6 +94,12 @@ function portalDeps(record: PortalProjectRecord, links = resolution([{ token: PO
           return record;
         },
         async listPortalRsvps(projectId: string) {
+          projectIds.push(projectId);
+          return [];
+        },
+      },
+      guests: {
+        async listGuests(projectId: string) {
           projectIds.push(projectId);
           return [];
         },
@@ -189,12 +196,14 @@ describe("F–J: publication eligibility and summary", () => {
 
   it("the view carries no ids, storage paths, renderer data, token or hash", async () => {
     const view = await loadCustomerPortal(PORTAL.rawToken, portalDeps(await projectRecord(["GROOM", "BRIDE"], { personalizedGuestEntitled: true })).deps);
-    const json = JSON.stringify(view);
+    // Task 033E-A: guestTool rows may carry `guestId` (mutation target only); everything else stays id-free.
+    if (view.status !== "READY" || view.guestTool === null) throw new Error("expected READY with guest tool");
+    const json = JSON.stringify({ ...view, guestTool: { ...view.guestTool, guests: view.guestTool.guests.map((row) => ({ ...row, guestId: "<target>" })) } });
     expect(json).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
     expect(json).not.toMatch(/storage|rendererKey|templateVersion|payload|signed|https?:/i);
     expect(json).not.toContain(PORTAL.rawToken);
     expect(json).not.toContain(hex(hashAccessToken(PORTAL.rawToken)));
-    expect(view).toMatchObject({ status: "READY", personalizedGuestEntitled: true });
+    expect(view).toMatchObject({ status: "READY", personalizedGuestEntitled: true, guestTool: { mode: "COMMON_ONLY", guests: [] } });
   });
 
   it("repository row guards reject malformed rows", () => {
@@ -235,7 +244,14 @@ describe("K–P: boundaries", () => {
     const code = [PAGE, COPY, REPO, USE_CASE, WIRING, "lib/server/customer-portal/customer-portal-types.ts"].map((f) => strip(read(f))).join("\n");
     expect(code).not.toMatch(/\.from\("guests"\)|project_media|\.storage\b|payment_status|review_feedback|current_review_version_id|wedding_details/);
     expect(code).not.toMatch(/\.(insert|update|upsert|delete|rpc)\(/);
-    expect(PRODUCTION.filter((f) => f.startsWith("app/api/") && /portal/i.test(f))).toEqual([]);
+    // Task 033E-A: the only Portal API routes are the three Bearer-PORTAL Guest Tool routes (no Project id segment).
+    expect(PRODUCTION.filter((f) => f.startsWith("app/api/") && /portal/i.test(f)).sort()).toEqual(
+      [
+        "app/api/v2/public/portal/guests/[guestId]/revoke/route.ts",
+        "app/api/v2/public/portal/guests/[guestId]/route.ts",
+        "app/api/v2/public/portal/guests/route.ts",
+      ].sort(),
+    );
   });
 
   it("the repository queries exactly the five Project-scoped tables, each filtered by the resolved projectId", () => {

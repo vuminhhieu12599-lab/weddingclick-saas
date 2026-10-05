@@ -16,4 +16,5 @@ export * from "./project-task-status";
 export * from "./media-type";
 export * from "./service-package-code";
 export * from "./service-addon-code";
+export * from "./guest-display-name";
 export * from "./template-design-manifest";

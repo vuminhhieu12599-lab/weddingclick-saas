@@ -2058,3 +2058,15 @@ Implemented by `app/portal/[token]/portal-rsvp-list.tsx`, `lib/server/customer-p
 4. **Not entitlement-gated.** RSVP viewing does not require PERSONALIZED_GUEST. That add-on gates only the future Guest Tool. Reading `guests.display_name`/`invitation_variant` as RSVP context is part of the PORTAL RSVP list (PHYSICAL_DATABASE_PLAN §15), not Guest Tool access.
 5. **No migration.** The existing 0018 service_role SELECT grants serve the server-only PORTAL list. A narrow explicit-column repository plus a row guard is the boundary.
 6. **Still deferred.** Guest Tool, and the PORTAL link listing/revoke pre-production requirement (Task 033C item 5).
+
+## Task 033E-A — Portal Guest Tool Foundation (2026-10-05)
+
+Implemented by `app/portal/[token]/portal-guest-tool.tsx`, `app/api/v2/public/portal/guests/**`, `lib/server/customer-portal/portal-guest-*.ts`, `lib/server/routes/portal-guests.ts`, `lib/server/supabase/portal-guest-repository.ts`, `lib/server/auth/dormant-guest-token.ts` and `lib/domain/guest-display-name.ts`. No migration (0017 grants and constraints suffice). See `docs/API_CONTRACT.md` §25.
+
+1. **Gated and Project-pinned.** The Guest Tool requires an active PERSONALIZED_GUEST add-on, re-checked on every request. The PORTAL token is the only customer credential; the server-resolved Project id is authoritative and the browser never sends one. A guest id is a target, never authority.
+2. **Customer-editable data.** Only `display_name` and, for SEPARATE packages, the explicit GROOM/BRIDE side. COMMON is server-authoritative. A SEPARATE side is never guessed.
+3. **Edit rules.** The display name stays editable after a link is issued (no regeneration or invalidation). The side locks once `token_issued_at` is set, enforced in the same conditional UPDATE (no read-then-write).
+4. **Revoke.** Soft (`revoked_at`), atomic, with no delete, no restore and no RSVP change. That guest's issued link stops resolving immediately (frozen 0042). RSVP history is preserved.
+5. **Link state is read-only** in 033E-A. There is no ISSUE/REGENERATE.
+6. **Carry-forward to 033E-B (Owner Option A).** The 033B1 ISSUE-vs-side-change race is fail-closed (at worst a dead link) and accepted here. 033E-B must add an `invitation_variant` predicate, or equivalent race-safe protection, to the issuance replacement write. `replaceGuestToken` is unchanged in 033E-A.
+7. **Unchanged deferrals.** The policy for issued links after the add-on is revoked; PORTAL link listing/revoke (pre-production); rate limiting (Task 035).

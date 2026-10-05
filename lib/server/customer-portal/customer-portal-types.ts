@@ -1,6 +1,7 @@
 import type { InvitationVariant, RsvpAttendanceStatus } from "../../domain";
 import type { EventDateTimePresentationV1 } from "../../invitation-rendering/event-date-time-presentation";
 import type { CeremonyTitle } from "../../invitation-rendering/wedding-domain-types";
+import type { CustomerPortalGuestTool } from "./portal-guest-types";
 
 /**
  * Task 033C — private Customer Portal foundation (read-only, post-publish).
@@ -33,6 +34,8 @@ export interface PortalPublishedVersionRecord {
 export interface PortalProjectRecord {
   /** `projects.project_code`; `null` only if the Project row is missing. */
   projectCode: string | null;
+  /** `projects.package_code_snapshot` (Task 033E-A Guest Tool mode); `null` only if the Project row is missing. */
+  packageCode: string | null;
   invitations: PortalInvitationRecord[];
   versions: PortalPublishedVersionRecord[];
   /** Non-revoked `project_addons` row with `addon_code_snapshot = PERSONALIZED_GUEST`. Informational only here. */
@@ -108,4 +111,6 @@ export type CustomerPortalView =
       personalizedGuestEntitled: boolean;
       rsvps: CustomerPortalRsvpRow[];
       rsvpSummary: CustomerPortalRsvpSummary;
+      /** Task 033E-A: present only with an active PERSONALIZED_GUEST add-on. */
+      guestTool: CustomerPortalGuestTool | null;
     };

@@ -83,6 +83,7 @@ async function publishedRecord(projectId: string): Promise<PortalProjectRecord> 
   const snapshot = (await buildRendererFixture({ variant: "COMMON" })).snapshot;
   return {
     projectCode: snapshot.project.code,
+    packageCode: "COMMON",
     invitations: [{ id: INV, variant: "COMMON", publicSlug: "wc-common", publishedVersionId: VER }],
     versions: [
       { id: VER, invitationId: INV, projectId, versionType: "PUBLISHED", templateVersionId: FIXTURE_TEMPLATE_VERSION_ID, rendererKey: snapshot.template.rendererKey, payload: snapshot },
@@ -106,7 +107,7 @@ function deps(opts: { failRsvps?: boolean; empty?: boolean } = {}) {
     { token: PORTAL_A, row: {} },
     { token: PORTAL_B, row: { projectId: PROJECT_B } },
   ]);
-  return { rsvpReads, deps: { resolution: links, portal } };
+  return { rsvpReads, deps: { resolution: links, portal, guests: { listGuests: async () => [] } } };
 }
 
 async function ready(token: string, d = deps()) {
@@ -227,7 +228,11 @@ describe("033D K, L, S, T: static boundaries", () => {
     expect(repo).not.toMatch(/token_hash|token_hint|token_issued_at|phone|note|\.(insert|update|upsert|delete|rpc)\(/);
 
     const production = ["app", "lib"].flatMap(listSources);
-    expect(production.filter((f) => /portal/i.test(f) && f.startsWith("app/api/"))).toEqual([]);
+    // Task 033E-A Guest Tool routes are the only Portal APIs; none touches RSVPs.
+    for (const f of production.filter((f) => /portal/i.test(f) && f.startsWith("app/api/"))) {
+      expect(f).toMatch(/^app\/api\/v2\/public\/portal\/guests\//);
+      expect(read(f)).not.toMatch(/rsvp/i);
+    }
     const portalUi = ["app/portal/[token]/page.tsx", "app/portal/[token]/portal-rsvp-list.tsx", "lib/server/customer-portal/present-portal-rsvps.ts"].map((f) => strip(read(f))).join("\n");
     expect(portalUi).not.toMatch(/issueGuestLink|regenerate|revoke|createGuest|<form|<button|onClick|service-role-client|SUPABASE_SERVICE_ROLE_KEY|localStorage|sessionStorage/);
     expect(read("app/portal/[token]/portal-rsvp-list.tsx")).not.toMatch(/^"use client"/m);

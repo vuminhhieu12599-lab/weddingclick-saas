@@ -5,6 +5,7 @@ import { createCustomerPortalPageDependencies } from "../../../lib/server/custom
 import type { CustomerPortalView } from "../../../lib/server/customer-portal/customer-portal-types";
 import { loadCustomerPortal } from "../../../lib/server/customer-portal/load-customer-portal";
 import { ApiError } from "../../../lib/server/errors/api-error";
+import { PortalGuestTool } from "./portal-guest-tool";
 import { PortalLinkCopy } from "./portal-link-copy";
 import { PortalRsvpList } from "./portal-rsvp-list";
 
@@ -58,7 +59,9 @@ function portalErrorMessage(error: unknown) {
  * open it) to exactly one Project. Read-only and post-publish: a summary
  * from the immutable PUBLISHED Snapshot(s) and that Project's public
  * invitation links, plus (Task 033D) the read-only RSVP list of that same
- * resolved Project. No Guest Tool yet; no RSVP, editing, publishing,
+ * resolved Project, and (Task 033E-A, PERSONALIZED_GUEST only) the Guest
+ * Tool: list / add / edit name or unissued side / revoke, through Bearer
+ * PORTAL routes. No link ISSUE/REGENERATE, RSVP, invitation, publishing,
  * payment or lifecycle action exists here.
  */
 export default async function CustomerPortalPage({ params }: { params: Promise<{ token: string }> }) {
@@ -117,11 +120,7 @@ export default async function CustomerPortalPage({ params }: { params: Promise<{
 
         <PortalRsvpList rows={view.rsvps} summary={view.rsvpSummary} />
 
-        {view.personalizedGuestEntitled && (
-          <section className="rounded-2xl border border-dashed border-stone-300 bg-white p-5 text-sm text-stone-600">
-            Gói của bạn có thiệp mời cá nhân hoá. Công cụ quản lý khách mời và link mời riêng sẽ có tại đây.
-          </section>
-        )}
+        {view.guestTool !== null && <PortalGuestTool token={token} mode={view.guestTool.mode} guests={view.guestTool.guests} />}
       </div>
     </main>
   );

@@ -1127,3 +1127,39 @@ It reads no RSVPs, guests, media, Storage, payment, review or draft data, and wr
 **Unchanged.** §23 metadata/privacy (noindex, nofollow, no-referrer, no Open Graph, force-dynamic, no token storage), PORTAL issue/rotate, public and personalized invitations, both RSVP submit flows (§20/§22), §21 Open Graph.
 
 **Not in 033D.** Guest Tool (create/edit/revoke/issue/regenerate/import/QR/messaging), RSVP edit/delete, sort/filter/export, and the PORTAL link listing/revoke gap (§23, still a pre-production requirement).
+
+## 25. Task 033E-A — Portal Guest Tool foundation
+
+**Scope.** Inside `/portal/[token]`, a "Danh sách khách mời" section lets the couple list guests, add a guest, edit a guest's display name (and side, while no link is issued) and revoke a guest. Link state is shown read-only ("Chưa cấp link" / "Đã cấp link"). There is no customer login, no ISSUE/REGENERATE, no restore, no delete, no import/CSV/QR/messaging, and no phone/note/group editing. No migration: the 0017 service_role grants on `guests` (written for this Guest Tool) and the existing constraints suffice.
+
+**Entitlement.** The section and every mutation require an active PERSONALIZED_GUEST add-on (non-revoked `project_addons` row, `addon_code_snapshot = 'PERSONALIZED_GUEST'`). It is re-checked server-side on every request; without it the section is absent and mutations return 403. RSVP owner-read (§24) is unaffected.
+
+**Authorization.** `Authorization: Bearer <raw PORTAL token>` (the 030B pattern, `parseBearerToken`) → `resolveAccessLink({ expectedLinkType: "PORTAL" })` → `projectId` → published-pointer check + entitlement + package mode → body read/validation → one write pinned by `project_id = projectId`. No route or body accepts a Project id. A guest id only targets a row of the resolved Project. A foreign, unknown or malformed guest id is 404, with no oracle. REVIEW/INTAKE links, guest tokens, slugs and UUIDs are 404 like any non-PORTAL value.
+
+| Route | Body | Success |
+|---|---|---|
+| `POST /api/v2/public/portal/guests` | `{ displayName[, invitationVariant] }` | 201 `{ data: row }` |
+| `PATCH /api/v2/public/portal/guests/[guestId]` | `{ displayName[, invitationVariant] }` | 200 `{ data: row }` |
+| `POST /api/v2/public/portal/guests/[guestId]/revoke` | none | 200 `{ data: row }` |
+
+Errors: 400 malformed body / name / side; 401 no Bearer; 403 not entitled (or no valid publication); 404 guest not in this Project or PORTAL token not found; 409 with `reason` `GUEST_REVOKED`, `SIDE_LOCKED`, `ALREADY_REVOKED` or `CONCURRENT_CHANGE`; 410 revoked/expired PORTAL link; fixed 500 with the fixed log `[handlePortalGuestRequest] Unexpected error`. Responses are `no-store`.
+
+**Package mode.** From `projects.package_code_snapshot` via `requiredInvitationVariantsForPackage` (never from publications, guests, slugs or the browser); an unknown package fails closed.
+- COMMON → `COMMON_ONLY`: the server writes `invitation_variant = 'COMMON'`. The body may omit the variant or send exactly `"COMMON"`; anything else is 400.
+- SEPARATE → `GROOM_OR_BRIDE`: create requires `GROOM` or `BRIDE` (missing, null, COMMON or unknown → 400, never defaulted); edit may omit it.
+
+**Display name.** Trimmed server-side, non-blank, ≤ 200 Unicode code points (`normalizeGuestDisplayName`, mirroring the DB CHECK). Duplicates are allowed. Exact keys only.
+
+**Create.** Inserts `project_id` = resolved Project, the validated name and variant, a **dormant** `token_hash` (`generateDormantGuestTokenHash()`: SHA-256 of a fresh 32-byte CSPRNG token whose raw value is discarded immediately), `token_hint`/`token_issued_at`/`revoked_at`/`created_by` = NULL. The dormant hash never resolves (0042 requires `token_issued_at IS NOT NULL`). Success only after the inserted row is returned.
+
+**Edit.** One conditional UPDATE: `id`, `project_id = resolved`, `revoked_at IS NULL`, and when a side is sent also `token_issued_at IS NULL OR invitation_variant = <side>`. The display name stays editable after issuance. The 0042 resolver reads it live, so the issued link keeps working with the new name; nothing is regenerated or invalidated. The side locks once a link is issued; resubmitting the same side succeeds. On 0 rows, a read-only Project-pinned classification (no write follows) returns 404 / `GUEST_REVOKED` / `SIDE_LOCKED` / `CONCURRENT_CHANGE`.
+
+**Revoke.** One conditional UPDATE `SET revoked_at` where `id`, `project_id = resolved`, `revoked_at IS NULL`. A repeat is 409 `ALREADY_REVOKED`. No DELETE, no token change, no restore, no `rsvps` write. Under frozen 0042, a revoked guest's issued link renders not-found and its RSVP submit is rejected (`GT001`) immediately. The RSVP history stays and is still listed in §24 under the canonical name.
+
+**Read model.** Server-rendered with the Portal (`loadCustomerPortal` → `guestTool: { mode, guests } | null`). Each row has `guestId` (mutation target only, never authority), `displayName`, `invitationVariant` (NULL resolved per §7.3), `status` ACTIVE|REVOKED and `linkStatus` NOT_ISSUED|ISSUED (from `token_issued_at IS NOT NULL`; the timestamp is never serialized). Active guests come first, then revoked ones, each in `created_at, id` order. Never serialized: token hash/hint, raw token, `token_issued_at`, phone, note, group, Project id, `created_by`. The list read uses `count: "exact"` so it is never silently truncated.
+
+**Boundary.** `lib/server/supabase/portal-guest-repository.ts` (service_role, server-only, the only new service_role importer) is wired by `lib/server/customer-portal/portal-guest-supabase.ts` (routes) and `customer-portal-supabase.ts` (page). The client component `app/portal/[token]/portal-guest-tool.tsx` keeps the token only in props/memory (no browser storage) and uses a synchronous pending guard against double submits. It shows success only after a 2xx and then calls `router.refresh()`. Revoke uses an in-page confirmation, not `confirm()`.
+
+**Known carry-forward (Owner Option A).** Frozen 033B1 `replaceGuestToken` does not condition on `invitation_variant`. A staff ISSUE racing a customer side change (both legal while `token_issued_at IS NULL`) can issue a link for the old side's slug, which never resolves. This fails closed: no cross-Project access or data exposure. Accepted for 033E-A; **Task 033E-B must add an `invitation_variant` predicate (or equivalent) to issuance replacement.**
+
+**Still deferred.** ISSUE/REGENERATE from the Portal (033E-B); the policy for already-issued links after the add-on itself is revoked (separate deferred decision; guest-level revoke above is distinct and immediate); PORTAL link listing/revoke (§23, pre-production); rate limiting (Task 035, pre-production).

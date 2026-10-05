@@ -149,10 +149,12 @@ export function getServiceRoleCustomerPortalGateway(): CustomerPortalGateway {
       if (!isValidUuid(projectId)) fail();
       const client = createServiceRoleSupabaseClient();
 
-      const project = await client.from("projects").select("project_code").eq("id", projectId).maybeSingle();
+      const project = await client.from("projects").select("project_code, package_code_snapshot").eq("id", projectId).maybeSingle();
       if (project.error) fail();
       const projectCode = project.data === null ? null : project.data.project_code;
       if (projectCode !== null && typeof projectCode !== "string") fail();
+      const packageCode = project.data === null ? null : project.data.package_code_snapshot;
+      if (packageCode !== null && typeof packageCode !== "string") fail();
 
       const invitationRows = await client
         .from("project_invitations")
@@ -185,7 +187,7 @@ export function getServiceRoleCustomerPortalGateway(): CustomerPortalGateway {
         .limit(1);
       if (addons.error || !Array.isArray(addons.data)) fail();
 
-      return { projectCode, invitations, versions, personalizedGuestEntitled: addons.data.length === 1 };
+      return { projectCode, packageCode, invitations, versions, personalizedGuestEntitled: addons.data.length === 1 };
     },
 
     async listPortalRsvps(projectId): Promise<PortalRsvpRecord[]> {
