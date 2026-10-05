@@ -1068,3 +1068,37 @@ Client mapping adds 410 → `UNAVAILABLE`. Generic rows (`guest_id` NULL) are ex
 **Unchanged.** Staff Preview and Customer Review stay UNAVAILABLE-only and never carry a guest token. `SOCIAL_SHARE_COVER`, Elegant Editorial v1, publish/republish.
 
 **Not in this task.** The Customer Portal itself (PORTAL link resolution, RSVP list, and the Guest Tool for guest create/list/edit/revoke and customer-side ISSUE/REGENERATE), rate limiting / token brute-force protection (Task 035 pre-production gate; the 256-bit token is the current control), bulk import, messaging, QR codes, analytics, and the deferred decision on already-issued links after entitlement revocation.
+
+## 23. Task 033C — Private Customer Portal `/portal/[token]` (foundation)
+
+**Actors.** The customer/couple never logs in, never creates the Project and never edits the staff-owned workflow. After publish, staff sends the public invitation link(s) and, separately, a private Customer Portal link. The Portal is a limited, read-only, post-publish surface. It is **not** a Project editor.
+
+**Credential.** The Portal reuses the existing Task 026 capability `project_access_links` with `link_type = 'PORTAL'`: the same 43-character, 256-bit base64url token and SHA-256 `token_hash`, with `revoked_at`, `expires_at` and `last_used_at` working as before. No new token type, table or migration. The opaque token in the path is the only credential. The URL carries no Project id, slug, guest token, review token or query identity.
+
+**Resolution.** `loadCustomerPortal` calls `resolveAccessLink({ rawToken, expectedLinkType: "PORTAL" })` (§4):
+
+| Token | Result |
+|---|---|
+| Malformed, unknown, or a REVIEW/INTAKE link (wrong purpose) | "Không tìm thấy trang" (NOT_FOUND), nothing else read |
+| Revoked or expired PORTAL link | "Link đã hết hiệu lực" (410 kinds) |
+| Valid PORTAL link | exactly one `projectId`; `last_used_at` updated |
+
+Guest tokens and public slugs are not access links and never resolve. A Project UUID grants nothing.
+
+**Eligibility (MVP).** The Portal renders only if the resolved Project has at least one `project_invitations.published_version_id` pointing to a `PUBLISHED` row of the same invitation and Project. Every pointer is integrity-checked; a fault fails closed with a generic error. No publication → "Thiệp chưa được xuất bản". ARCHIVED/closure policy is not decided here.
+
+**Reads.** `lib/server/supabase/customer-portal-repository.ts` (`service_role`, server-only) runs four read-only SELECTs, each filtered by the resolved `projectId` and using existing grants:
+- the Project code;
+- its invitations with a published pointer;
+- exactly those versions;
+- whether a non-revoked PERSONALIZED_GUEST add-on exists (informational).
+
+It reads no RSVPs, guests, media, Storage, payment, review or draft data, and writes nothing.
+
+**View.** Per published variant (COMMON, then GROOM, then BRIDE): the public path `/i/<public_slug>`, couple names in that variant's canonical primary → secondary order, the ceremony title and date/time from the immutable PUBLISHED Snapshot (`deriveEventDateTimePresentationV1`). Nothing is signed. No ids, storage paths, renderer data, token or hash reach the browser. The page also shows an informational RSVP placeholder, plus a Guest Tool note when the add-on is active. There are no inactive controls.
+
+**Metadata.** Fixed title "Cổng khách hàng — WeddingClick", `noindex, nofollow`, `referrer: no-referrer`, no Open Graph, `force-dynamic`. §21 is unchanged.
+
+**Staff.** The Publish tab ("Xuất bản") shows "Link Portal khách hàng" once at least one variant is published. It issues through the existing `POST /api/v2/internal/projects/[id]/access-links` with `{ linkType: "PORTAL" }`, and can rotate the link issued in that view through the existing `…/access-links/[linkId]/rotate`. The raw URL (`/portal/<token>`, built from the browser origin; no SITE_URL) is held only in component state and shown once. Several PORTAL links may be active at once (Task 026 D2). Earlier links stay active until revoked, and there is no listing UI for them yet. **This must be addressed before production or customer rollout** (staff must be able to find and revoke older active PORTAL links).
+
+**Not in 033C.** RSVP owner-read (the next Portal capability, inside the Portal), the Guest Tool (later, PERSONALIZED_GUEST entitlement-gated, through the shared `issueGuestLink`, §22.1), customer guest APIs, ARCHIVED policy, a PORTAL link listing/revocation UI, and one-active-link enforcement.

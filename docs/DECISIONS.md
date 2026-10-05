@@ -2037,3 +2037,13 @@ Implemented by migration `0042_personalized_guest_link.sql`, `POST /api/v2/inter
 7. **Metadata.** Personalized pages emit a fixed generic title, `noindex` and `no-referrer`: no Open Graph, guest name or token. Task 032B metadata for `/i/[slug]` is unchanged.
 8. **Deferred.** Rate limiting and token brute-force protection (Task 035 gate). Bulk import, messaging, QR codes and analytics are also deferred.
 9. **Actors and entitlement (final alignment).** Staff creates, reviews and publishes; customers never log in or edit the Project. Guest management belongs to the **Guest Tool in the Customer Portal**: a later milestone, reached through a `project_access_links` PORTAL link (distinct from REVIEW links and guest tokens) and not implemented here. The staff endpoint is a support/back-office path. Both paths use one actor-neutral `issueGuestLink` use case that takes an already-authorized client and gateway, never a `StaffContext`. New ISSUE/REGENERATE requires an active PERSONALIZED_GUEST entitlement (non-revoked `project_addons` row, server-derived; 403 otherwise). Already-issued links are not invalidated if the add-on is later revoked; that behavior is an **open owner decision (deferred)**, and 0042 is unchanged.
+
+## Task 033C — Private Customer Portal Foundation (2026-10-05)
+
+Implemented by `app/portal/[token]/page.tsx`, `lib/server/customer-portal/*` and `lib/server/supabase/customer-portal-repository.ts`. No migration. See `docs/API_CONTRACT.md` §23.
+
+1. **No customer login.** Holding the Project's PORTAL access link is the authorization. Staff still creates, completes, reviews and publishes; the Portal is not a Project editor.
+2. **Existing capability reused.** `project_access_links` with `link_type = 'PORTAL'` and the Task 026 resolver, issue and rotate paths are reused. No new token architecture. Public slugs, guest tokens, REVIEW links and PORTAL links stay four distinct credentials.
+3. **Post-publish only.** Content renders only when at least one invitation has a valid current PUBLISHED pointer; otherwise "not ready". ARCHIVED handling is deferred.
+4. **Read-only summary from PUBLISHED data.** Couple names, rite and date come from the immutable Snapshot, never the draft. Links are `/i/<public_slug>` for published variants only.
+5. **Deferred.** The RSVP list (next) and the Guest Tool (PERSONALIZED_GUEST-gated) both belong in the Portal. Also deferred: a PORTAL link listing/revoke UI and one-active-link enforcement. Several active PORTAL links are currently allowed (D2). **Pre-production requirement (Product Owner, 2026-10-05):** staff must be able to find and revoke older active PORTAL links before production or customer rollout.

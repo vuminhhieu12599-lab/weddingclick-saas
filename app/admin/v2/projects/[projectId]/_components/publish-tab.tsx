@@ -4,8 +4,10 @@ import { useState } from "react";
 
 import {
   fetchProjectPublishState,
+  issuePortalAccessLink,
   markProjectPaid,
   publishInvitationVariant,
+  rotateAccessLink,
   transitionProjectStatus,
 } from "../../../../../../lib/admin/admin-api-client";
 import { AdminApiError } from "../../../../../../lib/admin/admin-api-error";
@@ -323,10 +325,98 @@ function PaymentLifecycleCard({ projectId, step, onChanged }: { projectId: strin
 }
 
 /**
+ * Task 033C: issues the customer's private PORTAL link (existing Task 026
+ * route, `linkType: "PORTAL"`) and can rotate the link issued in this view.
+ * The raw URL lives only in component state and is shown once; nothing is
+ * stored in the browser. Earlier PORTAL links stay active until revoked
+ * (multiple active links are allowed by Task 026 D2).
+ */
+function PortalLinkIssuer({ projectId }: { projectId: string }) {
+  const [pending, setPending] = useState(false);
+  const [issued, setIssued] = useState<{ id: string; url: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run(action: () => Promise<{ id: string; token: string }>, failure: string) {
+    if (pending) {
+      return;
+    }
+    setPending(true);
+    setError(null);
+    try {
+      const link = await action();
+      setIssued({ id: link.id, url: `${window.location.origin}/portal/${encodeURIComponent(link.token)}` });
+    } catch {
+      setError(failure);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5" data-testid="portal-link-issuer">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">Link Portal khách hàng</p>
+          <p className="mt-1 text-xs text-slate-500">
+            Trang riêng của khách (không cần đăng nhập): xem thiệp đã xuất bản và các link thiệp. Mỗi lần bấm tạo một link mới; link cũ vẫn hoạt động cho đến khi bị thu hồi.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void run(() => issuePortalAccessLink(projectId), "Không thể tạo link Portal lúc này. Vui lòng thử lại.")}
+            disabled={pending}
+            className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            {pending ? "Đang xử lý..." : "Tạo link Portal khách hàng"}
+          </button>
+          {issued !== null && (
+            <button
+              type="button"
+              onClick={() => void run(() => rotateAccessLink(projectId, issued.id), "Không thể tạo lại link Portal lúc này. Vui lòng thử lại.")}
+              disabled={pending}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              Tạo lại link Portal (thu hồi link vừa tạo)
+            </button>
+          )}
+        </div>
+      </div>
+      {issued !== null && (
+        <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+          <p className="text-xs text-emerald-800">Sao chép và gửi riêng cho khách. Link chỉ hiển thị một lần.</p>
+          <input
+            readOnly
+            value={issued.url}
+            onFocus={(event) => event.currentTarget.select()}
+            className="mt-2 w-full rounded border border-emerald-200 bg-white px-2 py-1 font-mono text-xs text-slate-800"
+            aria-label="Link Portal khách hàng"
+          />
+          <button
+            type="button"
+            onClick={() => void navigator.clipboard.writeText(issued.url).catch(() => undefined)}
+            className="mt-2 rounded border border-emerald-300 bg-white px-3 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100"
+          >
+            Sao chép
+          </button>
+        </div>
+      )}
+      {error !== null && (
+        <p className="mt-3 text-sm text-red-700" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
  * Task 031 staff publish area: per REQUIRED variant (canonical package
  * policy, server-derived) the approved current review, the current
  * publication, the first blocker, and a confirmed publish action. No
  * public link, QR, sharing, analytics, guest or rollback controls here.
+ * Task 033C adds only the customer PORTAL link issuer, shown once at
+ * least one variant has a current publication.
  */
 export function PublishTab({ project }: { project: ProjectSummary }) {
   const { data, loading, error, reload } = useAdminQuery(() => fetchProjectPublishState(project.id), [project.id]);
@@ -371,6 +461,7 @@ export function PublishTab({ project }: { project: ProjectSummary }) {
           {data.variants.map((row) => (
             <VariantPublishCard key={row.variant} projectId={project.id} row={row} onChanged={reload} />
           ))}
+          {data.variants.some((row) => row.publishedVersion !== null) && <PortalLinkIssuer projectId={project.id} />}
         </>
       )}
     </div>

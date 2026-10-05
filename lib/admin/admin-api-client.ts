@@ -201,6 +201,36 @@ export async function issueReviewAccessLink(projectId: string): Promise<{ id: st
   return { id: body.data.id, token: body.data.token };
 }
 
+/**
+ * Task 033C: issues one new customer PORTAL access link through the same
+ * existing Task 026 staff route (`linkType: "PORTAL"`). The raw token is
+ * returned exactly once (no-store) and never persisted client-side.
+ */
+export async function issuePortalAccessLink(projectId: string): Promise<{ id: string; token: string }> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: { id: string; token: string } }>(
+    `/api/v2/internal/projects/${encodeURIComponent(projectId)}/access-links`,
+    token,
+    { method: "POST", body: { linkType: "PORTAL" } },
+  );
+  return { id: body.data.id, token: body.data.token };
+}
+
+/**
+ * Task 033C: rotates one known access link through the existing Task 026
+ * rotate route (old row revoked, replacement row issued atomically by
+ * `rotate_access_link`). Returns the replacement id and raw token once.
+ */
+export async function rotateAccessLink(projectId: string, accessLinkId: string): Promise<{ id: string; token: string }> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: { id: string; token: string } }>(
+    `/api/v2/internal/projects/${encodeURIComponent(projectId)}/access-links/${encodeURIComponent(accessLinkId)}/rotate`,
+    token,
+    { method: "POST" },
+  );
+  return { id: body.data.id, token: body.data.token };
+}
+
 /** Staff render of a persisted REVIEW Snapshot; runtime media URLs are never stored. */
 export async function fetchReviewVersionPreview(projectId: string, versionId: string): Promise<ReviewVersionPreviewBody> {
   const token = await requireAccessToken();
