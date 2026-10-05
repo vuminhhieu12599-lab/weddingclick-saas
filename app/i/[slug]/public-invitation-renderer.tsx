@@ -26,6 +26,12 @@ import { InvitationRendererHostCore } from "../../../templates/core/client/invit
  * slug's current PUBLISHED version. `SUCCESS` is resolved only for a 201
  * whose body confirms the row was recorded; anything else is INVALID,
  * UNAVAILABLE or FAILED (K17), never a fake success.
+ *
+ * Task 033B1: on the personalized route /i/[slug]/g/[token] the wrapper also
+ * receives that route's raw guest token and sends it as `guestToken`; the
+ * server hashes it and derives the guest identity from it alone. The token
+ * is never put in the ViewModel, storage, logs or metadata. 410 (revoked
+ * guest link) resolves UNAVAILABLE.
  */
 
 const PUBLIC_RSVP_ENDPOINT = "/api/v2/public/rsvp";
@@ -46,7 +52,11 @@ async function isRecordedBody(response: Response): Promise<boolean> {
   }
 }
 
-export function createPublicRsvpCapability(publicSlug: string, fetchImpl: typeof fetch = (input, init) => fetch(input, init)): RsvpCapabilityV1 {
+export function createPublicRsvpCapability(
+  publicSlug: string,
+  fetchImpl: typeof fetch = (input, init) => fetch(input, init),
+  guestToken?: string,
+): RsvpCapabilityV1 {
   const capability: RsvpCapabilityV1 = {
     async submit(input: RsvpSubmitInputV1): Promise<RsvpSubmitResultV1> {
       if (!isValidRsvpSubmitInputV1(input)) return INVALID;
@@ -59,6 +69,7 @@ export function createPublicRsvpCapability(publicSlug: string, fetchImpl: typeof
           cache: "no-store",
           body: JSON.stringify({
             publicSlug,
+            ...(guestToken === undefined ? {} : { guestToken }),
             attendance: input.attendance,
             partySize: input.partySize,
             message: input.message,
@@ -70,7 +81,7 @@ export function createPublicRsvpCapability(publicSlug: string, fetchImpl: typeof
       }
       if (response.status === 201) return (await isRecordedBody(response)) ? SUCCESS : FAILED;
       if (response.status === 400) return INVALID;
-      if (response.status === 404) return UNAVAILABLE;
+      if (response.status === 404 || response.status === 410) return UNAVAILABLE;
       return FAILED;
     },
   };
@@ -79,12 +90,14 @@ export function createPublicRsvpCapability(publicSlug: string, fetchImpl: typeof
 
 interface PublicInvitationRendererProps {
   readonly publicSlug: string;
+  /** Personalized route only (Task 033B1). */
+  readonly guestToken?: string;
   readonly rendererKey: string;
   readonly viewModel: InvitationViewModel;
   readonly sections: RendererEffectiveSections;
 }
 
-export function PublicInvitationRenderer({ publicSlug, rendererKey, viewModel, sections }: PublicInvitationRendererProps) {
-  const rsvp = useMemo(() => createPublicRsvpCapability(publicSlug), [publicSlug]);
+export function PublicInvitationRenderer({ publicSlug, guestToken, rendererKey, viewModel, sections }: PublicInvitationRendererProps) {
+  const rsvp = useMemo(() => createPublicRsvpCapability(publicSlug, undefined, guestToken), [publicSlug, guestToken]);
   return <InvitationRendererHostCore rendererKey={rendererKey} viewModel={viewModel} sections={sections} rsvp={rsvp} />;
 }

@@ -8,7 +8,9 @@ import { handleSubmitPublicRsvpRequest } from "../../../../../lib/server/routes/
  * public published invitation /i/[slug]. No session and no token: the body's
  * `publicSlug` is resolved server-side to its CURRENT PUBLISHED invitation,
  * and Project/invitation/version are never accepted from the browser.
- * Rate limiting is the Task 035 pre-production gate.
+ * Task 033B1: an optional `guestToken` (personalized /i/[slug]/g/[token])
+ * binds the response to that guest's one current RSVP; the guest id is never
+ * accepted from the browser. Rate limiting is the Task 035 pre-production gate.
  */
 export async function POST(request: Request) {
   const result = await handleSubmitPublicRsvpRequest(() => request.json(), createPublicRsvpDependencies());

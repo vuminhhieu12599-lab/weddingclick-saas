@@ -730,6 +730,7 @@ Purpose: personalized guest records. `display_name` remains single free-form `TE
 | `created_by` | `UUID` | NULL | *(none)* | `REFERENCES profiles(id) ON DELETE SET NULL` |
 | `token_hash` | `BYTEA` | NOT NULL | *(none)* | `UNIQUE`, `CHECK (octet_length(token_hash) = 32)` |
 | `token_hint` | `TEXT` | NULL | *(none)* | |
+| `token_issued_at` | `TIMESTAMPTZ` | NULL | *(none)* | *Since 0042.* Issuance authority: NULL = never issued (dormant `token_hash`, never resolves). `token_hint` is display-only. |
 | `revoked_at` | `TIMESTAMPTZ` | NULL | *(none)* | `NULL` = active/resolvable |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | |
 | `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | |
@@ -1052,6 +1053,8 @@ Unchanged from Revision 1 (§2.17 above restates the exact columns). Verificatio
 ## 11. I. Personalized Guest Token Model
 
 Unchanged column model from Revision 1 (§2.19 above), with rotation now explicitly defined and distinguished from revocation (§R14, §2.19). `display_name` remains a single free-form field; resolution is by `token_hash` only, never by `display_name` or a predictable id.
+
+*Since 0042 (Task 033B1):* public resolution is `resolve_public_guest(slug, token_hash)` (private helper) behind the `service_role`-only `get_public_guest_invitation` and `submit_public_guest_rsvp`. It requires the slug's current PUBLISHED version, the same Project and the permitted variant (`docs/API_CONTRACT.md` §7.3). The personalized RSVP upserts on `rsvps_guest_id_key`. 0042 adds `guests.token_issued_at TIMESTAMPTZ NULL` (no default, no backfill): NULL = never issued, so the NOT NULL `token_hash` is a dormant placeholder that never resolves; set by ISSUE/REGENERATE. It is the only issuance authority; `token_hint` stays display-only (`docs/API_CONTRACT.md` §22.1).
 
 ---
 

@@ -24,3 +24,18 @@ export function requiredInvitationVariantsForPackage(packageCode: string): reado
     ? REQUIRED_INVITATION_VARIANTS_BY_PACKAGE[packageCode]
     : null;
 }
+
+/**
+ * docs/API_CONTRACT.md §7.3 — the invitation a personalized guest belongs
+ * to (Task 033B1). An explicit `guests.invitation_variant` is used as is.
+ * `NULL` resolves to `COMMON` only for a COMMON-package Project; for any
+ * other package it is an incomplete configuration (`null`) and is never
+ * guessed as GROOM or BRIDE. Mirrored by `resolve_public_guest` (0042).
+ */
+export function resolveGuestInvitationVariant(
+  guestVariant: InvitationVariant | null,
+  packageCode: string,
+): InvitationVariant | null {
+  if (guestVariant !== null) return guestVariant;
+  return packageCode === "COMMON" ? "COMMON" : null;
+}

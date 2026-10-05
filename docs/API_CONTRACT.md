@@ -966,7 +966,7 @@ Every response is `Cache-Control: no-store`. No database detail is returned; not
 
 **Client capability.** `app/i/[slug]/public-invitation-renderer.tsx` (client) builds the RSVP capability in the client graph and passes it to the host core. Mapping: 201 with `recorded: true` → `SUCCESS`; 400 → `INVALID`; 404 → `UNAVAILABLE`; any other status, unexpected body or network error → `FAILED`. Staff Preview and Customer Review keep the UNAVAILABLE-only wrapper and never write.
 
-**Not in this task.** Personalized guest tokens / guest resolve (no issuance or resolution contract exists yet; Task 032/033 guest workflow), RSVP read/portal/summary, rate limiting (Task 035 pre-production gate), Open Graph (Task 032B), analytics, republish lifecycle.
+**Not in this task.** Personalized guest tokens / guest resolve (*since added by §22, Task 033B1; this generic contract is unchanged*), RSVP read/portal/summary, rate limiting (Task 035 pre-production gate), Open Graph (Task 032B), analytics, republish lifecycle.
 
 ## 21. Task 032B — Open Graph + Social Share Cover for `/i/[slug]`
 
@@ -990,3 +990,81 @@ Every response is `Cache-Control: no-store`. No database detail is returned; not
 **Crawlers.** `noindex` stays: it does not block Open Graph previews. Next.js 16 streams metadata to normal browsers but renders it blocking in `<head>` for its default HTML-limited bot list, which includes `facebookexternalhit`. Zalo's crawler is not in that list. Real Facebook/Zalo validation needs a public HTTPS deployment; localhost can only be checked by inspecting the generated HTML.
 
 **Not in this task.** Facebook/Zalo SDKs, tracking, analytics, `og:url`/site-URL config, `htmlLimitedBots` override, guest personalization, RSVP changes, republish lifecycle.
+
+## 22. Task 033B1 — Personalized Guest Link `/i/[slug]/g/[token]`
+
+Adds personalized invitations beside the unchanged generic `/i/[slug]` (§19–§21). Migration `0042_personalized_guest_link.sql`.
+
+**URLs.**
+
+| URL | Meaning |
+|---|---|
+| `/i/[slug]` | generic, non-personalized invitation ("Quý khách"); RSVP `guest_id` NULL (§20) — unchanged |
+| `/i/[slug]/g/[token]` | personalized invitation for exactly one guest; `[token]` is the credential |
+
+Never `?guest=`, never a guest id, name, phone or email as identity. The slug stays a routing locator.
+
+**Token.** 32 CSPRNG bytes, unpadded base64url (43 chars, 256 bits), generated server-side by the shared `generateAccessToken()` (Task 026 D7). `guests.token_hash` stores only its SHA-256 digest; `guests.token_hint` its last 8 characters (display only, never lifecycle state). The raw token is returned once, inside the issued path, and is never stored, logged or put in metadata.
+
+### 22.1 Guest-link issuance — staff SUPPORT path `POST /api/v2/internal/projects/[id]/guests/[guestId]/access-link`
+
+**Actors (accepted product model).** Customers never log in and never edit the Project. The primary flow for managing invited guests and personalized links is the **Guest Tool inside the Customer Portal**: a later milestone, reached through a `project_access_links` PORTAL link and gated by the PERSONALIZED_GUEST entitlement. It is **not implemented in 033B1**. This endpoint is the staff **support/back-office** path only. Both paths share one actor-neutral use case, `issueGuestLink(projectId, guestId, body, client, gateway)`. Each caller authorizes first, then passes an already-authorized data client and gateway (staff: `requireStaff` → staff-scoped client; future Portal: PORTAL resolution → Project-pinned gateway).
+
+**Entitlement.** Every new ISSUE and REGENERATE requires an active PERSONALIZED_GUEST entitlement: at least one `project_addons` row of this Project with `addon_code_snapshot = 'PERSONALIZED_GUEST'` and `revoked_at IS NULL` (`docs/PHYSICAL_DATABASE_PLAN.md` §2.6). It is derived server-side, never sent by the browser; if it is missing the response is 403. The gate covers issuance only. Links already issued keep resolving even if the add-on is later revoked; 0042 resolution is unchanged. **What should happen to those links is an open owner decision (DEFERRED).**
+
+Staff support path: staff Bearer session + `requireStaff` (auth before validation). Direct RLS on `guests` with the staff-scoped client (§7.5: no activity event), never `service_role`. Body exactly `{ "action": "ISSUE" | "REGENERATE" }`; the browser never sends a token, hash, hint, variant or Project.
+
+`guests.token_hash` is `NOT NULL` (0017), so every guest already has a hash whose raw token was never delivered. That **dormant** hash is not a credential. Issuance state is the explicit `guests.token_issued_at` (0042, nullable, existing rows NULL, no backfill): NULL = never issued; set = an issued token is active unless the guest is revoked. `token_hint` is never issuance state.
+
+| Action | Allowed when | Effect |
+|---|---|---|
+| `ISSUE` | `revoked_at IS NULL` and `token_issued_at IS NULL` | in-place replacement of the dormant `token_hash`/`token_hint` (§2.19 [R14]); `token_issued_at` = now |
+| `REGENERATE` | `revoked_at IS NULL` and `token_issued_at IS NOT NULL` | same replacement, `token_issued_at` = now; the previous token stops resolving immediately |
+
+The UPDATE is conditional on project, `revoked_at IS NULL` and the expected `token_issued_at` state, so concurrent calls cannot both succeed. `token_issued_at` is the issuing server's clock (PostgREST cannot send `now()`). No token history, one active token per guest.
+
+| Condition | HTTP |
+|---|---|
+| Success | 200 `{ data: { guestId, projectId, invitationVariant, invitationPath } }` — `invitationPath` = `/i/<slug>/g/<token>`, returned once |
+| No/invalid bearer · not active staff | 401 · 403 |
+| Project has no active PERSONALIZED_GUEST entitlement | 403 `{ error: "Personalized guest add-on is not active for this project" }`, nothing written |
+| Bad UUID, body not exactly `{ action }`, unknown action | 400 |
+| Guest not in this Project | 404 |
+| Revoked guest · ISSUE when already issued · REGENERATE before ISSUE · lost race | 409 |
+| Variant unresolvable (§7.3: NULL on a non-COMMON package) or no invitation of that variant | 422 |
+
+The variant is `guests.invitation_variant`, or `COMMON` when NULL on a COMMON-package Project (`resolveGuestInvitationVariant`, `lib/domain`). The slug is that invitation's `public_slug`; issuance does not require the invitation to be published yet. Every response is `Cache-Control: no-store`.
+
+### 22.2 Public resolution
+
+The page hashes the token (shape-checked first; malformed → not-found with no database read) and calls `get_public_guest_invitation(slug, hash)` (0042, `STABLE SECURITY DEFINER`, `SET search_path = ''`, `EXECUTE` for `service_role` only, via `lib/server/supabase/public-guest-repository.ts`). Through the private helper `resolve_public_guest` it requires, in order: the slug's current `PUBLISHED` version (`PI001` on pointer fault), a guest with that hash **and `token_issued_at IS NOT NULL`** (a dormant never-issued hash never resolves), the guest's Project = the invitation's Project, and the permitted variant (§4 step 6, §7.3). It returns only `{ displayName }` of an active guest, else NULL.
+
+Then the unchanged §19 pipeline renders the same PUBLISHED Snapshot with the same renderer; `guests.display_name` is passed as the ViewModel `guest` overlay (the existing renderer contract). The RSVP name input is not prefilled.
+
+**Fail closed, no fallback.** Malformed, unknown, dormant (never issued), regenerated-old, revoked, other-Project and wrong-variant tokens all render the same not-found. A bad personalized credential never becomes the generic `/i/[slug]`. Nothing distinguishes unknown slug from unknown token from foreign token.
+
+**Metadata.** Fixed: generic title, `noindex, nofollow`, `referrer: no-referrer`. No Open Graph, no guest name, no token, no `og:url`/canonical. §21 is unchanged and applies only to `/i/[slug]`.
+
+### 22.3 Personalized RSVP — `POST /api/v2/public/rsvp` with `guestToken`
+
+Same endpoint as §20. The body is either the five §20 keys (generic, unchanged) or those five plus `guestToken` (personalized). `guestId`, `token`, `guest` and every other key stay 400.
+
+With `guestToken`: shape check (malformed → 404, no database call) → SHA-256 → `submit_public_guest_rsvp(slug, hash, …)` (0042, `SECURITY DEFINER`, `service_role` only). The RPC re-validates input (`RS001`), resolves the guest exactly as in §22.2, and then:
+
+- `guest_id` comes only from the token; `project_id` only from the publication;
+- the typed `guestName` is stored in `guest_display_name_snapshot` as response data, never identity;
+- one logical RSVP per guest: `INSERT … ON CONFLICT (guest_id) WHERE guest_id IS NOT NULL DO UPDATE` on the existing `rsvps_guest_id_key` (0018). The first submission inserts; later ones atomically replace `attendance`, `party_size`, `message` and the name snapshot (attendance may change). `id`, `project_id`, `guest_id`, `created_at` are kept.
+
+| Condition | HTTP |
+|---|---|
+| Persisted (insert or update) | 201 `{ data: { recorded: true } }` |
+| Invalid input | 400 |
+| Malformed / unknown / dormant (never issued) / other-Project / wrong-variant token, or slug not published | 404 — nothing written, never a generic insert |
+| Known guest token, revoked (`GT001`, §4.1) | 410 `{ error: "Invitation link is no longer valid" }` |
+| Other fault | 500 |
+
+Client mapping adds 410 → `UNAVAILABLE`. Generic rows (`guest_id` NULL) are excluded from the unique index by NULL semantics and stay unbounded (§20).
+
+**Unchanged.** Staff Preview and Customer Review stay UNAVAILABLE-only and never carry a guest token. `SOCIAL_SHARE_COVER`, Elegant Editorial v1, publish/republish.
+
+**Not in this task.** The Customer Portal itself (PORTAL link resolution, RSVP list, and the Guest Tool for guest create/list/edit/revoke and customer-side ISSUE/REGENERATE), rate limiting / token brute-force protection (Task 035 pre-production gate; the 256-bit token is the current control), bulk import, messaging, QR codes, analytics, and the deferred decision on already-issued links after entitlement revocation.

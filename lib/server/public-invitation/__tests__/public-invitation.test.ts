@@ -216,7 +216,8 @@ describe("service_role containment + public route (Task 032A)", () => {
   it("L: repository and signer are imported only by the wiring; the wiring only by /i/[slug]", () => {
     expect(importersOf("public-invitation-repository")).toEqual([WIRING]);
     expect(importersOf("published-invitation-media-signer")).toEqual([WIRING]);
-    expect(importersOf("public-invitation-supabase")).toEqual([PAGE]);
+    // Task 033B1 compatibility addition: the personalized /i/[slug]/g/[token] wiring reuses these page dependencies.
+    expect(importersOf("public-invitation-supabase")).toEqual([PAGE, "lib/server/public-guest/public-guest-supabase.ts"]);
   });
 
   it("L: the page is a Server Component that never imports service-role-client and renders through the public host wrapper", () => {

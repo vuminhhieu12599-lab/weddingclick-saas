@@ -54,6 +54,13 @@ const PUBLIC_RSVP_REPOSITORY_PATH = "lib/server/supabase/public-rsvp-repository.
  * returned object — see lib/server/public-invitation/__tests__/public-social-metadata.test.ts.
  */
 const PUBLIC_SOCIAL_SHARE_REPOSITORY_PATH = "lib/server/supabase/public-social-share-repository.ts";
+/**
+ * Task 033B1 compatibility addition: the personalized guest link's own
+ * narrow repository for the two service_role-only 0042 RPCs
+ * (`get_public_guest_invitation`, `submit_public_guest_rsvp`) — see
+ * lib/server/public-guest/__tests__/personalized-guest-link.test.ts.
+ */
+const PUBLIC_GUEST_REPOSITORY_PATH = "lib/server/supabase/public-guest-repository.ts";
 
 const PHASE_2_PRODUCTION_FILES = [
   "lib/server/auth/access-token-crypto.ts",
@@ -240,7 +247,7 @@ describe("Task 026 Phase 2 — service-role client import boundary (§7)", () =>
    * RPC"). The allowlist below is an exact two-file list — never a blanket
    * exemption — so a THIRD future service-role importer remains caught.
    */
-  it("only the resolution repository, the Task 027 intake-submit repository, the two Task 030B customer-review modules and the two Task 032A public-invitation modules the Task 033A public RSVP repository and the Task 032B social-share repository import service-role-client.ts", () => {
+  it("only the resolution repository, the Task 027 intake-submit repository, the two Task 030B customer-review modules and the two Task 032A public-invitation modules the Task 033A public RSVP repository the Task 032B social-share repository and the Task 033B1 public-guest repository import service-role-client.ts", () => {
     const importers = ALL_PRODUCTION_FILES.filter(
       (f) => f !== SERVICE_ROLE_CLIENT_PATH && IMPORT_PATTERN.test(readFile(f)),
     );
@@ -254,6 +261,7 @@ describe("Task 026 Phase 2 — service-role client import boundary (§7)", () =>
         PUBLISHED_INVITATION_MEDIA_SIGNER_PATH,
         PUBLIC_RSVP_REPOSITORY_PATH,
         PUBLIC_SOCIAL_SHARE_REPOSITORY_PATH,
+        PUBLIC_GUEST_REPOSITORY_PATH,
       ].sort(),
     );
   });
@@ -491,7 +499,7 @@ describe("Task 026 Phase 2 — indirect (transitive) client-reachability to serv
    * Narrowed by Task 027 Phase 2 — same exact two-file allowlist as the
    * import-boundary describe block above.
    */
-  it("the resolution repository, the intake-submit repository, the two Task 030B customer-review modules and the two Task 032A public-invitation modules the Task 033A public RSVP repository and the Task 032B social-share repository are the only nodes with a direct edge to service-role-client.ts, across the whole graph", () => {
+  it("the resolution repository, the intake-submit repository, the two Task 030B customer-review modules and the two Task 032A public-invitation modules the Task 033A public RSVP repository the Task 032B social-share repository and the Task 033B1 public-guest repository are the only nodes with a direct edge to service-role-client.ts, across the whole graph", () => {
     const directImporters = ALL_PRODUCTION_FILES.filter((file) =>
       (importGraph.get(file) ?? []).includes(SERVICE_ROLE_CLIENT_PATH),
     );
@@ -505,6 +513,7 @@ describe("Task 026 Phase 2 — indirect (transitive) client-reachability to serv
         PUBLISHED_INVITATION_MEDIA_SIGNER_PATH,
         PUBLIC_RSVP_REPOSITORY_PATH,
         PUBLIC_SOCIAL_SHARE_REPOSITORY_PATH,
+        PUBLIC_GUEST_REPOSITORY_PATH,
       ].sort(),
     );
   });

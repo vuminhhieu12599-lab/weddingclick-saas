@@ -5,11 +5,12 @@ import { submitPublicRsvp, type SubmitPublicRsvpDependencies } from "../public-r
  * Framework-agnostic handler for POST /api/v2/public/rsvp (Task 033A).
  * Mirrors lib/server/routes/customer-review.ts: no-store on every response,
  * fixed generic messages, never raw DB detail, and nothing about the request
- * (slug, name, message) is logged. 201 is returned only after the 0040 RPC
- * confirmed the persisted row.
+ * (slug, name, message, guest token) is logged. 201 is returned only after
+ * the 0040 RPC (or, with a guest token, the 0042 RPC) confirmed the
+ * persisted row. 410 = revoked personalized guest link (Task 033B1).
  */
 export interface PublicRsvpApiResult {
-  status: 201 | 400 | 404 | 500;
+  status: 201 | 400 | 404 | 410 | 500;
   body: { data: { recorded: true } } | { error: string };
   headers: Record<string, string>;
 }
@@ -37,6 +38,7 @@ export async function handleSubmitPublicRsvpRequest(
     if (error instanceof ApiError) {
       if (error.kind === "BAD_REQUEST") return result(400, { error: "Invalid RSVP request" });
       if (error.kind === "NOT_FOUND") return result(404, { error: "Invitation not found" });
+      if (error.kind === "REVOKED_TOKEN") return result(410, { error: "Invitation link is no longer valid" });
     }
     console.error("[handleSubmitPublicRsvpRequest] Unexpected error");
     return result(500, { error: "Internal server error" });

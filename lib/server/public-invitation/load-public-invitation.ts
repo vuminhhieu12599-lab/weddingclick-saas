@@ -1,6 +1,6 @@
 import { buildInvitationViewModel } from "../../invitation-rendering/build-invitation-view-model";
 import { extractSnapshotMediaRefs } from "../../invitation-rendering/extract-snapshot-media-refs";
-import type { MediaResolution, MediaResolver } from "../../invitation-rendering/invitation-view-model-types";
+import type { GuestOverlay, MediaResolution, MediaResolver } from "../../invitation-rendering/invitation-view-model-types";
 import type { RendererCompatibilityRegistry } from "../../invitation-rendering/renderer-registry";
 import { selectRendererCompatibility } from "../../invitation-rendering/renderer-selection";
 import { resolveSnapshotMedia } from "../../invitation-rendering/resolve-snapshot-media";
@@ -84,8 +84,16 @@ function pinnedMediaResolver(
  * Any integrity or renderer fault throws. Never reads or rebuilds the
  * mutable draft, never falls back to REVIEW. Signed URLs exist only in the
  * returned ViewModel and are never persisted.
+ *
+ * `guest` (Task 033B1) is an ALREADY-AUTHORIZED overlay, supplied only by
+ * the personalized loader after the guest token resolved on this slug;
+ * omitted for the generic /i/[slug] flow, which is otherwise identical.
  */
-export async function loadPublicInvitation(publicSlug: string, deps: LoadPublicInvitationDependencies): Promise<PublicInvitationView | null> {
+export async function loadPublicInvitation(
+  publicSlug: string,
+  deps: LoadPublicInvitationDependencies,
+  guest?: GuestOverlay,
+): Promise<PublicInvitationView | null> {
   if (!isWellFormedPublicSlug(publicSlug)) {
     return null;
   }
@@ -116,7 +124,7 @@ export async function loadPublicInvitation(publicSlug: string, deps: LoadPublicI
   const urls = toSign.length === 0 ? new Map<string, string>() : await deps.signMedia(toSign);
 
   const mediaResolutions = await resolveSnapshotMedia(snapshot, pinnedMediaResolver(version, urls, refs));
-  const viewModel = buildInvitationViewModel({ snapshot, mediaResolutions });
+  const viewModel = buildInvitationViewModel(guest === undefined ? { snapshot, mediaResolutions } : { snapshot, guest, mediaResolutions });
   const selection = selectRendererCompatibility({ snapshot, viewModel, registry: deps.rendererRegistry });
 
   return { rendererKey: selection.rendererKey, viewModel, sections: selection.effectiveSections };
