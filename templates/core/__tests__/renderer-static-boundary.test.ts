@@ -1029,6 +1029,8 @@ const HARNESS_PAGE = `${HARNESS_ROOT}/page.tsx`;
 const HARNESS_WRAPPER = `${HARNESS_ROOT}/renderer-harness-client.tsx`;
 /** P30 amendment (Staff Preview RSVP): the staff preview frame's UNAVAILABLE-only wrapper. */
 const STAFF_PREVIEW_WRAPPER = "app/admin/preview-frame/staff-preview-renderer.tsx";
+/** Task 033A: the public /i/[slug] wrapper, the only caller with a REAL RSVP capability. */
+const PUBLIC_INVITATION_WRAPPER = "app/i/[slug]/public-invitation-renderer.tsx";
 const HARNESS_SCENARIOS = `${HARNESS_ROOT}/harness-scenarios.ts`;
 const HARNESS_FILES = [HARNESS_GATE, HARNESS_PAGE, HARNESS_WRAPPER, HARNESS_SCENARIOS] as const;
 /** RF-06D: provenance note for the harness-only audio tone (not code). */
@@ -1431,11 +1433,11 @@ describe("RF-06C boundaries across the repository", () => {
   const appSources = nonTestSources("app");
   const productionSources = [...nonTestSources("templates"), ...nonTestSources("lib"), ...appSources];
 
-  it("only the production host, the harness wrapper and the staff preview wrapper render the host core", () => {
+  it("only the production host, the harness wrapper, the staff preview wrapper and the Task 033A public wrapper render the host core", () => {
     const importers = productionSources.filter((file) =>
       resolvedImportsOf(file).includes(RF06C_HOST_CORE_MODULE.replace(/\.tsx$/, "")),
     );
-    expect(importers.sort()).toStrictEqual([HARNESS_WRAPPER, HOST_MODULE, STAFF_PREVIEW_WRAPPER].sort());
+    expect(importers.sort()).toStrictEqual([HARNESS_WRAPPER, HOST_MODULE, PUBLIC_INVITATION_WRAPPER, STAFF_PREVIEW_WRAPPER].sort());
     for (const importer of importers) expect(readRepoFile(importer).startsWith('"use client";\n'), importer).toBe(true);
   });
 
@@ -1457,10 +1459,10 @@ describe("RF-06C boundaries across the repository", () => {
     }
   });
 
-  it("an RSVP capability is constructed only in the harness and staff preview wrappers, and only as UNAVAILABLE", () => {
+  it("an RSVP capability is constructed only in the harness, staff preview and Task 033A public wrappers; preview ones only as UNAVAILABLE", () => {
     for (const file of productionSources) {
       const constructs = /:\s*RsvpCapabilityV1\s*=/.test(codeOf(file));
-      expect(constructs, file).toBe(file === HARNESS_WRAPPER || file === STAFF_PREVIEW_WRAPPER);
+      expect(constructs, file).toBe(file === HARNESS_WRAPPER || file === STAFF_PREVIEW_WRAPPER || file === PUBLIC_INVITATION_WRAPPER);
     }
     const staffPreview = codeOf(STAFF_PREVIEW_WRAPPER);
     expect(staffPreview).toMatch(/Object\.freeze\(\{ status: "UNAVAILABLE" \}\)/);

@@ -41,6 +41,12 @@ const CUSTOMER_REVIEW_MEDIA_SIGNER_PATH = "lib/server/supabase/customer-review-m
  */
 const PUBLIC_INVITATION_REPOSITORY_PATH = "lib/server/supabase/public-invitation-repository.ts";
 const PUBLISHED_INVITATION_MEDIA_SIGNER_PATH = "lib/server/supabase/published-invitation-media-signer.ts";
+/**
+ * Task 033A compatibility addition: the public RSVP route's own narrow
+ * repository for the service_role-only 0040 `submit_public_rsvp` RPC — see
+ * lib/server/public-rsvp/__tests__/public-rsvp.test.ts.
+ */
+const PUBLIC_RSVP_REPOSITORY_PATH = "lib/server/supabase/public-rsvp-repository.ts";
 
 const PHASE_2_PRODUCTION_FILES = [
   "lib/server/auth/access-token-crypto.ts",
@@ -227,7 +233,7 @@ describe("Task 026 Phase 2 — service-role client import boundary (§7)", () =>
    * RPC"). The allowlist below is an exact two-file list — never a blanket
    * exemption — so a THIRD future service-role importer remains caught.
    */
-  it("only the resolution repository, the Task 027 intake-submit repository, the two Task 030B customer-review modules and the two Task 032A public-invitation modules import service-role-client.ts", () => {
+  it("only the resolution repository, the Task 027 intake-submit repository, the two Task 030B customer-review modules and the two Task 032A public-invitation modules and the Task 033A public RSVP repository import service-role-client.ts", () => {
     const importers = ALL_PRODUCTION_FILES.filter(
       (f) => f !== SERVICE_ROLE_CLIENT_PATH && IMPORT_PATTERN.test(readFile(f)),
     );
@@ -239,6 +245,7 @@ describe("Task 026 Phase 2 — service-role client import boundary (§7)", () =>
         CUSTOMER_REVIEW_MEDIA_SIGNER_PATH,
         PUBLIC_INVITATION_REPOSITORY_PATH,
         PUBLISHED_INVITATION_MEDIA_SIGNER_PATH,
+        PUBLIC_RSVP_REPOSITORY_PATH,
       ].sort(),
     );
   });
@@ -476,7 +483,7 @@ describe("Task 026 Phase 2 — indirect (transitive) client-reachability to serv
    * Narrowed by Task 027 Phase 2 — same exact two-file allowlist as the
    * import-boundary describe block above.
    */
-  it("the resolution repository, the intake-submit repository, the two Task 030B customer-review modules and the two Task 032A public-invitation modules are the only nodes with a direct edge to service-role-client.ts, across the whole graph", () => {
+  it("the resolution repository, the intake-submit repository, the two Task 030B customer-review modules and the two Task 032A public-invitation modules and the Task 033A public RSVP repository are the only nodes with a direct edge to service-role-client.ts, across the whole graph", () => {
     const directImporters = ALL_PRODUCTION_FILES.filter((file) =>
       (importGraph.get(file) ?? []).includes(SERVICE_ROLE_CLIENT_PATH),
     );
@@ -488,6 +495,7 @@ describe("Task 026 Phase 2 — indirect (transitive) client-reachability to serv
         CUSTOMER_REVIEW_MEDIA_SIGNER_PATH,
         PUBLIC_INVITATION_REPOSITORY_PATH,
         PUBLISHED_INVITATION_MEDIA_SIGNER_PATH,
+        PUBLIC_RSVP_REPOSITORY_PATH,
       ].sort(),
     );
   });

@@ -1997,4 +1997,16 @@ Implemented by migration `0039_public_invitation_read.sql` (`get_public_invitati
 3. **Only pinned PUBLISHED media are signed**, at request time, by a dedicated server-only `service_role` signer used after the slug resolved to an exact PUBLISHED version (Product Owner direction). Signed URLs are never persisted.
 4. **`service_role` containment.** Two new narrow modules: the read-only RPC repository and the signer, imported only by the public page wiring. The RPC is `EXECUTE` for `service_role` only; `anon`/`authenticated` receive nothing and no table grant is added.
 5. **Freshness.** The page is dynamic: a republish moves the slug on the next request.
-6. **RSVP hidden** (production host supplies no RSVP capability) until Task 033. Open Graph is Task 032B. Guest personalization remains future work.
+6. **RSVP hidden** (production host supplies no RSVP capability) until Task 033. Open Graph is Task 032B. Guest personalization remains future work. *Superseded for RSVP by Task 033A below.*
+
+## Task 033A — Public RSVP Foundation (2026-10-05)
+
+Implemented by migration `0040_submit_public_rsvp.sql` (`submit_public_rsvp`), `POST /api/v2/public/rsvp` and the public client wrapper `app/i/[slug]/public-invitation-renderer.tsx`. See `docs/API_CONTRACT.md` §20. Realizes P29/P30 for the public route only.
+
+1. **Identity model.** The public `/i/[slug]` invitation is the canonical **non-personalized** flow: every row has `guest_id` NULL. The typed name (`guest_display_name_snapshot`, RF15 "RSVP completion") is response/display data only and is **never** identity: it never looks up, creates or updates a guest or an existing RSVP. No `?guest=`, guest id, token or Project/invitation/version id is accepted from the browser. Personalized RSVP needs the guest-token issuance/resolution contract, which does not exist yet; it stays future work.
+2. **Statuses** are exactly `ATTENDING | MAYBE | NOT_ATTENDING` (0032); party size `ATTENDING`/`MAYBE` 1–20, `NOT_ATTENDING` 0; message ≤ 500; name required, trimmed, non-blank, ≤ 200. Validated by the server use case and again in the RPC.
+3. **PUBLISHED binding.** The slug is resolved server-side to the invitation's current `published_version_id`, which must be a `PUBLISHED` row of the same invitation and Project; the RSVP is stored against that Project. Unknown or never-published slug → 404, nothing written. No REVIEW or draft path exists. `rsvps` has no invitation/version column, so the binding is Project-level; no column was added.
+4. **Duplicates.** Non-personalized submissions are unbounded (§2.20 / §J): each submission, including "Sửa lại", is a new row. The one-current-row rule applies only to personalized guests, which this task never writes.
+5. **No fake success.** `SUCCESS` only after a 201 confirming the persisted row; 400 → `INVALID`, 404 → `UNAVAILABLE`, anything else → `FAILED`.
+6. **Containment.** One new `service_role` module (the RPC repository), imported only by the route wiring. `EXECUTE` for `service_role` only; no table grant or RLS policy changed.
+7. **Unchanged.** Staff Preview and Customer Review stay UNAVAILABLE-only (no write). `InvitationRendererHost` is unchanged and still supplies no RSVP; only the public wrapper does. Elegant Editorial v1 is visually untouched. Open Graph remains Task 032B; rate limiting remains the Task 035 pre-production gate.

@@ -219,11 +219,12 @@ describe("service_role containment + public route (Task 032A)", () => {
     expect(importersOf("public-invitation-supabase")).toEqual([PAGE]);
   });
 
-  it("L: the page is a Server Component that never imports service-role-client and renders through the production host", () => {
+  it("L: the page is a Server Component that never imports service-role-client and renders through the public host wrapper", () => {
     const page = read(PAGE);
     expect(page).not.toMatch(/^["']use client["']/m);
     expect(page).not.toMatch(/service-role-client|SUPABASE_SERVICE_ROLE_KEY|createServiceRole/);
-    expect(page).toMatch(/<InvitationRendererHost /);
+    // Task 033A: the client wrapper renders the host core with the real public RSVP capability.
+    expect(page).toMatch(/<PublicInvitationRenderer\s/);
     expect(page).toMatch(/export const dynamic = "force-dynamic"/);
   });
 

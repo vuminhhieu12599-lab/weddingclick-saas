@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { loadPublicInvitation } from "../../../lib/server/public-invitation/load-public-invitation";
 import { createPublicInvitationPageDependencies } from "../../../lib/server/public-invitation/public-invitation-supabase";
 import type { PublicInvitationView } from "../../../lib/server/public-invitation/public-invitation-types";
-import { InvitationRendererHost } from "../../../templates/core/invitation-renderer-host";
+import { PublicInvitationRenderer } from "./public-invitation-renderer";
 
 /**
  * Every request re-resolves the slug's CURRENT `published_version_id` (so a
@@ -34,8 +34,10 @@ function PublicInvitationUnavailable() {
  * Public published invitation (Task 032A). The slug is the only locator:
  * it is resolved server-side to the invitation's exact current PUBLISHED
  * version (never REVIEW, never the mutable draft), whose persisted Snapshot
- * renders through its pinned renderer key in the production host — which
- * supplies no RSVP capability until Task 033. No query parameter selects a
+ * renders through its pinned renderer key in the production host core. The
+ * client wrapper supplies the real public RSVP capability (Task 033A), bound
+ * only to this slug; the server re-derives the PUBLISHED binding on every
+ * submission. No query parameter selects a
  * variant, version or renderer. Unknown or unpublished slug → not-found;
  * any integrity, renderer or media-signing fault → a fixed safe message
  * (no slug, id or database detail is echoed or logged).
@@ -54,5 +56,12 @@ export default async function PublicInvitationPage({ params }: { params: Promise
     notFound();
   }
 
-  return <InvitationRendererHost rendererKey={view.rendererKey} viewModel={view.viewModel} sections={view.sections} />;
+  return (
+    <PublicInvitationRenderer
+      publicSlug={slug}
+      rendererKey={view.rendererKey}
+      viewModel={view.viewModel}
+      sections={view.sections}
+    />
+  );
 }

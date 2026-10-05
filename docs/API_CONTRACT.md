@@ -922,7 +922,7 @@ Server-rendered page `app/i/[slug]/page.tsx`. No staff session, no customer toke
 
 **Media.** Only `project_media` rows pinned to that exact PUBLISHED version through `invitation_version_media`, in the `project-media` bucket and referenced by its Snapshot, are signed — through `lib/server/supabase/published-invitation-media-signer.ts` (PUBLISHED INVITATION MEDIA SIGNING ONLY, 1 hour). Anything else is `UNAVAILABLE`. Signed URLs live only in the rendered ViewModel and are never persisted.
 
-**Capabilities.** The production host: clipboard, music and clock only. No RSVP capability, so the RSVP section is not rendered until Task 033. Music never autoplays; "Mở thiệp" remains the explicit gesture (template behavior unchanged).
+**Capabilities.** The production host: clipboard, music and clock only. No RSVP capability, so the RSVP section is not rendered until Task 033. *Superseded by Task 033A (§20): the page now renders through the public client wrapper, which adds the real public RSVP capability.* Music never autoplays; "Mở thiệp" remains the explicit gesture (template behavior unchanged).
 
 | Condition | Result |
 |---|---|
@@ -934,3 +934,36 @@ Server-rendered page `app/i/[slug]/page.tsx`. No staff session, no customer toke
 **Caching.** `export const dynamic = "force-dynamic"`: every request re-resolves the current `published_version_id` (a later republish moves the slug immediately) and signs fresh URLs. Metadata is a fixed title with `noindex` until Task 032B.
 
 **Not in this task.** Open Graph / `SOCIAL_SHARE_COVER` metadata (Task 032B), RSVP persistence (Task 033), guest tokens/personalization, QR/share/analytics, republish lifecycle changes, rollback/unpublish.
+
+## 20. Task 033A — Public RSVP `POST /api/v2/public/rsvp`
+
+Non-personalized RSVP from the public published invitation `/i/[slug]`. No session, no customer token and no guest token: the generic public invitation is the canonical non-personalized flow (`docs/PRODUCT.md` §14, `docs/PHYSICAL_DATABASE_PLAN.md` §2.20 — `guest_id` NULL, typed name required).
+
+**Request body** — exactly these five keys, nothing else (any other key, such as a Project/invitation/version id, renderer key, guest id or token, is 400):
+
+| Key | Rule |
+|---|---|
+| `publicSlug` | the slug of the page; shape as in §19 (malformed → 404, no database read). A routing locator, never authorization |
+| `attendance` | `ATTENDING` \| `MAYBE` \| `NOT_ATTENDING` |
+| `partySize` | integer; `ATTENDING`/`MAYBE` 1–20, `NOT_ATTENDING` exactly 0 |
+| `message` | `null` or ≤ 500 code points |
+| `guestName` | required typed response name: already trimmed, non-blank, ≤ 200 code points. Display/response data only, never identity |
+
+The four response fields are validated with the canonical `isValidRsvpSubmitInputV1` (K16), then re-validated inside the RPC.
+
+**Flow.** Route → `submitPublicRsvp` → `submit_public_rsvp` (migration 0040, `SECURITY DEFINER`, `SET search_path = ''`, `EXECUTE` for `service_role` only, via `lib/server/supabase/public-rsvp-repository.ts`). The RPC resolves the slug to its invitation, requires `published_version_id` to point at a `PUBLISHED` row of the same invitation and Project (else `PI001`), derives `project_id`, and inserts one `rsvps` row (`guest_id` NULL, `guest_display_name_snapshot` = typed name). It never reads REVIEW pointers, draft data or existing RSVPs, and never touches `guests`.
+
+| Condition | Result |
+|---|---|
+| Persisted | 201 `{ data: { recorded: true } }` |
+| Malformed body / unparseable JSON / extra key / invalid field (`RS001` from the RPC included) | 400 `{ error: "Invalid RSVP request" }` |
+| Malformed, unknown or never-published slug | 404 `{ error: "Invitation not found" }`, nothing written |
+| Any other fault (`PI001`, DB error, unexpected shape) | 500 `{ error: "Internal server error" }` |
+
+Every response is `Cache-Control: no-store`. No database detail is returned; nothing about the request (slug, name, message) is logged.
+
+**Duplicates.** Non-personalized rows are unbounded (§2.20 / §J accepted limitation): every submission, including a "Sửa lại" resubmission, inserts a new row. No row is ever updated or matched by the typed name.
+
+**Client capability.** `app/i/[slug]/public-invitation-renderer.tsx` (client) builds the RSVP capability in the client graph and passes it to the host core. Mapping: 201 with `recorded: true` → `SUCCESS`; 400 → `INVALID`; 404 → `UNAVAILABLE`; any other status, unexpected body or network error → `FAILED`. Staff Preview and Customer Review keep the UNAVAILABLE-only wrapper and never write.
+
+**Not in this task.** Personalized guest tokens / guest resolve (no issuance or resolution contract exists yet; Task 032/033 guest workflow), RSVP read/portal/summary, rate limiting (Task 035 pre-production gate), Open Graph (Task 032B), analytics, republish lifecycle.
