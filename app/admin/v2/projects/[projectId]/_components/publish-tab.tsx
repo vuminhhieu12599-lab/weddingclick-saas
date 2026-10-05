@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 
-import { fetchProjectPublishState, publishInvitationVariant } from "../../../../../../lib/admin/admin-api-client";
+import {
+  fetchProjectPublishState,
+  markProjectPaid,
+  publishInvitationVariant,
+  transitionProjectStatus,
+} from "../../../../../../lib/admin/admin-api-client";
 import { AdminApiError } from "../../../../../../lib/admin/admin-api-error";
 import { useAdminQuery } from "../../../../../../lib/admin/use-admin-query";
 import { formatDateTimeVi } from "../../../../../../lib/presentation/format-date";
@@ -189,6 +194,134 @@ function VariantPublishCard({
   );
 }
 
+type PaymentStep = "TO_AWAITING_PAYMENT" | "MARK_PAID" | "TO_READY_TO_PUBLISH";
+
+const PAYMENT_STEP_COPY: Readonly<Record<PaymentStep, { action: string; confirm: string; pending: string }>> = {
+  TO_AWAITING_PAYMENT: {
+    action: "Chuyển sang “Chờ thanh toán”",
+    confirm: "Chuyển dự án sang trạng thái “Chờ thanh toán”? Khách đã duyệt không có nghĩa là đã thanh toán.",
+    pending: "Đang chuyển...",
+  },
+  MARK_PAID: {
+    action: "Xác nhận đã thanh toán",
+    confirm: "Chỉ xác nhận khi đã thực nhận thanh toán của khách. Thao tác này không xuất bản thiệp.",
+    pending: "Đang xác nhận...",
+  },
+  TO_READY_TO_PUBLISH: {
+    action: "Chuyển sang “Sẵn sàng xuất bản”",
+    confirm: "Chuyển dự án sang trạng thái “Sẵn sàng xuất bản”? Việc xuất bản vẫn cần thao tác riêng cho từng thiệp.",
+    pending: "Đang chuyển...",
+  },
+};
+
+/**
+ * Next Task 025 payment-lifecycle step, or `null` when none applies here.
+ * Mirrors the frozen manual graph APPROVED -> AWAITING_PAYMENT ->
+ * (MARK_PAID) -> READY_TO_PUBLISH for display only; the RPCs remain the
+ * sole authority and reject any illegal step.
+ */
+export function nextPaymentStep(state: Pick<ProjectPublishState, "projectStatus" | "paymentStatus">): PaymentStep | null {
+  if (state.projectStatus === "APPROVED") {
+    return "TO_AWAITING_PAYMENT";
+  }
+  if (state.projectStatus === "AWAITING_PAYMENT") {
+    return state.paymentStatus === "PAID" ? "TO_READY_TO_PUBLISH" : "MARK_PAID";
+  }
+  return null;
+}
+
+function paymentStepErrorMessage(error: unknown): string {
+  if (error instanceof AdminApiError) {
+    switch (error.status) {
+      case 401:
+        return "Phiên đăng nhập nhân sự đã hết hạn. Vui lòng đăng nhập lại.";
+      case 403:
+        return "Tài khoản không có quyền thực hiện thao tác này.";
+      case 404:
+        return "Không tìm thấy dự án.";
+      case 409:
+      case 422:
+        return "Trạng thái dự án vừa thay đổi hoặc chưa đủ điều kiện. Đã tải lại trạng thái — kiểm tra rồi thử lại nếu cần.";
+    }
+  }
+  return "Không thể cập nhật lúc này. Vui lòng thử lại.";
+}
+
+/** Staff-only Task 025 payment/lifecycle step shown above the publish cards. */
+function PaymentLifecycleCard({ projectId, step, onChanged }: { projectId: string; step: PaymentStep; onChanged: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const copy = PAYMENT_STEP_COPY[step];
+
+  async function handleConfirm() {
+    if (pending) {
+      return;
+    }
+    setPending(true);
+    setError(null);
+    try {
+      if (step === "MARK_PAID") {
+        await markProjectPaid(projectId);
+      } else {
+        await transitionProjectStatus(projectId, step === "TO_AWAITING_PAYMENT" ? "AWAITING_PAYMENT" : "READY_TO_PUBLISH");
+      }
+      setConfirming(false);
+      onChanged();
+    } catch (caught) {
+      setError(paymentStepErrorMessage(caught));
+      setConfirming(false);
+      if (caught instanceof AdminApiError && (caught.status === 409 || caught.status === 422)) {
+        onChanged();
+      }
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5" data-testid="payment-lifecycle">
+      {!confirming && (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+        >
+          {copy.action}
+        </button>
+      )}
+      {confirming && (
+        <div className="rounded-lg border border-slate-300 bg-slate-50 p-3" role="group" aria-label={copy.action}>
+          <p className="text-sm text-slate-700">{copy.confirm}</p>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => void handleConfirm()}
+              disabled={pending}
+              className="rounded-lg bg-emerald-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
+            >
+              {pending ? copy.pending : "Xác nhận"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              disabled={pending}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              Huỷ
+            </button>
+          </div>
+        </div>
+      )}
+      {error !== null && (
+        <p className="mt-3 text-sm text-red-700" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /**
  * Task 031 staff publish area: per REQUIRED variant (canonical package
  * policy, server-derived) the approved current review, the current
@@ -197,6 +330,7 @@ function VariantPublishCard({
  */
 export function PublishTab({ project }: { project: ProjectSummary }) {
   const { data, loading, error, reload } = useAdminQuery(() => fetchProjectPublishState(project.id), [project.id]);
+  const paymentStep = data === null ? null : nextPaymentStep(data);
 
   return (
     <div className="space-y-4">
@@ -207,6 +341,10 @@ export function PublishTab({ project }: { project: ProjectSummary }) {
           <p className="mt-1 text-xs text-slate-500">{data.paymentStatus === "PAID" ? "Đã thanh toán" : "Chưa thanh toán"}</p>
         )}
       </div>
+
+      {paymentStep !== null && (
+        <PaymentLifecycleCard key={paymentStep} projectId={project.id} step={paymentStep} onChanged={reload} />
+      )}
 
       {loading && data === null && <LoadingState label="Đang tải trạng thái xuất bản..." />}
       {error !== null && <ErrorState message={error} onRetry={reload} />}

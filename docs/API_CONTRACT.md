@@ -913,3 +913,24 @@ The Xuất bản tab shows, per required variant, the current review and its app
 ### 18.4 Not in this task
 
 No public `/i/[slug]` rendering, no public media resolver, no Open Graph / `SOCIAL_SHARE_COVER` metadata, no guest token, no RSVP persistence, no QR/share/analytics, no rollback/unpublish.
+
+## 19. Task 032A — Public Published Invitation `/i/[slug]`
+
+Server-rendered page `app/i/[slug]/page.tsx`. No staff session, no customer token, no query parameter: the path slug (`project_invitations.public_slug`, e.g. `wc-2026-000001-groom`) is the only locator and is a routing identifier, never authorization. Each invitation variant has its own slug, so a COMMON/GROOM/BRIDE slug always renders its own invitation; no parameter switches variant, version or renderer.
+
+**Flow.** Slug shape check (lowercase alphanumerics and single hyphens, ≤ 100 chars; anything else → not-found without a database read) → `get_public_invitation` (migration 0039, `service_role` only, via `lib/server/supabase/public-invitation-repository.ts`) → the exact row referenced by `published_version_id` (must be `PUBLISHED`, same invitation, same Project) → integrity gate on the persisted Snapshot (payload variant, template version and renderer key must equal the stored row binding, and `payload.project.code` the Project's code) → runtime signing of only the pinned media the Snapshot references → `buildInvitationViewModel` → exact `renderer_key_snapshot` through the fail-closed registry → `InvitationRendererHost`. The PUBLISHED Snapshot is immutable and is never rebuilt; the mutable draft and any REVIEW version are never read, and there is no "latest version" inference.
+
+**Media.** Only `project_media` rows pinned to that exact PUBLISHED version through `invitation_version_media`, in the `project-media` bucket and referenced by its Snapshot, are signed — through `lib/server/supabase/published-invitation-media-signer.ts` (PUBLISHED INVITATION MEDIA SIGNING ONLY, 1 hour). Anything else is `UNAVAILABLE`. Signed URLs live only in the rendered ViewModel and are never persisted.
+
+**Capabilities.** The production host: clipboard, music and clock only. No RSVP capability, so the RSVP section is not rendered until Task 033. Music never autoplays; "Mở thiệp" remains the explicit gesture (template behavior unchanged).
+
+| Condition | Result |
+|---|---|
+| Published slug | 200, the invitation |
+| Malformed or unknown slug | Next.js not-found (404) |
+| Invitation with `published_version_id IS NULL` | not-found (404) — never REVIEW or draft |
+| Pointer/Snapshot binding mismatch (`PI001` or TS gate), unregistered renderer, media-signing failure, any other fault | fixed safe message "Chưa thể hiển thị thiệp"; no slug, id or database detail is shown or logged |
+
+**Caching.** `export const dynamic = "force-dynamic"`: every request re-resolves the current `published_version_id` (a later republish moves the slug immediately) and signs fresh URLs. Metadata is a fixed title with `noindex` until Task 032B.
+
+**Not in this task.** Open Graph / `SOCIAL_SHARE_COVER` metadata (Task 032B), RSVP persistence (Task 033), guest tokens/personalization, QR/share/analytics, republish lifecycle changes, rollback/unpublish.

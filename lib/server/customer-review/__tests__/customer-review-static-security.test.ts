@@ -73,12 +73,13 @@ describe("service_role containment (Task 030B)", () => {
     expect(read(FEEDBACK_CLIENT)).not.toMatch(/^import (?!type )[^;]*lib\/server/m);
   });
 
-  it("customer review code has no RSVP, guest token, publish or public slug path, and /i/[slug] does not exist", () => {
+  it("customer review code has no RSVP, guest token, publish or public slug path, and /i/[slug] never reaches it", () => {
     const files = [...listSources("lib/server/customer-review"), PAGE, FRAME, FEEDBACK_CLIENT, ROUTE, REPOSITORY, SIGNER];
     const code = files.map((f) => strip(read(f))).join("\n");
     expect(code).not.toMatch(/rsvps|guest_token|publish_invitation|public_slug|published_version_id|payment_status|openGraph/i);
     expect(code).not.toMatch(/RsvpCapabilityV1/);
-    expect(existsSync(join(ROOT, "app", "i"))).toBe(false);
+    // Task 032A now owns app/i/[slug]; it must never reach customer-review code.
+    expect(read("app/i/[slug]/page.tsx")).not.toMatch(/customer-review|review-shared/);
   });
 });
 

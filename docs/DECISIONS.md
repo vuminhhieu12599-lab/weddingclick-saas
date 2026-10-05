@@ -1987,3 +1987,14 @@ Implemented by migration `0038_publish_invitation.sql` (`publish_invitation`), `
 6. **Concurrency.** Compare-and-set on both `current_review_version_id` and `published_version_id`, under the Project and invitation row locks. A double submit creates one PUBLISHED row; the second gets 409 `STALE_PUBLISHED_VERSION`. Republishing the same review is 409 `ALREADY_PUBLISHED`.
 7. **Open owner decision (not implemented here):** once a Project is `PUBLISHED`, `create_review_version` still rejects a new review (0037 RV010), so a fully published Project cannot be revised and republished yet. Re-opening review after publication needs a Product Owner decision on the status path.
 8. The public invitation route `/i/[slug]`, Open Graph metadata, guest tokens and RSVP persistence remain future tasks.
+
+## Task 032A — Public Published Invitation (2026-10-03)
+
+Implemented by migration `0039_public_invitation_read.sql` (`get_public_invitation`) and `app/i/[slug]/page.tsx`. See `docs/API_CONTRACT.md` §19.
+
+1. **`/i/[slug]` renders only the current publication.** The slug resolves to one `project_invitations` row and only the version referenced by its `published_version_id` is rendered. No publication → not-found. There is never a REVIEW or draft fallback.
+2. **The PUBLISHED Snapshot is used as persisted.** It must agree with its row (variant, template version, renderer key) and its Project code; any mismatch fails closed. The renderer is selected only from `renderer_key_snapshot`.
+3. **Only pinned PUBLISHED media are signed**, at request time, by a dedicated server-only `service_role` signer used after the slug resolved to an exact PUBLISHED version (Product Owner direction). Signed URLs are never persisted.
+4. **`service_role` containment.** Two new narrow modules: the read-only RPC repository and the signer, imported only by the public page wiring. The RPC is `EXECUTE` for `service_role` only; `anon`/`authenticated` receive nothing and no table grant is added.
+5. **Freshness.** The page is dynamic: a republish moves the slug on the next request.
+6. **RSVP hidden** (production host supplies no RSVP capability) until Task 033. Open Graph is Task 032B. Guest personalization remains future work.

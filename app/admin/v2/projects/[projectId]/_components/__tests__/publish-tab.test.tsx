@@ -15,9 +15,11 @@ vi.mock("../../../../../../../lib/admin/use-admin-query", () => ({
 vi.mock("../../../../../../../lib/admin/admin-api-client", () => ({
   fetchProjectPublishState: vi.fn(),
   publishInvitationVariant: vi.fn(),
+  markProjectPaid: vi.fn(),
+  transitionProjectStatus: vi.fn(),
 }));
 
-const { PublishTab, publishErrorFeedback } = await import("../publish-tab");
+const { PublishTab, nextPaymentStep, publishErrorFeedback } = await import("../publish-tab");
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
 const project = { id: PROJECT_ID, status: "READY_TO_PUBLISH" } as ProjectSummary;
@@ -85,6 +87,36 @@ describe("PublishTab", () => {
     const html = renderToStaticMarkup(<PublishTab project={project} />);
     expect(html).toContain("Chưa xác nhận thanh toán");
     expect(html).toContain("Chưa thanh toán");
+    expect(html).not.toContain("Xuất bản bản duyệt");
+    expect(html).toContain('data-testid="payment-lifecycle"');
+    expect(html).toContain("Chuyển sang “Chờ thanh toán”");
+    expect(html).not.toContain("Xác nhận đã thanh toán");
+  });
+
+  it("payment step follows the Task 025 graph: APPROVED -> AWAITING_PAYMENT -> MARK_PAID -> READY_TO_PUBLISH, nothing else", () => {
+    expect(nextPaymentStep({ projectStatus: "APPROVED", paymentStatus: "UNPAID" })).toBe("TO_AWAITING_PAYMENT");
+    expect(nextPaymentStep({ projectStatus: "AWAITING_PAYMENT", paymentStatus: "UNPAID" })).toBe("MARK_PAID");
+    expect(nextPaymentStep({ projectStatus: "AWAITING_PAYMENT", paymentStatus: "PAID" })).toBe("TO_READY_TO_PUBLISH");
+    expect(nextPaymentStep({ projectStatus: "READY_TO_PUBLISH", paymentStatus: "PAID" })).toBeNull();
+    expect(nextPaymentStep({ projectStatus: "PUBLISHED", paymentStatus: "PAID" })).toBeNull();
+    expect(nextPaymentStep({ projectStatus: "CUSTOMER_REVIEW", paymentStatus: "UNPAID" })).toBeNull();
+  });
+
+  it("AWAITING_PAYMENT unpaid shows the mark-paid action, never a publish action", () => {
+    queryData = {
+      projectId: PROJECT_ID,
+      projectStatus: "AWAITING_PAYMENT",
+      paymentStatus: "UNPAID",
+      packageCode: "COMMON",
+      requiredVariants: ["COMMON"],
+      projectBlocker: "PAYMENT_NOT_READY",
+      allRequiredVariantsPublished: false,
+      variants: [
+        { variant: "COMMON", invitationId: "a1", currentReview: review(1), publishedVersion: null, upToDate: false, canPublish: false, blocker: "PAYMENT_NOT_READY" },
+      ],
+    };
+    const html = renderToStaticMarkup(<PublishTab project={project} />);
+    expect(html).toContain("Xác nhận đã thanh toán");
     expect(html).not.toContain("Xuất bản bản duyệt");
   });
 

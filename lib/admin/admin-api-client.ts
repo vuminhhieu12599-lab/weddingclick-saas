@@ -23,6 +23,7 @@ import type {
 import type { ProjectSummary } from "../server/projects/project-types";
 import type { CreatedReviewVersion, ProjectReviewState } from "../server/invitation-review/invitation-review-types";
 import type { ProjectPublishState, PublishedInvitationVersion } from "../server/invitation-publish/invitation-publish-types";
+import type { MarkPaidResult, TransitionStatusResult } from "../server/project-lifecycle/project-lifecycle-types";
 import type { StaffInvitationPreviewBody } from "../server/routes/invitation-preview";
 import type { ReviewVersionPreviewBody } from "../server/routes/invitation-review";
 import type { StaffMeSuccessBody } from "../server/routes/staff-me";
@@ -237,6 +238,35 @@ export async function publishInvitationVariant(
     `/api/v2/internal/projects/${encodeURIComponent(projectId)}/publish`,
     token,
     { method: "POST", body: { variant, expectedCurrentReviewVersionId, expectedPublishedVersionId } },
+  );
+  return body.data;
+}
+
+/**
+ * Task 025 lifecycle transition (PATCH /status). The edge graph and the
+ * AWAITING_PAYMENT -> READY_TO_PUBLISH payment precondition stay
+ * exclusively server/RPC-enforced.
+ */
+export async function transitionProjectStatus(
+  projectId: string,
+  targetStatus: ProjectStatus,
+): Promise<TransitionStatusResult> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: TransitionStatusResult }>(
+    `/api/v2/internal/projects/${encodeURIComponent(projectId)}/status`,
+    token,
+    { method: "PATCH", body: { targetStatus } },
+  );
+  return body.data;
+}
+
+/** Task 025 narrow payment command (PATCH /payment, fixed `MARK_PAID` action only). */
+export async function markProjectPaid(projectId: string): Promise<MarkPaidResult> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: MarkPaidResult }>(
+    `/api/v2/internal/projects/${encodeURIComponent(projectId)}/payment`,
+    token,
+    { method: "PATCH", body: { action: "MARK_PAID" } },
   );
   return body.data;
 }

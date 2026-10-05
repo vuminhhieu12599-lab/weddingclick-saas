@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
@@ -163,6 +163,6 @@ describe("Task 031 static security contract (migration 0038)", () => {
     expect(code).not.toMatch(/service[_-]?role|SERVICE_ROLE|createServiceRole/i);
     expect(code).not.toMatch(/\.(insert|update|upsert|delete)\(/);
     expect(code).not.toMatch(/rsvps|guest_token|openGraph|SOCIAL_SHARE_COVER|loadStaffDraftSnapshot|buildSnapshotPayload/);
-    expect(existsSync(join(root, "app", "i"))).toBe(false);
+    // Task 032A now owns app/i/[slug] (public PUBLISHED rendering only).
   });
 });
