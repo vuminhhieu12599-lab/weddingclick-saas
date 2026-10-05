@@ -1205,3 +1205,19 @@ Never serialized: Project id, guest id, `token_hash`, `token_hint`, `token_issue
 **Entitlement vs already-issued links (unchanged, deferred).** The add-on gates only new ISSUE/REGENERATE. If PERSONALIZED_GUEST is revoked after a link was issued, that link keeps resolving under frozen 0042; what should happen is still an open owner decision. Guest-level revoke (§25) is distinct and invalidates the link immediately.
 
 **Unchanged.** Staff support route §22.1 (product behavior; only the race predicate added), 0042 resolution, personalized page and RSVP (§22.2–§22.3), §24 RSVP owner-read.
+
+## 27. Task 033E-C — Per-guest RSVP status in the Portal Guest Tool
+
+**Scope.** Each Guest Tool row (§25) shows whether that personalized guest has responded. Read-only: no RSVP create/edit in the Portal, no new route, no change to RSVP submit/update (§20, §22.3), no realtime or polling (a full refresh shows the current state). **No migration.**
+
+**Identity.** Joined only by `rsvps.guest_id = guests.id`. At most one row per guest is guaranteed by `rsvps_guest_id_key` (0018). Names, typed response names, sides, tokens and slugs are never used. Generic rows (`guest_id IS NULL`) are never read by this projection, so they never attach to a guest even when the typed name equals a guest's `display_name`. They stay in the §24 list only.
+
+**Read.** Inside `loadCustomerPortal`, after the §25 gate (PORTAL → Project, entitlement), two Project-scoped service_role reads with no N+1: the existing guest list and `listGuestRsvps` (`rsvps` `project_id, guest_id, attendance, party_size`, `project_id = resolved`, `guest_id IS NOT NULL`, `count: "exact"`; a count mismatch fails rather than silently truncating). They are merged by guest id. The page fails closed if a row belongs to another Project, names a guest outside the list, appears twice for one guest, has an unknown attendance, or breaks the 0018/0032 party-size rule.
+
+**Row fields (list only).** `rsvpStatus`: `NOT_RESPONDED | ATTENDING | MAYBE | NOT_ATTENDING`; `rsvpPartySize`: the count for ATTENDING / MAYBE, `null` otherwise (never 0). Never serialized: RSVP id, Project id, message, typed name, timestamps. The §25 mutation responses are unchanged.
+
+**UI.** One compact line under the side/link line: "Chưa phản hồi", "Sẽ tham dự · N người", "Có thể tham dự · N người", "Không tham dự" (no "0 người"). The message, typed name and time stay in "Phản hồi tham dự" (§24).
+
+**Independence.** RSVP status is independent of link state and revoke: NOT_ISSUED/ISSUED × responded/not are all valid. A revoked guest keeps its historical status. An updated personalized RSVP (same row) shows its latest attendance on the next load.
+
+**Entitlement.** Unchanged: without PERSONALIZED_GUEST there is no Guest Tool and no per-guest read; §24 still lists every response.

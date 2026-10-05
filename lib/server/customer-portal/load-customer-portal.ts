@@ -7,7 +7,7 @@ import { resolveAccessLink } from "../access-links/resolve-access-link";
 import { assertStoredReviewSnapshot } from "../invitation-review/assert-stored-review-snapshot";
 import type { AccessLinkResolutionRepository } from "../supabase/access-link-resolution-repository";
 import type { CustomerPortalGateway, CustomerPortalInvitationCard, CustomerPortalView } from "./customer-portal-types";
-import { guestToolModeForPackage, presentPortalGuests } from "./portal-guest-tool";
+import { attachGuestRsvpStatuses, guestToolModeForPackage, presentPortalGuests } from "./portal-guest-tool";
 import type { CustomerPortalGuestTool, PortalGuestGateway } from "./portal-guest-types";
 import { presentPortalRsvps } from "./present-portal-rsvps";
 
@@ -15,7 +15,7 @@ export interface LoadCustomerPortalDependencies {
   resolution: AccessLinkResolutionRepository;
   portal: CustomerPortalGateway;
   /** Task 033E-A Guest Tool list, read only with an active PERSONALIZED_GUEST add-on. */
-  guests: Pick<PortalGuestGateway, "listGuests">;
+  guests: Pick<PortalGuestGateway, "listGuests" | "listGuestRsvps">;
   now?: () => Date;
 }
 
@@ -110,7 +110,9 @@ export async function loadCustomerPortal(rawToken: string, deps: LoadCustomerPor
     if (mode === null) {
       throw new Error("Unsupported package for guest tool");
     }
-    guestTool = { mode, guests: presentPortalGuests(await deps.guests.listGuests(context.projectId), mode) };
+    // Task 033E-C: two Project-scoped reads (guests, personalized RSVPs), merged by guest_id — no N+1.
+    const guests = presentPortalGuests(await deps.guests.listGuests(context.projectId), mode);
+    guestTool = { mode, guests: attachGuestRsvpStatuses(guests, await deps.guests.listGuestRsvps(context.projectId)) };
   }
   return {
     status: "READY",

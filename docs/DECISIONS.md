@@ -2082,3 +2082,13 @@ Implemented by `app/api/v2/public/portal/guests/[guestId]/access-link/route.ts`,
 5. **033B1 race fixed.** `ReplaceGuestTokenParams.expectedInvitationVariant` is enforced by both gateways in the same single conditional UPDATE. A concurrent side change → 409, never a dead link (closes the 033E-A carry-forward).
 6. **UI.** "Tạo link" / "Tạo lại link" (in-page confirmation), a one-time panel with copy that reports success only after the clipboard write resolved. Side locked after issuance (§25).
 7. **Unchanged deferrals.** Already-issued links after add-on revocation keep resolving (owner decision deferred); QR, messaging, import, bulk actions; PORTAL link listing/revoke; rate limiting (Task 035).
+
+## Task 033E-C — Per-Guest RSVP Status in the Portal Guest Tool (2026-10-05)
+
+Implemented in `lib/server/supabase/portal-guest-repository.ts` (`listGuestRsvps`), `attachGuestRsvpStatuses` (`lib/server/customer-portal/portal-guest-tool.ts`), `load-customer-portal.ts` and the Guest Tool UI. No migration. See `docs/API_CONTRACT.md` §27.
+
+1. **Identity is `guest_id` only.** One personalized RSVP per guest (`rsvps_guest_id_key`). Generic `guest_id IS NULL` rows never map to a guest, whatever the typed name.
+2. **Compact statuses.** Chưa phản hồi / Sẽ tham dự · N người / Có thể tham dự · N người / Không tham dự (never "0 người"). Details stay in the §24 "Phản hồi tham dự" section.
+3. **Revoked guests keep their historical RSVP status.** Link state, revoke state and RSVP state are independent.
+4. **Read-only.** No RSVP mutation in the Portal; no realtime or polling (full refresh). Two Project-scoped reads merged server-side (no N+1, exact count, fail closed on integrity faults).
+5. **Unchanged.** PERSONALIZED_GUEST gating of the Guest Tool; §24 owner-read independent of entitlement; 033E-A/B semantics; RSVP submit/update.

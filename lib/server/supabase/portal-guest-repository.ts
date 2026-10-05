@@ -1,5 +1,11 @@
-import { INVITATION_VARIANTS, SERVICE_ADDON_CODES, type InvitationVariant } from "../../domain";
-import type { PortalGuestGateway, PortalGuestLinkGateway, PortalGuestRecord, PortalGuestState } from "../customer-portal/portal-guest-types";
+import { INVITATION_VARIANTS, RSVP_ATTENDANCE_STATUSES, SERVICE_ADDON_CODES, type InvitationVariant, type RsvpAttendanceStatus } from "../../domain";
+import type {
+  PortalGuestGateway,
+  PortalGuestLinkGateway,
+  PortalGuestRecord,
+  PortalGuestRsvpRecord,
+  PortalGuestState,
+} from "../customer-portal/portal-guest-types";
 import { isValidUuid } from "../validation/uuid";
 import { toPostgresByteaHexLiteral } from "./postgres-bytea";
 import { createServiceRoleSupabaseClient } from "./service-role-client";
@@ -10,7 +16,7 @@ import { createServiceRoleSupabaseClient } from "./service-role-client";
  * resolved `projectId` (never browser input) and, for one guest, also by
  * its id. Uses the existing 0017 service_role grants on `guests` (the
  * Customer PORTAL Guest Tool) and the 0005/0006/0012/0013 SELECT grants —
- * no migration, no `.rpc()`, no DELETE, no `rsvps` access.
+ * no migration, no `.rpc()`, no DELETE, no `rsvps` write (033E-C: one read).
  *
  * Writes are single conditional statements (the 033B1 `replaceGuestToken`
  * style): edit requires `revoked_at IS NULL` and, for a side, also
@@ -20,6 +26,8 @@ import { createServiceRoleSupabaseClient } from "./service-role-client";
  * are never read or written; `token_issued_at` is reduced to a boolean
  * here. A fresh client per call. Nothing is logged; errors carry no detail.
  * Task 033E-B adds the Project-pinned issuance gateway at the end of this file.
+ * Task 033E-C adds a read-only, Project-scoped personalized `rsvps` read
+ * (guest id, attendance, party size only; no message, name or timestamps).
  */
 
 const PERSONALIZED_GUEST_ADDON_CODE = SERVICE_ADDON_CODES[0];
@@ -64,6 +72,24 @@ export function toPortalGuestRecord(row: unknown, projectId: string): PortalGues
 function singleOrNull(data: unknown, projectId: string): PortalGuestRecord | null {
   if (!Array.isArray(data) || data.length > 1) fail();
   return data.length === 0 ? null : toPortalGuestRecord(data[0], projectId);
+}
+
+/**
+ * Task 033E-C — guards one personalized RSVP row of `projectId`: same Project,
+ * non-null guest id, known attendance, integer party size. Fails closed otherwise.
+ */
+export function toPortalGuestRsvpRecord(row: unknown, projectId: string): PortalGuestRsvpRecord {
+  if (typeof row !== "object" || row === null) fail();
+  const r = row as Record<string, unknown>;
+  if (
+    r.project_id !== projectId ||
+    !(typeof r.guest_id === "string" && isValidUuid(r.guest_id)) ||
+    !(typeof r.attendance === "string" && (RSVP_ATTENDANCE_STATUSES as readonly string[]).includes(r.attendance)) ||
+    !(typeof r.party_size === "number" && Number.isInteger(r.party_size))
+  ) {
+    fail();
+  }
+  return { guestId: r.guest_id, attendance: r.attendance as RsvpAttendanceStatus, partySize: r.party_size };
 }
 
 function toGuestState(record: PortalGuestRecord): PortalGuestState {
@@ -192,6 +218,21 @@ export function getServiceRolePortalGuestGateway(): PortalGuestGateway {
       const row = await client.from("guests").select(GUEST_COLUMNS).eq("id", guestId).eq("project_id", projectId).maybeSingle();
       if (row.error) fail();
       return row.data === null ? null : toGuestState(toPortalGuestRecord(row.data, projectId));
+    },
+
+    async listGuestRsvps(projectId) {
+      if (!isValidUuid(projectId)) fail();
+      const client = createServiceRoleSupabaseClient();
+      // Personalized rows only: a generic (guest_id NULL) row is never read here.
+      const rows = await client
+        .from("rsvps")
+        .select("project_id, guest_id, attendance, party_size", { count: "exact" })
+        .eq("project_id", projectId)
+        .not("guest_id", "is", null);
+      if (rows.error || !Array.isArray(rows.data)) fail();
+      // A server row cap must never silently drop a guest's status.
+      if (rows.count !== rows.data.length) fail();
+      return rows.data.map((row: unknown) => toPortalGuestRsvpRecord(row, projectId));
     },
   };
 }

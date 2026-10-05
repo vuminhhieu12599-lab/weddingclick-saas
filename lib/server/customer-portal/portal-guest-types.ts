@@ -1,4 +1,4 @@
-import type { InvitationVariant } from "../../domain";
+import type { InvitationVariant, RsvpAttendanceStatus } from "../../domain";
 import type { GuestLinkGateway } from "../guest-links/guest-link-types";
 
 /**
@@ -70,7 +70,23 @@ export interface PortalGuestGateway {
   revokeGuest(projectId: string, guestId: string): Promise<PortalGuestRecord | null>;
   /** Read-only, Project-pinned; used only to classify a 0-row write. Never followed by a write. */
   getGuestState(projectId: string, guestId: string): Promise<PortalGuestState | null>;
+  /**
+   * Task 033E-C — read-only: this Project's personalized RSVP rows
+   * (`guest_id IS NOT NULL`), reduced to guest id + attendance + party size.
+   * One query, exact count (never silently truncated); generic rows are never read.
+   */
+  listGuestRsvps(projectId: string): Promise<PortalGuestRsvpRecord[]>;
 }
+
+/** Task 033E-C — one personalized `rsvps` row (≤ 1 per guest, `rsvps_guest_id_key`), reduced in the repository. */
+export interface PortalGuestRsvpRecord {
+  guestId: string;
+  attendance: RsvpAttendanceStatus;
+  partySize: number;
+}
+
+/** Task 033E-C — compact per-guest RSVP state; joined only by `rsvps.guest_id = guests.id`. */
+export type PortalGuestRsvpStatus = "NOT_RESPONDED" | RsvpAttendanceStatus;
 
 /**
  * One guest as the customer sees it. `guestId` is only the mutation target
@@ -86,10 +102,21 @@ export interface CustomerPortalGuestRow {
   linkStatus: "NOT_ISSUED" | "ISSUED";
 }
 
+/**
+ * Task 033E-C — a Guest Tool list row: the 033E-A row plus the compact RSVP
+ * status. `rsvpPartySize` is set only for ATTENDING / MAYBE (never 0); no
+ * RSVP id, message, typed name or timestamps. Mutation responses keep the
+ * plain `CustomerPortalGuestRow`.
+ */
+export interface CustomerPortalGuestListRow extends CustomerPortalGuestRow {
+  rsvpStatus: PortalGuestRsvpStatus;
+  rsvpPartySize: number | null;
+}
+
 export interface CustomerPortalGuestTool {
   mode: PortalGuestToolMode;
   /** Active guests first, then revoked; each group in the repository's order. */
-  guests: CustomerPortalGuestRow[];
+  guests: CustomerPortalGuestListRow[];
 }
 
 /**

@@ -103,6 +103,10 @@ function portalDeps(record: PortalProjectRecord, links = resolution([{ token: PO
           projectIds.push(projectId);
           return [];
         },
+        async listGuestRsvps(projectId: string) {
+          projectIds.push(projectId);
+          return [];
+        },
       },
     },
   };
@@ -244,9 +248,11 @@ describe("K–P: boundaries", () => {
     const code = [PAGE, COPY, REPO, USE_CASE, WIRING, "lib/server/customer-portal/customer-portal-types.ts"].map((f) => strip(read(f))).join("\n");
     expect(code).not.toMatch(/\.from\("guests"\)|project_media|\.storage\b|payment_status|review_feedback|current_review_version_id|wedding_details/);
     expect(code).not.toMatch(/\.(insert|update|upsert|delete|rpc)\(/);
-    // Task 033E-A: the only Portal API routes are the three Bearer-PORTAL Guest Tool routes (no Project id segment).
+    // Task 033E-A: the only Portal API routes are the Bearer-PORTAL Guest Tool routes (no Project id segment);
+    // Task 033E-B added access-link (ISSUE / REGENERATE).
     expect(PRODUCTION.filter((f) => f.startsWith("app/api/") && /portal/i.test(f)).sort()).toEqual(
       [
+        "app/api/v2/public/portal/guests/[guestId]/access-link/route.ts",
         "app/api/v2/public/portal/guests/[guestId]/revoke/route.ts",
         "app/api/v2/public/portal/guests/[guestId]/route.ts",
         "app/api/v2/public/portal/guests/route.ts",

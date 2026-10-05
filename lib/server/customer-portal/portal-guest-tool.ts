@@ -6,11 +6,13 @@ import { issueGuestLink } from "../guest-links/issue-guest-link";
 import type { AccessLinkResolutionRepository } from "../supabase/access-link-resolution-repository";
 import { isValidUuid } from "../validation/uuid";
 import type {
+  CustomerPortalGuestListRow,
   CustomerPortalGuestRow,
   PortalGuestConflictReason,
   PortalGuestGateway,
   PortalGuestLinkGateway,
   PortalGuestRecord,
+  PortalGuestRsvpRecord,
   PortalIssuedGuestLink,
   PortalGuestToolMode,
   UpdatePortalGuestParams,
@@ -76,6 +78,37 @@ export function presentPortalGuest(record: PortalGuestRecord, mode: PortalGuestT
 export function presentPortalGuests(records: readonly PortalGuestRecord[], mode: PortalGuestToolMode): CustomerPortalGuestRow[] {
   const rows = records.map((record) => presentPortalGuest(record, mode));
   return [...rows.filter((row) => row.status === "ACTIVE"), ...rows.filter((row) => row.status === "REVOKED")];
+}
+
+/**
+ * Task 033E-C — attaches each guest's compact RSVP status, joined ONLY by
+ * `rsvps.guest_id = guests.id` (never a name, side, token or slug). Fails
+ * closed if an RSVP names a guest outside this Project's list, a guest has
+ * two rows, or attendance/party size break the 0018/0032 rule. Independent
+ * of link and revoke state: a revoked guest keeps its historical status.
+ */
+export function attachGuestRsvpStatuses(
+  rows: readonly CustomerPortalGuestRow[],
+  rsvps: readonly PortalGuestRsvpRecord[],
+): CustomerPortalGuestListRow[] {
+  const byGuest = new Map<string, PortalGuestRsvpRecord>();
+  const guestIds = new Set(rows.map((row) => row.guestId));
+  for (const rsvp of rsvps) {
+    if (!guestIds.has(rsvp.guestId) || byGuest.has(rsvp.guestId)) {
+      throw new Error("Guest RSVP integrity fault");
+    }
+    const counted = rsvp.attendance === "ATTENDING" || rsvp.attendance === "MAYBE";
+    const validSize = counted ? Number.isInteger(rsvp.partySize) && rsvp.partySize >= 1 && rsvp.partySize <= 20 : rsvp.partySize === 0;
+    if (!validSize) {
+      throw new Error("Guest RSVP integrity fault");
+    }
+    byGuest.set(rsvp.guestId, rsvp);
+  }
+  return rows.map((row) => {
+    const rsvp = byGuest.get(row.guestId);
+    if (rsvp === undefined) return { ...row, rsvpStatus: "NOT_RESPONDED", rsvpPartySize: null };
+    return { ...row, rsvpStatus: rsvp.attendance, rsvpPartySize: rsvp.attendance === "NOT_ATTENDING" ? null : rsvp.partySize };
+  });
 }
 
 interface AuthorizedGuestTool {

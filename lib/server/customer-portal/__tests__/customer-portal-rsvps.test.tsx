@@ -107,7 +107,7 @@ function deps(opts: { failRsvps?: boolean; empty?: boolean } = {}) {
     { token: PORTAL_A, row: {} },
     { token: PORTAL_B, row: { projectId: PROJECT_B } },
   ]);
-  return { rsvpReads, deps: { resolution: links, portal, guests: { listGuests: async () => [] } } };
+  return { rsvpReads, deps: { resolution: links, portal, guests: { listGuests: async () => [], listGuestRsvps: async () => [] } } };
 }
 
 async function ready(token: string, d = deps()) {

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { GUEST_DISPLAY_NAME_MAX_LENGTH, type InvitationVariant } from "../../../lib/domain";
-import type { CustomerPortalGuestRow, PortalGuestToolMode } from "../../../lib/server/customer-portal/portal-guest-types";
+import type { CustomerPortalGuestListRow, CustomerPortalGuestRow, PortalGuestRsvpStatus, PortalGuestToolMode } from "../../../lib/server/customer-portal/portal-guest-types";
 
 const VARIANT_LABELS: Readonly<Record<InvitationVariant, string>> = {
   COMMON: "Thiệp chung",
@@ -67,7 +67,35 @@ function SidePicker({ name, value, onChange, disabled }: { name: string; value: 
 interface PortalGuestToolProps {
   readonly token: string;
   readonly mode: PortalGuestToolMode;
-  readonly guests: readonly CustomerPortalGuestRow[];
+  readonly guests: readonly CustomerPortalGuestListRow[];
+}
+
+const RSVP_STATUS_LABELS: Readonly<Record<PortalGuestRsvpStatus, string>> = {
+  NOT_RESPONDED: "Chưa phản hồi",
+  ATTENDING: "Sẽ tham dự",
+  MAYBE: "Có thể tham dự",
+  NOT_ATTENDING: "Không tham dự",
+};
+
+const RSVP_STATUS_TONES: Readonly<Record<PortalGuestRsvpStatus, string>> = {
+  NOT_RESPONDED: "text-stone-500",
+  ATTENDING: "text-emerald-700",
+  MAYBE: "text-amber-700",
+  NOT_ATTENDING: "text-stone-600",
+};
+
+/** Task 033E-C — compact RSVP text; a person count only for ATTENDING / MAYBE (never "0 người"). */
+export function guestRsvpStatusText(status: PortalGuestRsvpStatus, partySize: number | null): string {
+  const label = RSVP_STATUS_LABELS[status];
+  return (status === "ATTENDING" || status === "MAYBE") && partySize !== null && partySize > 0 ? `${label} · ${partySize} người` : label;
+}
+
+function GuestRsvpStatus({ guest }: { guest: CustomerPortalGuestListRow }) {
+  return (
+    <p className={`text-xs ${RSVP_STATUS_TONES[guest.rsvpStatus]}`} data-portal-guest-rsvp={guest.rsvpStatus}>
+      {guestRsvpStatusText(guest.rsvpStatus, guest.rsvpPartySize)}
+    </p>
+  );
 }
 
 /** Relative `/i/<slug>/g/<token>` from the server → absolute with this origin (no SITE_URL exists). */
@@ -137,6 +165,9 @@ export function IssuedLinkPanel({ link, onClose }: { link: IssuedLink; onClose: 
  * in-page confirmation) send only `{ action }`; the server decides validity
  * from canonical state. The returned raw link is shown once from component
  * memory and dropped on close, on a later issue, on revoke and on reload.
+ *
+ * Task 033E-C: each row shows its server-derived RSVP status (read-only;
+ * details stay in "Phản hồi tham dự"). Updated only by a full refresh.
  */
 export function PortalGuestTool({ token, mode, guests }: PortalGuestToolProps) {
   const router = useRouter();
@@ -346,6 +377,7 @@ export function PortalGuestTool({ token, mode, guests }: PortalGuestToolProps) {
                       {guest.invitationVariant === null ? "Chưa chọn nhà trai/nhà gái" : VARIANT_LABELS[guest.invitationVariant]} ·{" "}
                       {guest.linkStatus === "ISSUED" ? "Đã cấp link" : "Chưa cấp link"}
                     </p>
+                    <GuestRsvpStatus guest={guest} />
                     {issuedLink?.guestId === guest.guestId && <IssuedLinkPanel key={issuedLink.path} link={issuedLink} onClose={() => setIssuedLink(null)} />}
                     {confirmRegenerate === guest.guestId ? (
                       <div className="mt-2 rounded-lg bg-amber-50 p-2 text-sm text-amber-900" data-portal-guest-regenerate-confirm>
@@ -429,6 +461,7 @@ export function PortalGuestTool({ token, mode, guests }: PortalGuestToolProps) {
             <li key={guest.guestId} className="py-3 opacity-60" data-portal-guest-row="REVOKED">
               <p className="break-words text-sm text-stone-500 line-through">{guest.displayName}</p>
               <p className="text-xs text-stone-500">Đã thu hồi — link không còn hiệu lực</p>
+              <GuestRsvpStatus guest={guest} />
             </li>
           ))}
         </ul>

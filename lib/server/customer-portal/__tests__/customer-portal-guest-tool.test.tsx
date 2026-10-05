@@ -9,7 +9,12 @@ import { generateAccessToken, hashAccessToken } from "../../auth/access-token-cr
 import { issueGuestLink } from "../../guest-links/issue-guest-link";
 import { supabaseGuestLinkStaffGateway } from "../../supabase/guest-link-staff-repository";
 import type { AccessLinkResolutionRepository, ResolvedAccessLinkRow } from "../../supabase/access-link-resolution-repository";
-import { getServiceRolePortalGuestGateway, getServiceRolePortalGuestLinkGateway, toPortalGuestRecord } from "../../supabase/portal-guest-repository";
+import {
+  getServiceRolePortalGuestGateway,
+  getServiceRolePortalGuestLinkGateway,
+  toPortalGuestRecord,
+  toPortalGuestRsvpRecord,
+} from "../../supabase/portal-guest-repository";
 import {
   handleCreatePortalGuestRequest,
   handleIssuePortalGuestLinkRequest,
@@ -17,7 +22,15 @@ import {
   handleUpdatePortalGuestRequest,
 } from "../../routes/portal-guests";
 import { loadCustomerPortal } from "../load-customer-portal";
-import { createPortalGuest, issuePortalGuestLink, revokePortalGuest, updatePortalGuest, type PortalGuestToolDependencies } from "../portal-guest-tool";
+import {
+  attachGuestRsvpStatuses,
+  createPortalGuest,
+  issuePortalGuestLink,
+  presentPortalGuests,
+  revokePortalGuest,
+  updatePortalGuest,
+  type PortalGuestToolDependencies,
+} from "../portal-guest-tool";
 
 /**
  * Task 033E-A — Portal Guest Tool foundation. The REAL service_role
@@ -415,7 +428,8 @@ describe("033E-A AG–AO: boundaries and UI", () => {
   // Amended by Task 033E-B: ISSUE / REGENERATE now exist (shared issueGuestLink) and the 033B1 replaceGuestToken carries the variant predicate.
   it("AG/AH/AN/AD/AL: no restore/delete; service_role only in the repository; routes only use the wiring", () => {
     const code = [...NEW_SERVER, ...ROUTES, CLIENT].map((f) => strip(read(f))).join("\n");
-    expect(code).not.toMatch(/unrevoke|restore|\.delete\(|\.rpc\(|from\("rsvps"\)|localStorage|sessionStorage|indexedDB|document\.cookie/);
+    // Amended by Task 033E-C: one read-only `rsvps` select is allowed; no RSVP write ever.
+    expect(code).not.toMatch(/unrevoke|restore|\.delete\(|\.rpc\(|from\("rsvps"\)\s*\.(insert|update|upsert|delete)|localStorage|sessionStorage|indexedDB|document\.cookie/);
     for (const f of [...NEW_SERVER.filter((f) => !f.endsWith("portal-guest-repository.ts")), ...ROUTES, CLIENT]) {
       expect(read(f), f).not.toMatch(/service-role-client|SUPABASE_SERVICE_ROLE_KEY|createServiceRole/);
     }
@@ -459,9 +473,9 @@ describe("033E-A AG–AO: boundaries and UI", () => {
   it("AO: active / revoked / empty states; COMMON has no side picker; link actions per state, no raw link or copy control from props", async () => {
     const { PortalGuestTool } = await import("../../../../app/portal/[token]/portal-guest-tool");
     const rows = [
-      { guestId: GUEST_A1, displayName: "Anh Hiếu và gia đình", invitationVariant: "GROOM" as const, status: "ACTIVE" as const, linkStatus: "NOT_ISSUED" as const },
-      { guestId: GUEST_A2, displayName: "Chú B và người thương", invitationVariant: "BRIDE" as const, status: "ACTIVE" as const, linkStatus: "ISSUED" as const },
-      { guestId: GUEST_B1, displayName: "Đã đi xa", invitationVariant: "BRIDE" as const, status: "REVOKED" as const, linkStatus: "ISSUED" as const },
+      { guestId: GUEST_A1, displayName: "Anh Hiếu và gia đình", invitationVariant: "GROOM" as const, status: "ACTIVE" as const, linkStatus: "NOT_ISSUED" as const, rsvpStatus: "NOT_RESPONDED" as const, rsvpPartySize: null },
+      { guestId: GUEST_A2, displayName: "Chú B và người thương", invitationVariant: "BRIDE" as const, status: "ACTIVE" as const, linkStatus: "ISSUED" as const, rsvpStatus: "NOT_RESPONDED" as const, rsvpPartySize: null },
+      { guestId: GUEST_B1, displayName: "Đã đi xa", invitationVariant: "BRIDE" as const, status: "REVOKED" as const, linkStatus: "ISSUED" as const, rsvpStatus: "NOT_RESPONDED" as const, rsvpPartySize: null },
     ];
     const html = renderToStaticMarkup(<PortalGuestTool token="t" mode="GROOM_OR_BRIDE" guests={rows} />);
     for (const text of ["Danh sách khách mời", "Thêm khách", "Thiệp nhà trai · Chưa cấp link", "Thiệp nhà gái · Đã cấp link", "Sửa", "Thu hồi", "Đã thu hồi — link không còn hiệu lực"]) expect(html).toContain(text);
@@ -687,9 +701,9 @@ describe("033E-B V–AF: Portal UI", () => {
   it("V/W/X/Y/AA/AE/AF: actions per state; in-page regenerate confirmation; no confirm(), storage, query param, QR/import/messaging", async () => {
     const { PortalGuestTool } = await import("../../../../app/portal/[token]/portal-guest-tool");
     const rows = [
-      { guestId: GUEST_A1, displayName: "A", invitationVariant: "GROOM" as const, status: "ACTIVE" as const, linkStatus: "NOT_ISSUED" as const },
-      { guestId: GUEST_A2, displayName: "B", invitationVariant: "BRIDE" as const, status: "ACTIVE" as const, linkStatus: "ISSUED" as const },
-      { guestId: GUEST_B1, displayName: "C", invitationVariant: null, status: "ACTIVE" as const, linkStatus: "NOT_ISSUED" as const },
+      { guestId: GUEST_A1, displayName: "A", invitationVariant: "GROOM" as const, status: "ACTIVE" as const, linkStatus: "NOT_ISSUED" as const, rsvpStatus: "NOT_RESPONDED" as const, rsvpPartySize: null },
+      { guestId: GUEST_A2, displayName: "B", invitationVariant: "BRIDE" as const, status: "ACTIVE" as const, linkStatus: "ISSUED" as const, rsvpStatus: "NOT_RESPONDED" as const, rsvpPartySize: null },
+      { guestId: GUEST_B1, displayName: "C", invitationVariant: null, status: "ACTIVE" as const, linkStatus: "NOT_ISSUED" as const, rsvpStatus: "NOT_RESPONDED" as const, rsvpPartySize: null },
     ];
     const html = renderToStaticMarkup(<PortalGuestTool token="t" mode="GROOM_OR_BRIDE" guests={rows} />);
     expect(html.match(/>Tạo link</g)).toHaveLength(1);
@@ -732,5 +746,138 @@ describe("033E-B V–AF: Portal UI", () => {
     expect(await copyPersonalizedLink(() => Promise.reject(new Error("denied")), "u")).toBe("FAILED");
     expect(await copyPersonalizedLink(undefined, "u")).toBe("FAILED");
     expect(strip(read(CLIENT_SRC))).toMatch(/copy === "COPIED" \? "Đã sao chép" : copy === "FAILED"/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 033E-C — per-guest RSVP status (read-only)
+// ---------------------------------------------------------------------------
+
+const GENERIC_SAME_NAME = { id: "44444444-0000-4000-8000-000000000002", project_id: PROJECT_A, guest_id: null, guest_display_name_snapshot: "Anh Hiếu và gia đình", attendance: "ATTENDING", party_size: 3 };
+const FOREIGN_RSVP = { id: "44444444-0000-4000-8000-000000000003", project_id: PROJECT_B, guest_id: GUEST_B1, attendance: "MAYBE", party_size: 1 };
+const listRows = async (projectId = PROJECT_A) => {
+  const gw = getServiceRolePortalGuestGateway();
+  return attachGuestRsvpStatuses(presentPortalGuests(await gw.listGuests(projectId), "GROOM_OR_BRIDE"), await gw.listGuestRsvps(projectId));
+};
+const bare = (guestId: string) => ({ guestId, displayName: "Khách", invitationVariant: "BRIDE" as const, status: "ACTIVE" as const, linkStatus: "ISSUED" as const });
+const byId = (rows: Awaited<ReturnType<typeof listRows>>, id: string) => rows.find((r) => r.guestId === id)!;
+const row = (guestId: string, rsvpStatus: "NOT_RESPONDED" | "ATTENDING" | "MAYBE" | "NOT_ATTENDING", rsvpPartySize: number | null, status: "ACTIVE" | "REVOKED" = "ACTIVE") => ({
+  guestId,
+  displayName: `Khách ${guestId.slice(-2)}`,
+  invitationVariant: "BRIDE" as const,
+  status,
+  linkStatus: "ISSUED" as const,
+  rsvpStatus,
+  rsvpPartySize,
+});
+
+describe("033E-C A–Q: per-guest RSVP status projection", () => {
+  it("A/B/E/H/I/N/O: joined only by guest_id; generic same-name row never attaches; dormant + issued guests can be NOT_RESPONDED", async () => {
+    db.rsvps.push(GENERIC_SAME_NAME, FOREIGN_RSVP);
+    let rows = await listRows();
+    expect(byId(rows, GUEST_A2)).toMatchObject({ linkStatus: "ISSUED", rsvpStatus: "ATTENDING", rsvpPartySize: 2 });
+    expect(byId(rows, GUEST_A1)).toMatchObject({ linkStatus: "NOT_ISSUED", rsvpStatus: "NOT_RESPONDED", rsvpPartySize: null });
+    db.rsvps = [GENERIC_SAME_NAME];
+    rows = await listRows();
+    expect(rows.map((r) => r.rsvpStatus)).toEqual(["NOT_RESPONDED", "NOT_RESPONDED"]);
+    expect(byId(rows, GUEST_A2).linkStatus).toBe("ISSUED");
+    expect(writes).toEqual([]);
+  });
+
+  it("C/D/F/G: MAYBE and ATTENDING carry a count; NOT_ATTENDING never carries 0", () => {
+    const base = [GUEST_A1, GUEST_A2, GUEST_B1].map(bare);
+    const rows = attachGuestRsvpStatuses(base, [
+      { guestId: GUEST_A1, attendance: "MAYBE", partySize: 3 },
+      { guestId: GUEST_A2, attendance: "NOT_ATTENDING", partySize: 0 },
+      { guestId: GUEST_B1, attendance: "ATTENDING", partySize: 1 },
+    ]);
+    expect(rows.map((r) => [r.rsvpStatus, r.rsvpPartySize])).toEqual([["MAYBE", 3], ["NOT_ATTENDING", null], ["ATTENDING", 1]]);
+  });
+
+  it("J/K/L: foreign Project rows are never read; unknown guest, duplicate, bad attendance or party size fail closed", async () => {
+    db.rsvps.push(FOREIGN_RSVP);
+    expect((await getServiceRolePortalGuestGateway().listGuestRsvps(PROJECT_A)).map((r) => r.guestId)).toEqual([GUEST_A2]);
+    expect(() => toPortalGuestRsvpRecord({ ...FOREIGN_RSVP }, PROJECT_A)).toThrow();
+    for (const bad of [{ attendance: "YES" }, { attendance: null }, { guest_id: null }, { guest_id: "x" }, { party_size: "2" }, { party_size: 1.5 }]) {
+      expect(() => toPortalGuestRsvpRecord({ project_id: PROJECT_A, guest_id: GUEST_A1, attendance: "ATTENDING", party_size: 2, ...bad }, PROJECT_A)).toThrow();
+    }
+    const base = [GUEST_A1].map(bare);
+    for (const rsvps of [
+      [{ guestId: GUEST_B1, attendance: "ATTENDING" as const, partySize: 1 }],
+      [{ guestId: GUEST_A1, attendance: "ATTENDING" as const, partySize: 1 }, { guestId: GUEST_A1, attendance: "MAYBE" as const, partySize: 1 }],
+      [{ guestId: GUEST_A1, attendance: "NOT_ATTENDING" as const, partySize: 2 }],
+      [{ guestId: GUEST_A1, attendance: "ATTENDING" as const, partySize: 0 }],
+      [{ guestId: GUEST_A1, attendance: "MAYBE" as const, partySize: 21 }],
+    ]) {
+      expect(() => attachGuestRsvpStatuses(base, rsvps)).toThrow("Guest RSVP integrity fault");
+    }
+  });
+
+  it("M/W: a revoked guest keeps its historical status; an updated row shows the latest attendance on the next read", async () => {
+    await revokePortalGuest(PORTAL_A.rawToken, GUEST_A2, deps());
+    expect(byId(await listRows(), GUEST_A2)).toMatchObject({ status: "REVOKED", rsvpStatus: "ATTENDING", rsvpPartySize: 2 });
+    Object.assign(db.rsvps[0], { attendance: "NOT_ATTENDING", party_size: 0 });
+    expect(byId(await listRows(), GUEST_A2)).toMatchObject({ rsvpStatus: "NOT_ATTENDING", rsvpPartySize: null });
+    expect(writes.filter((w) => w.table === "rsvps")).toEqual([]);
+  });
+
+  it("P/Q/truncation: the read selects four columns, personalized only, exact count; rows serialize no RSVP id, message, name, time or project", async () => {
+    db.rsvps[0] = { ...db.rsvps[0], message: "Chúc mừng!", guest_display_name_snapshot: "Tên gõ", created_at: "2026-10-05T01:02:03Z" };
+    const json = JSON.stringify(await listRows());
+    expect(json).not.toMatch(/44444444|Chúc mừng|Tên gõ|2026-10-05|message|snapshot|created|updated|project|rsvpId/i);
+    expect(Object.keys((await listRows())[0]).sort()).toEqual(["displayName", "guestId", "invitationVariant", "linkStatus", "rsvpPartySize", "rsvpStatus", "status"]);
+    const repo = strip(read("lib/server/supabase/portal-guest-repository.ts"));
+    const fn = repo.slice(repo.indexOf("async listGuestRsvps"));
+    expect(fn).toMatch(/\.from\("rsvps"\)\s*\.select\("project_id, guest_id, attendance, party_size", \{ count: "exact" \}\)\s*\.eq\("project_id", projectId\)\s*\.not\("guest_id", "is", null\)/);
+    expect(fn).toMatch(/if \(rows\.count !== rows\.data\.length\) fail\(\);/);
+    expect(repo.match(/from\("rsvps"\)/g)).toHaveLength(1);
+  });
+});
+
+describe("033E-C R–X: loader, entitlement, 033D and UI", () => {
+  it("R/S/X: entitled → per-guest statuses + 033D list incl. generic row; not entitled → no Guest Tool, no guest RSVP read, 033D intact", async () => {
+    const { buildRendererFixture } = await import("../../../../templates/core/fixtures/renderer-fixture-pipeline");
+    const { FIXTURE_TEMPLATE_VERSION_ID } = await import("../../../../templates/core/fixtures/renderer-fixture-sources");
+    const snapshot = (await buildRendererFixture({ variant: "COMMON" })).snapshot;
+    const record = (entitled: boolean) => ({
+      projectCode: snapshot.project.code,
+      packageCode: "SEPARATE",
+      invitations: [{ id: "11111111-0000-4000-8000-000000000001", variant: "COMMON" as const, publicSlug: "wc-a", publishedVersionId: "22222222-0000-4000-8000-000000000001" }],
+      versions: [{ id: "22222222-0000-4000-8000-000000000001", invitationId: "11111111-0000-4000-8000-000000000001", projectId: PROJECT_A, versionType: "PUBLISHED", templateVersionId: FIXTURE_TEMPLATE_VERSION_ID, rendererKey: snapshot.template.rendererKey, payload: snapshot }],
+      personalizedGuestEntitled: entitled,
+    });
+    const generic = { typedName: "Anh Hiếu và gia đình", attendance: "ATTENDING" as const, partySize: 3, message: "Hẹn gặp", createdAt: "2026-10-01T00:00:00Z", updatedAt: "2026-10-01T00:00:00Z", guest: null };
+    const gw = getServiceRolePortalGuestGateway();
+    const rsvpReads: string[] = [];
+    const load = (entitled: boolean) =>
+      loadCustomerPortal(PORTAL_A.rawToken, {
+        resolution: resolution(),
+        portal: { getPortalProject: async () => record(entitled), listPortalRsvps: async () => [generic] },
+        guests: { listGuests: gw.listGuests, listGuestRsvps: async (id: string) => (rsvpReads.push(id), gw.listGuestRsvps(id)) },
+      });
+    const on = await load(true);
+    if (on.status !== "READY" || on.guestTool === null) throw new Error("expected guest tool");
+    expect(on.guestTool.guests.map((g) => [g.displayName, g.rsvpStatus, g.rsvpPartySize])).toEqual([
+      ["Anh Hiếu và gia đình", "NOT_RESPONDED", null],
+      ["Chú B và người thương", "ATTENDING", 2],
+    ]);
+    expect(on.rsvps).toEqual([expect.objectContaining({ guestName: "Anh Hiếu và gia đình", message: "Hẹn gặp" })]);
+    expect(rsvpReads).toEqual([PROJECT_A]);
+    const off = await load(false);
+    expect(off).toMatchObject({ status: "READY", guestTool: null, rsvps: [{ guestName: "Anh Hiếu và gia đình" }] });
+    expect(rsvpReads).toEqual([PROJECT_A]);
+  });
+
+  it("V: each status renders compactly (no '0 người', no message); revoked rows keep their status; actions unchanged", async () => {
+    const { PortalGuestTool, guestRsvpStatusText } = await import("../../../../app/portal/[token]/portal-guest-tool");
+    expect(guestRsvpStatusText("NOT_ATTENDING", 0)).toBe("Không tham dự");
+    const rows = [row(GUEST_A1, "NOT_RESPONDED", null), row(GUEST_A2, "ATTENDING", 2), row(GUEST_B1, "MAYBE", 3), row("f0000000-0000-4000-8000-0000000000c1", "NOT_ATTENDING", null), row("f0000000-0000-4000-8000-0000000000c2", "ATTENDING", 4, "REVOKED")];
+    const html = renderToStaticMarkup(<PortalGuestTool token="t" mode="GROOM_OR_BRIDE" guests={rows} />);
+    for (const text of ["Chưa phản hồi", "Sẽ tham dự · 2 người", "Có thể tham dự · 3 người", "Không tham dự", "Sẽ tham dự · 4 người", "Đã thu hồi — link không còn hiệu lực"]) expect(html).toContain(text);
+    expect(html).not.toMatch(/0 người|Lời nhắn|Hẹn gặp/);
+    expect(html.match(/data-portal-guest-rsvp="/g)).toHaveLength(5);
+    expect(html.match(/>Tạo lại link</g)).toHaveLength(4);
+    expect(html.match(/>Sửa</g)).toHaveLength(4);
+    expect(strip(read("app/portal/[token]/portal-guest-tool.tsx"))).not.toMatch(/setInterval|EventSource|WebSocket|\.channel\(|subscribe\(/);
   });
 });
