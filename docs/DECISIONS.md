@@ -2047,3 +2047,14 @@ Implemented by `app/portal/[token]/page.tsx`, `lib/server/customer-portal/*` and
 3. **Post-publish only.** Content renders only when at least one invitation has a valid current PUBLISHED pointer; otherwise "not ready". ARCHIVED handling is deferred.
 4. **Read-only summary from PUBLISHED data.** Couple names, rite and date come from the immutable Snapshot, never the draft. Links are `/i/<public_slug>` for published variants only.
 5. **Deferred.** The RSVP list (next) and the Guest Tool (PERSONALIZED_GUEST-gated) both belong in the Portal. Also deferred: a PORTAL link listing/revoke UI and one-active-link enforcement. Several active PORTAL links are currently allowed (D2). **Pre-production requirement (Product Owner, 2026-10-05):** staff must be able to find and revoke older active PORTAL links before production or customer rollout.
+
+## Task 033D — Portal RSVP Owner-Read (2026-10-05)
+
+Implemented by `app/portal/[token]/portal-rsvp-list.tsx`, `lib/server/customer-portal/present-portal-rsvps.ts` and `listPortalRsvps` in `lib/server/supabase/customer-portal-repository.ts`. No migration. See `docs/API_CONTRACT.md` §24.
+
+1. **Read-only.** The customer sees every RSVP response of their Project. The Portal has no RSVP edit/delete, no guest management and no new API.
+2. **Authority.** Only the server-resolved PORTAL `projectId` scopes the read. A Project id is never browser authority.
+3. **Identity.** For a personalized row, the canonical `guests.display_name` is the identity and the typed snapshot is secondary. A generic row shows its typed snapshot and is never deduplicated.
+4. **Not entitlement-gated.** RSVP viewing does not require PERSONALIZED_GUEST. That add-on gates only the future Guest Tool. Reading `guests.display_name`/`invitation_variant` as RSVP context is part of the PORTAL RSVP list (PHYSICAL_DATABASE_PLAN §15), not Guest Tool access.
+5. **No migration.** The existing 0018 service_role SELECT grants serve the server-only PORTAL list. A narrow explicit-column repository plus a row guard is the boundary.
+6. **Still deferred.** Guest Tool, and the PORTAL link listing/revoke pre-production requirement (Task 033C item 5).

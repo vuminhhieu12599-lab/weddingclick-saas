@@ -7,6 +7,7 @@ import { resolveAccessLink } from "../access-links/resolve-access-link";
 import { assertStoredReviewSnapshot } from "../invitation-review/assert-stored-review-snapshot";
 import type { AccessLinkResolutionRepository } from "../supabase/access-link-resolution-repository";
 import type { CustomerPortalGateway, CustomerPortalInvitationCard, CustomerPortalView } from "./customer-portal-types";
+import { presentPortalRsvps } from "./present-portal-rsvps";
 
 export interface LoadCustomerPortalDependencies {
   resolution: AccessLinkResolutionRepository;
@@ -37,11 +38,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  *     is set, and exactly those versions
  *   → integrity gate per pointer (PUBLISHED, same invitation, same Project,
  *     stored Snapshot binding + Project code), fail closed
- *   → read-only summary from the immutable PUBLISHED Snapshot.
+ *   → read-only summary from the immutable PUBLISHED Snapshot
+ *   → Task 033D: read-only RSVP list of that same resolved projectId
+ *     (generic and personalized; not PERSONALIZED_GUEST-gated).
  *
- * `NOT_READY` when the Project has no published invitation. Never reads the
- * mutable draft, RSVPs, guests or media; signs nothing; writes nothing
- * except the canonical `last_used_at` of the resolver.
+ * `NOT_READY` when the Project has no published invitation (RSVPs are then
+ * not read). Never reads the mutable draft or media; never manages guests;
+ * signs nothing; writes nothing except the canonical `last_used_at` of the
+ * resolver. A failed RSVP read throws (never a fake empty list).
  */
 export async function loadCustomerPortal(rawToken: string, deps: LoadCustomerPortalDependencies): Promise<CustomerPortalView> {
   const context = await resolveAccessLink({ rawToken, expectedLinkType: "PORTAL" }, deps.resolution, deps.now);
@@ -92,5 +96,12 @@ export async function loadCustomerPortal(rawToken: string, deps: LoadCustomerPor
   if (invitations.length === 0) {
     return { status: "NOT_READY" };
   }
-  return { status: "READY", invitations, personalizedGuestEntitled: record.personalizedGuestEntitled };
+  const rsvps = presentPortalRsvps(await deps.portal.listPortalRsvps(context.projectId));
+  return {
+    status: "READY",
+    invitations,
+    personalizedGuestEntitled: record.personalizedGuestEntitled,
+    rsvps: rsvps.rows,
+    rsvpSummary: rsvps.summary,
+  };
 }

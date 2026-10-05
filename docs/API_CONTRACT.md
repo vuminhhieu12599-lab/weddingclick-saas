@@ -1102,3 +1102,28 @@ It reads no RSVPs, guests, media, Storage, payment, review or draft data, and wr
 **Staff.** The Publish tab ("Xuất bản") shows "Link Portal khách hàng" once at least one variant is published. It issues through the existing `POST /api/v2/internal/projects/[id]/access-links` with `{ linkType: "PORTAL" }`, and can rotate the link issued in that view through the existing `…/access-links/[linkId]/rotate`. The raw URL (`/portal/<token>`, built from the browser origin; no SITE_URL) is held only in component state and shown once. Several PORTAL links may be active at once (Task 026 D2). Earlier links stay active until revoked, and there is no listing UI for them yet. **This must be addressed before production or customer rollout** (staff must be able to find and revoke older active PORTAL links).
 
 **Not in 033C.** RSVP owner-read (the next Portal capability, inside the Portal), the Guest Tool (later, PERSONALIZED_GUEST entitlement-gated, through the shared `issueGuestLink`, §22.1), customer guest APIs, ARCHIVED policy, a PORTAL link listing/revocation UI, and one-active-link enforcement.
+
+## 24. Task 033D — Portal RSVP owner-read (read-only)
+
+**Scope.** `/portal/[token]` now shows the RSVP responses of its Project. It is read only. There is no customer login, no RSVP mutation, no Guest Tool and no new route or API: the list is rendered server-side by the existing Portal page.
+
+**Authorization.** As in §23, the raw PORTAL token is resolved with `resolveAccessLink({ expectedLinkType: "PORTAL" })` to exactly one `projectId`. RSVPs are read only for that server-resolved id. `loadCustomerPortal(rawToken, deps)` takes no Project id, so the browser has no parameter to supply one. A Project UUID, public slug, guest token, REVIEW or INTAKE link never reads RSVPs. RSVPs are read only once the Portal is READY (post-publish).
+
+**Read boundary (no migration).** `CustomerPortalGateway.listPortalRsvps(projectId)` in `lib/server/supabase/customer-portal-repository.ts` (server-only, `service_role`) runs one SELECT with an explicit column list: `rsvps` filtered by `project_id`, with the canonical Guest embedded through the `rsvps.guest_id` FK (`display_name`, `invitation_variant`, plus `project_id` for an integrity check). It uses the existing 0018 service_role SELECT grants on `rsvps` and `guests` (PHYSICAL_DATABASE_PLAN §15: "Customer PORTAL: server-only (R aggregate/list)"), the same direct-select pattern as §23. A dedicated RPC would grant `service_role` nothing it does not already have, so 0043 is not needed. The repository never reads `token_hash`, `token_hint`, `token_issued_at`, `phone`, `note` or `group_name`. `guest_id` and every `project_id` are used for guards only and never leave the module. Row guard (`toPortalRsvps`): a row of another Project, a personalized row whose embedded Guest is missing or belongs to another Project, an unknown attendance value or a malformed field fails closed. `count: "exact"` must equal the returned rows, so a server row cap can never silently truncate the list.
+
+**Presentation (`presentPortalRsvps`).**
+- PERSONALIZED (`guest_id` set): the canonical `guests.display_name` is the identity. The typed `guest_display_name_snapshot` appears only as a secondary "Trả lời với tên" line when it differs, and is never identity. The Guest's invitation variant is shown when set. There is one current row per guest (0018 unique index).
+- GENERIC (`guest_id` NULL): the typed snapshot is shown, labeled "Phản hồi từ link chung". Each submission is its own row and is never deduplicated. A response whose Guest was later deleted (FK `SET NULL`) shows as generic, under its snapshot name.
+- Attendance labels: ATTENDING "Sẽ tham dự", MAYBE "Có thể tham dự", NOT_ATTENDING "Không tham dự". `party_size` is shown as stored, and a person count is not shown for NOT_ATTENDING (always 0). Rows are never recalculated or rewritten.
+- Summary: responses per status and summed party size per status, derived from the loaded rows only.
+- Time: `updated_at`, formatted dd/mm/yyyy HH:mm in Asia/Ho_Chi_Minh (`formatDateTimeVi`).
+- Order: `updated_at DESC, id DESC` in the query. The use case keeps `updated_at DESC` with a stable sort, so newest first is deterministic. There are no sort or filter controls.
+- Empty: "Chưa có phản hồi tham dự." (not an error).
+
+**Entitlement.** RSVP viewing is **not** gated by PERSONALIZED_GUEST. Generic and existing personalized responses are always visible to the Project's Portal, whatever the add-on state. PERSONALIZED_GUEST gates only the future Guest Tool.
+
+**Errors.** A failed RSVP read after a valid resolution throws, and the page shows its existing generic "Chưa thể hiển thị trang" state with the fixed `[CustomerPortalPage] Unexpected error` log. It never shows a fake empty list. Token errors are unchanged from §23.
+
+**Unchanged.** §23 metadata/privacy (noindex, nofollow, no-referrer, no Open Graph, force-dynamic, no token storage), PORTAL issue/rotate, public and personalized invitations, both RSVP submit flows (§20/§22), §21 Open Graph.
+
+**Not in 033D.** Guest Tool (create/edit/revoke/issue/regenerate/import/QR/messaging), RSVP edit/delete, sort/filter/export, and the PORTAL link listing/revoke gap (§23, still a pre-production requirement).

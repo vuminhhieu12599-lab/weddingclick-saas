@@ -92,6 +92,10 @@ function portalDeps(record: PortalProjectRecord, links = resolution([{ token: PO
           projectIds.push(projectId);
           return record;
         },
+        async listPortalRsvps(projectId: string) {
+          projectIds.push(projectId);
+          return [];
+        },
       },
     },
   };
@@ -102,7 +106,7 @@ describe("A–E: PORTAL-only token resolution", () => {
     const d = portalDeps(await projectRecord(["COMMON"]));
     const view = await loadCustomerPortal(PORTAL.rawToken, d.deps);
     expect(view.status).toBe("READY");
-    expect(d.projectIds).toEqual([PROJECT_A]);
+    expect(d.projectIds).toEqual([PROJECT_A, PROJECT_A]);
     expect(d.touched).toEqual([LINK_ID]);
   });
 
@@ -227,17 +231,17 @@ const USE_CASE = "lib/server/customer-portal/load-customer-portal.ts";
 const WIRING = "lib/server/customer-portal/customer-portal-supabase.ts";
 
 describe("K–P: boundaries", () => {
-  it("K/L: no RSVP, guest, media, payment, review or write path anywhere in the portal", () => {
+  it("K/L: no guest management, media, payment, review or write path anywhere in the portal (RSVP read-only since 033D)", () => {
     const code = [PAGE, COPY, REPO, USE_CASE, WIRING, "lib/server/customer-portal/customer-portal-types.ts"].map((f) => strip(read(f))).join("\n");
-    expect(code).not.toMatch(/rsvps|"guests"|project_media|\.storage\b|payment_status|review_feedback|current_review_version_id|wedding_details/);
+    expect(code).not.toMatch(/\.from\("guests"\)|project_media|\.storage\b|payment_status|review_feedback|current_review_version_id|wedding_details/);
     expect(code).not.toMatch(/\.(insert|update|upsert|delete|rpc)\(/);
     expect(PRODUCTION.filter((f) => f.startsWith("app/api/") && /portal/i.test(f))).toEqual([]);
   });
 
-  it("the repository queries exactly the four Project-scoped tables, each filtered by the resolved projectId", () => {
+  it("the repository queries exactly the five Project-scoped tables, each filtered by the resolved projectId", () => {
     const repo = strip(read(REPO));
-    expect([...repo.matchAll(/\.from\("([a-z_]+)"\)/g)].map((m) => m[1])).toEqual(["projects", "project_invitations", "invitation_versions", "project_addons"]);
-    expect(repo.match(/\.eq\("project_id", projectId\)/g)).toHaveLength(3);
+    expect([...repo.matchAll(/\.from\("([a-z_]+)"\)/g)].map((m) => m[1])).toEqual(["projects", "project_invitations", "invitation_versions", "project_addons", "rsvps"]);
+    expect(repo.match(/\.eq\("project_id", projectId\)/g)).toHaveLength(4);
     expect(repo).toMatch(/\.eq\("id", projectId\)/);
     expect(repo).not.toMatch(/console\./);
   });
@@ -250,10 +254,10 @@ describe("K–P: boundaries", () => {
     expect(page).toMatch(/expectedLinkType|loadCustomerPortal\(token, createCustomerPortalPageDependencies\(\)\)/);
   });
 
-  it("M: logging is a fixed string; the shell renders placeholders, not fake controls", () => {
+  it("M: logging is a fixed string; the shell renders no fake controls", () => {
     const page = read(PAGE);
     for (const line of page.split("\n").filter((l) => /console\./.test(l))) expect(line).toMatch(/console\.error\("\[CustomerPortalPage\] Unexpected error"\);/);
-    expect(page).toContain("Phản hồi tham dự sẽ được hiển thị tại đây.");
+    expect(page).toContain("<PortalRsvpList rows={view.rsvps} summary={view.rsvpSummary} />");
     expect(page).not.toMatch(/<button|onClick|<form/);
   });
 

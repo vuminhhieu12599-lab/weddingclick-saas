@@ -6,6 +6,7 @@ import type { CustomerPortalView } from "../../../lib/server/customer-portal/cus
 import { loadCustomerPortal } from "../../../lib/server/customer-portal/load-customer-portal";
 import { ApiError } from "../../../lib/server/errors/api-error";
 import { PortalLinkCopy } from "./portal-link-copy";
+import { PortalRsvpList } from "./portal-rsvp-list";
 
 /** Every request re-resolves the PORTAL link and the Project's CURRENT publications. */
 export const dynamic = "force-dynamic";
@@ -56,8 +57,9 @@ function portalErrorMessage(error: unknown) {
  * PORTAL only — REVIEW/INTAKE links, guest tokens and public slugs never
  * open it) to exactly one Project. Read-only and post-publish: a summary
  * from the immutable PUBLISHED Snapshot(s) and that Project's public
- * invitation links. No RSVP data and no Guest Tool yet; no editing,
- * publishing, payment or lifecycle action exists here.
+ * invitation links, plus (Task 033D) the read-only RSVP list of that same
+ * resolved Project. No Guest Tool yet; no RSVP, editing, publishing,
+ * payment or lifecycle action exists here.
  */
 export default async function CustomerPortalPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -113,9 +115,7 @@ export default async function CustomerPortalPage({ params }: { params: Promise<{
           ))}
         </section>
 
-        <section className="rounded-2xl border border-dashed border-stone-300 bg-white p-5 text-sm text-stone-600">
-          Phản hồi tham dự sẽ được hiển thị tại đây.
-        </section>
+        <PortalRsvpList rows={view.rsvps} summary={view.rsvpSummary} />
 
         {view.personalizedGuestEntitled && (
           <section className="rounded-2xl border border-dashed border-stone-300 bg-white p-5 text-sm text-stone-600">
