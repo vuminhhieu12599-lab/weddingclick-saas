@@ -2212,3 +2212,14 @@ Docs-only record following the post-Task 035 pilot readiness audit. The P0 list,
 7. **D6 — Catalog prices: confirmed** as the frozen V1 commercial prices: `COMMON` 150,000 VND; `SEPARATE` 250,000 VND; `PERSONALIZED_GUEST` add-on 50,000 VND (the existing migration 0003 seed values).
 8. **D7 — Personalized OG: keep generic for the pilot.** Personalized guest-token URLs keep the fixed generic metadata (Task 033B1); no couple-title or cover Open Graph is added now. No token may ever appear in metadata. A richer personalized share card may be reconsidered after the pilot. Accepted debt, not a pilot blocker.
 9. **D8 — Out of pilot scope:** customer Intake page, staff Intake UI, Excel guest import, bulk guest operations. Staff collect customer information through chat/manual communication and enter it in V2. Manual Guest Tool management is sufficient. Older aspirational text (`docs/PRODUCT.md` §13 "import guests from Excel", `docs/ROADMAP.md` Week 4 "Excel import/export workflow") does not override this decision.
+
+## Launch Hardening 02 — Staff Access-Link Inventory + Revoke (P0-1, 2026-10-06)
+
+Contract: `docs/API_CONTRACT.md` §33. Resolves the Task 033C item 5 / 033D item 6 deferral "PORTAL link listing/revoke" (the Product Owner's 2026-10-05 pre-production requirement).
+
+1. **Scope.** All `project_access_links` types (`INTAKE`, `REVIEW`, `PORTAL`) of one Project. Personalized guest links are excluded.
+2. **No schema change.** Listing uses the existing 0014 staff SELECT policy/grant; revocation reuses the frozen 0025 `revoke_access_link` route and RPC unchanged, which already logs `ACCESS_LINK_REVOKED` once. No new activity code. Latest migration stays 0043.
+3. **Separate read seam.** A new read-only `AccessLinkInventoryGateway` keeps the frozen Task 026 issue/rotate/revoke gateway, repository and route module byte-identical.
+4. **Completeness over paging.** The whole Project set is returned with an exact count; any mismatch fails closed, so no active link is hidden. Expected volume per Project is small.
+5. **Status** follows the frozen resolver precedence (revoked, then `expires_at <= now`, else active). `token_hint` is not returned (Task 026 Phase 3 keeps it off every HTTP response); `last_used_at` is shown to help staff identify the link a customer is using.
+6. **UI.** Publish-tab section with in-page confirmation and an authoritative server re-read after every revoke. The Task 033C Portal issuer is unchanged; after issuing, staff press "Tải lại".

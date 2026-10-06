@@ -1448,3 +1448,29 @@ V1 RSVP is not routed into V2 RSVP: the data models differ.
   - `lib/admin/signed-media-upload.ts`, the V2 Task 024 `uploadToSignedUrl` with a server-issued one-time token.
 
 **Not changed.** Task 035A (frozen at `cabb201`), V2 behavior and data retention. The six earlier checkpoint tests that asserted "no 0043" now allow exactly this approved file (owner decision 2026-10-06).
+
+## 33. Launch Hardening 02 — Staff Access-Link Inventory + Revoke (P0-1)
+
+**Purpose.** Staff can find and revoke every capability link of a Project after a page reload, so an old or leaked link (above all a PORTAL link) is recoverable through the product. Closes the Task 033C deferral "PORTAL link listing/revoke" (`docs/DECISIONS.md`).
+
+**Managed types.** Exactly the frozen `ACCESS_LINK_TYPES` stored in `project_access_links`: `INTAKE`, `REVIEW`, `PORTAL`. Personalized guest links (the `guests` token model, §22/§26) are out of scope.
+
+### 33.1 `GET /api/v2/internal/projects/[id]/access-links`
+
+- **Auth:** Bearer → `requireStaff` → staff-scoped Supabase client. STAFF and ADMIN alike. No `service_role`, no customer/guest token.
+- **Order of checks:** missing/malformed bearer 401 → unknown user 401 → non-staff 403 → malformed Project id 400 → unknown Project 404 (direct RLS read of `projects`).
+- **Read:** one staff-RLS select of explicit columns `id, project_id, link_type, created_at, expires_at, revoked_at, last_used_at` filtered by `project_id`, with an exact count. `token_hash`, `token_hint` and `created_by` are never selected.
+- **Completeness:** the full Project set is returned. If the exact count differs from the rows received (a server row cap), or any row belongs to another Project or has an unknown type, the request fails closed with 500 — an active link can never be silently hidden.
+- **Response (200, `Cache-Control: no-store`):** `{ data: [{ id, linkType, status, createdAt, expiresAt, revokedAt, lastUsedAt }] }`. `id` is the revoke target, not a credential. No token, hash, hint, Project id or creator id.
+- **Status:** derived at request time with the frozen resolver precedence (§4): `revoked_at` set → `REVOKED`; else `expires_at <= now` → `EXPIRED`; else `ACTIVE`.
+- **Ordering:** `ACTIVE` first, then `EXPIRED`/`REVOKED`; each group `created_at` descending, `id` descending as tie-break.
+
+### 33.2 Revoke
+
+Reuses the frozen Task 026 route `POST /api/v2/internal/projects/[id]/access-links/[linkId]/revoke` (§11.3) and `revoke_access_link` unchanged: pinned to `(project_id, id)`; cross-Project or unknown link → 404 (AL003); already revoked → 409 (AL004); exactly one `ACCESS_LINK_REVOKED` activity row, written by the RPC. An expired-but-not-revoked link remains revocable at the API; the UI offers revoke on `ACTIVE` rows. There is no restore. A revoked token stops resolving immediately (`REVOKED_TOKEN` → the link type's frozen unavailable state).
+
+### 33.3 Staff UI
+
+Publish tab ("Xuất bản"), section "Liên kết truy cập", shown regardless of publication state. Rows show the type label (Cổng khách hàng / Duyệt thiệp / Thu thập thông tin), status, created, last used, expiry and revoked times; no UUID. "Thu hồi link" opens an in-page confirmation ("Xác nhận thu hồi", stating the link stops immediately and cannot be restored). After every revoke attempt the list is re-read from the server; success is shown only after the server confirmed. "Tải lại" re-reads the list (for example after issuing a new Portal link). The Task 033C Portal issuer and its one-time raw URL are unchanged.
+
+**Not provided.** Raw-token or URL recovery (raw tokens are never stored), restore/unrevoke, ISSUE/ROTATE changes, new Intake/Review UI, guest-link management. **No migration** (latest remains 0043): the existing 0014 staff SELECT policy/grant and the 0025 RPC suffice.

@@ -18,6 +18,7 @@ import type {
 } from "../server/project-tasks/project-task-types";
 import type { ProjectActivityPage } from "../server/project-activity/project-activity-types";
 import type { AdminDashboard } from "../server/dashboard/dashboard-types";
+import type { AccessLinkInventoryItem } from "../server/access-links/access-link-inventory-types";
 
 import type { CustomerRecord } from "../server/customers/customer-types";
 import type { ProjectDesignRecord } from "../server/project-design/project-design-types";
@@ -245,6 +246,32 @@ export async function rotateAccessLink(projectId: string, accessLinkId: string):
     { method: "POST" },
   );
   return { id: body.data.id, token: body.data.token };
+}
+
+/**
+ * Launch Hardening 02 / P0-1: every INTAKE/REVIEW/PORTAL link of the Project
+ * (active first). Stable metadata only — a raw token is never recoverable.
+ */
+export async function fetchProjectAccessLinks(projectId: string): Promise<AccessLinkInventoryItem[]> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: AccessLinkInventoryItem[] }>(
+    `/api/v2/internal/projects/${encodeURIComponent(projectId)}/access-links`,
+    token,
+  );
+  return body.data;
+}
+
+/**
+ * Launch Hardening 02 / P0-1: revokes one access link of this Project through
+ * the existing Task 026 revoke route (`revoke_access_link`). No restore exists.
+ */
+export async function revokeProjectAccessLink(projectId: string, accessLinkId: string): Promise<void> {
+  const token = await requireAccessToken();
+  await requestJson<{ data: { id: string } }>(
+    `/api/v2/internal/projects/${encodeURIComponent(projectId)}/access-links/${encodeURIComponent(accessLinkId)}/revoke`,
+    token,
+    { method: "POST" },
+  );
 }
 
 /** Staff render of a persisted REVIEW Snapshot; runtime media URLs are never stored. */

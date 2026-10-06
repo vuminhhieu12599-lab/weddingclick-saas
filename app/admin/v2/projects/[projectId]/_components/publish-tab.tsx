@@ -22,6 +22,7 @@ import type {
 import type { ProjectSummary } from "../../../../../../lib/server/projects/project-types";
 import { ErrorState, LoadingState } from "../../../_components/page-states";
 import { PREVIEW_VARIANT_LABELS } from "../preview/_components/preview-state";
+import { AccessLinkInventory } from "./access-link-inventory";
 
 const BLOCKER_MESSAGES: Readonly<Record<NonNullable<RequiredVariantPublishState["blocker"]>, string>> = {
   LIFECYCLE_NOT_READY: "Dự án chưa ở trạng thái “Sẵn sàng xuất bản”.",
@@ -416,7 +417,10 @@ function PortalLinkIssuer({ projectId }: { projectId: string }) {
  * publication, the first blocker, and a confirmed publish action. No
  * public link, QR, sharing, analytics, guest or rollback controls here.
  * Task 033C adds only the customer PORTAL link issuer, shown once at
- * least one variant has a current publication.
+ * least one variant has a current publication. Launch Hardening 02 adds the
+ * staff access-link inventory (list + revoke of every INTAKE/REVIEW/PORTAL
+ * link), shown regardless of publication state; after issuing a new Portal
+ * link, "Tải lại" re-reads the authoritative list.
  */
 export function PublishTab({ project }: { project: ProjectSummary }) {
   const { data, loading, error, reload } = useAdminQuery(() => fetchProjectPublishState(project.id), [project.id]);
@@ -464,6 +468,8 @@ export function PublishTab({ project }: { project: ProjectSummary }) {
           {data.variants.some((row) => row.publishedVersion !== null) && <PortalLinkIssuer projectId={project.id} />}
         </>
       )}
+
+      <AccessLinkInventory projectId={project.id} />
     </div>
   );
 }
