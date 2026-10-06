@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import type { ProjectSummary } from "../../../../../../lib/server/projects/project-types";
+import { ActivityTab } from "./activity-tab";
 import { DataTab } from "./data-tab";
 import { DesignTab } from "./design-tab";
 import { PublishTab } from "./publish-tab";
@@ -15,6 +16,7 @@ const TABS = [
   { key: "REVIEW", label: "Duyệt" },
   { key: "PUBLISH", label: "Xuất bản" },
   { key: "TASKS", label: "Công việc" },
+  { key: "ACTIVITY", label: "Lịch sử" },
 ] as const;
 
 export type TabKey = (typeof TABS)[number]["key"];
@@ -52,6 +54,7 @@ export function WorkspaceTabs({ project, initialTab = "DATA" }: { project: Proje
         {active === "REVIEW" && <ReviewTab project={project} />}
         {active === "PUBLISH" && <PublishTab project={project} />}
         {active === "TASKS" && <TasksTab project={project} />}
+        {active === "ACTIVITY" && <ActivityTab project={project} />}
       </div>
     </div>
   );

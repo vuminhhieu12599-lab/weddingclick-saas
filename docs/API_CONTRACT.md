@@ -1254,3 +1254,31 @@ Never serialized: Project id, guest id, `token_hash`, `token_hint`, `token_issue
 - Task assignment is independent of `projects.assigned_staff_id`, which is never written here. Delete removes only the task row: it does not touch activity logs, Project lifecycle, customers or guests.
 
 **UI.** "Công việc" tab on `/admin/v2/projects/[projectId]`. The list shows title, a Vietnamese status label (Chưa làm / Đang làm / Hoàn thành / Đã huỷ; English codes are what is persisted), due date/time and assignee. "Thêm công việc" opens a create form (Tiêu đề, Hạn hoàn thành, Người phụ trách with "Không phân công"). Edit adds Trạng thái and sends only the changed fields. Delete asks for confirmation in the page (no `window.confirm`). The due date is entered as wall-clock time in `Asia/Ho_Chi_Minh` (the existing admin display timezone) and converted with the shared civil-time helper. Every confirmed write re-reads the list from the server. Empty state: "Chưa có công việc nào."
+
+## 29. Task 034B — Staff Project Activity History (read-only)
+
+**Scope.** Second slice of Task 034 (§8): staff **read** of `activity_logs` (0020) for one Project. Dashboard aggregation (034C) is not part of it. **No migration, no writes.** Nothing calls `log_activity`, inserts/updates/deletes `activity_logs`, backfills or synthesizes events. The frozen Activity Union (§6) is unchanged, and Project Tasks (§28) stay unaudited. The union is now mirrored once in `lib/domain/activity-action-type.ts` (`ACTIVITY_ACTION_TYPES`, `ACTIVITY_ACTOR_TYPES`).
+
+**Path.** `requireStaff` (STAFF and ADMIN alike), then the staff-scoped client under the 0020 `is_staff()` SELECT policy. No `service_role`, no RPC, no customer / Portal / Review / guest / public access.
+
+| Route | Query | Success |
+|---|---|---|
+| `GET …/projects/[id]/activity` | `cursor?` (opaque, from the previous page) | 200 `{ data: { items: ProjectActivityRecord[], nextCursor: string \| null } }` |
+
+**Record.** `id, actionType, summary, actorType, actorDisplayName, createdAt`. `project_id`, `actor_profile_id` and `metadata` are never selected into the response (`metadata` is not read at all). `summary` is the stored one-liner, shown as-is.
+
+**Actor.** STAFF → `profiles.display_name` when the profile still resolves, else "Nhân viên" (e.g. `actor_profile_id` SET NULL after a profile hard-delete). CUSTOMER → "Khách hàng", GUEST → "Khách mời", SYSTEM → "Hệ thống". Customer/guest identity is never inferred. Names come from one bounded `profiles` read (`id, display_name`) for the distinct STAFF actors on the page (no N+1).
+
+**Order and pages.** `created_at DESC, id DESC`, served by the `(project_id, created_at DESC)` index. The page size is fixed at 30 and has no `limit` parameter. One extra row is read to decide `nextCursor`, so there is no count query. The cursor is base64url of `created_at|id` from the last row. The server checks that it is an RFC 3339 TIMESTAMPTZ plus a UUID, and it is a continuation position, never a credential: every page is still filtered by the route `project_id`, so a cursor from another Project cannot cross scope. There is no realtime and no polling. A manual reload shows newer rows.
+
+**Integrity.** An `action_type` outside §6, an unknown `actor_type` or a row of another Project is an integrity fault that returns a generic 500. Such a row is never relabelled. A future task that extends §6 must update this reader explicitly.
+
+| Condition | Kind | HTTP |
+|---|---|---|
+| Missing/malformed Authorization, invalid/expired token | `UNAUTHENTICATED` | 401 |
+| Authenticated, not active STAFF/ADMIN | `FORBIDDEN` | 403 |
+| Malformed project id or cursor | `BAD_REQUEST` | 400 |
+| Project not visible | `NOT_FOUND` | 404 |
+| Unexpected DB failure, unsupported/malformed row | `INTERNAL` | 500 (generic body) |
+
+**UI.** "Lịch sử" tab on `/admin/v2/projects/[projectId]`. Each row shows the summary as the main text, with the actor · date/time (`formatDateTimeVi`, Asia/Ho_Chi_Minh) below it. "Xem thêm" appends older rows, is disabled while pending and reports errors in the page. "Tải lại" re-reads from the first page. Empty state: "Chưa có lịch sử hoạt động." No metadata, UUIDs or action codes are shown.

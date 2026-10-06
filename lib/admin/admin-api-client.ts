@@ -16,6 +16,7 @@ import type {
   ProjectTaskPatch,
   ProjectTaskRecord,
 } from "../server/project-tasks/project-task-types";
+import type { ProjectActivityPage } from "../server/project-activity/project-activity-types";
 
 import type { CustomerRecord } from "../server/customers/customer-types";
 import type { ProjectDesignRecord } from "../server/project-design/project-design-types";
@@ -569,6 +570,18 @@ export async function deleteProjectTask(projectId: string, taskId: string): Prom
   await requestJson<{ deleted: true }>(projectPath(projectId, `tasks/${encodeURIComponent(taskId)}`), token, {
     method: "DELETE",
   });
+}
+
+// ---------------------------------------------------------------------------
+// Project Activity (Task 034B — staff read-only audit history)
+// ---------------------------------------------------------------------------
+
+/** One newest-first page; pass the previous page's `nextCursor` for older rows. */
+export async function fetchProjectActivity(projectId: string, cursor: string | null = null): Promise<ProjectActivityPage> {
+  const token = await requireAccessToken();
+  const suffix = cursor === null ? "activity" : `activity?${new URLSearchParams({ cursor }).toString()}`;
+  const body = await requestJson<{ data: ProjectActivityPage }>(projectPath(projectId, suffix), token);
+  return body.data;
 }
 
 // ---------------------------------------------------------------------------

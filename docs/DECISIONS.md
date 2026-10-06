@@ -2102,3 +2102,13 @@ Implemented in `lib/server/project-tasks/*`, `lib/server/routes/project-tasks.ts
 3. **No activity logging.** The frozen Activity Union (§6) has no task action, and none was invented. Activity read is 034B, dashboard aggregation 034C.
 4. **Assignee lookup.** No active-staff list existed. A minimal read-only `GET …/tasks/assignees` returns active profiles' `id, display_name` under the existing staff RLS. This is not a staff-management feature. Task assignment never changes the Project assignment, and a later deactivation keeps the stored assignment and name.
 5. **Ordering.** `sort_order, due_at NULLS LAST, created_at, id`. `sort_order` stays internal (no UI input in V1).
+
+## Task 034B — Staff Project Activity History (2026-10-06)
+
+Implemented in `lib/server/project-activity/*`, `lib/server/routes/project-activity.ts`, `lib/server/supabase/project-activity-repository.ts`, `app/api/v2/internal/projects/[id]/activity/route.ts` and the "Lịch sử" admin tab. No migration (0020 already provides the table, the index and staff SELECT). See `docs/API_CONTRACT.md` §29.
+
+1. **Read-only, staff only.** `requireStaff` + 0020 `is_staff()` SELECT. Nothing writes, backfills or synthesizes activity. The frozen union (§6) is unchanged, and Project Tasks stay unaudited.
+2. **Minimal projection.** `id, actionType, summary, actorType, actorDisplayName, createdAt`. Raw `metadata`, `project_id` and `actor_profile_id` are not exposed: the V1 UI does not need them, and historical JSON is not broadened to the browser.
+3. **Keyset pagination local to this feature.** The shared `parseLimit` convention (bounded limit, no continuation) cannot reach older rows, so this feature uses a fixed page of 30 and an opaque `created_at|id` cursor in `created_at DESC, id DESC` order. This is not new shared pagination infrastructure.
+4. **Fail closed on unknown codes.** An action type outside §6 is an integrity fault (500), never relabelled.
+5. **Actor fallbacks.** A STAFF row whose profile no longer resolves reads "Nhân viên". Other actors use fixed labels, and customer/guest identity is never inferred.

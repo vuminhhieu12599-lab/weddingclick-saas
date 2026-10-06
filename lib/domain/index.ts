@@ -18,3 +18,4 @@ export * from "./service-package-code";
 export * from "./service-addon-code";
 export * from "./guest-display-name";
 export * from "./template-design-manifest";
+export * from "./activity-action-type";
