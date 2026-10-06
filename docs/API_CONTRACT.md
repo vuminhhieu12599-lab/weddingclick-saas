@@ -1474,3 +1474,35 @@ Reuses the frozen Task 026 route `POST /api/v2/internal/projects/[id]/access-lin
 Publish tab ("Xuất bản"), section "Liên kết truy cập", shown regardless of publication state. Rows show the type label (Cổng khách hàng / Duyệt thiệp / Thu thập thông tin), status, created, last used, expiry and revoked times; no UUID. "Thu hồi link" opens an in-page confirmation ("Xác nhận thu hồi", stating the link stops immediately and cannot be restored). After every revoke attempt the list is re-read from the server; success is shown only after the server confirmed. "Tải lại" re-reads the list (for example after issuing a new Portal link). The Task 033C Portal issuer and its one-time raw URL are unchanged.
 
 **Not provided.** Raw-token or URL recovery (raw tokens are never stored), restore/unrevoke, ISSUE/ROTATE changes, new Intake/Review UI, guest-link management. **No migration** (latest remains 0043): the existing 0014 staff SELECT policy/grant and the 0025 RPC suffice.
+
+## 34. Launch Hardening 03 — Staff Customer + Project Creation UI (P0-3)
+
+**Purpose.** Staff start a real WeddingClick workflow entirely in V2 Admin (owner decision D1, `docs/DECISIONS.md` "Launch Hardening 01"). UI only: the frozen Task 005 / 005B routes and `create_project_with_addons` are reused unchanged.
+
+### 34.1 Flow
+
+`/admin/v2/projects` → "Tạo dự án" → `/admin/v2/projects/new` → Customer fields + package + add-ons → submit:
+
+1. `POST /api/v2/internal/customers` (Task 005) with `{ displayName, phone, email, contactNote }`; blank optional fields are sent as `null`.
+2. `POST /api/v2/internal/projects` (Task 005B) with `{ customerId, packageCode, addonCodes }` only.
+3. On `201`, `router.replace("/admin/v2/projects/<server-returned id>")`.
+
+Both calls use the staff Bearer token through `lib/admin/admin-api-client.ts`; STAFF and ADMIN alike; no browser Supabase table access and no `service_role`. The client validation (name 1–200 characters, canonical `SERVICE_PACKAGE_CODES` / `SERVICE_ADDON_CODES`) is for UX only; the server validators and the RPC stay authoritative.
+
+### 34.2 Not one transaction
+
+The two routes are separate requests. The Project + add-ons step is atomic (`create_project_with_addons`); Customer + Project together are **not**. If the Customer is created and the Project fails, the Customer remains. The form keeps that Customer id, hides the Customer fields and offers "Thử lại tạo dự án", which calls only step 2 for the same Customer — a retry never creates a second Customer. "Nhập khách hàng khác" is an explicit staff choice that clears the Customer fields; the earlier Customer stays as an ordinary Customer with no Project.
+
+### 34.3 Duplicate submit
+
+Neither route is idempotent. The form blocks a second submit with an in-flight ref guard and disables every input and the submit button while a request is in flight and during the success redirect. There is no server-side idempotency guarantee.
+
+### 34.4 Server-derived values
+
+Project code, `event_type` `WEDDING`, `status` `NEW`, `payment_status` `UNPAID`, the package/add-on price and name snapshots and `created_by` all come from the RPC and column defaults (0005/0006b). The form shows no price; the Project workspace shows the stored snapshot. No lifecycle or payment transition is triggered. Add-ons are chosen only at creation; there is no post-create add-on editing.
+
+### 34.5 Errors and logging
+
+Errors are shown as fixed Vietnamese messages keyed by HTTP status (0/401/403/400/404/409, else a generic retry message); server text is never rendered. Customer and Project creation write no activity row — there is no creation activity code in the frozen contract, and adding one would need a migration.
+
+**Not provided.** Intake UI, Excel import, customer search/reuse of an existing Customer, CRM editing, assigned staff/deadline input, add-on editing, Republish. **No migration** (latest remains 0043).

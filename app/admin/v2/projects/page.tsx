@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { fetchProjects, PROJECT_LIST_LIMIT } from "../../../../lib/admin/admin-api-client";
 import { useAdminQuery } from "../../../../lib/admin/use-admin-query";
 import { EmptyState, ErrorState, LoadingState } from "../_components/page-states";
@@ -17,6 +19,14 @@ export default function ProjectsListPage() {
           projects && projects.length >= PROJECT_LIST_LIMIT
             ? `Hiển thị ${PROJECT_LIST_LIMIT} dự án được tạo gần nhất`
             : "Toàn bộ dự án WeddingClick"
+        }
+        actions={
+          <Link
+            href="/admin/v2/projects/new"
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            Tạo dự án
+          </Link>
         }
       />
 

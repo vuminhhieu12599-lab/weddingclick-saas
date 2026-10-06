@@ -2223,3 +2223,15 @@ Contract: `docs/API_CONTRACT.md` §33. Resolves the Task 033C item 5 / 033D item
 4. **Completeness over paging.** The whole Project set is returned with an exact count; any mismatch fails closed, so no active link is hidden. Expected volume per Project is small.
 5. **Status** follows the frozen resolver precedence (revoked, then `expires_at <= now`, else active). `token_hint` is not returned (Task 026 Phase 3 keeps it off every HTTP response); `last_used_at` is shown to help staff identify the link a customer is using.
 6. **UI.** Publish-tab section with in-page confirmation and an authoritative server re-read after every revoke. The Task 033C Portal issuer is unchanged; after issuing, staff press "Tải lại".
+
+## Launch Hardening 03 — Staff Customer + Project Creation UI (P0-3, 2026-10-06)
+
+Contract: `docs/API_CONTRACT.md` §34. Implements owner decision D1.
+
+1. **UI only.** The frozen Task 005 Customer route and Task 005B Project route (`create_project_with_addons`) are reused unchanged. No schema change; latest migration stays 0043.
+2. **Entry point.** "Tạo dự án" on `/admin/v2/projects` opens a dedicated route `/admin/v2/projects/new`. Success redirects to the new Project workspace using only the server-returned id.
+3. **Honest partial success.** Customer + Project are two requests, not one transaction. After a Project failure the created Customer is kept and reused for the retry; a retry never creates another Customer.
+4. **Duplicate-submit protection is client-side only** (in-flight guard and disabled controls). The routes are not idempotent and no idempotency is claimed.
+5. **Pricing stays server-side.** The form sends canonical codes only and shows no price; snapshots come from the catalog inside the RPC (D6 prices). Initial `NEW` / `UNPAID` come from column defaults; nothing auto-transitions.
+6. **No creation activity row.** The frozen contract has no Customer/Project creation activity code; adding one is out of scope (it would need a migration).
+7. **DEV-verified (2026-10-06).** One test Customer and Project were created through the UI (`SEPARATE` + `PERSONALIZED_GUEST`): one 201 per route, redirect to the returned id, `NEW` / `UNPAID`, server price snapshots, no review, invitation, design or publication. The form has no horizontal overflow at 360/390/430 px. The record is kept as labelled DEV test data.

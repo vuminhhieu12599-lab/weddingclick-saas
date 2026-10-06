@@ -1,4 +1,4 @@
-import type { InvitationVariant, MediaType, ProjectStatus } from "../domain";
+import type { InvitationVariant, MediaType, ProjectStatus, ServiceAddonCode, ServicePackageCode } from "../domain";
 import type {
   FinalizeMediaResult,
   ProjectMediaRecord,
@@ -120,6 +120,19 @@ export async function fetchStaffMe(): Promise<StaffMeSuccessBody> {
   return requestJson<StaffMeSuccessBody>("/api/v2/internal/me", token);
 }
 
+export interface CreateCustomerBody {
+  displayName: string;
+  phone: string | null;
+  email: string | null;
+  contactNote: string | null;
+}
+
+export interface CreateProjectBody {
+  customerId: string;
+  packageCode: ServicePackageCode;
+  addonCodes: ServiceAddonCode[];
+}
+
 export interface ListProjectsFilter {
   status?: ProjectStatus;
   /** Defaults to PROJECT_LIST_LIMIT. */
@@ -142,6 +155,27 @@ export async function fetchAdminDashboard(): Promise<AdminDashboard> {
   const token = await requireAccessToken();
   const body = await requestJson<{ data: AdminDashboard }>("/api/v2/internal/dashboard", token);
   return body.data;
+}
+
+/**
+ * Launch Hardening 03 / P0-3: creates one Customer through the existing
+ * Task 005 staff route. Only the four canonical input fields are sent;
+ * `created_by` is always server-derived.
+ */
+export async function createCustomer(input: CreateCustomerBody): Promise<CustomerRecord> {
+  const token = await requireAccessToken();
+  return requestJson<CustomerRecord>("/api/v2/internal/customers", token, { method: "POST", body: input });
+}
+
+/**
+ * Launch Hardening 03 / P0-3: creates one Project + initial add-ons through
+ * the existing Task 005B route (atomic `create_project_with_addons`). Prices,
+ * project code, status and payment state are server-derived; the body
+ * carries business intent only.
+ */
+export async function createProject(input: CreateProjectBody): Promise<{ id: string }> {
+  const token = await requireAccessToken();
+  return requestJson<{ id: string }>("/api/v2/internal/projects", token, { method: "POST", body: input });
 }
 
 export async function fetchProjectById(projectId: string): Promise<ProjectSummary> {
