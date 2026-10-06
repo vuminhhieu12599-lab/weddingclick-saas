@@ -17,6 +17,7 @@ import type {
   ProjectTaskRecord,
 } from "../server/project-tasks/project-task-types";
 import type { ProjectActivityPage } from "../server/project-activity/project-activity-types";
+import type { AdminDashboard } from "../server/dashboard/dashboard-types";
 
 import type { CustomerRecord } from "../server/customers/customer-types";
 import type { ProjectDesignRecord } from "../server/project-design/project-design-types";
@@ -120,17 +121,26 @@ export async function fetchStaffMe(): Promise<StaffMeSuccessBody> {
 
 export interface ListProjectsFilter {
   status?: ProjectStatus;
+  /** Defaults to PROJECT_LIST_LIMIT. */
+  limit?: number;
 }
 
 export async function fetchProjects(
   filter: ListProjectsFilter = {},
 ): Promise<ProjectSummary[]> {
   const token = await requireAccessToken();
-  const params = new URLSearchParams({ limit: String(PROJECT_LIST_LIMIT) });
+  const params = new URLSearchParams({ limit: String(filter.limit ?? PROJECT_LIST_LIMIT) });
   if (filter.status) {
     params.set("status", filter.status);
   }
   return requestJson<ProjectSummary[]>(`/api/v2/internal/projects?${params.toString()}`, token);
+}
+
+/** Server-side dashboard aggregates (Task 034C) — exact counts, no 100-row browser cap. */
+export async function fetchAdminDashboard(): Promise<AdminDashboard> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: AdminDashboard }>("/api/v2/internal/dashboard", token);
+  return body.data;
 }
 
 export async function fetchProjectById(projectId: string): Promise<ProjectSummary> {

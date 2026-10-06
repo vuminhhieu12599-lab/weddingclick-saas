@@ -1,4 +1,4 @@
-import { PROJECT_STATUSES, type ProjectStatus } from "../domain";
+import { PROJECT_STAFF_ACTION_STATUSES, PROJECT_STATUSES, type ProjectStatus } from "../domain";
 
 /**
  * Central Vietnamese label + badge tone mapping for `ProjectStatus`
@@ -44,15 +44,6 @@ const PROJECT_STATUS_TONES: Record<ProjectStatus, ProjectStatusTone> = {
   ARCHIVED: "neutral",
 };
 
-/** Statuses that represent work currently sitting with WeddingClick staff. */
-const STATUSES_NEEDING_STAFF_ATTENTION: readonly ProjectStatus[] = [
-  "NEW",
-  "WAITING_FOR_INFO",
-  "IN_PROGRESS",
-  "REVISION_REQUIRED",
-  "AWAITING_PAYMENT",
-];
-
 export function getProjectStatusLabel(status: ProjectStatus): string {
   return PROJECT_STATUS_LABELS_VI[status];
 }
@@ -61,8 +52,9 @@ export function getProjectStatusTone(status: ProjectStatus): ProjectStatusTone {
   return PROJECT_STATUS_TONES[status];
 }
 
+/** "Cần xử lý" — the owner-approved staff-action group (Task 034C), defined once in the domain layer. */
 export function isStatusNeedingStaffAttention(status: ProjectStatus): boolean {
-  return STATUSES_NEEDING_STAFF_ATTENTION.includes(status);
+  return (PROJECT_STAFF_ACTION_STATUSES as readonly ProjectStatus[]).includes(status);
 }
 
 /** Ordered lifecycle, re-exported so UI never redefines the sequence. */

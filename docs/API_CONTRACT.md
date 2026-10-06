@@ -1282,3 +1282,37 @@ Never serialized: Project id, guest id, `token_hash`, `token_hint`, `token_issue
 | Unexpected DB failure, unsupported/malformed row | `INTERNAL` | 500 (generic body) |
 
 **UI.** "Lịch sử" tab on `/admin/v2/projects/[projectId]`. Each row shows the summary as the main text, with the actor · date/time (`formatDateTimeVi`, Asia/Ho_Chi_Minh) below it. "Xem thêm" appends older rows, is disabled while pending and reports errors in the page. "Tải lại" re-reads from the first page. Empty state: "Chưa có lịch sử hoạt động." No metadata, UUIDs or action codes are shown.
+
+## 30. Task 034C — Staff Admin Dashboard Aggregation
+
+**Scope.** Final slice of Task 034 (§8): the `/admin/v2` "Tổng quan" operational summary, computed **server-side** from the current canonical tables `projects` and `project_tasks`, never from `activity_logs`. **Read-only, no migration**, no realtime/polling (a page reload re-reads). It replaces the old browser-side counting over the 100-row project list (`PROJECT_LIST_LIMIT`), which silently capped totals. Out of scope: staff workload (no per-staff counts, scores or rankings) and statistics (projects by month, revenue, package/template popularity, conversion, RSVP engagement, overdue rate/trends).
+
+**Path.** `GET /api/v2/internal/dashboard`: `requireStaff` (STAFF and ADMIN alike), then the staff-scoped client under existing staff RLS. No `service_role`, no RPC, no customer / Portal / Review / guest / public access.
+
+**Definitions (owner-approved, constants in `lib/domain/project-dashboard-groups.ts`).** `now` is the server instant (`generatedAt`). Windows are exact rolling durations (7 × 24 h, 30 × 24 h) compared as TIMESTAMPTZ instants in the database, never as formatted strings.
+
+| Metric | Label | Definition |
+|---|---|---|
+| Status breakdown | (12 canonical labels) | exact count per `ProjectStatus`. No synthetic status. |
+| Active | Đang hoạt động | status NOT IN (`COMPLETED`, `ARCHIVED`). `PUBLISHED` is active. |
+| Staff action | Cần xử lý | status IN (`NEW`, `IN_PROGRESS`, `INTERNAL_REVIEW`, `REVISION_REQUIRED`, `APPROVED`, `READY_TO_PUBLISH`) |
+| Waiting for customer | Chờ khách | status IN (`WAITING_FOR_INFO`, `CUSTOMER_REVIEW`, `AWAITING_PAYMENT`) |
+| Project overdue | Quá hạn | `deadline_at < now` (NULL never) AND status NOT IN (`PUBLISHED`, `COMPLETED`, `ARCHIVED`) |
+| Project approaching | Sắp đến hạn | `now <= deadline_at <= now + 7 days`, same status exclusion. Disjoint from overdue. |
+| Recently completed | Hoàn thành 30 ngày | status = `COMPLETED` AND `completed_at >= now − 30 days` (NULL never). `ARCHIVED` is not counted. |
+| Outstanding tasks | Công việc chưa xong | task status IN (`TODO`, `IN_PROGRESS`) AND parent Project status NOT IN (`COMPLETED`, `ARCHIVED`). `PUBLISHED` Projects' tasks count. |
+| Overdue tasks | Công việc quá hạn | outstanding AND `due_at < now` (NULL never) |
+| Upcoming tasks | Công việc 7 ngày tới | outstanding AND `now <= due_at <= now + 7 days`. Disjoint from overdue tasks. |
+
+Cần xử lý and Chờ khách together with `PUBLISHED`/`COMPLETED`/`ARCHIVED` partition the 12 statuses. The presentation helper `isStatusNeedingStaffAttention` now delegates to the same Cần xử lý constant (it previously hid a different code-only set).
+
+**Queries.** There is a fixed set of 20, run in parallel and independent of data size (no N+1):
+- 12 status counts, plus 3 Project counts (overdue, approaching, recently completed), all `count: "exact", head: true`, so no rows are transferred. The overdue and approaching filters use the `(status, deadline_at)` index.
+- 3 task counts with `projects!inner(status)` so the parent-status exclusion is applied in the database.
+- 2 deadline lists (overdue, approaching), each `limit 10`, ordered `deadline_at ASC, id ASC`.
+
+`project_tasks` has only its `(project_id)` index. That is accepted at V1 volume; review a `(status, due_at)` index if cross-Project task counts grow.
+
+**Response.** `200 { data: { generatedAt, projects: { active, staffAction, waitingForCustomer, overdue, approaching, recentlyCompleted, byStatus }, tasks: { outstanding, overdue, upcoming }, attention: [{ id, projectCode, status, deadlineAt, overdue }] } }`. `attention` lists overdue Projects first and then approaching ones, earliest deadline first with an `id` tie-break, at most 10 in total. It carries navigation fields only: no customer, price, note, token or activity data. Errors: 401 (missing/invalid credential), 403 (not active staff), 500 (generic body).
+
+**UI.** It shows 6 summary tiles, 3 task tiles, the deadline attention list (linking to each Project, with a "Hiển thị n / N" hint when truncated), and the 12-status breakdown using the existing labels. "Dự án gần đây" keeps its meaning (5 newest by `created_at DESC, id DESC`) through the existing list endpoint with `limit=5`, not the 100-row list.

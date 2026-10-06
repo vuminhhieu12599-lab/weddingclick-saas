@@ -2112,3 +2112,19 @@ Implemented in `lib/server/project-activity/*`, `lib/server/routes/project-activ
 3. **Keyset pagination local to this feature.** The shared `parseLimit` convention (bounded limit, no continuation) cannot reach older rows, so this feature uses a fixed page of 30 and an opaque `created_at|id` cursor in `created_at DESC, id DESC` order. This is not new shared pagination infrastructure.
 4. **Fail closed on unknown codes.** An action type outside §6 is an integrity fault (500), never relabelled.
 5. **Actor fallbacks.** A STAFF row whose profile no longer resolves reads "Nhân viên". Other actors use fixed labels, and customer/guest identity is never inferred.
+
+## Task 034C — Staff Admin Dashboard Aggregation (2026-10-06)
+
+Implemented in `lib/domain/project-dashboard-groups.ts`, `lib/server/dashboard/*`, `lib/server/routes/admin-dashboard.ts`, `lib/server/supabase/dashboard-repository.ts`, `app/api/v2/internal/dashboard/route.ts` and `/admin/v2`. No migration. See `docs/API_CONTRACT.md` §30 for the exact definitions.
+
+1. **Owner decisions (2026-10-06).**
+   - Active excludes only COMPLETED/ARCHIVED.
+   - Cần xử lý = NEW, IN_PROGRESS, INTERNAL_REVIEW, REVISION_REQUIRED, APPROVED, READY_TO_PUBLISH. This replaces the earlier code-only set, whose only consumer was this dashboard.
+   - Chờ khách = WAITING_FOR_INFO, CUSTOMER_REVIEW, AWAITING_PAYMENT.
+   - Deadline metrics exclude PUBLISHED/COMPLETED/ARCHIVED. The approaching window is 7 days.
+   - Task totals cover TODO/IN_PROGRESS only and exclude tasks on COMPLETED/ARCHIVED Projects. The upcoming-task window is 7 days.
+   - Recently completed = COMPLETED with `completed_at` in the last 30 days.
+   - Staff workload and statistics are out of scope.
+2. **Server-side truth.** Exact head counts over the canonical tables replace browser counting over the capped 100-row list. Activity logs are never used as dashboard truth.
+3. **Read-only, staff only.** `requireStaff` + staff RLS. No `service_role`, RPC or writes. No realtime.
+4. **Fixed query set (20).** No per-Project, per-staff or per-task queries. The attention list is bounded to 10.
