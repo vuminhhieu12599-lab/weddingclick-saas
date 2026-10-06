@@ -11,6 +11,11 @@ import type {
   ProjectDressCodeSwatchRecord,
 } from "../server/project-dress-code/project-dress-code-types";
 import type { ProjectTimelineItemRecord } from "../server/project-timeline/project-timeline-types";
+import type {
+  AssignableStaffRecord,
+  ProjectTaskPatch,
+  ProjectTaskRecord,
+} from "../server/project-tasks/project-task-types";
 
 import type { CustomerRecord } from "../server/customers/customer-types";
 import type { ProjectDesignRecord } from "../server/project-design/project-design-types";
@@ -510,6 +515,58 @@ export async function updateProjectTimelineItem(
 export async function deleteProjectTimelineItem(projectId: string, itemId: string): Promise<void> {
   const token = await requireAccessToken();
   await requestJson<{ deleted: true }>(projectPath(projectId, `timeline/${encodeURIComponent(itemId)}`), token, {
+    method: "DELETE",
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Project Tasks (Task 034A — staff-only operational tasks)
+// ---------------------------------------------------------------------------
+
+export interface CreateProjectTaskBody {
+  title: string;
+  dueAt: string | null;
+  assignedStaffId: string | null;
+}
+
+export async function fetchProjectTasks(projectId: string): Promise<ProjectTaskRecord[]> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: ProjectTaskRecord[] }>(projectPath(projectId, "tasks"), token);
+  return body.data;
+}
+
+export async function fetchTaskAssignees(projectId: string): Promise<AssignableStaffRecord[]> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: AssignableStaffRecord[] }>(projectPath(projectId, "tasks/assignees"), token);
+  return body.data;
+}
+
+export async function createProjectTask(projectId: string, input: CreateProjectTaskBody): Promise<ProjectTaskRecord> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: ProjectTaskRecord }>(projectPath(projectId, "tasks"), token, {
+    method: "POST",
+    body: input,
+  });
+  return body.data;
+}
+
+export async function updateProjectTask(
+  projectId: string,
+  taskId: string,
+  patch: ProjectTaskPatch,
+): Promise<ProjectTaskRecord> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: ProjectTaskRecord }>(
+    projectPath(projectId, `tasks/${encodeURIComponent(taskId)}`),
+    token,
+    { method: "PATCH", body: patch },
+  );
+  return body.data;
+}
+
+export async function deleteProjectTask(projectId: string, taskId: string): Promise<void> {
+  const token = await requireAccessToken();
+  await requestJson<{ deleted: true }>(projectPath(projectId, `tasks/${encodeURIComponent(taskId)}`), token, {
     method: "DELETE",
   });
 }

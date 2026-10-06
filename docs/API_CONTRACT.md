@@ -1221,3 +1221,36 @@ Never serialized: Project id, guest id, `token_hash`, `token_hint`, `token_issue
 **Independence.** RSVP status is independent of link state and revoke: NOT_ISSUED/ISSUED × responded/not are all valid. A revoked guest keeps its historical status. An updated personalized RSVP (same row) shows its latest attendance on the next load.
 
 **Entitlement.** Unchanged: without PERSONALIZED_GUEST there is no Guest Tool and no per-guest read; §24 still lists every response.
+
+## 28. Task 034A — Staff Project Tasks CRUD
+
+**Scope.** First slice of Task 034 (§8): `project_tasks` (0019) CRUD for staff only. Activity-log read (034B) and dashboard aggregation (034C) are not part of it. **No migration.** These are lightweight operational task/deadline items. There are no subtasks, comments, priorities, labels, notifications, reminders or automation.
+
+**Path.** Every route runs `requireStaff` (STAFF and ADMIN alike, no ADMIN-only branch), then one plain staff-RLS statement scoped by the URL `project_id` (and task id). `project_tasks` has no type in the frozen Activity Union (§6), so it stays on the direct-RLS path (§3) with **no activity logging**. No `service_role`, no RPC, no customer / Portal / Review / guest / public access.
+
+| Route | Body | Success |
+|---|---|---|
+| `GET …/projects/[id]/tasks` | — | 200 `{ data: ProjectTaskRecord[] }` |
+| `GET …/projects/[id]/tasks/assignees` | — | 200 `{ data: { id, displayName }[] }`: active STAFF/ADMIN profiles, by display name |
+| `POST …/projects/[id]/tasks` | `{ title, dueAt?, assignedStaffId?, sortOrder? }` | 201 `{ data }`: status is always the DB default `TODO` |
+| `PATCH …/projects/[id]/tasks/[taskId]` | any non-empty subset of `title`/`status`/`dueAt`/`assignedStaffId`/`sortOrder` | 200 `{ data }` |
+| `DELETE …/projects/[id]/tasks/[taskId]` | — | 200 `{ deleted: true }` |
+
+**Record.** `id, projectId, title, status, dueAt, assignedStaffId, assignedStaffDisplayName, sortOrder, createdAt, updatedAt`. The display name comes from `profiles` (`id, display_name` only) and is kept after the profile is deactivated. Email and auth metadata are never read.
+
+**Ordering.** No canonical ordering existed, so it is `sort_order ASC, due_at ASC NULLS LAST, created_at ASC, id ASC`. "Overdue" is derived from `(due_at, status)` and never stored.
+
+**Validation.** Exact allow-listed keys: `projectId`, `createdAt`, `updatedAt` and (on create) `status` are rejected. `title` is trimmed, non-blank and at most 200 Unicode code points (the 0019 CHECK). `status` must be `TODO | IN_PROGRESS | DONE | CANCELLED`, with no transition rules because this is operational data, not Project lifecycle. `dueAt` is `null` or an RFC 3339 timestamp with an explicit offset (TIMESTAMPTZ). `assignedStaffId` is `null` or the UUID of an active STAFF/ADMIN profile. `sortOrder` is an int4 integer (default 0) and is not exposed in the UI.
+
+| Condition | Kind | HTTP |
+|---|---|---|
+| Missing/malformed Authorization, invalid/expired token | `UNAUTHENTICATED` | 401 |
+| Authenticated, not active STAFF/ADMIN | `FORBIDDEN` | 403 |
+| Malformed project/task/staff id, invalid body | `BAD_REQUEST` | 400 |
+| Project not visible; task not in this Project; assignee not an active staff profile | `NOT_FOUND` | 404 |
+| Unexpected DB failure / malformed row | `INTERNAL` | 500 (generic body) |
+
+- A task id from Project B used against Project A is 404 (update/delete are scoped by both ids), so there is no cross-Project oracle.
+- Task assignment is independent of `projects.assigned_staff_id`, which is never written here. Delete removes only the task row: it does not touch activity logs, Project lifecycle, customers or guests.
+
+**UI.** "Công việc" tab on `/admin/v2/projects/[projectId]`. The list shows title, a Vietnamese status label (Chưa làm / Đang làm / Hoàn thành / Đã huỷ; English codes are what is persisted), due date/time and assignee. "Thêm công việc" opens a create form (Tiêu đề, Hạn hoàn thành, Người phụ trách with "Không phân công"). Edit adds Trạng thái and sends only the changed fields. Delete asks for confirmation in the page (no `window.confirm`). The due date is entered as wall-clock time in `Asia/Ho_Chi_Minh` (the existing admin display timezone) and converted with the shared civil-time helper. Every confirmed write re-reads the list from the server. Empty state: "Chưa có công việc nào."

@@ -7,12 +7,14 @@ import { DataTab } from "./data-tab";
 import { DesignTab } from "./design-tab";
 import { PublishTab } from "./publish-tab";
 import { ReviewTab } from "./review-tab";
+import { TasksTab } from "./tasks-tab";
 
 const TABS = [
   { key: "DATA", label: "Dữ liệu" },
   { key: "DESIGN", label: "Thiết kế" },
   { key: "REVIEW", label: "Duyệt" },
   { key: "PUBLISH", label: "Xuất bản" },
+  { key: "TASKS", label: "Công việc" },
 ] as const;
 
 export type TabKey = (typeof TABS)[number]["key"];
@@ -49,6 +51,7 @@ export function WorkspaceTabs({ project, initialTab = "DATA" }: { project: Proje
         {active === "DESIGN" && <DesignTab project={project} />}
         {active === "REVIEW" && <ReviewTab project={project} />}
         {active === "PUBLISH" && <PublishTab project={project} />}
+        {active === "TASKS" && <TasksTab project={project} />}
       </div>
     </div>
   );

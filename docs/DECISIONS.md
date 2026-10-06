@@ -2092,3 +2092,13 @@ Implemented in `lib/server/supabase/portal-guest-repository.ts` (`listGuestRsvps
 3. **Revoked guests keep their historical RSVP status.** Link state, revoke state and RSVP state are independent.
 4. **Read-only.** No RSVP mutation in the Portal; no realtime or polling (full refresh). Two Project-scoped reads merged server-side (no N+1, exact count, fail closed on integrity faults).
 5. **Unchanged.** PERSONALIZED_GUEST gating of the Guest Tool; §24 owner-read independent of entitlement; 033E-A/B semantics; RSVP submit/update.
+
+## Task 034A — Staff Project Tasks CRUD (2026-10-05)
+
+Implemented in `lib/server/project-tasks/*`, `lib/server/routes/project-tasks.ts`, `lib/server/supabase/project-tasks-repository.ts`, `app/api/v2/internal/projects/[id]/tasks/**` and the "Công việc" admin tab. No migration (0019 already satisfies it). See `docs/API_CONTRACT.md` §28.
+
+1. **Internal staff only.** `requireStaff` + 0019 `is_staff()` RLS, STAFF and ADMIN alike. No customer, Portal, Review, guest or public surface. No `service_role`.
+2. **Lightweight operational model.** Statuses `TODO | IN_PROGRESS | DONE | CANCELLED` with free transitions. Nullable due date (TIMESTAMPTZ), optional staff assignment, full Project-scoped CRUD including delete.
+3. **No activity logging.** The frozen Activity Union (§6) has no task action, and none was invented. Activity read is 034B, dashboard aggregation 034C.
+4. **Assignee lookup.** No active-staff list existed. A minimal read-only `GET …/tasks/assignees` returns active profiles' `id, display_name` under the existing staff RLS. This is not a staff-management feature. Task assignment never changes the Project assignment, and a later deactivation keeps the stored assignment and name.
+5. **Ordering.** `sort_order, due_at NULLS LAST, created_at, id`. `sort_order` stays internal (no UI input in V1).
