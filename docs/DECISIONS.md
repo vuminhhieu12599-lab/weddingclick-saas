@@ -2165,3 +2165,34 @@ Implemented in `lib/server/rate-limit/*`, `proxy.ts`, `lib/server/supabase/publi
    - The two families are never mixed.
    - Marketplace secrets are consumed natively, never duplicated under renamed variables.
 7. **Open.** Real Upstash configuration plus a pre-production smoke. **Task 035B** (Legacy V1 exposure containment) is a release blocker. Task 035 is not complete.
+
+## Task 035B — Legacy V1 Exposure Containment (2026-10-06)
+
+Implemented in:
+- `supabase/migrations/20260911041203_0043_legacy_v1_lockdown.sql` (authored, **not applied**);
+- `next.config.ts`;
+- `components/legacy-v1-retired.tsx`;
+- the V1 pages `app/[id]/**`, `app/guest-list/[id]`, `app/dashboard` and `app/thong-ke`;
+- the three V1 themes.
+
+See `docs/API_CONTRACT.md` §32 and `docs/SECURITY.md` §11.2.
+
+1. **Owner decisions (2026-10-06).**
+   - V1 is not a launch surface.
+   - Revoke all `anon`/`authenticated` access to `invitations`/`weddings`/`wishes`, including reads. The 2 old V1 links may stop rendering.
+   - Enable and force RLS; drop the permissive policies.
+   - `wedding-photos`: drop anonymous upload and make the bucket private. Old public URLs may stop working.
+   - Delete nothing.
+   - Public V1 pages show a fixed unavailable state; `/admin`, `/dashboard` and `/thong-ke` redirect to `/admin/v2`.
+   - `app/admin/page.tsx` stays untouched (owner's local change) and is contained by an exact redirect plus database denial.
+   - Claude authors 0043; the owner applies it.
+2. **Database is the fix.** The anon key is public, so UI changes alone are cosmetic.
+   - **Verified first:** the live state was confirmed with read-only catalog queries. `postgres`/`service_role` have BYPASSRLS, which makes FORCE RLS safe.
+   - **Local test:** 0043 was tested against a disposable local Postgres replica of that state:
+     - client grants removed, RLS forced, policies dropped;
+     - bucket private, anon/authenticated uploads denied;
+     - all rows and objects kept;
+     - fresh-database no-op and re-run both OK;
+     - an unknown leftover policy fails closed with a full rollback.
+3. **Checkpoint tests.** The six tests asserting "no migration 0043" (033B1, 033E, 034A, 034B, 034C and frozen 035A `rate-limit.test.ts`) now allow exactly the approved 0043 file (owner decision). No 035A runtime file changed.
+4. **Open.** Owner applies 0043 → post-application verification → 035B freeze → Task 035 complete.

@@ -446,9 +446,10 @@ const executable = sql.split("\n").filter((l) => !l.trim().startsWith("--")).joi
 
 describe("migration 0042", () => {
   it("is the only 0042 and the latest migration; three SECURITY DEFINER functions with empty search_path", () => {
-    expect(readdirSync(join(ROOT, MIGRATIONS)).filter((f) => f.includes("_0043_"))).toEqual([]);
+    // Task 035B: the only migration allowed after 0042 is the owner-approved legacy V1 lockdown.
+    expect(readdirSync(join(ROOT, MIGRATIONS)).filter((f) => f.includes("_0043_"))).toEqual(["20260911041203_0043_legacy_v1_lockdown.sql"]);
     expect(sqlFile).toHaveLength(1);
-    expect(readdirSync(join(ROOT, MIGRATIONS)).sort().at(-1)).toBe(sqlFile[0]);
+    expect(readdirSync(join(ROOT, MIGRATIONS)).sort().slice(-2)).toEqual([sqlFile[0], "20260911041203_0043_legacy_v1_lockdown.sql"]);
     expect(executable.match(/CREATE FUNCTION/g)).toHaveLength(3);
     expect(executable.match(/SECURITY DEFINER\s+SET search_path = ''/g)).toHaveLength(3);
   });

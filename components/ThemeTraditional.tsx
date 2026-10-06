@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { LEGACY_V1_UNAVAILABLE_MESSAGE } from "./legacy-v1-retired";
 
-export default function ThemeTraditional({ invitation, guestName, id }: { invitation: any, guestName: string, id: string }) {
+export default function ThemeTraditional({ invitation, guestName }: { invitation: any, guestName: string, id: string }) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [rsvpName, setRsvpName] = useState(guestName);
   const [attendance, setAttendance] = useState("Có tham dự");
   const [message, setMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [rsvpSuccess, setRsvpSuccess] = useState(false);
+  const [isSubmitting] = useState(false);
+  const [rsvpSuccess] = useState(false);
   const [showQRPopup, setShowQRPopup] = useState(false);
   const [isOpened, setIsOpened] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -53,13 +53,10 @@ export default function ThemeTraditional({ invitation, guestName, id }: { invita
   }, [invitation]);
 
   // Gửi Lời chúc
-  const handleRsvpSubmit = async (e: React.FormEvent) => {
+  // Task 035B: Legacy V1 RSVP is retired — nothing is written and success is never shown.
+  const handleRsvpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!rsvpName) return alert("Vui lòng nhập tên của bạn!");
-    setIsSubmitting(true);
-    await supabase.from('wishes').insert([{ wedding_id: id, guest_name: rsvpName, attendance, message }]);
-    setIsSubmitting(false);
-    setRsvpSuccess(true);
+    alert(LEGACY_V1_UNAVAILABLE_MESSAGE);
   };
 
   const handleCopyBank = () => {

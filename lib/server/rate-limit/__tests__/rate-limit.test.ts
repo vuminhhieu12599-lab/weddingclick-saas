@@ -550,7 +550,8 @@ describe("static safety (T, Z, AA, AD, AE)", () => {
   });
 
   it("no migration 0043, only the two approved dependencies were added, Task 034 code unchanged", () => {
-    expect(readdirSync(join(ROOT, "supabase/migrations")).filter((f) => /_0043_/.test(f))).toEqual([]);
+    // Task 035B: the only migration allowed after 0042 is the owner-approved legacy V1 lockdown.
+    expect(readdirSync(join(ROOT, "supabase/migrations")).filter((f) => /_0043_/.test(f))).toEqual(["20260911041203_0043_legacy_v1_lockdown.sql"]);
     const pkg = JSON.parse(read("package.json")) as { dependencies: Record<string, string> };
     expect(Object.keys(pkg.dependencies).filter((d) => d.startsWith("@upstash/")).sort()).toEqual(["@upstash/ratelimit", "@upstash/redis"]);
     const changed = execFileSync("git", ["diff", "--name-only", "HEAD", "--", "lib/server/project-tasks", "lib/server/project-activity", "lib/server/dashboard", "app/api/v2/internal", "supabase"], { cwd: ROOT, encoding: "utf8" });

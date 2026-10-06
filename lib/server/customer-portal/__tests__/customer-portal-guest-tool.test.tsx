@@ -685,9 +685,15 @@ describe("033E-B AG–AI: staff path, resolver and RSVP preserved", () => {
       "lib/server/public-rsvp",
       "lib/server/supabase/public-guest-repository.ts",
       // app/api/v2/public/rsvp/route.ts: Task 035A wraps it with abuse-control guards only.
+      // Task 035B narrowed only this test's "latest migration" checkpoint assertion.
+      ":!lib/server/public-guest/__tests__/personalized-guest-link.test.tsx",
     ];
     expect(execFileSync("git", ["diff", "--name-only", "HEAD", "--", ...frozen], { cwd: ROOT, encoding: "utf8" })).toBe("");
-    expect(readdirMigrations().at(-1)).toMatch(/_0042_/);
+    // Task 035B: the only migration allowed after 0042 is the owner-approved legacy V1 lockdown.
+    expect(readdirMigrations().slice(-2).map((name) => name.split("/").at(-1))).toEqual([
+      "20260911041202_0042_personalized_guest_link.sql",
+      "20260911041203_0043_legacy_v1_lockdown.sql",
+    ]);
   });
 });
 

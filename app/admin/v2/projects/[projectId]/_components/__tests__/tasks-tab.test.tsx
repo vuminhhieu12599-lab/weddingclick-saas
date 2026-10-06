@@ -115,7 +115,8 @@ describe("Task 034A boundaries", () => {
         expect(readdirSync(join(ROOT, dir), { recursive: true }).join("\n")).not.toMatch(/task/i);
       }
     }
-    expect(readdirSync(join(ROOT, "supabase/migrations")).some((name) => /_0043_/.test(name))).toBe(false);
+    // Task 035B: the only migration allowed after 0042 is the owner-approved legacy V1 lockdown.
+    expect(readdirSync(join(ROOT, "supabase/migrations")).filter((name) => /_0043_/.test(name))).toEqual(["20260911041203_0043_legacy_v1_lockdown.sql"]);
     expect(readFileSync(join(__dirname, "../workspace-tabs.tsx"), "utf8")).toContain('{ key: "TASKS", label: "Công việc" }');
   });
 });

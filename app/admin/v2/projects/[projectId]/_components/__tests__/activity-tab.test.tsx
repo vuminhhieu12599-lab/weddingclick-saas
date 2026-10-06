@@ -89,7 +89,8 @@ describe("Task 034B boundaries", () => {
 
   it("migration 0020 unchanged, no 0043, and the domain union matches the frozen §6 list", async () => {
     const migrations = readdirSync(join(ROOT, "supabase/migrations"));
-    expect(migrations.some((name) => /_0043_/.test(name))).toBe(false);
+    // Task 035B: the only migration allowed after 0042 is the owner-approved legacy V1 lockdown.
+    expect(migrations.filter((name) => /_0043_/.test(name))).toEqual(["20260911041203_0043_legacy_v1_lockdown.sql"]);
     const m0020 = migrations.find((name) => /_0020_activity_logs\.sql$/.test(name))!;
     expect(execFileSync("git", ["status", "--porcelain", "--", `supabase/migrations/${m0020}`], { cwd: ROOT }).toString()).toBe("");
     const section = readFileSync(join(ROOT, "docs/API_CONTRACT.md"), "utf8").split("## 6. Activity Action Type Union")[1].split("```text")[1].split("```")[0];

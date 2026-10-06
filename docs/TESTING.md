@@ -301,7 +301,7 @@ Before launch verify:
 - non-entitled Project cannot create personalized guests;
 - Staff cannot perform Admin-only action if role restrictions apply;
 - service-role credential absent from browser bundle;
-- **basic abuse/rate-limiting controls exist on public RSVP submission and customer-token verification endpoints — this is a mandatory pre-production gate (`docs/SECURITY.md` §11), not an optional check. Production readiness fails without it, even if implementation was reasonably deferred earlier in the six-week plan.** Task 035A covers V2 (`docs/API_CONTRACT.md` §31). Its focused tests are `lib/server/rate-limit/__tests__/` (fake store, no live Upstash). This check still fails until the real Upstash pre-production smoke passes and Task 035B (Legacy V1 exposure containment) is complete.
+- **basic abuse/rate-limiting controls exist on public RSVP submission and customer-token verification endpoints — this is a mandatory pre-production gate (`docs/SECURITY.md` §11), not an optional check. Production readiness fails without it, even if implementation was reasonably deferred earlier in the six-week plan.** Task 035A covers V2 (`docs/API_CONTRACT.md` §31). Its focused tests are `lib/server/rate-limit/__tests__/` (fake store, no live Upstash). This check still fails until the real Upstash pre-production smoke passes and Task 035B (Legacy V1 exposure containment) is complete. Its focused tests are `components/__tests__/legacy-v1-containment.test.tsx`; 035B is complete only once migration 0043 is applied and verified.
 
 ---
 

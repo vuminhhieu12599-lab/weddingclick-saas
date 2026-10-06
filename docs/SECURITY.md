@@ -280,10 +280,39 @@ Security properties:
 - **Split failure policy.** Token pages fail open. State-changing routes fail closed with 503, including when the Upstash variables or the IP HMAC secret are missing or invalid. Missing configuration is never "security disabled".
 - **Logging and telemetry.** No limiter analytics. No `activity_logs` writes. Only the fixed diagnostic categories are logged.
 
-**Remaining release blocker — Task 035B (Legacy V1 exposure containment).**
+**Remaining release blocker — Task 035B (Legacy V1 exposure containment).** *(As found by the 035A audit; containment is now implemented — see §11.2.)*
 - **What remains:** Legacy V1 browser code still writes directly to Supabase with the anon key: `wishes` insert in the V1 themes, and `invitations` update/delete in `/thong-ke`, `/dashboard` and `/admin`. Per `docs/LEGACY_AUDIT.md`, V1 tables have RLS disabled or effectively public.
 - **Why 035A cannot fix it:** these requests bypass Next.js entirely, so no application limiter can protect them.
 - **Consequence:** Task 035 is **not complete**, and Production Ready is **not met**, until 035B is done.
+
+### 11.2 Task 035B — Legacy V1 exposure containment (implemented; migration pending owner application)
+
+V1 is **retired and quarantined**. V2 is the canonical production workflow. Full contract: `docs/API_CONTRACT.md` §32.
+
+**Exposure found (live read-only catalog audit, 2026-10-06).** V1 and V2 share one Supabase project.
+- **Grants:** `anon` and `authenticated` held SELECT/INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER on `public.invitations`, `public.weddings` and `public.wishes`.
+- **RLS:** `weddings`/`wishes` had RLS off. `invitations` had `ALL ... USING (true)` and `SELECT ... USING (true)` policies.
+- **Storage:** `storage.objects` let `public` INSERT into the public `wedding-photos` bucket.
+- **Why the database is the fix:** the anon key is public by design, so only the database can deny this.
+
+**Primary fix — migration `0043_legacy_v1_lockdown`.**
+- **Tables:** REVOKE ALL on the three tables (and owned sequences) from `anon`, `authenticated`, `PUBLIC`; ENABLE + FORCE RLS; drop the two permissive policies.
+- **Storage:** drop the anonymous upload policy; set `wedding-photos` private.
+- **Fail closed:** post-condition assertions abort the migration if any client privilege, legacy policy or public bucket remains.
+- **Non-destructive:** no row or object is deleted.
+- **Unaffected:** `service_role` and `postgres` both have BYPASSRLS, so FORCE RLS does not affect them. `project-media` and every V2 object are untouched.
+- **Status:** **authored, not applied** — the Product Owner applies it and a post-application verification follows.
+
+**Complementary app containment.**
+- **Public V1 pages:** `/[id]`, `/[id]/rsvp`, `/[id]/vip` and `/guest-list/[id]` render the fixed "Phiên bản thiệp này không còn được hỗ trợ." state (noindex) and read nothing.
+- **Staff V1 pages:** `/admin`, `/dashboard` and `/thong-ke` redirect exactly to `/admin/v2` (307, `next.config.ts`). `/dashboard` and `/thong-ke` also redirect at page level.
+- **V1 themes:** RSVP no longer writes and never shows success.
+- **`app/admin/page.tsx`:** the V1 editor stays byte-identical as a documented quarantine. It is unreachable via the exact redirect, and its table/storage operations are denied by 0043.
+- **Regression guard:** a static boundary test (`components/__tests__/legacy-v1-containment.test.tsx`) fails if browser code writes through the public Supabase client again. The only exceptions are that quarantine and the V2 token-authorized signed media upload.
+
+**Data retained.** The 2 `invitations` rows, any `weddings`/`wishes` rows and the ~100 `wedding-photos` objects are preserved. They remain reachable only by `service_role`/`postgres`.
+
+Task 035A remains frozen at `cabb201`. **Task 035 is complete only after 0043 is applied, the post-application verification passes and 035B is frozen.**
 
 ---
 

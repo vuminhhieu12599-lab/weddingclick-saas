@@ -1406,3 +1406,45 @@ Cần xử lý and Chờ khách together with `PUBLISHED`/`COMPLETED`/`ARCHIVED`
   - To reset every V1 counter, bump `RATE_LIMIT_NAMESPACE`.
 
 **No migration** (latest remains 0042). No CAPTCHA. A Vercel Firewall may be added later as an outer layer only.
+
+## 32. Task 035B — Legacy V1 Exposure Containment
+
+**Status.** Implemented locally. Migration `20260911041203_0043_legacy_v1_lockdown.sql` is **authored, NOT applied**. The Product Owner applies it manually; a separate post-application verification must prove:
+- anon reads denied;
+- anon writes denied;
+- authenticated legacy access denied;
+- `wedding-photos` upload denied;
+- `wedding-photos` public read denied;
+- V2 still healthy.
+
+Task 035 is not complete until then.
+
+**Database (primary).** Every statement is guarded (`to_regclass`); the migration is a no-op on fresh environments without V1 objects and is re-runnable.
+
+| Object | Change |
+|---|---|
+| `public.invitations`, `public.weddings`, `public.wishes` | `REVOKE ALL` from `anon`, `authenticated`, `PUBLIC` (incl. owned sequences); `ENABLE` + `FORCE ROW LEVEL SECURITY` |
+| `public.invitations` policies | drop "Cho phép admin sửa thiệp" (ALL, `USING (true)`) and "Cho phép tất cả mọi người đọc thiệp" (SELECT, `USING (true)`) |
+| `storage.objects` | drop "Cho phép mọi người tải ảnh lên" (public INSERT into `wedding-photos`) |
+| `storage.buckets` | `wedding-photos` → `public = false` |
+
+- **Post-conditions:** the migration raises (and rolls back) if any client grant, any policy on the three tables, any `wedding-photos` storage policy, or a public `wedding-photos` bucket remains.
+- **Non-destructive:** no `DELETE`, `TRUNCATE` or `DROP TABLE`, and no storage object removal.
+- **Unaffected:** `service_role`/`postgres` access (both BYPASSRLS), `project-media` and all V2 objects.
+
+**Routes.**
+| Route | Behavior |
+|---|---|
+| `/[id]`, `/[id]/rsvp`, `/[id]/vip`, `/guest-list/[id]` | fixed unavailable page "Phiên bản thiệp này không còn được hỗ trợ." + contact hint, `noindex`; no data read |
+| `/admin`, `/dashboard`, `/thong-ke` | exact `next.config.ts` redirect → `/admin/v2` (307); `/dashboard` and `/thong-ke` pages also `redirect()` |
+| `/admin/v2/**` and every V2 route | unchanged (never matched) |
+
+V1 RSVP is not routed into V2 RSVP: the data models differ.
+
+**Browser write boundary.**
+- **Rule:** no browser file may call `.insert/.update/.upsert/.delete/.rpc` or Storage writes through `lib/supabase`.
+- **Exceptions:**
+  - `app/admin/page.tsx`, the owner-quarantined V1 editor: unchanged, valid only while `/admin` is redirected and 0043 denies its operations;
+  - `lib/admin/signed-media-upload.ts`, the V2 Task 024 `uploadToSignedUrl` with a server-issued one-time token.
+
+**Not changed.** Task 035A (frozen at `cabb201`), V2 behavior and data retention. The six earlier checkpoint tests that asserted "no 0043" now allow exactly this approved file (owner decision 2026-10-06).

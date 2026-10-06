@@ -75,8 +75,9 @@ describe("Task 034C boundaries", () => {
     expect(page).toContain("fetchAdminDashboard()");
     expect(page).not.toMatch(/PROJECT_LIST_LIMIT|isStatusNeedingStaffAttention|\.filter\(/);
 
-    expect(readdirSync(join(ROOT, "supabase/migrations")).some((name) => /_0043_/.test(name))).toBe(false);
-    const frozen = ["supabase", "lib/server/project-tasks", "lib/server/project-activity", "lib/server/supabase/project-tasks-repository.ts", "lib/server/supabase/project-activity-repository.ts", "app/api/v2/internal/projects"];
+    // Task 035B: the only migration allowed after 0042 is the owner-approved legacy V1 lockdown.
+    expect(readdirSync(join(ROOT, "supabase/migrations")).filter((name) => /_0043_/.test(name))).toEqual(["20260911041203_0043_legacy_v1_lockdown.sql"]);
+    const frozen = ["supabase", "lib/server/project-tasks", "lib/server/project-activity", "lib/server/supabase/project-tasks-repository.ts", "lib/server/supabase/project-activity-repository.ts", "app/api/v2/internal/projects", ":!supabase/migrations/20260911041203_0043_legacy_v1_lockdown.sql"];
     expect(execFileSync("git", ["status", "--porcelain", "--", ...frozen], { cwd: ROOT }).toString()).toBe("");
   });
 
