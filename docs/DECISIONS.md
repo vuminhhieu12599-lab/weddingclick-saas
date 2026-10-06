@@ -2128,3 +2128,40 @@ Implemented in `lib/domain/project-dashboard-groups.ts`, `lib/server/dashboard/*
 2. **Server-side truth.** Exact head counts over the canonical tables replace browser counting over the capped 100-row list. Activity logs are never used as dashboard truth.
 3. **Read-only, staff only.** `requireStaff` + staff RLS. No `service_role`, RPC or writes. No realtime.
 4. **Fixed query set (20).** No per-Project, per-staff or per-task queries. The attention list is bounded to 10.
+
+## Task 035A — V2 Abuse Controls / Distributed Rate Limiting (2026-10-06)
+
+Implemented in `lib/server/rate-limit/*`, `proxy.ts`, `lib/server/supabase/public-guest-identity-repository.ts`, the seven `app/api/v2/public/**` route files and the 429/503 mapping of the four public handlers. No migration. See `docs/API_CONTRACT.md` §31 for the contract and `docs/SECURITY.md` §11.1.
+
+1. **Owner decisions (2026-10-06).**
+   - Upstash Redis + `@upstash/redis` + `@upstash/ratelimit`, sliding window, analytics off.
+   - Trusted IP: CLIENT → VERCEL → WEDDINGCLICK.
+   - Limiter key: HMAC-SHA256(`RATE_LIMIT_IP_HMAC_SECRET`, normalized IP). This 035A micro-correction replaced the original unkeyed SHA-256, which was brute-forceable over IPv4. A missing or invalid secret is handled like limiter misconfiguration: token pages fail open, mutations 503, fixed diagnostic `RATE_LIMIT_IDENTITY_NOT_CONFIGURED`.
+   - Thresholds as in §31.
+   - Split failure policy: token pages fail open, mutations fail closed with 503.
+   - `RATE_LIMITED` → 429 is added to the error model, with `Retry-After` only when a correct reset is available.
+   - The generic `/i/[slug]` and staff APIs are excluded.
+   - No CAPTCHA, no Postgres limiter, no 0043.
+2. **Seam, not rewrite.** Post-resolution guards are injected through the frozen use cases' existing dependency seams, so no domain logic changed:
+   - the resolver's `touchLastUsedAt` (called only after full validation);
+   - the Portal mint gateway's `getGuestLinkTarget`;
+   - the personalized RSVP gateway.
+3. **Implementation choices made within the owner decisions.**
+   - **IPv6 /64 (owner-approved).** IPv6 is keyed on its /64 network. Rotating addresses inside one /64 would otherwise multiply the per-IP budget.
+   - **Unresolved IPs.** Requests without a resolvable IP share one bucket; this is never a bypass.
+   - **No `Retry-After`.** Upstash's sliding-window `reset` is the end of the current fixed window, not a guaranteed retry time, so the "correct reset" condition is not met.
+   - **Dedicated error class.** `RateLimitGuardError` is separate from `ApiError`, so `apiErrorStatus` and every staff handler stay unchanged.
+   - **Store timeout.** The SDK's "timeout = allow" is converted into backend unavailable so the mutation fail-closed policy holds.
+4. **Personalized-RSVP guest id.** The 0042 RPC deliberately never returns the guest id. A new narrow `service_role` read (`guests.id` of the active guest by `token_hash`) supplies the limiter key.
+   - **Server-side only:** the id is never returned to a caller.
+   - **RPC stays authoritative** for slug/Project binding and the frozen 404/410.
+   - **Cost:** one extra indexed read per personalized RSVP.
+5. **Checkpoint-test amendments.** These tests asserted that earlier tasks had added no rate limiting. They were narrowed to exclude only the files 035A wraps:
+   - the Task 027 Phase 2 "no rate limiting" scope test;
+   - the Task 033E-B byte-identity test for `app/api/v2/public/rsvp/route.ts`;
+   - the `service_role` importer allowlist, which gains the identity repository.
+6. **Redis credential sources (micro-correction, 2026-10-06).**
+   - The adapter uses the first complete pair: explicit `UPSTASH_REDIS_REST_URL`/`_TOKEN`, else the Vercel Marketplace-managed `KV_REST_API_URL`/`KV_REST_API_TOKEN`.
+   - The two families are never mixed.
+   - Marketplace secrets are consumed natively, never duplicated under renamed variables.
+7. **Open.** Real Upstash configuration plus a pre-production smoke. **Task 035B** (Legacy V1 exposure containment) is a release blocker. Task 035 is not complete.

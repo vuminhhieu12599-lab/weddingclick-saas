@@ -264,7 +264,7 @@ Must have:
 - documented recovery/known limitations;
 - successful build/tests;
 - approved production Supabase security;
-- basic abuse/rate-limiting controls on public RSVP submission and customer-token verification endpoints (`docs/SECURITY.md` §11) — implementation may be deferred during Weeks 1–4, but this is a mandatory gate, not optional, and Production Ready is not met without it. Tracked as the explicit pre-production security gate task in `docs/API_CONTRACT.md` §8 (Task 035).
+- basic abuse/rate-limiting controls on public RSVP submission and customer-token verification endpoints (`docs/SECURITY.md` §11) — implementation may be deferred during Weeks 1–4, but this is a mandatory gate, not optional, and Production Ready is not met without it. Tracked as the explicit pre-production security gate task in `docs/API_CONTRACT.md` §8 (Task 035). Status: **Task 035A** (V2 distributed abuse controls, `docs/API_CONTRACT.md` §31) is implemented but still needs real Upstash configuration and a pre-production smoke. **Task 035B** (Legacy V1 exposure containment) is open. Production Ready is not met until both are done.
 
 ---
 

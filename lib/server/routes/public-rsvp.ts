@@ -1,4 +1,5 @@
 import { ApiError } from "../errors/api-error";
+import { RateLimitGuardError } from "../rate-limit/rate-limit-error";
 import { submitPublicRsvp, type SubmitPublicRsvpDependencies } from "../public-rsvp/submit-public-rsvp";
 
 /**
@@ -8,9 +9,11 @@ import { submitPublicRsvp, type SubmitPublicRsvpDependencies } from "../public-r
  * (slug, name, message, guest token) is logged. 201 is returned only after
  * the 0040 RPC (or, with a guest token, the 0042 RPC) confirmed the
  * persisted row. 410 = revoked personalized guest link (Task 033B1).
+ * 429 / 503 = Task 035A post-resolution per-guest guard (rate limited /
+ * limiter store unavailable, fail-closed); nothing was written.
  */
 export interface PublicRsvpApiResult {
-  status: 201 | 400 | 404 | 410 | 500;
+  status: 201 | 400 | 404 | 410 | 429 | 500 | 503;
   body: { data: { recorded: true } } | { error: string };
   headers: Record<string, string>;
 }
@@ -35,6 +38,7 @@ export async function handleSubmitPublicRsvpRequest(
     await submitPublicRsvp(body, deps);
     return result(201, { data: { recorded: true } });
   } catch (error) {
+    if (error instanceof RateLimitGuardError) return result(error.status, { error: error.message });
     if (error instanceof ApiError) {
       if (error.kind === "BAD_REQUEST") return result(400, { error: "Invalid RSVP request" });
       if (error.kind === "NOT_FOUND") return result(404, { error: "Invitation not found" });

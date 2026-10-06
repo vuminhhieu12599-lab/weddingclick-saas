@@ -9,6 +9,7 @@ import {
   type PortalGuestToolDependencies,
 } from "../customer-portal/portal-guest-tool";
 import { ApiError, apiErrorStatus } from "../errors/api-error";
+import { RateLimitGuardError } from "../rate-limit/rate-limit-error";
 
 /**
  * Framework-agnostic handlers for the Task 033E-A Portal Guest Tool
@@ -18,9 +19,11 @@ import { ApiError, apiErrorStatus } from "../errors/api-error";
  * generic 500, never raw DB/token detail, fixed-string logging only. A 409
  * carries a stable `reason` for the customer UI. A 422 (Task 033E-B) means
  * the guest's invitation side is not issuable (unresolved or unpublished).
+ * 429 / 503 come from the Task 035A post-resolution per-link / per-guest
+ * guards.
  */
 export interface PortalGuestApiResult {
-  status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 410 | 422 | 500;
+  status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 410 | 422 | 429 | 500 | 503;
   body:
     | { data: CustomerPortalGuestRow | PortalIssuedGuestLink }
     | { error: string }
@@ -46,6 +49,9 @@ async function handle(
   try {
     return result(successStatus, { data: await run(token) });
   } catch (error) {
+    if (error instanceof RateLimitGuardError) {
+      return result(error.status, { error: error.message });
+    }
     if (error instanceof PortalGuestConflictError) {
       return result(409, { error: error.message, reason: error.reason });
     }

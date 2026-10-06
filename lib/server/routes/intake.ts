@@ -15,6 +15,7 @@ import type {
 import { listIntakeSubmissionsByProjectId } from "../intake/list-intake-submissions";
 import { rejectIntakeSubmission } from "../intake/reject-intake-submission";
 import { submitIntakeSubmission } from "../intake/submit-intake-submission";
+import { RateLimitGuardError } from "../rate-limit/rate-limit-error";
 
 /**
  * Pure, framework-agnostic handlers backing the Intake Workflow HTTP
@@ -22,7 +23,7 @@ import { submitIntakeSubmission } from "../intake/submit-intake-submission";
  * (Task 026 Phase 3) for the shared no-store/error-mapping conventions.
  */
 export interface ApiResult<TBody> {
-  status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 410 | 422 | 500;
+  status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 410 | 422 | 429 | 500 | 503;
   body: TBody | { error: string };
   headers?: Record<string, string>;
 }
@@ -79,6 +80,10 @@ interface SubmitIntakeResponseData {
  * never touched for any of the auth/resolver failure paths above, and is
  * only ever invoked once token resolution has already succeeded (see
  * submitIntakeSubmission's own ordering guarantee).
+ *
+ * Task 035A: a post-resolution per-INTAKE-link guard refusal maps to 429
+ * (limited) or 503 (limiter store unavailable, fail-closed); nothing is
+ * submitted in either case.
  */
 export async function handleSubmitIntakeRequest(
   authorizationHeader: string | null,
@@ -112,6 +117,9 @@ export async function handleSubmitIntakeRequest(
       },
     });
   } catch (error) {
+    if (error instanceof RateLimitGuardError) {
+      return withNoStore<SubmitIntakeResponseData>({ status: error.status, body: { error: error.message } });
+    }
     return withNoStore(toErrorResult(error, "[handleSubmitIntakeRequest] Unexpected error"));
   }
 }

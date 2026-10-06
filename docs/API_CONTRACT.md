@@ -152,7 +152,9 @@ Media implementation is explicitly **not** part of Task 022 (see §8).
 | `EXPIRED_TOKEN` | 410 | a known customer access link, correct purpose, that has expired — customer access links only; guest tokens have no `expires_at` and can never produce this |
 | `REVOKED_TOKEN` | 410 | a known, correct-purpose customer access link that has been revoked, **or** a known guest token that has been revoked |
 | `INVARIANT` | 422 | well-formed input violates a business rule (illegal status transition, RSVP bounds, incomplete SEPARATE-package guest variant) |
+| `RATE_LIMITED` | 429 | Task 035A: a public/capability abuse-control guard refused the request (§31). Generic body, `Cache-Control: no-store`, no `Retry-After`, no `X-RateLimit-*` |
 | `INTERNAL` | 500 | generic message only, never raw SQL/Postgres/service-role detail |
+| `SERVICE_UNAVAILABLE` | 503 | Task 035A: the shared limiter store a **state-changing** public/capability route requires is unavailable or unconfigured (fail-closed, §31). Nothing is written |
 
 Rule of thumb: **staff-side already-done/already-revoked conflicts are `CONFLICT` (409)**; **token consumption failures (expired/revoked) are `410`**, never `409`.
 
@@ -241,7 +243,7 @@ Confirmed: no `GUEST_TOKEN_ROTATED` type in initial V1. Rotation is a trusted st
 
 ### 7.6 Rate limiting / abuse controls
 
-Mandatory before **production** launch (`SECURITY.md` §11, `ROADMAP.md` Production Ready Definition) but does **not** block DEV/STAGING implementation of the RSVP workflow (Task 033). An explicit pre-production security gate task exists in the revised order as Task 035 (§8).
+Mandatory before **production** launch (`SECURITY.md` §11, `ROADMAP.md` Production Ready Definition) but does **not** block DEV/STAGING implementation of the RSVP workflow (Task 033). An explicit pre-production security gate task exists in the revised order as Task 035 (§8). **Task 035A** (V2 distributed abuse controls) is implemented — see §31. **Task 035B** (Legacy V1 exposure containment) remains open, so the Task 035 gate as a whole is **not** passed.
 
 ### 7.7 Token failure HTTP model
 
@@ -1316,3 +1318,91 @@ Cần xử lý and Chờ khách together with `PUBLISHED`/`COMPLETED`/`ARCHIVED`
 **Response.** `200 { data: { generatedAt, projects: { active, staffAction, waitingForCustomer, overdue, approaching, recentlyCompleted, byStatus }, tasks: { outstanding, overdue, upcoming }, attention: [{ id, projectCode, status, deadlineAt, overdue }] } }`. `attention` lists overdue Projects first and then approaching ones, earliest deadline first with an `id` tie-break, at most 10 in total. It carries navigation fields only: no customer, price, note, token or activity data. Errors: 401 (missing/invalid credential), 403 (not active staff), 500 (generic body).
 
 **UI.** It shows 6 summary tiles, 3 task tiles, the deadline attention list (linking to each Project, with a "Hiển thị n / N" hint when truncated), and the 12-status breakdown using the existing labels. "Dự án gần đây" keeps its meaning (5 newest by `created_at DESC, id DESC`) through the existing list endpoint with `limit=5`, not the 100-row list.
+
+## 31. Task 035A — V2 Abuse Controls / Distributed Rate Limiting
+
+**Status.** Implemented locally. The complete Task 035 gate is **not** passed: Task 035B (Legacy V1 exposure containment) must still complete before Production Ready. Real Upstash configuration and a controlled pre-production smoke are still required (see **Deployment**).
+
+**Backend.** Upstash Redis (REST) via `@upstash/redis` + `@upstash/ratelimit`, behind the `RateLimitStore` seam (`lib/server/rate-limit/`).
+- **Algorithm:** `SLIDING WINDOW` for every rule.
+- **Disabled SDK features:** limiter analytics, the ephemeral in-process cache and SDK telemetry are all off.
+- **Bounded wait:** one store attempt (Redis retries disabled), capped at 1 s.
+- **No local authority:** no process-local counter is authoritative.
+- **Tests:** they use a deterministic fake store.
+
+**Rules (owner-approved).**
+
+| Rule | Routes | Key subject | Limit / window | Store unavailable |
+|---|---|---|---|---|
+| `TOKEN_PAGE_IP` | `/i/[slug]/g/[token]`, `/review/[token]`, `/review/[token]/frame`, `/portal/[token]` (via `proxy.ts`) | keyed client-IP identity | 120 / 1 min | fail **open** |
+| `PUBLIC_WRITE_IP` | `POST /api/v2/public/rsvp` (generic + personalized) | keyed client-IP identity | 60 / 10 min | 503 |
+| `CAPABILITY_MUTATION_IP` | `POST review-feedback`, `POST intake-submissions`, `POST portal/guests`, `PATCH portal/guests/[guestId]`, `POST …/revoke`, `POST …/access-link` (one shared budget) | keyed client-IP identity | 60 / 10 min | 503 |
+| `GUEST_RSVP_GUEST` | personalized RSVP, after the token resolves to an active guest | `guestId` | 20 / 10 min | 503 |
+| `REVIEW_FEEDBACK_LINK` | review feedback (COMMENT, REVISION_REQUEST, APPROVAL alike), after REVIEW resolution | `accessLinkId` | 20 / 10 min | 503 |
+| `INTAKE_LINK` | intake submission, after INTAKE resolution | `accessLinkId` | 5 / 1 h | 503 |
+| `PORTAL_MUTATION_LINK` | Portal guest create / edit / revoke, after PORTAL resolution | `accessLinkId` | 120 / 1 h | 503 |
+| `GUEST_LINK_MINT_GUEST` | Portal ISSUE and REGENERATE, once the guest is confirmed in the resolved Project | `guestId` | 5 / 1 h | 503 |
+
+**Not limited:** the generic public invitation `/i/[slug]`, every staff `/api/v2/internal/**` route, and all admin/staff pages.
+
+**Order.** pre-resolution IP guard → frozen token resolution (§4.1, unchanged) → post-resolution link/guest guard → frozen domain action.
+- **IP guard:** runs before any body read, token hash or `service_role` lookup. Its 429 is therefore independent of credential validity, so it creates no oracle.
+- **Link guard (REVIEW / INTAKE / PORTAL):** injected at the resolver's `touchLastUsedAt` step, which runs only after shape, hash, purpose, project, revoked and expiry checks have all passed.
+  - Malformed, unknown, wrong-purpose, revoked or expired tokens keep their frozen 404/410 and never reach the guard.
+  - A refused request writes no `last_used_at` and never reads the body.
+- **Mint guard:** applied after `getGuestLinkTarget` confirms the guest belongs to the resolved Project, and before any token rotation. ISSUE/REGENERATE race protections are unchanged.
+- **Personalized-RSVP guest guard:** the 0042 RPC never returns the guest id, so a narrow `service_role` lookup supplies it (`guests.id` of the active guest by `token_hash`, `public-guest-identity-repository.ts`).
+  - The id stays server-side.
+  - When the lookup finds no active guest, the guard is skipped and the RPC yields its frozen 404/410.
+
+**Keys.**
+- **Formats:** `wc:v1:<segment>:ip:<HMAC-SHA256(RATE_LIMIT_IP_HMAC_SECRET, normalized IP)>`, `wc:v1:<segment>:link:<uuid>` and `wc:v1:<segment>:guest:<uuid>`. Upstash appends the window index.
+- **Keyed IP identity:** the IP digest is keyed with a server-only secret, so the small IPv4 space cannot be brute-forced back to an address from Redis keys. Redis keys never contain a raw IP. Rotating the secret starts fresh limiter identities, which is acceptable.
+- **Never keys:** raw IP, raw REVIEW/PORTAL/INTAKE/guest token, or stored `token_hash`.
+- **Unresolved IP:** requests whose client IP cannot be determined share one `unresolved` bucket; this is never a bypass.
+
+**Trusted client IP.** Owner deployment contract: CLIENT → VERCEL → WEDDINGCLICK, with no other proxy or CDN in front.
+- **Single reader:** `lib/server/rate-limit/client-ip.ts` is the only reader. It prefers `x-real-ip`, else the first `x-forwarded-for` entry (both are normalized by Vercel's first hop).
+- **Validation:** the value is validated with `node:net`.
+  - IPv4-mapped IPv6 collapses to IPv4.
+  - Other IPv6 addresses are reduced to their /64 network.
+  - Anything else → unresolved.
+- **Revisit:** this trust MUST be revisited if the topology changes.
+
+**Responses.**
+- **429:** `{"error":"Too many requests"}` (JSON for APIs; a fixed Vietnamese `text/plain` page for token pages) with `Cache-Control: no-store`.
+- **503:** `{"error":"Service temporarily unavailable"}` with `Cache-Control: no-store`.
+- **No `Retry-After`:** the sliding window's `reset` is only the end of the current fixed window. A request after it may still be refused, so no correct retry time is available.
+- **No headers:** no `X-RateLimit-*` header.
+- **No details:** no key, IP, token state, counter or provider detail.
+- **Code:** the post-resolution refusals are a dedicated `RateLimitGuardError` (kind `RATE_LIMITED` | `SERVICE_UNAVAILABLE`), mapped only by the four public handlers. `apiErrorStatus` and the staff error mapping are unchanged.
+
+**Logging.** Fixed categories only: `[rate-limit] RATE_LIMIT_BACKEND_NOT_CONFIGURED` and `[rate-limit] RATE_LIMIT_BACKEND_UNAVAILABLE`.
+- **Never logged:** IP, IP hash, token, token hash, link or guest id, guest name, or RSVP message.
+- **Not activity:** no `activity_logs` writes.
+
+**Deployment.**
+- **Redis credentials:** server-only, resolved as ONE complete pair and never mixed across families:
+  1. **Preferred, explicit/direct Upstash:** `UPSTASH_REDIS_REST_URL` (HTTPS) + `UPSTASH_REDIS_REST_TOKEN`.
+  2. **Else Vercel Marketplace (Upstash integration):** `KV_REST_API_URL` + `KV_REST_API_TOKEN`, used natively so Marketplace-managed rotation stays effective.
+
+  The rules:
+  - **Do not duplicate:** never manually copy Marketplace-managed secrets into `UPSTASH_*` names just to rename them.
+  - **Partial pairs:** a partial `UPSTASH_*` pair is ignored (the complete `KV_*` pair is then used whole). A partial pair with no complete pair is invalid.
+  - **Invalid:** a non-HTTPS URL is invalid.
+  - **Handling:** all of these are never `NEXT_PUBLIC_`, never committed, never logged.
+- **`RATE_LIMIT_IP_HMAC_SECRET`** is required separately, whichever Redis source is used. It is server-only, never `NEXT_PUBLIC_`, never committed, never logged.
+- **`RATE_LIMIT_IP_HMAC_SECRET`:** ≥ 32 cryptographically random bytes, generated for this purpose only.
+  - **Independence:** never reuse the Supabase service-role key, the Upstash token or any customer/guest token.
+  - **Generation:** `openssl rand -hex 32` (64 hex characters).
+  - **Validation:** the application treats it as an opaque UTF-8 secret and rejects values shorter than 43 characters or containing whitespace. A length check cannot prove entropy.
+  - **Rotation:** resets all IP limiter identities; link/guest limits are unaffected.
+- **Missing or invalid configuration (no complete Redis pair, or an invalid HMAC secret):** every protected mutation returns 503 without running the domain handler, and token pages fail open. This includes local `next dev` and Vercel Preview without the variables.
+  - **Fixed diagnostics:** `RATE_LIMIT_BACKEND_NOT_CONFIGURED` (Upstash) and `RATE_LIMIT_IDENTITY_NOT_CONFIGURED` (HMAC secret).
+- **Release condition:** not releasable until a complete Redis pair and the HMAC secret are configured in the target environment and a controlled smoke passes. That smoke uses a normal request, one controlled 429 on an isolated key, recovery after the window, and no credential in logs.
+- **Operational recovery:**
+  - Counters expire on their own.
+  - To clear a stuck key, delete `wc:v1:<segment>:<subject>:*` in Upstash.
+  - To reset every V1 counter, bump `RATE_LIMIT_NAMESPACE`.
+
+**No migration** (latest remains 0042). No CAPTCHA. A Vercel Firewall may be added later as an outer layer only.

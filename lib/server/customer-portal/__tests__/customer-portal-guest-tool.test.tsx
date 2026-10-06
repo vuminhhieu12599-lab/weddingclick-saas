@@ -684,7 +684,7 @@ describe("033E-B AG–AI: staff path, resolver and RSVP preserved", () => {
       "lib/server/public-guest",
       "lib/server/public-rsvp",
       "lib/server/supabase/public-guest-repository.ts",
-      "app/api/v2/public/rsvp",
+      // app/api/v2/public/rsvp/route.ts: Task 035A wraps it with abuse-control guards only.
     ];
     expect(execFileSync("git", ["diff", "--name-only", "HEAD", "--", ...frozen], { cwd: ROOT, encoding: "utf8" })).toBe("");
     expect(readdirMigrations().at(-1)).toMatch(/_0042_/);

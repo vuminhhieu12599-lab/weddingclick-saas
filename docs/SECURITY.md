@@ -259,6 +259,32 @@ For non-personalized invitations, do not grant table-wide read/write simply to a
 
 Never return sensitive internal database errors directly to guests.
 
+### 11.1 Task 035A — V2 abuse controls (implemented; gate still open)
+
+This control is a distributed Upstash Redis sliding-window limiter. The exact rules, order and contract are in `docs/API_CONTRACT.md` §31.
+
+- **Covered:** every V2 anonymous write and capability-token consumer.
+  - The personalized invitation, Review page/frame and Portal page, as token pages.
+  - Public RSVP.
+  - Review feedback.
+  - Intake submission.
+  - Portal guest create/edit/revoke.
+  - Portal ISSUE/REGENERATE.
+- **Not covered:** the generic `/i/[slug]` and staff `/api/v2/internal/**` routes.
+
+Security properties:
+
+- **No raw credentials or IPs in limiter keys.** Pre-resolution keys use HMAC-SHA256 of the normalized trusted client IP, keyed with the server-only `RATE_LIMIT_IP_HMAC_SECRET` (≥ 32 random bytes, independent of every other credential). IPv4 is the individual address, IPv4-mapped IPv6 collapses to IPv4, and IPv6 aggregates to its /64. A plain hash would let anyone with Redis key access brute-force the IPv4 space; the keyed digest prevents that. Rotating the secret only starts fresh limiter identities. Post-resolution keys use the resolved non-secret `accessLinkId`/`guestId`.
+- **No new oracle.** IP guards run before token resolution, and the frozen 404/410 model (`API_CONTRACT.md` §4.1) is unchanged.
+- **Trusted IP.** It relies on the owner deployment contract CLIENT → VERCEL → WEDDINGCLICK (no other proxy/CDN). If a reverse proxy/CDN is ever placed in front of Vercel, the client-IP trust model MUST be re-reviewed.
+- **Split failure policy.** Token pages fail open. State-changing routes fail closed with 503, including when the Upstash variables or the IP HMAC secret are missing or invalid. Missing configuration is never "security disabled".
+- **Logging and telemetry.** No limiter analytics. No `activity_logs` writes. Only the fixed diagnostic categories are logged.
+
+**Remaining release blocker — Task 035B (Legacy V1 exposure containment).**
+- **What remains:** Legacy V1 browser code still writes directly to Supabase with the anon key: `wishes` insert in the V1 themes, and `invitations` update/delete in `/thong-ke`, `/dashboard` and `/admin`. Per `docs/LEGACY_AUDIT.md`, V1 tables have RLS disabled or effectively public.
+- **Why 035A cannot fix it:** these requests bypass Next.js entirely, so no application limiter can protect them.
+- **Consequence:** Task 035 is **not complete**, and Production Ready is **not met**, until 035B is done.
+
 ---
 
 ## 12. Input Safety

@@ -207,8 +207,16 @@ describe("Task 027 Phase 2 — no request/body/token logging", () => {
   });
 });
 
+/**
+ * Task 035A owns abuse controls: the public submit route file adds the
+ * pre-resolution IP guard and per-INTAKE-link guard wiring, and the shared
+ * handler maps the guard's 429/503. Every other Phase 2 file (use case,
+ * validation, gateways, staff routes) must still implement none.
+ */
+const TASK_035A_GUARDED_FILES = new Set(["app/api/v2/public/intake-submissions/route.ts", "lib/server/routes/intake.ts"]);
+
 describe("Task 027 Phase 2 — no rate-limiting scope creep", () => {
-  it.each(PHASE_2_PRODUCTION_FILES)("%s implements no rate limiting", (file) => {
+  it.each(PHASE_2_PRODUCTION_FILES.filter((file) => !TASK_035A_GUARDED_FILES.has(file)))("%s implements no rate limiting", (file) => {
     const contents = readFile(file);
     expect(contents).not.toMatch(/rate.?limit/i);
     expect(contents).not.toMatch(/\bredis\b/i);

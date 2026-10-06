@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { withAccessLinkTargetLimit } from "../../../../../lib/server/rate-limit/post-resolution-guards";
+import { guardApiRequestByClientIp } from "../../../../../lib/server/rate-limit/rate-limit-guards";
+import { createUpstashRateLimitStore } from "../../../../../lib/server/rate-limit/upstash-rate-limit-store";
 import { getServiceRoleAccessLinkResolutionRepository } from "../../../../../lib/server/supabase/access-link-resolution-repository";
 import { handleSubmitIntakeRequest } from "../../../../../lib/server/routes/intake";
 import { getServiceRoleIntakeSubmitGateway } from "../../../../../lib/server/supabase/intake-submit-repository";
@@ -23,12 +26,20 @@ import { getServiceRoleIntakeSubmitGateway } from "../../../../../lib/server/sup
  * token resolution has already succeeded. Reading it eagerly here would let
  * a malformed-JSON body preempt or reorder the frozen
  * auth-transport/resolver error precedence.
+ *
+ * Task 035A: CAPABILITY_MUTATION per-IP guard before resolution, then the
+ * per-INTAKE-link guard after successful resolution (before the body read).
  */
 export async function POST(request: Request) {
+  const store = createUpstashRateLimitStore();
+  const blocked = await guardApiRequestByClientIp(request.headers, "CAPABILITY_MUTATION_IP", store);
+  if (blocked !== null) {
+    return blocked;
+  }
   const result = await handleSubmitIntakeRequest(
     request.headers.get("authorization"),
     () => request.json(),
-    getServiceRoleAccessLinkResolutionRepository(),
+    withAccessLinkTargetLimit(getServiceRoleAccessLinkResolutionRepository(), "INTAKE_LINK", store),
     getServiceRoleIntakeSubmitGateway(),
   );
 
