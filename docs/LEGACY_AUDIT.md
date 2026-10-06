@@ -208,7 +208,7 @@ Observed examples:
 
 V1 must not be considered production-safe for real customer data.
 
-**Task 035B (2026-10-06):** V1 is retired and quarantined. Migration `0043_legacy_v1_lockdown` removes every `anon`/`authenticated` privilege and permissive policy on `invitations`/`weddings`/`wishes`, forces RLS, drops the anonymous `wedding-photos` upload policy and makes that bucket private. No data or objects are deleted. The migration is authored and awaiting owner application. V1 public pages are unavailable and V1 staff pages redirect to `/admin/v2`. See `docs/SECURITY.md` §11.2.
+**Task 035B (2026-10-06):** V1 is retired and quarantined. Migration `0043_legacy_v1_lockdown` removes every `anon`/`authenticated` privilege and permissive policy on `invitations`/`weddings`/`wishes`, forces RLS, drops the anonymous `wedding-photos` upload policy and makes that bucket private. No data or objects are deleted. The migration is applied and live-verified (2026-10-06); Task 035B is frozen at `70ab2bf5ee2bf19b2202cce158d61555558701ae`. V1 public pages are unavailable and V1 staff pages redirect to `/admin/v2`. See `docs/SECURITY.md` §11.2.
 
 V2 security must be built before commercial launch.
 

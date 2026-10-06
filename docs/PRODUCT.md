@@ -408,7 +408,7 @@ Personalized guest capability is a paid add-on.
 Customer/staff should be able to:
 
 - add a guest manually;
-- import guests from Excel/CSV-like workflow;
+- import guests from Excel/CSV-like workflow; *(out of pilot scope — owner decision D8, `docs/DECISIONS.md` "Launch Hardening 01"; the frozen Guest Tool is manual)*
 - edit guest display text;
 - delete/revoke guest entry when appropriate;
 - select intended invitation variant when relevant;

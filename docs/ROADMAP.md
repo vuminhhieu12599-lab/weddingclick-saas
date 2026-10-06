@@ -149,7 +149,7 @@ Template #2 and #3 should not proceed until Template #1 proves the shared archit
 - Customer Portal.
 - Guest Tool entitlement.
 - Manual guest creation.
-- Excel import/export workflow.
+- Excel import/export workflow. *(Out of pilot scope — owner decision D8, `docs/DECISIONS.md` "Launch Hardening 01".)*
 - Secure guest token resolution.
 - RSVP server flow.
 - RSVP dashboard/reporting.
@@ -244,7 +244,68 @@ Allowed work:
 
 Start with a small controlled number of real customers after Production Ready gate.
 
+*Amended 2026-10-06 (Launch Hardening 01):* the first real customer is a single closely-supported **pilot** admitted at the **Pilot Ready** gate below, before full Production Ready. See "Pilot Launch Hardening".
+
 Observe real-world issues before high-volume sales.
+
+---
+
+## Pilot Launch Hardening
+
+**Recorded:** 2026-10-06 (Launch Hardening 01). Owner decisions D1–D8: `docs/DECISIONS.md` "Launch Hardening 01 — Pilot Launch Strategy and Owner Decisions".
+
+**Strategy.** The first real pilot customer uses **Elegant Editorial only**. It does not wait for Vietnamese Heritage or Romantic Minimal productionization. WeddingClick stays a staff-operated service workflow (not self-service), with manual/offline payment.
+
+### P0 — must complete before the first pilot customer
+
+| ID | Item |
+|---|---|
+| P0-1 | Staff active access-link list + revoke |
+| P0-2 | Republish after `PUBLISHED` (owner decisions D2/D3) |
+| P0-3 | Staff Customer + Project creation UI (owner decision D1) |
+| P0-4 | Separate Production Supabase, PRO plan (owner decision D4) |
+| P0-5 | Production Vercel Pro + environment + domain + isolated Production Upstash (owner decision D5) |
+| P0-6 | Minimum operations/recovery runbook |
+| P0-7 | Docs status synchronization — **done** (Launch Hardening 01) |
+| P0-8 | Facebook/Zalo crawler validation on Production HTTPS |
+| P0-9 | Final Production release smoke |
+
+### Accepted debt
+
+**P1 — pilot follow-up:**
+- real-device music check;
+- Vietnamese glyph spot-check;
+- staff Auth hardening / MFA consideration;
+- verify Production PostgREST `max_rows` = 1000;
+- personalized OG enhancement (deferred by owner decision D7).
+
+**P2 — after the pilot:**
+- Guest Excel import;
+- Intake UI;
+- 100-row Admin Project list cap;
+- Admin mobile shell;
+- RSVP pagination;
+- Vietnamese Heritage productionization;
+- Romantic Minimal productionization;
+- statistics/reporting;
+- QR/messaging;
+- add-on-revocation policy;
+- pre-existing V1 theme lint defects.
+
+### Pilot Ready Definition
+
+WeddingClick is **Pilot Ready** for **one closely-supported customer using Elegant Editorial only** when:
+
+- all P0 items are complete and frozen;
+- Production Supabase is separate;
+- Production Vercel and Upstash are isolated from Preview;
+- the final Production smoke passes;
+- crawler/share validation passes;
+- the operations/recovery runbook exists;
+- the known P1/P2 debts are explicitly accepted;
+- Staff use desktop from the canonical Production domain.
+
+**Pilot Ready is not Production Ready.** It makes no claim of three-template commercial completeness; the Production Ready Definition below is unchanged.
 
 ---
 
@@ -264,7 +325,7 @@ Must have:
 - documented recovery/known limitations;
 - successful build/tests;
 - approved production Supabase security;
-- basic abuse/rate-limiting controls on public RSVP submission and customer-token verification endpoints (`docs/SECURITY.md` §11) — implementation may be deferred during Weeks 1–4, but this is a mandatory gate, not optional, and Production Ready is not met without it. Tracked as the explicit pre-production security gate task in `docs/API_CONTRACT.md` §8 (Task 035). Status: **Task 035A** (V2 distributed abuse controls, `docs/API_CONTRACT.md` §31) is implemented but still needs real Upstash configuration and a pre-production smoke. **Task 035B** (Legacy V1 exposure containment) is implemented but migration 0043 still awaits owner application and post-application verification (`docs/API_CONTRACT.md` §32). Production Ready is not met until both are done.
+- basic abuse/rate-limiting controls on public RSVP submission and customer-token verification endpoints (`docs/SECURITY.md` §11) — implementation may be deferred during Weeks 1–4, but this is a mandatory gate, not optional, and Production Ready is not met without it. Tracked as the explicit pre-production security gate task in `docs/API_CONTRACT.md` §8 (Task 035). Status (2026-10-06): **COMPLETE.** **Task 035A** (V2 distributed abuse controls, `docs/API_CONTRACT.md` §31) is FROZEN at `cabb2010d62fb9ba9237434186a0d08fcecd7ef2`, and its controlled Preview smoke passed. **Task 035B** (Legacy V1 exposure containment, `docs/API_CONTRACT.md` §32) is FROZEN at `70ab2bf5ee2bf19b2202cce158d61555558701ae`, with migration 0043 applied and live-verified. This closes only this security criterion; the other Production Ready criteria above remain.
 
 ---
 

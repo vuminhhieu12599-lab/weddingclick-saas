@@ -1380,8 +1380,12 @@ Both 0021 and 0022 are privilege/workflow tightening only, not schema shape chan
 | `0039_public_invitation_read` | Task 032A: read-only, service_role-only `get_public_invitation(public_slug)` — resolves `project_invitations.public_slug` to the exact PUBLISHED row referenced by `published_version_id` (same invitation + Project, else `PI001`) and returns its persisted payload, pinned template/renderer binding and only its `invitation_version_media` storage references; unknown/unpublished → NULL, no REVIEW fallback (§2.13–§2.15) — no table shape change, no table grant | authored; **not applied**, to be pushed by the Product Owner |
 | `0040_submit_public_rsvp` | Task 033A: service_role-only `submit_public_rsvp(...)` — slug → current PUBLISHED version (same invitation + Project, else `PI001`) → one non-personalized `rsvps` insert (`guest_id` NULL); invalid input `RS001`; unknown/unpublished → NULL (§2.20) — no table shape change, no table grant | authored; **not applied**, to be pushed by the Product Owner |
 | `0041_public_social_share_cover` | Task 032B: read-only, service_role-only `get_public_social_share_cover(public_slug)` — current PUBLISHED version required (same invitation + Project, else `PI001`) → the Project's effective `SOCIAL_SHARE_COVER` storage reference only (§2.9); no COVER fallback — no table shape change, no table grant | authored; **not applied**, to be pushed by the Product Owner |
+| `0042_personalized_guest_link` | Task 033B1: personalized guest-link issuance and resolution (`docs/DECISIONS.md` "Task 033B1") | see status note below |
+| `0043_legacy_v1_lockdown` | Task 035B: Legacy V1 table/storage lockdown (`docs/SECURITY.md` §11.2) | applied by the Product Owner and live-verified in DEV/STAGING (2026-10-06) |
 
-No production-database application of any migration is recorded in this document.
+**Status note (Launch Hardening 01, 2026-10-06).** A read-only `supabase migration list --linked` on 2026-10-06 showed local and DEV/STAGING remote history identical for every migration 0001–0043 (45 files, including 0006b and 0013b). Any "not applied" entry above records the state when that row was written and is superseded by this note.
+
+No production-database application of any migration is recorded in this document. The separate Production Supabase project (Owner decision D4, `docs/DECISIONS.md` "Launch Hardening 01") does not exist yet; it replays all migrations from a clean schema.
 
 ---
 

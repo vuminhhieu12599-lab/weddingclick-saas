@@ -2164,12 +2164,13 @@ Implemented in `lib/server/rate-limit/*`, `proxy.ts`, `lib/server/supabase/publi
    - The adapter uses the first complete pair: explicit `UPSTASH_REDIS_REST_URL`/`_TOKEN`, else the Vercel Marketplace-managed `KV_REST_API_URL`/`KV_REST_API_TOKEN`.
    - The two families are never mixed.
    - Marketplace secrets are consumed natively, never duplicated under renamed variables.
-7. **Open.** Real Upstash configuration plus a pre-production smoke. **Task 035B** (Legacy V1 exposure containment) is a release blocker. Task 035 is not complete.
+7. **Open (historical, resolved).** Real Upstash configuration plus a pre-production smoke. **Task 035B** (Legacy V1 exposure containment) is a release blocker. Task 035 is not complete.
+   - *Status correction (Launch Hardening 01, 2026-10-06):* 035A is **FROZEN** at `cabb2010d62fb9ba9237434186a0d08fcecd7ef2`; the controlled Preview smoke passed; 035B is frozen (next section). The Task 035 gate is **COMPLETE**. Production Upstash isolation is pilot item P0-5.
 
 ## Task 035B — Legacy V1 Exposure Containment (2026-10-06)
 
 Implemented in:
-- `supabase/migrations/20260911041203_0043_legacy_v1_lockdown.sql` (authored, **not applied**);
+- `supabase/migrations/20260911041203_0043_legacy_v1_lockdown.sql` (*status correction 2026-10-06:* **applied and live-verified**; originally authored, not applied);
 - `next.config.ts`;
 - `components/legacy-v1-retired.tsx`;
 - the V1 pages `app/[id]/**`, `app/guest-list/[id]`, `app/dashboard` and `app/thong-ke`;
@@ -2195,4 +2196,19 @@ See `docs/API_CONTRACT.md` §32 and `docs/SECURITY.md` §11.2.
      - fresh-database no-op and re-run both OK;
      - an unknown leftover policy fails closed with a full rollback.
 3. **Checkpoint tests.** The six tests asserting "no migration 0043" (033B1, 033E, 034A, 034B, 034C and frozen 035A `rate-limit.test.ts`) now allow exactly the approved 0043 file (owner decision). No 035A runtime file changed.
-4. **Open.** Owner applies 0043 → post-application verification → 035B freeze → Task 035 complete.
+4. **Open (historical, resolved).** Owner applies 0043 → post-application verification → 035B freeze → Task 035 complete.
+5. **Closed (2026-10-06).** The owner applied 0043; the post-application live verification passed (`docs/SECURITY.md` §11.2); 035B is **FROZEN** at `70ab2bf5ee2bf19b2202cce158d61555558701ae`. The **Task 035 pre-production security gate is COMPLETE**. This is not a Production Ready claim.
+
+## Launch Hardening 01 — Pilot Launch Strategy and Owner Decisions (2026-10-06)
+
+Docs-only record following the post-Task 035 pilot readiness audit. The P0 list, accepted debt and the Pilot Ready definition live in `docs/ROADMAP.md` "Pilot Launch Hardening". Nothing here changes runtime code or schema.
+
+1. **Pilot strategy.** The first real pilot customer uses **Elegant Editorial only** (`wedding.elegant-editorial.v1`). The pilot does not wait for Vietnamese Heritage or Romantic Minimal productionization. WeddingClick stays a staff-operated service workflow, not self-service. Manual/offline payment stays frozen for the pilot.
+2. **D1 — Staff Customer + Project creation: APPROVED as a minimal Staff UI** (P0-3). An operator API runbook is not the normal pilot workflow. The existing backend APIs and the atomic `create_project_with_addons` stay the source of truth.
+3. **D2 — Republish: APPROVED.** A new Review may be created from `PUBLISHED`, but not from `COMPLETED` or `ARCHIVED`. Every post-publish correction needs a new customer review and approval. The currently published version stays live until an explicit republish succeeds; no silent live mutation (P0-2). This supersedes the "open owner decision" in Task 031 item 7 and Task 030B implementation choice 5 for `PUBLISHED` only.
+4. **D3 — Republish lifecycle: reuse the existing lifecycle.** After re-approval: `APPROVED → AWAITING_PAYMENT → READY_TO_PUBLISH → publish`, even when `payment_status` is already `PAID`. No automatic shortcut for republish. Accepted pilot friction.
+5. **D4 — Production Supabase: APPROVED, separate project, PRO plan.** It never reuses DEV/STAGING. Migrations are replayed from a clean schema in canonical order. Never copied: DEV fixtures, DEV users, DEV Projects, V1 data, `wedding-photos`, seed/demo data. Not provisioned in this checkpoint (P0-4).
+6. **D5 — Vercel: APPROVED, Vercel PRO for the commercial pilot.** The current Hobby environment stays development/preview only. The production domain is **not yet chosen**; it is selected during production provisioning (P0-5).
+7. **D6 — Catalog prices: confirmed** as the frozen V1 commercial prices: `COMMON` 150,000 VND; `SEPARATE` 250,000 VND; `PERSONALIZED_GUEST` add-on 50,000 VND (the existing migration 0003 seed values).
+8. **D7 — Personalized OG: keep generic for the pilot.** Personalized guest-token URLs keep the fixed generic metadata (Task 033B1); no couple-title or cover Open Graph is added now. No token may ever appear in metadata. A richer personalized share card may be reconsidered after the pilot. Accepted debt, not a pilot blocker.
+9. **D8 — Out of pilot scope:** customer Intake page, staff Intake UI, Excel guest import, bulk guest operations. Staff collect customer information through chat/manual communication and enter it in V2. Manual Guest Tool management is sufficient. Older aspirational text (`docs/PRODUCT.md` §13 "import guests from Excel", `docs/ROADMAP.md` Week 4 "Excel import/export workflow") does not override this decision.

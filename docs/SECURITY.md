@@ -259,7 +259,7 @@ For non-personalized invitations, do not grant table-wide read/write simply to a
 
 Never return sensitive internal database errors directly to guests.
 
-### 11.1 Task 035A — V2 abuse controls (implemented; gate still open)
+### 11.1 Task 035A — V2 abuse controls (FROZEN at `cabb2010d62fb9ba9237434186a0d08fcecd7ef2`)
 
 This control is a distributed Upstash Redis sliding-window limiter. The exact rules, order and contract are in `docs/API_CONTRACT.md` §31.
 
@@ -280,12 +280,12 @@ Security properties:
 - **Split failure policy.** Token pages fail open. State-changing routes fail closed with 503, including when the Upstash variables or the IP HMAC secret are missing or invalid. Missing configuration is never "security disabled".
 - **Logging and telemetry.** No limiter analytics. No `activity_logs` writes. Only the fixed diagnostic categories are logged.
 
-**Remaining release blocker — Task 035B (Legacy V1 exposure containment).** *(As found by the 035A audit; containment is now implemented — see §11.2.)*
+**Historical (035A audit, 2026-10-06) — resolved by Task 035B.** *Status correction (Launch Hardening 01, 2026-10-06): Task 035B is FROZEN at `70ab2bf5ee2bf19b2202cce158d61555558701ae`, migration 0043 is applied and live-verified, and the Task 035 pre-production security gate is **COMPLETE** (§11.2). The three bullets below record the finding as it stood before 035B and are not current state.*
 - **What remains:** Legacy V1 browser code still writes directly to Supabase with the anon key: `wishes` insert in the V1 themes, and `invitations` update/delete in `/thong-ke`, `/dashboard` and `/admin`. Per `docs/LEGACY_AUDIT.md`, V1 tables have RLS disabled or effectively public.
 - **Why 035A cannot fix it:** these requests bypass Next.js entirely, so no application limiter can protect them.
-- **Consequence:** Task 035 is **not complete**, and Production Ready is **not met**, until 035B is done.
+- **Consequence (at the time):** Task 035 could not complete until 035B was done. *(Done — see §11.2. Production Ready still has other open criteria; see `docs/ROADMAP.md`.)*
 
-### 11.2 Task 035B — Legacy V1 exposure containment (implemented; migration pending owner application)
+### 11.2 Task 035B — Legacy V1 exposure containment (FROZEN at `70ab2bf5ee2bf19b2202cce158d61555558701ae`; 0043 applied)
 
 V1 is **retired and quarantined**. V2 is the canonical production workflow. Full contract: `docs/API_CONTRACT.md` §32.
 
@@ -301,7 +301,9 @@ V1 is **retired and quarantined**. V2 is the canonical production workflow. Full
 - **Fail closed:** post-condition assertions abort the migration if any client privilege, legacy policy or public bucket remains.
 - **Non-destructive:** no row or object is deleted.
 - **Unaffected:** `service_role` and `postgres` both have BYPASSRLS, so FORCE RLS does not affect them. `project-media` and every V2 object are untouched.
-- **Status:** **authored, not applied** — the Product Owner applies it and a post-application verification follows.
+- **Status:** **applied and live-verified (2026-10-06).** The Product Owner applied it with `supabase db push`. Post-application verification against the live catalog confirmed: RLS enabled and forced on all three tables; no `anon`/`authenticated`/`PUBLIC` table, column or owned-sequence privileges; zero policies on the three tables; anon REST reads and writes denied (401 / 42501); authenticated access denied (rolled-back role simulation); `wedding-photos` private with no anonymous upload; all retained V1 rows and storage objects preserved; `service_role` read access intact; `project-media` and every V2 object unchanged. Local and remote migration history match through 0043.
+
+**Task 035 pre-production security gate: COMPLETE** (035A + 035B). This is a security gate only; it does not make the product Production Ready (`docs/ROADMAP.md`).
 
 **Complementary app containment.**
 - **Public V1 pages:** `/[id]`, `/[id]/rsvp`, `/[id]/vip` and `/guest-list/[id]` render the fixed "Phiên bản thiệp này không còn được hỗ trợ." state (noindex) and read nothing.

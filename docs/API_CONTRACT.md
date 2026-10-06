@@ -1321,7 +1321,7 @@ Cần xử lý and Chờ khách together with `PUBLISHED`/`COMPLETED`/`ARCHIVED`
 
 ## 31. Task 035A — V2 Abuse Controls / Distributed Rate Limiting
 
-**Status.** Implemented locally. The complete Task 035 gate is **not** passed: Task 035B (Legacy V1 exposure containment) must still complete before Production Ready. Real Upstash configuration and a controlled pre-production smoke are still required (see **Deployment**).
+**Status.** **FROZEN** at `cabb2010d62fb9ba9237434186a0d08fcecd7ef2`. The controlled Preview smoke passed (Product Owner record). Together with Task 035B (§32) the Task 035 pre-production security gate is **COMPLETE**. The Production environment still needs its own isolated Upstash database, `RATE_LIMIT_IP_HMAC_SECRET` and smoke under the pilot launch-hardening items P0-5 / P0-9 (`docs/ROADMAP.md` "Pilot Launch Hardening"). *(Superseded status text, kept for history: "Implemented locally. The complete Task 035 gate is not passed …")*
 
 **Backend.** Upstash Redis (REST) via `@upstash/redis` + `@upstash/ratelimit`, behind the `RateLimitStore` seam (`lib/server/rate-limit/`).
 - **Algorithm:** `SLIDING WINDOW` for every rule.
@@ -1405,11 +1405,11 @@ Cần xử lý and Chờ khách together with `PUBLISHED`/`COMPLETED`/`ARCHIVED`
   - To clear a stuck key, delete `wc:v1:<segment>:<subject>:*` in Upstash.
   - To reset every V1 counter, bump `RATE_LIMIT_NAMESPACE`.
 
-**No migration** (latest remains 0042). No CAPTCHA. A Vercel Firewall may be added later as an outer layer only.
+**No migration** (latest remained 0042 at the time; 0043 was later added by Task 035B, §32). No CAPTCHA. A Vercel Firewall may be added later as an outer layer only.
 
 ## 32. Task 035B — Legacy V1 Exposure Containment
 
-**Status.** Implemented locally. Migration `20260911041203_0043_legacy_v1_lockdown.sql` is **authored, NOT applied**. The Product Owner applies it manually; a separate post-application verification must prove:
+**Status.** **FROZEN** at `70ab2bf5ee2bf19b2202cce158d61555558701ae`. Migration `20260911041203_0043_legacy_v1_lockdown.sql` is **applied** (Product Owner, `supabase db push`) and **live-verified** (2026-10-06). The post-application verification proved each item below (details: `docs/SECURITY.md` §11.2):
 - anon reads denied;
 - anon writes denied;
 - authenticated legacy access denied;
@@ -1417,7 +1417,7 @@ Cần xử lý and Chờ khách together with `PUBLISHED`/`COMPLETED`/`ARCHIVED`
 - `wedding-photos` public read denied;
 - V2 still healthy.
 
-Task 035 is not complete until then.
+The Task 035 pre-production security gate is **COMPLETE**. *(Historical: until this verification, Task 035 was not complete.)*
 
 **Database (primary).** Every statement is guarded (`to_regclass`); the migration is a no-op on fresh environments without V1 objects and is re-runnable.
 
