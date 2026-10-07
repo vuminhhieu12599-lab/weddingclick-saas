@@ -32,7 +32,7 @@ export type CardStatus = { kind: "IDLE" } | { kind: "SAVING" } | { kind: "SAVED"
 const IDLE: CardStatus = { kind: "IDLE" };
 
 const INPUT_CLASS =
-  "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none";
+  "mt-1 block w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 text-base text-slate-900 focus:border-slate-500 focus:outline-none sm:py-2 sm:text-sm";
 
 function Field({
   label,
@@ -72,17 +72,17 @@ function Field({
 
 function CardFooter({ status, onSave }: { status: CardStatus; onSave: () => void }) {
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-3">
+    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
       <button
         type="button"
         onClick={onSave}
         disabled={status.kind === "SAVING"}
-        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-40"
+        className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-40 sm:py-2"
       >
         {status.kind === "SAVING" ? "Đang lưu..." : "Lưu"}
       </button>
       {status.kind === "SAVED" && <span className="text-sm text-emerald-700">Đã lưu.</span>}
-      {status.kind === "ERROR" && <span className="text-sm text-red-600">{status.message}</span>}
+      {status.kind === "ERROR" && <span className="break-words text-sm text-red-600">{status.message}</span>}
     </div>
   );
 }
@@ -166,7 +166,7 @@ export function RequiredInvitationDataEditor({ projectId, initialDetails, initia
   }
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5">
+    <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-slate-700">Thông tin bắt buộc cho thiệp</h3>
@@ -177,14 +177,14 @@ export function RequiredInvitationDataEditor({ projectId, initialDetails, initia
         {savedAny && (
           <Link
             href={`/admin/v2/projects/${encodeURIComponent(projectId)}/preview`}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-emerald-700 sm:w-auto sm:py-2"
           >
             Xem trước thiệp
           </Link>
         )}
       </div>
 
-      <div className="mt-4 rounded-lg border border-slate-200 p-4">
+      <div className="mt-4 rounded-lg border border-slate-200 p-3 sm:p-4">
         <h4 className="text-sm font-medium text-slate-800">Cô dâu & chú rể</h4>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <Field
@@ -209,7 +209,7 @@ export function RequiredInvitationDataEditor({ projectId, initialDetails, initia
         const update = (patch: Partial<CeremonyEventForm>) =>
           setSlotForms((current) => ({ ...current, [slot.side]: { ...current[slot.side], ...patch } }));
         return (
-          <div key={slot.side} className="mt-4 rounded-lg border border-slate-200 p-4" data-slot={slot.side}>
+          <div key={slot.side} className="mt-4 rounded-lg border border-slate-200 p-3 sm:p-4" data-slot={slot.side}>
             <h4 className="text-sm font-medium text-slate-800">{slot.label}</h4>
             {state.kind === "AMBIGUOUS" ? (
               <p className="mt-2 text-sm text-amber-700">

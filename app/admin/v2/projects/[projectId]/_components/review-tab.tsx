@@ -80,7 +80,7 @@ function ReviewLinkIssuer({ projectId }: { projectId: string }) {
           type="button"
           onClick={() => void handleIssue()}
           disabled={pending}
-          className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 sm:py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 sm:w-auto"
         >
           {pending ? "Đang tạo..." : "Tạo link duyệt"}
         </button>
@@ -92,7 +92,7 @@ function ReviewLinkIssuer({ projectId }: { projectId: string }) {
             readOnly
             value={url}
             onFocus={(event) => event.currentTarget.select()}
-            className="mt-2 w-full rounded border border-emerald-200 bg-white px-2 py-1 font-mono text-xs text-slate-800"
+            className="mt-2 block w-full min-w-0 rounded border border-emerald-200 bg-white px-2 py-2 font-mono text-xs text-slate-800 sm:py-1"
             aria-label="Link duyệt cho khách"
           />
         </div>
@@ -216,13 +216,13 @@ function VariantReviewCard({
             </>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap" data-mobile-stack>
           {review !== null && (
             <a
               href={`/admin/preview-frame/${encodeURIComponent(projectId)}?reviewVersionId=${encodeURIComponent(review.id)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 sm:py-1.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               Xem bản duyệt #{review.versionNumber}
             </a>
@@ -232,7 +232,7 @@ function VariantReviewCard({
               type="button"
               onClick={() => void handleCreate()}
               disabled={pending}
-              className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+              className="rounded-lg bg-slate-900 px-4 py-2.5 sm:py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
             >
               {pending ? "Đang tạo..." : review === null ? "Tạo bản duyệt" : "Tạo bản duyệt mới"}
             </button>
@@ -242,7 +242,7 @@ function VariantReviewCard({
               type="button"
               onClick={() => setConfirming(true)}
               disabled={pending}
-              className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+              className="rounded-lg bg-slate-900 px-4 py-2.5 sm:py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
             >
               {pending ? "Đang tạo..." : "Chỉnh sửa & duyệt lại"}
             </button>
@@ -257,12 +257,12 @@ function VariantReviewCard({
             <li>Thiệp đang xuất bản vẫn hiển thị cho khách mời, không đổi đường dẫn, cho đến khi xuất bản lại thành công.</li>
             <li>Khách phải duyệt lại bản mới; sau đó đi tiếp các bước chờ thanh toán → sẵn sàng xuất bản → xuất bản lại. Không thu tiền lại.</li>
           </ul>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row" data-mobile-stack>
             <button
               type="button"
               onClick={() => void handleCreate()}
               disabled={pending}
-              className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+              className="rounded-lg bg-slate-900 px-4 py-2.5 sm:py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
             >
               {pending ? "Đang tạo..." : "Xác nhận tạo bản duyệt mới"}
             </button>
@@ -270,7 +270,7 @@ function VariantReviewCard({
               type="button"
               onClick={() => setConfirming(false)}
               disabled={pending}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 sm:py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               Huỷ
             </button>

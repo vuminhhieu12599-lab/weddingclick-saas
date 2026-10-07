@@ -120,7 +120,7 @@ function AccessLinkRow({
             type="button"
             onClick={() => onAskRevoke(item.id)}
             disabled={busy}
-            className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+            className="w-full rounded-lg border border-red-200 bg-white px-3 py-2.5 text-xs sm:py-1.5 font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 sm:w-auto"
           >
             Thu hồi link
           </button>
@@ -131,12 +131,12 @@ function AccessLinkRow({
           <p className="text-xs text-red-800">
             Link cũ sẽ ngừng hoạt động ngay lập tức và không thể khôi phục. Nếu khách vẫn cần truy cập, hãy tạo link mới.
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap" data-mobile-stack>
             <button
               type="button"
               onClick={() => onConfirmRevoke(item.id)}
               disabled={pending}
-              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              className="rounded-lg bg-red-600 px-3 py-2.5 text-xs sm:py-1.5 font-medium text-white hover:bg-red-700 disabled:opacity-50"
             >
               {pending ? "Đang thu hồi..." : "Xác nhận thu hồi"}
             </button>
@@ -144,7 +144,7 @@ function AccessLinkRow({
               type="button"
               onClick={onCancelRevoke}
               disabled={pending}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-xs sm:py-1.5 font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               Hủy
             </button>
@@ -172,7 +172,7 @@ export function AccessLinkInventoryView(props: AccessLinkInventoryViewProps) {
           type="button"
           onClick={props.onReload}
           disabled={loading || busy}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-xs sm:py-1.5 font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 sm:w-auto"
         >
           Tải lại
         </button>

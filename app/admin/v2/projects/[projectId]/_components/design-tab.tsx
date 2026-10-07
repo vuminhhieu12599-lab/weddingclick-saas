@@ -61,7 +61,7 @@ export function DesignAssignmentView({
   const previewHref = `/admin/v2/projects/${encodeURIComponent(projectId)}/preview`;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
+    <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
       <h2 className="text-base font-semibold text-slate-900">Thiết kế thiệp</h2>
 
       <div className="mt-3 text-sm">
@@ -85,7 +85,7 @@ export function DesignAssignmentView({
           {options.map(({ template, version }) => (
             <label
               key={version.id}
-              className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 text-sm ${
+              className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-3 text-sm sm:py-2.5 ${
                 selectedVersionId === version.id ? "border-slate-900 bg-slate-50" : "border-slate-200"
               }`}
             >
@@ -95,11 +95,11 @@ export function DesignAssignmentView({
                 value={version.id}
                 checked={selectedVersionId === version.id}
                 onChange={() => onSelect(version.id)}
-                className="mt-0.5"
+                className="mt-0.5 h-4 w-4 shrink-0"
               />
-              <span>
+              <span className="min-w-0">
                 <span className="font-medium text-slate-900">{versionLabel(template, version.versionNumber)}</span>
-                <span className="ml-2 font-mono text-xs text-slate-400">{template.code}</span>
+                <span className="ml-2 break-all font-mono text-xs text-slate-400">{template.code}</span>
                 {version.id === currentTemplateVersionId && (
                   <span className="ml-2 text-xs text-emerald-700">(đang dùng)</span>
                 )}
@@ -117,12 +117,12 @@ export function DesignAssignmentView({
 
       {assignment && !assignment.ok && <p className="mt-3 text-sm text-amber-700">{assignment.reason}</p>}
 
-      <div className="mt-5 flex flex-wrap items-center gap-3">
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
         <button
           type="button"
           onClick={onSave}
           disabled={!canSave}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 sm:py-2"
         >
           {saveStatus.kind === "SAVING" ? "Đang lưu..." : "Lưu mẫu"}
         </button>
@@ -130,7 +130,7 @@ export function DesignAssignmentView({
         {design && (
           <Link
             href={previewHref}
-            className={`rounded-lg px-4 py-2 text-sm font-medium ${
+            className={`rounded-lg px-4 py-2.5 text-center text-sm font-medium sm:py-2 ${
               saveStatus.kind === "SAVED"
                 ? "bg-emerald-600 text-white hover:bg-emerald-700"
                 : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"

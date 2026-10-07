@@ -19,7 +19,7 @@ export function OptionalInvitationContent({ projectId }: { projectId: string }) 
   const onSaved = useCallback(() => setSavedAny(true), []);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5">
+    <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-slate-700">Nội dung tuỳ chọn cho thiệp</h3>
@@ -30,7 +30,7 @@ export function OptionalInvitationContent({ projectId }: { projectId: string }) 
         {savedAny && (
           <Link
             href={`/admin/v2/projects/${encodeURIComponent(projectId)}/preview`}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-emerald-700 sm:w-auto sm:py-2"
           >
             Xem trước thiệp
           </Link>

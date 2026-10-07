@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { ProjectSummary } from "../../../../../../lib/server/projects/project-types";
 import { ActivityTab } from "./activity-tab";
@@ -37,18 +37,38 @@ export function WorkspaceTabs({
   onProjectChanged: () => void;
 }) {
   const [active, setActive] = useState<TabKey>(initialTab);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const activeTabRef = useRef<HTMLButtonElement>(null);
+
+  // The strip scrolls horizontally on phones; keep the active tab (including a
+  // `?tab=` deep link) in view by scrolling only the strip, never the page.
+  useEffect(() => {
+    const strip = stripRef.current;
+    const tab = activeTabRef.current;
+    if (!strip || !tab) return;
+    const tabEnd = tab.offsetLeft + tab.offsetWidth;
+    if (tab.offsetLeft < strip.scrollLeft || tabEnd > strip.scrollLeft + strip.clientWidth) {
+      strip.scrollLeft = tab.offsetLeft - (strip.clientWidth - tab.offsetWidth) / 2;
+    }
+  }, [active]);
 
   return (
     <div className="mt-6">
-      <div className="flex gap-1 overflow-x-auto border-b border-slate-200">
+      <div
+        ref={stripRef}
+        className="relative flex gap-1 overflow-x-auto overscroll-x-contain border-b border-slate-200"
+        data-workspace-tab-strip
+      >
         {TABS.map((tab) => (
           <button
             key={tab.key}
+            ref={active === tab.key ? activeTabRef : undefined}
             type="button"
             onClick={() => setActive(tab.key)}
-            className={`shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+            aria-current={active === tab.key ? "true" : undefined}
+            className={`min-h-11 shrink-0 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors sm:px-4 ${
               active === tab.key
-                ? "border-slate-900 text-slate-900"
+                ? "border-slate-900 bg-slate-100 text-slate-900 sm:bg-transparent"
                 : "border-transparent text-slate-500 hover:text-slate-800"
             }`}
           >

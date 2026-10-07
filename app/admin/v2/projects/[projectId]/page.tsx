@@ -80,7 +80,7 @@ function ProjectRefreshNotice({
         <button
           type="button"
           onClick={onRetry}
-          className="rounded-lg border border-amber-300 bg-white px-3 py-1 text-sm font-medium text-amber-800 hover:bg-amber-100"
+          className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100 sm:w-auto sm:py-1"
         >
           Thử lại
         </button>

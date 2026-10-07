@@ -148,7 +148,7 @@ function VariantPublishCard({
           <button
             type="button"
             onClick={() => setConfirming(true)}
-            className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+            className="w-full rounded-lg bg-slate-900 px-4 py-2.5 sm:py-1.5 text-sm font-medium text-white hover:bg-slate-800 sm:w-auto"
           >
             {published === null ? `Xuất bản bản duyệt #${review?.versionNumber}` : `Xuất bản lại từ bản duyệt #${review?.versionNumber}`}
           </button>
@@ -168,12 +168,12 @@ function VariantPublishCard({
               </li>
             )}
           </ul>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row" data-mobile-stack>
             <button
               type="button"
               onClick={() => void handlePublish()}
               disabled={pending}
-              className="rounded-lg bg-emerald-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
+              className="rounded-lg bg-emerald-700 px-4 py-2.5 sm:py-1.5 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
             >
               {pending ? "Đang xuất bản..." : "Xác nhận xuất bản"}
             </button>
@@ -181,7 +181,7 @@ function VariantPublishCard({
               type="button"
               onClick={() => setConfirming(false)}
               disabled={pending}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 sm:py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               Huỷ
             </button>
@@ -304,7 +304,7 @@ function PaymentLifecycleCard({ projectId, step, onChanged }: { projectId: strin
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+          className="w-full rounded-lg bg-slate-900 px-4 py-2.5 sm:py-1.5 text-sm font-medium text-white hover:bg-slate-800 sm:w-auto"
         >
           {copy.action}
         </button>
@@ -312,12 +312,12 @@ function PaymentLifecycleCard({ projectId, step, onChanged }: { projectId: strin
       {confirming && (
         <div className="rounded-lg border border-slate-300 bg-slate-50 p-3" role="group" aria-label={copy.action}>
           <p className="text-sm text-slate-700">{copy.confirm}</p>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row" data-mobile-stack>
             <button
               type="button"
               onClick={() => void handleConfirm()}
               disabled={pending}
-              className="rounded-lg bg-emerald-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
+              className="rounded-lg bg-emerald-700 px-4 py-2.5 sm:py-1.5 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
             >
               {pending ? copy.pending : "Xác nhận"}
             </button>
@@ -325,7 +325,7 @@ function PaymentLifecycleCard({ projectId, step, onChanged }: { projectId: strin
               type="button"
               onClick={() => setConfirming(false)}
               disabled={pending}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 sm:py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               Huỷ
             </button>
@@ -378,12 +378,12 @@ function PortalLinkIssuer({ projectId }: { projectId: string }) {
             Trang riêng của khách (không cần đăng nhập): xem thiệp đã xuất bản và các link thiệp. Mỗi lần bấm tạo một link mới; link cũ vẫn hoạt động cho đến khi bị thu hồi.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap" data-mobile-stack>
           <button
             type="button"
             onClick={() => void run(() => issuePortalAccessLink(projectId), "Không thể tạo link Portal lúc này. Vui lòng thử lại.")}
             disabled={pending}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 sm:py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
           >
             {pending ? "Đang xử lý..." : "Tạo link Portal khách hàng"}
           </button>
@@ -392,7 +392,7 @@ function PortalLinkIssuer({ projectId }: { projectId: string }) {
               type="button"
               onClick={() => void run(() => rotateAccessLink(projectId, issued.id), "Không thể tạo lại link Portal lúc này. Vui lòng thử lại.")}
               disabled={pending}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 sm:py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               Tạo lại link Portal (thu hồi link vừa tạo)
             </button>
@@ -406,13 +406,13 @@ function PortalLinkIssuer({ projectId }: { projectId: string }) {
             readOnly
             value={issued.url}
             onFocus={(event) => event.currentTarget.select()}
-            className="mt-2 w-full rounded border border-emerald-200 bg-white px-2 py-1 font-mono text-xs text-slate-800"
+            className="mt-2 block w-full min-w-0 rounded border border-emerald-200 bg-white px-2 py-2 font-mono text-xs text-slate-800 sm:py-1"
             aria-label="Link Portal khách hàng"
           />
           <button
             type="button"
             onClick={() => void navigator.clipboard.writeText(issued.url).catch(() => undefined)}
-            className="mt-2 rounded border border-emerald-300 bg-white px-3 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100"
+            className="mt-2 w-full rounded border border-emerald-300 bg-white px-3 py-2 text-xs font-medium text-emerald-800 hover:bg-emerald-100 sm:w-auto sm:py-1"
           >
             Sao chép
           </button>

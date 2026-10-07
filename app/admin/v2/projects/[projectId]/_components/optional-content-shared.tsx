@@ -8,13 +8,13 @@ export type CardStatus =
   | { kind: "ERROR"; message: string };
 
 export const INPUT_CLASS =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none";
+  "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base text-slate-900 focus:border-slate-500 focus:outline-none sm:py-2 sm:text-sm";
 
 export const SMALL_BUTTON_CLASS =
-  "rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40";
+  "rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40 sm:py-1";
 
 export const PRIMARY_BUTTON_CLASS =
-  "rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-40";
+  "rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-40 sm:py-2";
 
 /** The server's own safe message (never raw database detail). */
 export function actionError(error: unknown): string {
