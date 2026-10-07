@@ -11,6 +11,10 @@ import type { ProjectSummary } from "../../../../../../../lib/server/projects/pr
  * mutation re-reads the parent Project summary so the header StatusBadge and
  * Lifecycle stepper update without a browser reload, and the background
  * reload keeps the workspace (and its active tab) mounted.
+ *
+ * P1-UX-02: a FAILED background reload of the current Project also keeps the
+ * workspace mounted, with an inline stale-data warning + retry instead of the
+ * full-page ErrorState; a summary for a different projectId is never shown.
  */
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
@@ -62,28 +66,111 @@ beforeEach(() => {
   queryState = { data: null, loading: false, error: null, reload: vi.fn() };
 });
 
+const OTHER_PROJECT_ID = "22222222-2222-4222-8222-222222222222";
+const FULL_LOADING = "Đang tải dự án...";
+const FULL_ERROR = "Không thể tải dữ liệu";
+const SYNCING = "Đang đồng bộ trạng thái dự án...";
+const SYNC_WARNING = "Không thể đồng bộ trạng thái dự án.";
+
+/**
+ * Element tree returned by ProjectDetail (the Suspense child of the page). Its
+ * only hooks are the mocked useParams/useSearchParams/useAdminQuery, so it can
+ * be called directly to inspect retry wiring without a DOM renderer.
+ */
+function renderDetailTree(): ReactNode {
+  const suspense = ProjectDetailPage() as ReactElement<{ children: ReactElement }>;
+  const detail = suspense.props.children.type as () => ReactNode;
+  return detail();
+}
+
+function retryHandlerOf(tree: ReactNode, name: string): unknown {
+  const [element] = findElements<{ onRetry: () => void }>(tree, name);
+  expect(element).toBeDefined();
+  return element.props.onRetry;
+}
+
+function expectWorkspace(html: string) {
+  expect(html).toContain('data-header-status="READY_TO_PUBLISH"');
+  expect(html).toContain('data-lifecycle-status="READY_TO_PUBLISH"');
+  expect(html).toContain('data-tab="PUBLISH"');
+}
+
+function expectNoWorkspace(html: string) {
+  expect(html).not.toContain("data-header-status");
+  expect(html).not.toContain("data-lifecycle-status");
+  expect(html).not.toContain('data-tab="PUBLISH"');
+}
+
 describe("ProjectDetail background reload", () => {
   it("first load (no Project yet) shows the full LoadingState", () => {
     queryState.loading = true;
     const html = renderToStaticMarkup(<ProjectDetailPage />);
-    expect(html).toContain("Đang tải dự án...");
-    expect(html).not.toContain('data-tab="PUBLISH"');
+    expect(html).toContain(FULL_LOADING);
+    expect(html).not.toContain(SYNCING);
+    expectNoWorkspace(html);
+  });
+
+  it("first-load failure (no Project yet) shows the full ErrorState wired to reload", () => {
+    queryState.error = "Network down";
+    const html = renderToStaticMarkup(<ProjectDetailPage />);
+    expect(html).toContain(FULL_ERROR);
+    expect(html).not.toContain(SYNC_WARNING);
+    expectNoWorkspace(html);
+    expect(retryHandlerOf(renderDetailTree(), "ErrorState")).toBe(queryState.reload);
   });
 
   it("a background reload keeps the existing Project, header, Lifecycle and active Xuất bản tab rendered", () => {
     queryState.data = project;
     queryState.loading = true;
     const html = renderToStaticMarkup(<ProjectDetailPage />);
-    expect(html).not.toContain("Đang tải dự án...");
-    expect(html).toContain('data-header-status="READY_TO_PUBLISH"');
-    expect(html).toContain('data-lifecycle-status="READY_TO_PUBLISH"');
-    expect(html).toContain('data-tab="PUBLISH"');
+    expect(html).not.toContain(FULL_LOADING);
+    expectWorkspace(html);
+    expect(html).toContain(SYNCING);
+    expect(html).not.toContain(SYNC_WARNING);
+  });
+
+  it("a failed background reload keeps the workspace and shows an inline stale-data warning wired to reload", () => {
+    queryState.data = project;
+    queryState.error = "Network down";
+    const html = renderToStaticMarkup(<ProjectDetailPage />);
+    expect(html).not.toContain(FULL_ERROR);
+    expect(html).not.toContain(FULL_LOADING);
+    expect(html).not.toContain(SYNCING);
+    expectWorkspace(html);
+    expect(html).toContain(SYNC_WARNING);
+    expect(html).toContain("có thể chưa mới nhất");
+    expect(html).toContain("Thử lại");
+
+    const tree = renderDetailTree();
+    expect(findElements(tree, "ErrorState")).toHaveLength(0);
+    expect(retryHandlerOf(tree, "ProjectRefreshNotice")).toBe(queryState.reload);
+  });
+
+  it("an idle current Project shows no refresh notice", () => {
+    queryState.data = project;
+    const html = renderToStaticMarkup(<ProjectDetailPage />);
+    expectWorkspace(html);
+    expect(html).not.toContain(SYNCING);
+    expect(html).not.toContain(SYNC_WARNING);
   });
 
   it("a stale summary for a different projectId is not shown while loading", () => {
-    queryState.data = { ...project, id: "22222222-2222-4222-8222-222222222222" };
+    queryState.data = { ...project, id: OTHER_PROJECT_ID };
     queryState.loading = true;
-    expect(renderToStaticMarkup(<ProjectDetailPage />)).toContain("Đang tải dự án...");
+    const html = renderToStaticMarkup(<ProjectDetailPage />);
+    expect(html).toContain(FULL_LOADING);
+    expect(html).not.toContain(SYNCING);
+    expectNoWorkspace(html);
+  });
+
+  it("a stale summary for a different projectId is not shown on error; the full ErrorState is", () => {
+    queryState.data = { ...project, id: OTHER_PROJECT_ID };
+    queryState.error = "Network down";
+    const html = renderToStaticMarkup(<ProjectDetailPage />);
+    expect(html).toContain(FULL_ERROR);
+    expect(html).not.toContain(SYNC_WARNING);
+    expectNoWorkspace(html);
+    expect(retryHandlerOf(renderDetailTree(), "ErrorState")).toBe(queryState.reload);
   });
 
   it("wires the Project summary reload through WorkspaceTabs into PublishTab", () => {
@@ -94,16 +181,16 @@ describe("ProjectDetail background reload", () => {
   });
 });
 
-/** Collects elements rendered directly by PublishTab (child components are not invoked). */
-function findElements(node: ReactNode, name: string): ReactElement<{ onChanged: () => void }>[] {
+/** Collects elements rendered directly by a component (child components are not invoked). */
+function findElements<P = { onChanged: () => void }>(node: ReactNode, name: string): ReactElement<P>[] {
   if (Array.isArray(node)) {
-    return node.flatMap((child: ReactNode) => findElements(child, name));
+    return node.flatMap((child: ReactNode) => findElements<P>(child, name));
   }
-  if (!isValidElement<{ children?: ReactNode; onChanged: () => void }>(node)) {
+  if (!isValidElement<P & { children?: ReactNode }>(node)) {
     return [];
   }
   const self = typeof node.type === "function" && node.type.name === name ? [node] : [];
-  return [...self, ...findElements(node.props.children, name)];
+  return [...self, ...findElements<P>(node.props.children, name)];
 }
 
 describe("PublishTab change handler", () => {
