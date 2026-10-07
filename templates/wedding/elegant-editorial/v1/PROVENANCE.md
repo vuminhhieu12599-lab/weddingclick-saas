@@ -166,8 +166,13 @@ Common record:
 - **Allowed production use:** WeddingClick Elegant Editorial v1
   (`wedding.elegant-editorial.v1`) public invitation rendering.
 - **Personal / customer data:** none; no people, text, logo or project data.
-- The engraved 囍 on the seal is not in any of these files: as in Task 029,
-  it is decorative system-font text drawn by `sections/decor.tsx`.
+- The engraved 囍 on the seal is not in any of these files; the approved
+  blank seal raster below is unchanged. Since the P1-UX-03 follow-up
+  (2026-10-07) `sections/decor.tsx` draws it as repository-authored vector
+  stroke geometry, reusing the mark from the already tracked
+  `opening-seal-double-happiness.svg`. It replaces the earlier system-font
+  text so its placement on the seal is deterministic across devices (the
+  font-dependent glyph sat off-centre on iOS).
 
 | File | Purpose | Source PNG (SHA-256) | Source → final | Max CSS size (Task 029) |
 |---|---|---|---|---|

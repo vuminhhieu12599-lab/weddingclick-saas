@@ -45,9 +45,34 @@ export function CoupleAmpersand({ className }: DecorProps) {
   return <span className={classes(styles.amp, className)}> &amp; </span>;
 }
 
-/** Task029 `envelopeSealMark` font stack: system CJK serif faces only, no font download. */
-const SEAL_MARK_FONT_FAMILY =
-  '"Songti SC", "STSong", "Noto Serif CJK SC", "Noto Serif SC", "Source Han Serif SC", "SimSun", serif';
+/**
+ * The seal's 囍 engraving as repository-authored vector strokes: the mark from
+ * the tracked `opening-seal-double-happiness.svg`, in its 100-unit box whose
+ * stroked ink is centred on (50, 47). Font-independent, so it lands on the
+ * same coordinates on every device instead of following whichever CJK font
+ * and `dominant-baseline` metrics a browser picks.
+ */
+const SEAL_MARK_STROKES = (
+  <>
+    <path d="M8 8 H42 M25 2 V22 M12 20 H38 M15 47 L19 53 M35 47 L31 53 M58 8 H92 M75 2 V22 M62 20 H88 M85 47 L81 53 M65 47 L69 53 M4 59 H96" />
+    <rect x="11" y="28" width="28" height="12" />
+    <rect x="11" y="66" width="28" height="26" />
+    <rect x="61" y="28" width="28" height="12" />
+    <rect x="61" y="66" width="28" height="26" />
+  </>
+);
+
+/**
+ * Scale 0.22 matches the ~20-unit ink of the previous 21.6px glyph, and
+ * translate(150 − 50·0.22, 142 − 47·0.22) = (139, 131.66) centres the mark on
+ * the seal raster's recessed disc at (150, 142). The three layers keep the
+ * previous engraving: light lower edge (+1), dark upper shadow (−1), the cut.
+ */
+const SEAL_MARK_LAYERS = [
+  { transform: "translate(139 132.66) scale(0.22)", stroke: "#ffecbe", strokeOpacity: "0.55" },
+  { transform: "translate(139 130.66) scale(0.22)", stroke: "#46300c", strokeOpacity: "0.35" },
+  { transform: "translate(139 131.66) scale(0.22)", stroke: "#7a5a24", strokeOpacity: undefined },
+] as const;
 
 /**
  * The Task029 opening envelope (Design Baseline B5 item 1), assembled exactly
@@ -60,7 +85,8 @@ const SEAL_MARK_FONT_FAMILY =
  * - flap: the Task029 offset (2.08%, −7.32%) at 95.89%, so its fold line
  *   lands on the body's top edge; the hinge is 14.65% down the flap box;
  * - seal: 22% of the canvas width, centred at 50% / 71%, with the Task029
- *   engraved 囍 as decorative system-font text (two hard 1 px shadows).
+ *   engraved 囍 as repository-authored vector strokes (two hard 1-unit
+ *   shadows), never a font glyph.
  *
  * The ivory cover-card frame sits tucked inside the pocket, occluded by the
  * body and clipped at the body's bottom edge; the runtime `media.cover`
@@ -110,22 +136,12 @@ export function EnvelopeMotif({ className }: DecorProps) {
           width="66"
           height="66"
         />
-        <g
-          fontFamily={SEAL_MARK_FONT_FAMILY}
-          fontSize="21.6"
-          textAnchor="middle"
-          dominantBaseline="central"
-          opacity="0.9"
-        >
-          <text x="150" y="143" fill="#ffecbe" fillOpacity="0.55">
-            囍
-          </text>
-          <text x="150" y="141" fill="#46300c" fillOpacity="0.35">
-            囍
-          </text>
-          <text x="150" y="142" fill="#7a5a24">
-            囍
-          </text>
+        <g fill="none" strokeWidth="6.5" strokeLinecap="square" strokeLinejoin="miter" opacity="0.9">
+          {SEAL_MARK_LAYERS.map((layer) => (
+            <g key={layer.stroke} transform={layer.transform} stroke={layer.stroke} strokeOpacity={layer.strokeOpacity}>
+              {SEAL_MARK_STROKES}
+            </g>
+          ))}
         </g>
       </g>
     </svg>

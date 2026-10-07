@@ -76,6 +76,15 @@ function count(html: string, needle: string): number {
 }
 
 /** The element text between an opening tag with `marker` and the next `</section>` / `</header>` / `</footer>`. */
+/** The seal's vector 囍 engraving group: three stroke layers of paths/rects only. */
+function sealMarkOf(envelope: string): string {
+  const mark = envelope.match(
+    /<g fill="none" stroke-width="6\.5" stroke-linecap="square" stroke-linejoin="miter" opacity="0\.9">(?:<g [^>]*>(?:<path [^>]*><\/path>|<rect [^>]*><\/rect>)+<\/g>){3}<\/g>/,
+  )?.[0];
+  expect(mark, "seal mark group").toBeDefined();
+  return mark ?? "";
+}
+
 function block(html: string, marker: string): string {
   const start = html.indexOf(marker);
   expect(start, marker).toBeGreaterThanOrEqual(0);
@@ -1074,13 +1083,10 @@ describe("content safety", () => {
     for (const fiction of ["Đà Nẵng", "Hẹn ngày chung vui", "❧", "Rất hân hạnh"]) {
       if (!canonical.includes(fiction)) expect(html, fiction).not.toContain(fiction);
     }
-    // Micro-Checkpoint 1B: the Task029 engraved 囍 seal mark is decorative text inside the
-    // aria-hidden envelope artwork only (three layers: two hard shadows + the mark), nowhere else.
+    // P1-UX-03 follow-up: the Task029 engraved 囍 seal mark is vector strokes, never text,
+    // so the glyph appears nowhere in the markup unless canonical data carries it.
     if (!canonical.includes("囍")) {
-      expect(count(html, "囍")).toBe(3);
-      const artwork = html.slice(html.indexOf('<svg class="'), html.indexOf("</svg>", html.lastIndexOf("囍")));
-      expect(artwork).toMatch(/^<svg class="[^"]*envelope[^"]*"[^>]*aria-hidden="true"/);
-      expect(count(artwork, "囍")).toBe(3);
+      expect(count(html, "囍")).toBe(0);
     }
     expect(html).not.toMatch(/additional_?note|additionalNote/i);
     expect(html).not.toMatch(/\bMAYBE\b|QR_COMMON|commonMediaId/);
@@ -1141,7 +1147,37 @@ describe("Task029 static sections (Design Baseline B5)", () => {
     expect(envelope).not.toMatch(/envelopeLiner|opening-envelope-[a-z]+\.svg|opening-seal-double-happiness/);
     // The runtime cover photograph is never baked into the envelope artwork.
     expect(envelope).not.toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.COVER));
-    expect(envelope).not.toMatch(/<(rect|circle|ellipse|path)\b|envelopeSealLeaf|envelopeSealRing|envelopeSealStem|envelopeFold/);
+    // The only vector shapes are the seal's 囍 engraving; no legacy hand-drawn envelope.
+    const withoutSealMark = envelope.replace(sealMarkOf(envelope), "");
+    expect(withoutSealMark).not.toMatch(/<(rect|circle|ellipse|path)\b|envelopeSealLeaf|envelopeSealRing|envelopeSealStem|envelopeFold/);
+  });
+
+  // P1-UX-03 follow-up: the 囍 on the approved blank seal raster was system-font <text> placed
+  // by dominant-baseline="central", so it sat off-centre on iOS. It is now repository-authored
+  // vector geometry at fixed coordinates, independent of any installed font.
+  it("opening seal: the 囍 engraving is font-independent vector geometry inside the animated seal group", async () => {
+    const { html } = await renderFixture({ variant: "GROOM", guest: FIXTURE_GUESTS.NORMAL });
+    const opening = block(html, "<header");
+    const envelope = opening.slice(opening.indexOf("<svg"), opening.lastIndexOf("</svg>") + "</svg>".length);
+    const sealGroup = envelope.slice(envelope.search(/<g class="[^"]*envelopeSeal[^"]*"><image/));
+    // Exactly the approved raster, unchanged position/size, then the engraving in the same group.
+    expect([...sealGroup.matchAll(/<image [^>]*href="([^"]*)"/g)].map((match) => match[1])).toStrictEqual([
+      "/renderers/wedding/elegant-editorial/v1/opening-envelope-seal.webp",
+    ]);
+    const mark = sealMarkOf(envelope);
+    expect(sealGroup).toContain(mark);
+    expect(sealGroup.indexOf(mark)).toBeGreaterThan(sealGroup.indexOf("opening-envelope-seal.webp"));
+    // No glyph, font or baseline dependency anywhere in the envelope artwork.
+    expect(envelope).not.toMatch(/<text\b|<tspan\b|囍|font-family|font-size|dominant-baseline|text-anchor/);
+    // Three layers (light lower edge, dark shadow, cut) of the same geometry, centred on (150, 142).
+    const layers = [...mark.matchAll(/<g transform="translate\(139 ([\d.]+)\) scale\(0\.22\)" stroke="(#[0-9a-f]{6})"/g)];
+    expect(layers.map((match) => [match[1], match[2]])).toStrictEqual([
+      ["132.66", "#ffecbe"],
+      ["130.66", "#46300c"],
+      ["131.66", "#7a5a24"],
+    ]);
+    expect(count(mark, "<path ")).toBe(3);
+    expect(count(mark, "<rect ")).toBe(12);
   });
 
   // Micro-Checkpoint 6 (RF7 Product Owner amendment): Task029 portrait blocks from media.portrait only.
