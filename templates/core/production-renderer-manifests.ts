@@ -3,6 +3,7 @@ import {
   type RendererCompatibilityRegistry,
 } from "../../lib/invitation-rendering/renderer-registry";
 import { ELEGANT_EDITORIAL_V1_MANIFEST } from "../wedding/elegant-editorial/v1/manifest";
+import { VIETNAMESE_HERITAGE_V1_MANIFEST } from "../wedding/vietnamese-heritage/v1/manifest";
 import {
   RENDERER_PRODUCTION_MANIFEST_ERROR_MESSAGES,
   RendererProductionManifestInvariantError,
@@ -57,11 +58,14 @@ export function validateProductionRendererManifests(
 
 /**
  * P27: the one ordered, explicit production manifest list feeding both
- * compositions. Today exactly Elegant Editorial v1. Validated at module
- * load, so a malformed production manifest fails closed on import.
+ * compositions: Elegant Editorial v1, then Vietnamese Heritage v1 (VH-01).
+ * Registration here is code compatibility only; a renderer is selectable
+ * only through an active catalog TemplateVersion row (not seeded for
+ * Vietnamese Heritage in VH-01). Validated at module load, so a malformed
+ * production manifest fails closed on import.
  */
 export const PRODUCTION_RENDERER_MANIFESTS: readonly RendererProductionManifestV1[] =
-  validateProductionRendererManifests([ELEGANT_EDITORIAL_V1_MANIFEST]);
+  validateProductionRendererManifests([ELEGANT_EDITORIAL_V1_MANIFEST, VIETNAMESE_HERITAGE_V1_MANIFEST]);
 
 /**
  * P27: readonly production key list derived from the manifest list, for

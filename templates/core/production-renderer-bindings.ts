@@ -6,6 +6,7 @@ import {
 } from "../../lib/invitation-rendering/renderer-binding-registry";
 import type { InvitationRendererComponentV1 } from "../../lib/invitation-rendering/renderer-component";
 import { ElegantEditorialV1 } from "../wedding/elegant-editorial/v1/elegant-editorial-v1";
+import { VietnameseHeritageV1 } from "../wedding/vietnamese-heritage/v1/vietnamese-heritage-v1";
 import { PRODUCTION_RENDERER_MANIFESTS } from "./production-renderer-manifests";
 import { RendererProductionManifestInvariantError, type RendererProductionManifestV1 } from "./renderer-manifest";
 
@@ -29,6 +30,7 @@ import { RendererProductionManifestInvariantError, type RendererProductionManife
 /** P27 B: explicit, closed rendererKey → component table. */
 const PRODUCTION_RENDERER_COMPONENTS: ReadonlyMap<string, InvitationRendererComponentV1> = new Map([
   ["wedding.elegant-editorial.v1", ElegantEditorialV1],
+  ["wedding.vietnamese-heritage.v1", VietnameseHeritageV1],
 ]);
 
 /** Fixed messages (docs/SECURITY.md): never a key or other manifest content. */

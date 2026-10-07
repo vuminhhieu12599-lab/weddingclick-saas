@@ -9,6 +9,11 @@ import { RendererBindingInvariantError } from "../../../lib/invitation-rendering
 import { buildRendererFixture } from "../fixtures/renderer-fixture-pipeline";
 import { FIXTURE_GUESTS } from "../fixtures/renderer-fixture-sources";
 
+// VH-01: the production binding registry also binds Vietnamese Heritage v1, whose
+// next/font loaders only run under the Next compiler.
+vi.mock("../../wedding/vietnamese-heritage/v1/fonts", () => ({
+  VIETNAMESE_HERITAGE_V1_FONT_VARIABLES_CLASS_NAME: "vh-test-font-variables",
+}));
 vi.mock("../../wedding/elegant-editorial/v1/fonts", () => ({
   ELEGANT_EDITORIAL_V1_FONT_VARIABLES_CLASS_NAME: "ee-test-font-variables",
 }));

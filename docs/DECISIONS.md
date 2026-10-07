@@ -2263,3 +2263,56 @@ Docs/operations checkpoint only. No runtime code, schema, migration, renderer or
 7. **Operations/recovery — P0-6 complete.** The minimum runbook is `docs/PILOT_OPERATIONS_RUNBOOK.md`. It defines safe daily checks, link recovery, post-publish correction, deployment/database incident handling, rate-limit outage behavior and the final smoke procedure without exposing secrets.
 8. **Gate result.** P0-1 through P0-9 are complete under the owner-approved lean-free exception. **WeddingClick V2 is PILOT READY for one closely-supported, no-charge customer using Elegant Editorial v1.** This is explicitly not the broader Production Ready/commercial-scale claim.
 
+
+## VH-01 — Vietnamese Heritage v1 Production Contract, Canonical Mapping and Renderer Skeleton (2026-10-07)
+
+Checkpoint VH-01 of Template 02, on branch `template-02-vietnamese-heritage-v1` from `16651db5811b27ee10929f1e3367b4ab66d890c3`. Code and docs only: **no migration, no catalog/database row, no activation, no deploy.** The approved Task 029 direction (`_directions/vietnamese-heritage/`) is the visual source of truth; it is reference only for code (RF-06-0 P2): no production import of `app/internal/prototypes/**`, no prototype asset, hook, resolver, fixture, section toggle or demo media. Elegant Editorial v1 stays the architecture reference; its identity, manifest, renderer and visuals are unchanged. Every RF-05 (K1–K45) and RF-06-0 (P1–P46) rule applies unchanged to this second renderer.
+
+1. **Identity (proposed; freezes at catalog seeding).** `eventType` `WEDDING`, `templateCode` `vietnamese-heritage`, `versionNumber` `1`, `displayName` "Vietnamese Heritage", `rendererKey` `wedding.vietnamese-heritage.v1` (the P18 composition), `supportedPayloadSchemaVersions` `[1]`, `supportedVariants` `COMMON`/`GROOM`/`BRIDE`. No fallback, default, alias or "latest".
+2. **Section capabilities.** `invitationMessage: false` (the direction shows only the salutation and guest line, the same shape as the Elegant Editorial Micro-Checkpoint 10 ruling), `photoStory: false` (the direction has no Photo Story section), every other key `true`. `sectionSettingsSchema` is exactly the six capable keys as `{ type: "boolean" }`; `designSettingsSchema` is `{}`.
+3. **Design set.** Exactly one curated set, matching Elegant Editorial's single-set convention: palette `heritage-vermilion`, font preset `heritage-classic`, effect preset `STANDARD`. No user-selectable colour or font controls. No naming conflict was found.
+4. **Registry.** `PRODUCTION_RENDERER_MANIFESTS` is the explicit ordered list `[ELEGANT_EDITORIAL_V1_MANIFEST, VIETNAMESE_HERITAGE_V1_MANIFEST]`; the client binding table adds exactly `wedding.vietnamese-heritage.v1 → VietnameseHeritageV1`. Key-set equality, duplicate rejection, unbound/orphan fail-closed checks and RF-04/RF-05 fail-closed lookup are unchanged. Registration is code compatibility only; a Project can select the renderer only through a catalog `template_versions` row, which VH-01 does not create.
+5. **Renderer graph.** `templates/wedding/vietnamese-heritage/v1/` holds the manifest, `fonts.ts`, `palette.ts`, `copy.ts`, the root `vietnamese-heritage-v1.tsx`, one CSS module, `sections/**`, `__tests__/**` and `PROVENANCE.md`. The renderer reads only the K6 props; VH-01 is static (no hooks, no `capabilities` read, no motion). It imports nothing from Elegant Editorial or `templates/core`; all temporal parts come from RF-05C `deriveEventDateTimePresentationV1`.
+6. **Fonts (`heritage-classic`).** Cormorant Garamond 500/600 × normal/italic, Playfair Display 500 italic, Great Vibes 400; subsets `latin` + `vietnamese` (all three list `vietnamese` in the installed Next font data); SIL OFL 1.1; `next/font/google` only, inside the renderer graph, no committed files, no runtime `@import`/CDN. **`preload: false`** on all three: the client binding registry statically imports every renderer, so preloaded VH families would be preloaded on every invitation route, Elegant Editorial included (verified in the build's font manifest: with preload, `/i/[slug]` preloaded 14 files instead of 8). Without preload the files download only when VH text uses them. Technical debt (not changed here): every renderer's JS, CSS module and `@font-face` rules ship in the shared invitation client graph; per-renderer code splitting is a future architecture decision. The prototype's synthetic 400/700 Cormorant uses map to 500/600. Real-device Vietnamese glyph QA is a certification step.
+7. **Assets.** VH-01 ships **no** decor. All ten Task 029 Vietnamese Heritage PNGs carry OpenAI C2PA manifests ("ChatGPT"/`gpt-image`, created 2026-09-24), but the 2026-10-01 Product Owner ruling authorizing approved prototype assets in production is recorded only for Elegant Editorial v1. Production-use rights for these files are therefore **not established** (P4/P5); they are not copied. File-by-file audit: `templates/wedding/vietnamese-heritage/v1/PROVENANCE.md`. **VH-02 asset blocker:** the Product Owner either extends the 2026-10-01 ruling to these files (then P6 2× WebP derived copies) or commissions WeddingClick-owned replacements. `heritage-lantern.png` and `heritage-corner-ornament.png` are unused by the direction and not needed. The Song Hỷ mark is the 囍 text glyph in VH-01; VH-02 replaces it with owned vector geometry (P1-UX-03 precedent).
+
+**Prototype → canonical mapping.** A = canonical data exists and is mapped; B = fixed template-owned copy/decor; C = no canonical source, removed or adapted; D = prototype demo content, never in production; *VH-02* = mapped contract, implementation deferred.
+
+| Prototype element | Class | Production source / behavior |
+|---|---|---|
+| Opening names / date | A | `people.primary`/`.secondary` names (explicit side order); RF-05C weekday + `DD.MM.YYYY` of `ceremony`. Static first panel in VH-01; split red doors + reduced-motion fallback *VH-02*. |
+| Opening "Thiệp Mời Cưới", "Chạm để mở thiệp" | B | Fixed copy (hint arrives with the *VH-02* door island). |
+| Hero photo | A | `media.cover` when `RESOLVED`; absent/`UNAVAILABLE` → typographic hero, no frame, no substitute. Prototype `hero.svg` is D. |
+| Couple names | A | Full canonical `people.primary.name` then `.secondary.name` (no two-token shortening; that is an Elegant Editorial-only ruling). |
+| Song Hỷ / medallion / gold rules | B | Template decor; medallion PNG blocked (item 7). |
+| Family columns | A | `families.primary` then `.secondary`; label "Nhà Trai"/"Nhà Gái" from explicit `side`; father, mother lines. |
+| Family addresses | A | `families.*.address`; null/blank lines omitted; a family with no line is not shown. |
+| Groom / bride portraits | A | `media.portrait.groom`/`.bride` by explicit side, `RESOLVED` only, primary side first. Demo portraits D. |
+| Centre couple portrait (three-photo) | C | No canonical role; omitted (question 2). |
+| Invitation salutation | B | "Trân Trọng Kính Mời". |
+| Guest personalization | A | `guest.displayName` verbatim; unpersonalized → fixed "Quý khách" (question 3). Never identity. |
+| Free-text invitation message | C | Not rendered (`invitationMessage: false`). |
+| Ceremony title | A | `ceremony.title` verbatim (RF3): GROOM "Lễ Thành Hôn", BRIDE "Lễ Vu Quy". |
+| Ceremony date / time / weekday | A | RF-05C parts of `ceremony.startsAt` in `ceremony.timezone`. |
+| Lunar display | A | `ceremony.lunarDateDisplay` verbatim beside fixed "Tức ngày"; omitted when null (RF6). |
+| "Tại tư gia {side}" host line + address | C | No separate canonical host field; venue text comes from the ceremony cards. |
+| Reception / venue blocks | A | `ceremonyCards` in given order: `card.title` verbatim, RF-05C time/weekday/date, `event.venueName`/`address`; side label only with several cards. "Tiệc mừng Lễ …" wording needs a ruling (question 4). |
+| Reception lunar line | C | Removed: the prototype's same-day comparison is the withdrawn RF6 rule; v1 renderers show lunar only on the ceremony. |
+| Directions / map | A | Link only when `event.mapUrl` exists. |
+| Timeline / schedule | A | `content.timeline` when `sections.timeline`; every step in order (the prototype's 5-item cap is removed). |
+| Countdown | A *VH-02* | RF-05C `deriveCeremonyCountdownV1` with `capabilities.clock` only. |
+| Love Story | A | `content.loveStory` text (line breaks kept) when `sections.loveStory`; deep oxblood band. Structured milestones, their dates/photos: D. |
+| Love Story photo / background | A | `media.loveStoryPhoto` when `RESOLVED`; else text-only. Demo background D. |
+| Love Story heading, eyebrow | B | "Chuyện Chúng Mình", "Love Story". |
+| Dress Code | A | `content.dressCode` description + every swatch when `sections.dressCode` (prototype 6-swatch cap removed; swatch labels have no canonical source, C). |
+| Gallery / album | A | `media.gallery` in order when `sections.gallery`; `UNAVAILABLE` → neutral tile. Orientation album layout + lightbox *VH-02*. Demo photos D. |
+| RSVP | A *VH-02* | `capabilities.rsvp` only (shared RF-05 contract; success only after confirmed `SUCCESS`). |
+| Gift / QR | A | Per operational side: `gift.<side>` bank lines and `media.qr.<side>` when `RESOLVED`; no common QR. Static panels in VH-01; dialog + copy control (`capabilities.clipboard`) *VH-02*. Gift intro note B. |
+| Music | A *VH-02* | `sections.music` **and** `capabilities.music` only; prototype track label D. |
+| Closing copy | B | Fixed Task 029 thank-you wording (question 5). |
+| Closing photo | C | No canonical role; typographic closing (question 5). |
+| Prototype demo data (names, venues, "Đà Nẵng"/"Sơn Trà", bank details, track) | D | Never in production. |
+
+**Questions for the Product Owner before VH-02 freezes the visuals:** (1) extend the 2026-10-01 asset ruling to the eight used Vietnamese Heritage PNGs, or commission replacements; (2) the three-photo centre slot: omit (VH-01) or reuse `media.cover`; (3) unpersonalized guest line: "Quý khách" (VH-01, production D1 precedent) or the prototype's "Bạn và Gia Đình"; (4) venue-card title: canonical "Lễ Thành Hôn"/"Lễ Vu Quy" (VH-01) or fixed "Tiệc mừng Lễ …" copy as Elegant Editorial ruling 7A; (5) closing: typographic (VH-01) or reuse `media.cover`, and whether the fixed thank-you wording is approved.
+
+**Test maintenance (multi-renderer generalization).** Assertions that encoded "exactly one production renderer" were first-renderer assumptions, not frozen invariants (RF-06-0 always planned further renderer families), and are generalized to the explicit two-entry list: the manifest-list length/order and derived key list (`production-renderer-manifests.test.ts`), the binding key list and the unbound/orphan/duplicate fixtures that now bind both real components (`production-renderer-bindings.test.ts`), and the static-boundary tree/allowlist/CSS-file lists (`renderer-static-boundary.test.ts`), which gain an explicit VH-01 block with the RF-06B forbidden list plus VH-specific rules. Eight suites that import the client binding graph add a `next/font` mock for the VH fonts module, exactly like their existing Elegant Editorial mock. No Elegant Editorial assertion was removed or weakened.

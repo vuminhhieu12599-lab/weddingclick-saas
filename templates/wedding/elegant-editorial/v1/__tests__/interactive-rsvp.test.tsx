@@ -28,6 +28,11 @@ import {
   type RsvpPhase,
 } from "../interactive/rsvp-model";
 
+// VH-01: the production binding registry also binds Vietnamese Heritage v1, whose
+// next/font loaders only run under the Next compiler.
+vi.mock("../../../vietnamese-heritage/v1/fonts", () => ({
+  VIETNAMESE_HERITAGE_V1_FONT_VARIABLES_CLASS_NAME: "vh-test-font-variables",
+}));
 vi.mock("../fonts", () => ({ ELEGANT_EDITORIAL_V1_FONT_VARIABLES_CLASS_NAME: "ee-test-font-variables" }));
 
 const { ElegantEditorialV1 } = await import("../elegant-editorial-v1");

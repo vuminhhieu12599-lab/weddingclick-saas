@@ -19,6 +19,11 @@ import { HARNESS_SCENARIO_IDS, buildHarnessRenderData } from "../harness-scenari
 const REPO_ROOT = join(__dirname, "..", "..", "..", "..");
 const received: InvitationRendererPropsV1[] = [];
 
+// VH-01: the production binding registry also binds Vietnamese Heritage v1, whose
+// next/font loaders only run under the Next compiler.
+vi.mock("../../../../templates/wedding/vietnamese-heritage/v1/fonts", () => ({
+  VIETNAMESE_HERITAGE_V1_FONT_VARIABLES_CLASS_NAME: "vh-test-font-variables",
+}));
 vi.mock("../../../../templates/wedding/elegant-editorial/v1/elegant-editorial-v1", () => ({
   ElegantEditorialV1: (props: InvitationRendererPropsV1) => {
     received.push(props);

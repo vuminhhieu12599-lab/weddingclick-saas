@@ -2,6 +2,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 // next/font loaders only run under the Next compiler (same mock as the renderer tests).
+// VH-01: the production binding registry also binds Vietnamese Heritage v1, whose
+// next/font loaders only run under the Next compiler.
+vi.mock("../../../../templates/wedding/vietnamese-heritage/v1/fonts", () => ({
+  VIETNAMESE_HERITAGE_V1_FONT_VARIABLES_CLASS_NAME: "vh-test-font-variables",
+}));
 vi.mock("../../../../templates/wedding/elegant-editorial/v1/fonts", () => ({
   ELEGANT_EDITORIAL_V1_FONT_VARIABLES_CLASS_NAME: "ee-test-font-variables",
 }));

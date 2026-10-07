@@ -16,6 +16,11 @@ import {
 } from "../production-renderer-manifests";
 import { RendererProductionManifestInvariantError, type RendererProductionManifestV1 } from "../renderer-manifest";
 
+// VH-01: the production binding registry also binds Vietnamese Heritage v1, whose
+// next/font loaders only run under the Next compiler.
+vi.mock("../../wedding/vietnamese-heritage/v1/fonts", () => ({
+  VIETNAMESE_HERITAGE_V1_FONT_VARIABLES_CLASS_NAME: "vh-test-font-variables",
+}));
 vi.mock("../../wedding/elegant-editorial/v1/fonts", () => ({
   ELEGANT_EDITORIAL_V1_FONT_VARIABLES_CLASS_NAME: "ee-test-font-variables",
 }));
@@ -26,6 +31,7 @@ const {
   createProductionRendererBindingRegistry,
 } = await import("../production-renderer-bindings");
 const { ElegantEditorialV1 } = await import("../../wedding/elegant-editorial/v1/elegant-editorial-v1");
+const { VietnameseHeritageV1 } = await import("../../wedding/vietnamese-heritage/v1/vietnamese-heritage-v1");
 
 /**
  * RF-06B production binding registry (docs/DECISIONS.md "RF-06-0 …" P27 B,
@@ -37,6 +43,17 @@ const { ElegantEditorialV1 } = await import("../../wedding/elegant-editorial/v1/
 const REPO_ROOT = join(__dirname, "..", "..", "..");
 
 const OtherComponent: InvitationRendererComponentV1 = () => null;
+
+const EE_KEY = "wedding.elegant-editorial.v1";
+const VH_KEY = "wedding.vietnamese-heritage.v1";
+
+/** The real production key → component pairs (VH-01: two renderers). */
+function productionComponents(): Map<string, InvitationRendererComponentV1> {
+  return new Map<string, InvitationRendererComponentV1>([
+    [EE_KEY, ElegantEditorialV1],
+    [VH_KEY, VietnameseHeritageV1],
+  ]);
+}
 
 function withKey(key: string): RendererProductionManifestV1 {
   const base = PRODUCTION_RENDERER_MANIFESTS[0] as RendererProductionManifestV1;
@@ -81,7 +98,8 @@ describe("key-set equality (P27)", () => {
 
 describe("Elegant Editorial binding", () => {
   it("wedding.elegant-editorial.v1 resolves to ElegantEditorialV1", () => {
-    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual(["wedding.elegant-editorial.v1"]);
+    // VH-01 generalization: the production key list is now exactly EE then VH (was EE only).
+    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([EE_KEY, VH_KEY]);
     expect(resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, "wedding.elegant-editorial.v1")).toBe(
       ElegantEditorialV1,
     );
@@ -100,6 +118,39 @@ describe("Elegant Editorial binding", () => {
       "createProductionRendererBindingRegistry(PRODUCTION_RENDERER_MANIFESTS, PRODUCTION_RENDERER_COMPONENTS)",
     );
     expect(source).not.toMatch(/ELEGANT_EDITORIAL_V1_MANIFEST|v1\/manifest|validateRendererProductionManifest\(/);
+  });
+});
+
+describe("Vietnamese Heritage binding (VH-01)", () => {
+  it("wedding.vietnamese-heritage.v1 resolves to VietnameseHeritageV1, distinct from Elegant Editorial", () => {
+    expect(resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, VH_KEY)).toBe(VietnameseHeritageV1);
+    expect(VietnameseHeritageV1).not.toBe(ElegantEditorialV1);
+    expect(resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, EE_KEY)).toBe(ElegantEditorialV1);
+  });
+
+  it("the bound manifest is the validated projection, not the raw source constant", () => {
+    const bound = PRODUCTION_RENDERER_BINDING_REGISTRY.compatibilityRegistry.lookup(VH_KEY);
+    expect(bound).toStrictEqual(projectCompatibilityManifest(PRODUCTION_RENDERER_MANIFESTS[1]?.compatibility));
+    expect(bound).toStrictEqual(PRODUCTION_COMPATIBILITY_REGISTRY.compatibility.lookup(VH_KEY));
+    expect(bound).not.toBe(PRODUCTION_RENDERER_MANIFESTS[1]?.compatibility);
+  });
+
+  it.each([
+    "wedding.vietnamese-heritage.v2",
+    "wedding.vietnamese-heritage",
+    "wedding.vietnamese-heritage.latest",
+    "wedding.vietnamese-heritage.V1",
+    "Wedding.vietnamese-heritage.v1",
+    " wedding.vietnamese-heritage.v1",
+    "wedding.vietnamese-heritage.v1 ",
+    "vietnamese-heritage",
+    "Vietnamese Heritage",
+    "wedding.heritage-vermilion.v1",
+  ])("unknown key %j throws RendererBindingInvariantError", (key) => {
+    expect(PRODUCTION_RENDERER_BINDING_REGISTRY.lookupComponent(key)).toBeUndefined();
+    expect(() => resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, key)).toThrow(
+      RendererBindingInvariantError,
+    );
   });
 });
 
@@ -128,17 +179,17 @@ describe("fail closed: no default, fallback, latest or alias", () => {
 describe("createProductionRendererBindingRegistry invariants", () => {
   it("an unbound production manifest fails closed with a fixed RF-06 message", () => {
     const manifests = [...PRODUCTION_RENDERER_MANIFESTS, withKey("wedding.unbound-template.v1")];
-    const components = new Map<string, InvitationRendererComponentV1>([["wedding.elegant-editorial.v1", ElegantEditorialV1]]);
+    // VH-01: every real production manifest is bound, so only the added manifest is unbound.
+    const components = productionComponents();
     expect(() => createProductionRendererBindingRegistry(manifests, components)).toThrow(
       new RendererProductionManifestInvariantError(PRODUCTION_RENDERER_BINDING_ERROR_MESSAGES.UNBOUND_MANIFEST),
     );
   });
 
   it("an orphan component binding fails closed with a fixed RF-06 message", () => {
-    const components = new Map<string, InvitationRendererComponentV1>([
-      ["wedding.elegant-editorial.v1", ElegantEditorialV1],
-      ["wedding.orphan-template.v1", OtherComponent],
-    ]);
+    // VH-01: both real bindings plus one orphan (with EE only, VH would fail first as unbound).
+    const components = productionComponents();
+    components.set("wedding.orphan-template.v1", OtherComponent);
     expect(() => createProductionRendererBindingRegistry(PRODUCTION_RENDERER_MANIFESTS, components)).toThrow(
       new RendererProductionManifestInvariantError(PRODUCTION_RENDERER_BINDING_ERROR_MESSAGES.ORPHAN_COMPONENT),
     );
@@ -152,7 +203,8 @@ describe("createProductionRendererBindingRegistry invariants", () => {
 
   it("a duplicate manifest key propagates the RF-05 binding error unchanged", () => {
     const manifests = [...PRODUCTION_RENDERER_MANIFESTS, ...PRODUCTION_RENDERER_MANIFESTS];
-    const components = new Map<string, InvitationRendererComponentV1>([["wedding.elegant-editorial.v1", ElegantEditorialV1]]);
+    // VH-01: both real bindings, so the duplicate key (not an unbound manifest) is what fails.
+    const components = productionComponents();
     expect(() => createProductionRendererBindingRegistry(manifests, components)).toThrow(RendererBindingInvariantError);
   });
 

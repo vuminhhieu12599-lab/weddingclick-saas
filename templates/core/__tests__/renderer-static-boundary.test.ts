@@ -42,6 +42,8 @@ const ALLOWED_IMPORTS: Readonly<Record<(typeof RF06A_FILES)[number], readonly st
   "templates/core/production-renderer-manifests.ts": [
     "lib/invitation-rendering/renderer-registry",
     "templates/wedding/elegant-editorial/v1/manifest",
+    // VH-01: the second explicit production manifest.
+    "templates/wedding/vietnamese-heritage/v1/manifest",
     "templates/core/renderer-manifest",
   ],
   "templates/wedding/elegant-editorial/v1/manifest.ts": ["templates/core/renderer-manifest"],
@@ -212,7 +214,10 @@ describe("RF-06A files", () => {
 
   it("the production manifest list is explicit (no discovery) and keys are not hand-typed there", () => {
     const code = stripComments(readRepoFile("templates/core/production-renderer-manifests.ts"));
-    expect(code).toContain("validateProductionRendererManifests([ELEGANT_EDITORIAL_V1_MANIFEST])");
+    // VH-01: still one explicit, ordered literal list, now with the second manifest.
+    expect(code).toContain(
+      "validateProductionRendererManifests([ELEGANT_EDITORIAL_V1_MANIFEST, VIETNAMESE_HERITAGE_V1_MANIFEST])",
+    );
     expect(/["'`]wedding\.[\w-]+\.v\d+/.test(code)).toBe(false);
   });
 
@@ -291,9 +296,10 @@ describe("templates/** production tree (P39)", () => {
   // RF-06B files; React, CSS and the provenance note exist only there.
   // RF-06C extension: plus exactly the RF-06C client-runtime files.
   // RF-06D extension: plus exactly the RF-06D islands and pure models.
-  it("templates/** contains exactly the RF-06A, RF-06B, RF-06C and RF-06D files", () => {
+  // VH-01 extension: plus exactly the Vietnamese Heritage v1 files (rules at the end of this file).
+  it("templates/** contains exactly the RF-06A, RF-06B, RF-06C, RF-06D and VH-01 files", () => {
     expect([...sources].sort()).toStrictEqual(
-      [...RF06A_FILES, ...RF06B_TEMPLATE_FILES, ...RF06C_FILES, ...RF06D_FILES].sort(),
+      [...RF06A_FILES, ...RF06B_TEMPLATE_FILES, ...RF06C_FILES, ...RF06D_FILES, ...VH01_FILES].sort(),
     );
   });
 
@@ -395,6 +401,8 @@ const RF06B_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06B_CODE_FILES)[number], 
     `${LIB}/renderer-binding-registry`,
     `${LIB}/renderer-component`,
     `${V1}/elegant-editorial-v1`,
+    // VH-01: the second explicit component binding.
+    "templates/wedding/vietnamese-heritage/v1/vietnamese-heritage-v1",
     "templates/core/production-renderer-manifests",
     "templates/core/renderer-manifest",
   ],
@@ -568,16 +576,17 @@ function codeOf(file: string): string {
 }
 
 describe("RF-06B template files", () => {
-  it("every listed file exists; .tsx and CSS live only in the RF-06B renderer/host scope (plus the RF-06C host core and RF-06D islands)", () => {
+  // VH-01 extension: the Vietnamese Heritage v1 renderer files and its one CSS module are the only additions.
+  it("every listed file exists; .tsx and CSS live only in the RF-06B renderer/host scope (plus the RF-06C host core, RF-06D islands and VH-01 renderer)", () => {
     for (const file of RF06B_TEMPLATE_FILES) expect(() => readRepoFile(file), file).not.toThrow();
     const sources = listSources(TEMPLATES_ROOT);
     for (const file of sources.filter((source) => /\.(tsx|css)$/.test(source))) {
       expect(
-        [HOST_MODULE, RF06C_HOST_CORE_MODULE, RF06B_CSS_FILE, ...RF06B_RENDERER_FILES, ...RF06D_ISLAND_FILES],
+        [HOST_MODULE, RF06C_HOST_CORE_MODULE, RF06B_CSS_FILE, ...RF06B_RENDERER_FILES, ...RF06D_ISLAND_FILES, VH01_CSS_FILE, ...VH01_RENDERER_FILES],
         file,
       ).toContain(file);
     }
-    expect(sources.filter((source) => source.endsWith(".css"))).toStrictEqual([RF06B_CSS_FILE]);
+    expect(sources.filter((source) => source.endsWith(".css")).sort()).toStrictEqual([RF06B_CSS_FILE, VH01_CSS_FILE].sort());
   });
 
   it.each(RF06B_CODE_FILES)("%s contains no forbidden runtime, data, browser, prototype or interaction code", (file) => {
@@ -1674,5 +1683,256 @@ describe("RF-06D interactive files", () => {
 
   it("no island declares a client or server boundary; the production host stays the only client entry", () => {
     for (const file of RF06D_FILES) expect(/["']use (client|server)["']/.test(readRepoFile(file)), file).toBe(false);
+  });
+});
+
+// ===========================================================================
+// VH-01 extension (docs/DECISIONS.md "VH-01 — Vietnamese Heritage v1
+// Production Contract"). The second production renderer gets its own
+// explicit lists and the same strictness as the RF-06A/RF-06B rules above;
+// nothing above is weakened. VH-01 is static: no island, hook, capability
+// read, decor file or motion yet.
+// ===========================================================================
+
+const VH = "templates/wedding/vietnamese-heritage/v1";
+const VH01_MANIFEST_FILE = `${VH}/manifest.ts`;
+const VH01_ROOT = `${VH}/vietnamese-heritage-v1.tsx`;
+const VH01_FONTS = `${VH}/fonts.ts`;
+const VH01_MEDIA_IMAGE = `${VH}/sections/media-image.tsx`;
+const VH01_SECTIONS = [
+  "ceremonial",
+  "closing",
+  "dress-code",
+  "events",
+  "gallery",
+  "gift",
+  "hero",
+  "love-story",
+  "media-image",
+  "opening-cover",
+  "song-hy",
+  "timeline",
+] as const;
+const VH01_RENDERER_FILES = [
+  VH01_ROOT,
+  ...VH01_SECTIONS.map((section) => `${VH}/sections/${section}.tsx`),
+] as const;
+const VH01_CODE_FILES = [
+  ...VH01_RENDERER_FILES,
+  `${VH}/sections/date-text.ts`,
+  `${VH}/copy.ts`,
+  `${VH}/palette.ts`,
+  VH01_FONTS,
+] as const;
+const VH01_CSS_FILE = `${VH}/vietnamese-heritage-v1.module.css`;
+const VH01_PROVENANCE_FILE = `${VH}/PROVENANCE.md`;
+const VH01_FILES = [VH01_MANIFEST_FILE, ...VH01_CODE_FILES, VH01_CSS_FILE, VH01_PROVENANCE_FILE] as const;
+
+const VH_CSS = `${VH}/vietnamese-heritage-v1.module.css`;
+const VH_SECTION_COMMON = [`${VH}/copy`, VH_CSS];
+const VH_TYPES = `${LIB}/invitation-view-model-types`;
+const VH_DATE = `${LIB}/event-date-time-presentation`;
+
+/** Exact import allowlist per VH-01 code file (repository-relative, no extension; CSS keeps its extension). */
+const VH01_ALLOWED_IMPORTS: Readonly<Record<string, readonly string[]>> = {
+  [VH01_ROOT]: [
+    VH_DATE,
+    `${LIB}/renderer-component`,
+    `${VH}/fonts`,
+    `${VH}/palette`,
+    VH_CSS,
+    ...["ceremonial", "closing", "dress-code", "events", "gallery", "gift", "hero", "love-story", "opening-cover", "timeline"].map(
+      (section) => `${VH}/sections/${section}`,
+    ),
+  ],
+  [`${VH}/copy.ts`]: [],
+  [`${VH}/palette.ts`]: ["react"],
+  [VH01_FONTS]: ["next/font/google"],
+  [`${VH}/sections/date-text.ts`]: [VH_DATE],
+  [VH01_MEDIA_IMAGE]: [VH_TYPES],
+  [`${VH}/sections/song-hy.tsx`]: VH_SECTION_COMMON,
+  [`${VH}/sections/opening-cover.tsx`]: [VH_DATE, VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/date-text`, `${VH}/sections/song-hy`],
+  [`${VH}/sections/hero.tsx`]: [
+    VH_DATE,
+    VH_TYPES,
+    ...VH_SECTION_COMMON,
+    `${VH}/sections/date-text`,
+    `${VH}/sections/media-image`,
+    `${VH}/sections/song-hy`,
+  ],
+  [`${VH}/sections/ceremonial.tsx`]: [
+    VH_DATE,
+    VH_TYPES,
+    `${LIB}/wedding-domain-types`,
+    ...VH_SECTION_COMMON,
+    `${VH}/sections/media-image`,
+    `${VH}/sections/song-hy`,
+  ],
+  [`${VH}/sections/events.tsx`]: [VH_DATE, VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/date-text`],
+  [`${VH}/sections/timeline.tsx`]: [VH_TYPES, ...VH_SECTION_COMMON],
+  [`${VH}/sections/love-story.tsx`]: [VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/media-image`],
+  [`${VH}/sections/gift.tsx`]: [VH_TYPES, `${LIB}/wedding-domain-types`, ...VH_SECTION_COMMON, `${VH}/sections/media-image`],
+  [`${VH}/sections/dress-code.tsx`]: [VH_TYPES, ...VH_SECTION_COMMON],
+  [`${VH}/sections/gallery.tsx`]: [VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/media-image`],
+  [`${VH}/sections/closing.tsx`]: [VH_DATE, VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/date-text`, `${VH}/sections/song-hy`],
+};
+
+/** VH-01 additions to the RF-06B forbidden list: static renderer, own graph only. */
+const VH01_EXTRA_FORBIDDEN: readonly [string, RegExp][] = [
+  ["capabilities read (VH-01 is static)", /\bcapabilities\b/],
+  ["Elegant Editorial coupling", /elegant-editorial|ELEGANT_EDITORIAL|ElegantEditorial/],
+  ["templates/core import", /templates\/core|\.\.\/core\//],
+  ["countdown / clock derivation", /ceremony-countdown|deriveCeremonyCountdown|ceremony-month-grid/],
+  ["RSVP contract", /rsvp-capability|RsvpCapability/],
+  ["raw Snapshot / payload", /snapshot-payload|SnapshotPayload|\bsnapshot\b/],
+  ["design key branching", /paletteKey|fontPresetKey|effectPresetKey/],
+  ["decor or prototype asset path", /\/renderers\/|\/prototypes\/|\.png["'`]|\.webp["'`]|\.svg["'`]/],
+  ["demo/prototype content", /demo|DEMO_|PrototypeWeddingData|wedding-data|Sơn Trà|sông Hàn|A Thousand Years/],
+  ["next/image", /next\/image/],
+  ["IntersectionObserver / matchMedia / animation", /IntersectionObserver|matchMedia|framer|animate/],
+];
+
+describe("VH-01 Vietnamese Heritage v1 files", () => {
+  it("every listed file exists and the allowlist covers exactly the code files", () => {
+    for (const file of VH01_FILES) expect(() => readRepoFile(file), file).not.toThrow();
+    expect(Object.keys(VH01_ALLOWED_IMPORTS).sort()).toStrictEqual([...VH01_CODE_FILES].sort());
+  });
+
+  it("the manifest is data only: type-only imports, no RF-06A forbidden code, and the only VH key literal outside the binding table", () => {
+    const statements = importsOf(readRepoFile(VH01_MANIFEST_FILE));
+    expect(statements).toStrictEqual([{ specifier: "../../../core/renderer-manifest", typeOnly: true }]);
+    const code = stripComments(readRepoFile(VH01_MANIFEST_FILE));
+    for (const [label, pattern] of RF06A_FORBIDDEN) {
+      expect(pattern.test(code), `${VH01_MANIFEST_FILE}: ${label}`).toBe(false);
+    }
+    for (const file of [VH01_MANIFEST_FILE, ...VH01_CODE_FILES, ...RF06A_FILES, ...RF06B_CODE_FILES]) {
+      const hasLiteral = /["'`]wedding\.vietnamese-heritage\.v1["'`]/.test(codeOf(file));
+      expect(hasLiteral, file).toBe(file === VH01_MANIFEST_FILE || file === BINDINGS_MODULE);
+    }
+  });
+
+  it.each(VH01_CODE_FILES)("%s imports only its exact allowlist", (file) => {
+    expect([...new Set(resolvedImportsOf(file))].sort(), file).toStrictEqual([...new Set(VH01_ALLOWED_IMPORTS[file])].sort());
+  });
+
+  it.each(VH01_CODE_FILES)("%s contains no forbidden runtime, data, browser, prototype, interaction or capability code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of [...RF06B_FORBIDDEN, ...VH01_EXTRA_FORBIDDEN]) {
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+    expect(ALL_HOOKS.test(code), `${file}: hooks`).toBe(false);
+  });
+
+  it("only the VH fonts module touches next/font, only next/font/google, with the three approved families", () => {
+    for (const file of VH01_CODE_FILES) {
+      const code = codeOf(file);
+      expect(/next\/font/.test(code), file).toBe(file === VH01_FONTS);
+      expect(/next\/font\/local/.test(code), file).toBe(false);
+    }
+    const fonts = codeOf(VH01_FONTS);
+    expect([...fonts.matchAll(/\b(\w+)\(\{/g)].map((match) => match[1]).sort()).toStrictEqual(
+      ["Cormorant_Garamond", "Great_Vibes", "Playfair_Display"].sort(),
+    );
+    expect(fonts.match(/subsets: \["latin", "vietnamese"\]/g)).toHaveLength(3);
+    expect(fonts.match(/display: "swap"/g)).toHaveLength(3);
+    // Never preloaded: the shared binding graph would otherwise preload them on Elegant Editorial routes too.
+    expect(fonts.match(/preload: false/g)).toHaveLength(3);
+    expect(fonts).not.toMatch(/preload: true/);
+  });
+
+  it("no VH file is a client or server boundary", () => {
+    // Comments are stripped: the manifest's doc comment names the directive it must not have.
+    for (const file of [VH01_MANIFEST_FILE, ...VH01_CODE_FILES]) {
+      expect(/["']use (client|server)["']/.test(codeOf(file)), file).toBe(false);
+    }
+  });
+
+  it("the root reads only viewModel and sections (no capabilities, manifest or renderer key)", () => {
+    const code = codeOf(VH01_ROOT);
+    expect(code).toMatch(/export function VietnameseHeritageV1\(\{ viewModel, sections \}: InvitationRendererPropsV1\)/);
+    expect(code).not.toMatch(/manifest|rendererKey|capabilities/);
+  });
+
+  it("only the binding module imports the VH renderer component, and no VH file imports a template outside its own tree", () => {
+    for (const file of [...RF06A_FILES, ...RF06B_CODE_FILES, ...RF06C_FILES, ...RF06D_FILES, ...VH01_CODE_FILES]) {
+      expect(resolvedImportsOf(file).includes(`${VH}/vietnamese-heritage-v1`), file).toBe(file === BINDINGS_MODULE);
+    }
+    for (const file of VH01_CODE_FILES) {
+      for (const modulePath of resolvedImportsOf(file)) {
+        if (modulePath.startsWith("templates/")) expect(modulePath.startsWith(`${VH}/`), `${file} → ${modulePath}`).toBe(true);
+      }
+    }
+  });
+
+  it("<img> only in the shared media element; no literal src/href and no file-backed decor", () => {
+    for (const file of VH01_CODE_FILES) {
+      const code = codeOf(file);
+      expect(/<img\b/.test(code), file).toBe(file === VH01_MEDIA_IMAGE);
+      expect(/<image\b|<svg\b/.test(code), file).toBe(false);
+      expect(code, file).not.toMatch(/\s(?:src|href)="[^"]*"/);
+    }
+    expect(codeOf(VH01_MEDIA_IMAGE)).toMatch(/src=\{media\.url\}/);
+    expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding"))).not.toContain("vietnamese-heritage");
+  });
+
+  it("the provenance note records the asset audit, the VH-02 blocker and no shipped decor", () => {
+    const note = readRepoFile(VH01_PROVENANCE_FILE);
+    for (const required of ["Source:", "Author / owner:", "Rights basis:", "Task 029", "VH-01", "VH-02", "BLOCKER"]) {
+      expect(note, required).toContain(required);
+    }
+    for (const file of [
+      "heritage-border-left.png",
+      "heritage-border-right.png",
+      "heritage-corner-ornament.png",
+      "heritage-double-happiness-medallion.png",
+      "heritage-floral-bottom-right.png",
+      "heritage-floral-top-left.png",
+      "heritage-gold-divider.png",
+      "heritage-lantern.png",
+      "heritage-paper-ivory.png",
+      "heritage-paper-red.png",
+    ]) {
+      expect(note, file).toMatch(new RegExp(`^\\| \`${file.replace(/[.]/g, "\\.")}\` \\|`, "m"));
+    }
+  });
+});
+
+describe("VH-01 renderer CSS", () => {
+  const cssCode = readRepoFile(VH01_CSS_FILE).replace(/\/\*[\s\S]*?\*\//g, "");
+
+  it.each([
+    ["runtime @import", /@import/],
+    ["external/url resource", /url\(|https?:/],
+    ["Tailwind directive", /@(tailwind|apply|layer|theme)\b/],
+    ["global selector", /:global|(^|[\s,}])(html|body|:root)\b/m],
+    ["viewport height", /\b100vh\b|\d+(\.\d+)?vh\b/],
+    ["review frame width", /--frame-width/],
+    ["prototype/global fonts", /Dancing Script|Playfair|Iowan|Cormorant|Great Vibes/],
+    ["!important", /!important/],
+    ["raw hex colour (palette.ts owns colours)", /#[0-9a-fA-F]{3,8}\b/],
+    ["Elegant Editorial tokens", /--ee-/],
+    ["VH-01 motion (VH-02 owns motion with its reduced-motion fallback)", /@keyframes|\banimation\b|\btransition\b/],
+  ])("has no %s", (_label, pattern) => {
+    expect(pattern.test(cssCode)).toBe(false);
+  });
+
+  it("uses only palette variables declared in palette.ts and the three renderer font variables", () => {
+    const palette = codeOf(`${VH}/palette.ts`);
+    const declared = new Set([...palette.matchAll(/"(--vh-[a-z-]+)": "#[0-9a-f]{6}"/g)].map((match) => match[1]));
+    expect(declared.size).toBeGreaterThan(5);
+    const fontVariables = ["--vh-font-serif", "--vh-font-display", "--vh-font-script"];
+    for (const [, variable] of cssCode.matchAll(/var\((--[\w-]+)\)/g)) {
+      expect(declared.has(variable) || fontVariables.includes(variable as string), variable).toBe(true);
+    }
+  });
+
+  it("every rule's selector list starts from a module class", () => {
+    const selectors = [...cssCode.matchAll(/(^|[{}])\s*([^{}@;]+)\{/g)].map((match) => (match[2] as string).trim());
+    expect(selectors.length).toBeGreaterThan(20);
+    for (const list of selectors) {
+      for (const selector of list.split(",").map((part) => part.trim())) {
+        expect(selector, selector).toMatch(/^\.[a-zA-Z]/);
+      }
+    }
   });
 });
