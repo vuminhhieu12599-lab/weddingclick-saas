@@ -8,6 +8,7 @@ import {
   updateProjectMediaSortOrder,
   uploadProjectMedia,
 } from "../../../../../../lib/admin/admin-api-client";
+import { isOptimizableImageMediaType } from "../../../../../../lib/admin/image-upload-optimizer";
 import {
   MEDIA_EDITOR_ROLES,
   mediaDimensionsLabel,
@@ -142,8 +143,9 @@ export function MediaEditorView({
         ? [sortOrderForReplacement(rows, role.mediaType)]
         : sortOrdersForAppend(rows, role.mediaType, files.length);
     const toUpload = role.cardinality === "SINGLE" ? files.slice(0, 1) : files;
+    const progressVerb = isOptimizableImageMediaType(role.mediaType) ? "Đang tối ưu và tải" : "Đang tải";
     for (const [index, file] of toUpload.entries()) {
-      setRoleStatus(role.mediaType, { kind: "SAVING", label: `Đang tải ${index + 1}/${toUpload.length}...` });
+      setRoleStatus(role.mediaType, { kind: "SAVING", label: `${progressVerb} ${index + 1}/${toUpload.length}...` });
       try {
         const media = await uploadProjectMedia(projectId, role.mediaType, file, sortOrders[index]);
         setRows((current) => [...current, media]);

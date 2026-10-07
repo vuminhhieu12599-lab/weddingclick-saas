@@ -44,6 +44,7 @@ import type {
 import { AdminApiError } from "./admin-api-error";
 import type { DesignAssignmentBody } from "./design-assignment";
 import { readImageDimensions } from "./image-dimensions";
+import { optimizeImageForUpload } from "./image-upload-optimizer";
 import { uploadToSignedMediaPath } from "./signed-media-upload";
 import { getStaffAccessToken } from "./staff-session-client";
 
@@ -486,17 +487,21 @@ export async function fetchProjectMedia(projectId: string): Promise<ProjectMedia
  * The existing Task 024 upload sequence: server upload-intent (server-owned
  * path + signed-upload token) → the browser's own direct upload to that
  * signed path → server finalize (Storage metadata re-verified server-side,
- * row inserted under staff RLS). Image roles also send their natural
+ * row inserted under staff RLS). Photo roles are first optimized in the
+ * browser (P1-MEDIA-01, never AUDIO/QR; falls back to the original); every
+ * later step — intent MIME/size, the signed upload, the finalize dimensions —
+ * uses the file actually uploaded. Image roles also send that file's natural
  * dimensions, decoded locally; the server validates them. Never a client-chosen path, never an
  * elevated credential. Resolves only once the row is confirmed.
  */
 export async function uploadProjectMedia(
   projectId: string,
   mediaType: MediaType,
-  file: File,
+  original: File,
   sortOrder: number,
 ): Promise<ProjectMediaRecord> {
   const token = await requireAccessToken();
+  const { file } = await optimizeImageForUpload(mediaType, original);
   // Image roles only: real natural dimensions drive orientation-aware layouts (never AUDIO).
   const dimensions = mediaType === "AUDIO" ? null : await readImageDimensions(file);
   const intent = await requestJson<UploadIntentResult>(projectPath(projectId, "media/upload-intent"), token, {

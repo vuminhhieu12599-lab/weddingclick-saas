@@ -137,6 +137,7 @@ describe("static boundaries", () => {
     "app/admin/v2/projects/[projectId]/_components/optional-invitation-content.tsx",
     "lib/admin/optional-content-editor.ts",
     "lib/admin/signed-media-upload.ts",
+    "lib/admin/image-upload-optimizer.ts",
     "lib/server/routes/project-timeline.ts",
     "lib/server/routes/project-dress-code.ts",
     "lib/server/project-timeline/manage-project-timeline.ts",
@@ -167,6 +168,12 @@ describe("static boundaries", () => {
     const client = read("lib/admin/admin-api-client.ts");
     expect(client).not.toMatch(/supabase|\.from\(/);
     expect(client.indexOf("media/upload-intent")).toBeLessThan(client.indexOf("media/finalize"));
+  });
+
+  it("image roles say they are optimizing while uploading; AUDIO keeps the plain upload label", () => {
+    const editor = read("app/admin/v2/projects/[projectId]/_components/media-editor.tsx");
+    expect(editor).toMatch(/isOptimizableImageMediaType\(role\.mediaType\) \? "Đang tối ưu và tải" : "Đang tải"/);
+    expect(editor).toContain("${progressVerb} ${index + 1}/${toUpload.length}...");
   });
 
   it("the preview link is gated on a confirmed save", () => {
