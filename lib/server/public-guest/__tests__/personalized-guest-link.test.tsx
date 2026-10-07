@@ -449,7 +449,8 @@ describe("migration 0042", () => {
     // Task 035B: the only migration allowed after 0042 is the owner-approved legacy V1 lockdown.
     expect(readdirSync(join(ROOT, MIGRATIONS)).filter((f) => f.includes("_0043_"))).toEqual(["20260911041203_0043_legacy_v1_lockdown.sql"]);
     expect(sqlFile).toHaveLength(1);
-    expect(readdirSync(join(ROOT, MIGRATIONS)).sort().slice(-2)).toEqual([sqlFile[0], "20260911041203_0043_legacy_v1_lockdown.sql"]);
+    // Launch Hardening 04 (owner-approved checkpoint maintenance): exactly the approved 0044 may follow 0043.
+    expect(readdirSync(join(ROOT, MIGRATIONS)).sort().slice(-3)).toEqual([sqlFile[0], "20260911041203_0043_legacy_v1_lockdown.sql", "20260911041204_0044_republish_after_published.sql"]);
     expect(executable.match(/CREATE FUNCTION/g)).toHaveLength(3);
     expect(executable.match(/SECURITY DEFINER\s+SET search_path = ''/g)).toHaveLength(3);
   });

@@ -161,6 +161,12 @@ function VariantPublishCard({
             <li>Bản duyệt #{review.versionNumber} đã được khách duyệt sẽ được cố định thành một bản xuất bản mới.</li>
             <li>Chỉnh sửa dữ liệu nháp sau này không làm thay đổi bản xuất bản này.</li>
             <li>Sau này có thể xuất bản một bản duyệt mới hơn (đã được duyệt) thành một bản xuất bản khác.</li>
+            {published !== null && (
+              <li data-testid={`republish-note-${row.variant}`}>
+                Bản xuất bản hiện tại #{published.versionNumber} được thay bằng bản mới trên cùng đường dẫn; bản cũ vẫn được lưu trong
+                lịch sử. Link khách mời, Cổng khách hàng và phản hồi RSVP giữ nguyên.
+              </li>
+            )}
           </ul>
           <div className="mt-3 flex gap-2">
             <button
@@ -231,6 +237,16 @@ export function nextPaymentStep(state: Pick<ProjectPublishState, "projectStatus"
     return state.paymentStatus === "PAID" ? "TO_READY_TO_PUBLISH" : "MARK_PAID";
   }
   return null;
+}
+
+/**
+ * Launch Hardening 04: a correction of an already published invitation is in
+ * progress — some required variant is live but the Project is not PUBLISHED.
+ * Display only; publication pointers change only through publish_invitation.
+ */
+export function isPostPublishCorrection(state: Pick<ProjectPublishState, "projectStatus" | "variants">): boolean {
+  const closed: readonly ProjectPublishState["projectStatus"][] = ["PUBLISHED", "COMPLETED", "ARCHIVED"];
+  return !closed.includes(state.projectStatus) && state.variants.some((row) => row.publishedVersion !== null);
 }
 
 function paymentStepErrorMessage(error: unknown): string {
@@ -451,9 +467,15 @@ export function PublishTab({ project }: { project: ProjectSummary }) {
 
       {data !== null && data.requiredVariants !== null && (
         <>
+          {isPostPublishCorrection(data) && (
+            <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800" data-testid="publish-correction-notice">
+              Đang chỉnh sửa sau xuất bản. Bản đang xuất bản vẫn hiển thị cho khách mời cho đến khi bấm “Xuất bản lại” thành công.
+            </div>
+          )}
           {data.allRequiredVariantsPublished ? (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800" data-testid="publish-summary">
               Tất cả thiệp bắt buộc đã được xuất bản từ bản duyệt hiện tại.
+              {data.projectStatus === "PUBLISHED" && " Để sửa thiệp đang xuất bản, dùng “Chỉnh sửa & duyệt lại” ở tab Duyệt."}
             </div>
           ) : (
             data.projectBlocker !== null && (

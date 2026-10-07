@@ -133,7 +133,8 @@ describe("Staff project creation UI", () => {
   });
 
   it("no migration 0044; backend, LH02 and 035A/035B surfaces are byte-identical to HEAD", () => {
-    expect(readdirSync(join(ROOT, "supabase/migrations")).filter((name) => /_0044_/.test(name))).toEqual([]);
+    // Launch Hardening 04 (owner-approved checkpoint maintenance): only the approved 0044; no 0045 or later.
+    expect(readdirSync(join(ROOT, "supabase/migrations")).filter((name) => /_(004[4-9]|00[5-9]\d|0[1-9]\d\d)_/.test(name))).toEqual(["20260911041204_0044_republish_after_published.sql"]);
     const changed = execFileSync(
       "git",
       [

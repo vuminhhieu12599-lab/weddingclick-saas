@@ -9,7 +9,7 @@ import {
 } from "../../../../../../lib/admin/admin-api-client";
 import { AdminApiError } from "../../../../../../lib/admin/admin-api-error";
 import { useAdminQuery } from "../../../../../../lib/admin/use-admin-query";
-import type { InvitationVariant, ReviewFeedbackType, ReviewOutcomeStatus } from "../../../../../../lib/domain";
+import type { InvitationVariant, ProjectStatus, ReviewFeedbackType, ReviewOutcomeStatus } from "../../../../../../lib/domain";
 import type { SnapshotPayloadIssue } from "../../../../../../lib/invitation-rendering/snapshot-payload-types";
 import { formatDateTimeVi } from "../../../../../../lib/presentation/format-date";
 import { getProjectStatusLabel } from "../../../../../../lib/presentation/project-status-labels";
@@ -144,16 +144,34 @@ export function createReviewErrorFeedback(error: unknown): CreateFeedback {
   return { kind: "ERROR", message: "Không thể tạo bản duyệt lúc này. Vui lòng thử lại." };
 }
 
+/**
+ * Launch Hardening 04 (owner decision D2, migration 0044): a new review may
+ * be created from PUBLISHED as an explicit post-publish correction, never
+ * from COMPLETED or ARCHIVED. Display only — `create_review_version` stays
+ * the authority (RV010).
+ */
+export type ReviewCreationMode = "OPEN" | "CORRECTION" | "CLOSED";
+
+export function reviewCreationMode(status: ProjectStatus): ReviewCreationMode {
+  if (status === "COMPLETED" || status === "ARCHIVED") {
+    return "CLOSED";
+  }
+  return status === "PUBLISHED" ? "CORRECTION" : "OPEN";
+}
+
 function VariantReviewCard({
   projectId,
   row,
+  mode,
   onChanged,
 }: {
   projectId: string;
   row: RequiredVariantReviewState;
+  mode: ReviewCreationMode;
   onChanged: () => void;
 }) {
   const [pending, setPending] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [feedback, setFeedback] = useState<CreateFeedback | null>(null);
   const review = row.currentReview;
 
@@ -162,6 +180,7 @@ function VariantReviewCard({
       return;
     }
     setPending(true);
+    setConfirming(false);
     setFeedback(null);
     try {
       const created = await createInvitationReviewVersion(projectId, row.variant, review?.id ?? null);
@@ -208,16 +227,56 @@ function VariantReviewCard({
               Xem bản duyệt #{review.versionNumber}
             </a>
           )}
-          <button
-            type="button"
-            onClick={() => void handleCreate()}
-            disabled={pending}
-            className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-          >
-            {pending ? "Đang tạo..." : review === null ? "Tạo bản duyệt" : "Tạo bản duyệt mới"}
-          </button>
+          {mode === "OPEN" && (
+            <button
+              type="button"
+              onClick={() => void handleCreate()}
+              disabled={pending}
+              className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              {pending ? "Đang tạo..." : review === null ? "Tạo bản duyệt" : "Tạo bản duyệt mới"}
+            </button>
+          )}
+          {mode === "CORRECTION" && !confirming && (
+            <button
+              type="button"
+              onClick={() => setConfirming(true)}
+              disabled={pending}
+              className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              {pending ? "Đang tạo..." : "Chỉnh sửa & duyệt lại"}
+            </button>
+          )}
         </div>
       </div>
+
+      {mode === "CORRECTION" && confirming && (
+        <div className="mt-3 rounded-lg border border-slate-300 bg-slate-50 p-3" role="group" aria-label="Xác nhận chỉnh sửa và duyệt lại">
+          <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+            <li>Tạo bản duyệt mới từ dữ liệu hiện tại cho {PREVIEW_VARIANT_LABELS[row.variant]}; dự án chuyển sang “Chờ khách duyệt”.</li>
+            <li>Thiệp đang xuất bản vẫn hiển thị cho khách mời, không đổi đường dẫn, cho đến khi xuất bản lại thành công.</li>
+            <li>Khách phải duyệt lại bản mới; sau đó đi tiếp các bước chờ thanh toán → sẵn sàng xuất bản → xuất bản lại. Không thu tiền lại.</li>
+          </ul>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => void handleCreate()}
+              disabled={pending}
+              className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              {pending ? "Đang tạo..." : "Xác nhận tạo bản duyệt mới"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              disabled={pending}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              Huỷ
+            </button>
+          </div>
+        </div>
+      )}
 
       {review !== null && review.feedback.length > 0 && (
         <ul className="mt-3 space-y-2" data-testid={`review-feedback-${row.variant}`}>
@@ -305,9 +364,26 @@ export function ReviewTab({ project }: { project: ProjectSummary }) {
               ? `Cần khách duyệt: ${data.requiredVariants.map((v: InvitationVariant) => PREVIEW_VARIANT_LABELS[v]).join(", ")}.`
               : OUTCOME_MESSAGES[data.reviewOutcome].text}
           </div>
+          {reviewCreationMode(data.projectStatus) === "CORRECTION" && (
+            <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800" data-testid="review-correction-notice">
+              Thiệp đang được xuất bản. Để sửa: cập nhật dữ liệu nháp, rồi bấm “Chỉnh sửa & duyệt lại” cho thiệp cần sửa. Bản đang
+              xuất bản vẫn hiển thị cho khách mời cho đến khi bản mới được khách duyệt và xuất bản lại.
+            </div>
+          )}
+          {reviewCreationMode(data.projectStatus) === "CLOSED" && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700" data-testid="review-closed-notice">
+              Dự án đã hoàn tất hoặc đã lưu trữ. Không thể tạo bản duyệt mới.
+            </div>
+          )}
           {data.variants.some((row) => row.currentReview !== null) && <ReviewLinkIssuer projectId={project.id} />}
           {data.variants.map((row) => (
-            <VariantReviewCard key={row.variant} projectId={project.id} row={row} onChanged={reload} />
+            <VariantReviewCard
+              key={row.variant}
+              projectId={project.id}
+              row={row}
+              mode={reviewCreationMode(data.projectStatus)}
+              onChanged={reload}
+            />
           ))}
         </>
       )}

@@ -261,8 +261,8 @@ Observe real-world issues before high-volume sales.
 | ID | Item |
 |---|---|
 | P0-1 | Staff active access-link list + revoke — **implemented and verified** (Launch Hardening 02, `docs/API_CONTRACT.md` §33; pending freeze) |
-| P0-2 | Republish after `PUBLISHED` (owner decisions D2/D3) |
-| P0-3 | Staff Customer + Project creation UI (owner decision D1) — **implemented and DEV-verified** (Launch Hardening 03, `docs/API_CONTRACT.md` §34; pending freeze) |
+| P0-2 | Republish after `PUBLISHED` (owner decisions D2/D3) — **implemented; migration 0044 APPLIED and DEV-verified** (post-apply republish E2E PASS on 2026-10-07); freeze performed by the Launch Hardening 04 commit (Launch Hardening 04, `docs/API_CONTRACT.md` §35) |
+| P0-3 | Staff Customer + Project creation UI (owner decision D1) — **COMPLETE / FROZEN** at `01a4155494836650068f45788d8730f0d63078c7` (Launch Hardening 03, `docs/API_CONTRACT.md` §34) |
 | P0-4 | Separate Production Supabase, PRO plan (owner decision D4) |
 | P0-5 | Production Vercel Pro + environment + domain + isolated Production Upstash (owner decision D5) |
 | P0-6 | Minimum operations/recovery runbook |

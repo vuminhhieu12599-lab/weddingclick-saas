@@ -1382,6 +1382,7 @@ Both 0021 and 0022 are privilege/workflow tightening only, not schema shape chan
 | `0041_public_social_share_cover` | Task 032B: read-only, service_role-only `get_public_social_share_cover(public_slug)` — current PUBLISHED version required (same invitation + Project, else `PI001`) → the Project's effective `SOCIAL_SHARE_COVER` storage reference only (§2.9); no COVER fallback — no table shape change, no table grant | authored; **not applied**, to be pushed by the Product Owner |
 | `0042_personalized_guest_link` | Task 033B1: personalized guest-link issuance and resolution (`docs/DECISIONS.md` "Task 033B1") | see status note below |
 | `0043_legacy_v1_lockdown` | Task 035B: Legacy V1 table/storage lockdown (`docs/SECURITY.md` §11.2) | applied by the Product Owner and live-verified in DEV/STAGING (2026-10-06) |
+| `0044_republish_after_published` | Launch Hardening 04: `create_review_version` replacement — RV010 rejects only `COMPLETED`/`ARCHIVED`, so a new REVIEW may be created from `PUBLISHED` (`docs/API_CONTRACT.md` §35) | **applied** by the Product Owner (DEV/STAGING); post-apply republish E2E PASS 2026-10-07 |
 
 **Status note (Launch Hardening 01, 2026-10-06).** A read-only `supabase migration list --linked` on 2026-10-06 showed local and DEV/STAGING remote history identical for every migration 0001–0043 (45 files, including 0006b and 0013b). Any "not applied" entry above records the state when that row was written and is superseded by this note.
 

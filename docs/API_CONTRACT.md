@@ -805,7 +805,7 @@ The server builds the Snapshot from the CURRENT draft through the same pipeline 
 
 `expectedCurrentReviewVersionId` is a compare-and-set token: it must equal the invitation's `current_review_version_id` (`null` = none yet). A double-click or concurrent duplicate carrying the same expectation creates exactly one version; the other gets 409.
 
-**Status side effect (Task 030B, migration 0037).** In the same transaction, a successful creation recomputes and saves the aggregate review outcome over all required current variants. The new version is unapproved, so this is `CUSTOMER_REVIEW` (including after `REVISION_REQUIRED` or `APPROVED`) unless another required variant still has an unreplaced revision request (`REVISION_REQUIRED`). A Project in `PUBLISHED` / `COMPLETED` / `ARCHIVED` is rejected with 409 (RV010) and nothing is written. Payment status is never changed.
+**Status side effect (Task 030B, migration 0037).** In the same transaction, a successful creation recomputes and saves the aggregate review outcome over all required current variants. The new version is unapproved, so this is `CUSTOMER_REVIEW` (including after `REVISION_REQUIRED` or `APPROVED`) unless another required variant still has an unreplaced revision request (`REVISION_REQUIRED`). A Project in `COMPLETED` / `ARCHIVED` is rejected with 409 (RV010) and nothing is written. *Amended by migration 0044 (Launch Hardening 04, §35; authored, not applied):* `PUBLISHED` is allowed for a post-publish correction and moves to `CUSTOMER_REVIEW` by the same recompute; until 0044 is applied, `PUBLISHED` is still rejected with RV010. Payment status is never changed.
 
 | Condition | Kind | HTTP |
 |---|---|---|
@@ -1506,3 +1506,19 @@ Project code, `event_type` `WEDDING`, `status` `NEW`, `payment_status` `UNPAID`,
 Errors are shown as fixed Vietnamese messages keyed by HTTP status (0/401/403/400/404/409, else a generic retry message); server text is never rendered. Customer and Project creation write no activity row — there is no creation activity code in the frozen contract, and adding one would need a migration.
 
 **Not provided.** Intake UI, Excel import, customer search/reuse of an existing Customer, CRM editing, assigned staff/deadline input, add-on editing, Republish. **No migration** (latest remains 0043).
+
+## 35. Launch Hardening 04 — Republish After PUBLISHED (P0-2)
+
+**Purpose.** Correct a live invitation without mutating the published snapshot (owner decisions D2/D3, `docs/DECISIONS.md` "Launch Hardening 01"). **Status:** implemented; migration 0044 **APPLIED** by the Product Owner and DEV-verified by a post-apply republish E2E (2026-10-07, `docs/DECISIONS.md` "Launch Hardening 04" item 7); freeze performed by the Launch Hardening 04 commit.
+
+### 35.1 Flow (no new route, RPC or activity code)
+
+`PUBLISHED` → staff edit the canonical draft → **"Chỉnh sửa & duyệt lại"** (Duyệt tab, in-page confirmation) → `POST …/review-versions` (§ Task 030, unchanged) → `CUSTOMER_REVIEW` → customer approves the **new** version through a Review link (`submit_review_feedback`, unchanged) → `APPROVED` → `AWAITING_PAYMENT` → `READY_TO_PUBLISH` → **"Xuất bản lại từ bản duyệt #N"** (Xuất bản tab) → `publish_invitation` (§8, unchanged) → `PUBLISHED`.
+
+- **Database change:** only `create_review_version` (0044): RV010 now rejects `COMPLETED` / `ARCHIVED` only. Everything else in its 0037 body, security mode, grants and error contract is unchanged.
+- **Approval:** an approval of an earlier version never counts for the new one; there is no skip, staff-approve or quick-republish path.
+- **Payment:** `payment_status` stays `PAID`. The Xuất bản tab offers `AWAITING_PAYMENT → READY_TO_PUBLISH` directly when already paid; `mark_project_paid` refuses a second confirmation (PL007). Price snapshots are untouched.
+- **Live version:** public `/i/[slug]`, RSVP, share cover and personalized guest reads resolve `published_version_id`, never `projects.status`, so the old publication stays live through `CUSTOMER_REVIEW` … `READY_TO_PUBLISH`. Only a successful publish moves the pointer.
+- **Republish:** appends a new PUBLISHED version copied from the approved review (CAS on both pointers, PB009/PB010 unchanged), keeps the old PUBLISHED row, keeps the frozen `public_slug`, logs `INVITATION_REPUBLISHED` once (written by the RPC; the UI logs nothing).
+- **SEPARATE:** a correction may cover one variant only; the untouched variant keeps its publication and the Project returns to `PUBLISHED` when every required publication matches its current review.
+- **Unchanged:** guest tokens and ids, Portal and other access links, RSVP rows (Project/guest scoped), templates, 035A/035B, LH02, LH03.
