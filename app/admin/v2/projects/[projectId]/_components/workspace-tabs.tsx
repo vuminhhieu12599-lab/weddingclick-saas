@@ -26,7 +26,16 @@ export function parseWorkspaceTab(raw: string | null): TabKey {
   return TABS.find((tab) => tab.key === raw)?.key ?? "DATA";
 }
 
-export function WorkspaceTabs({ project, initialTab = "DATA" }: { project: ProjectSummary; initialTab?: TabKey }) {
+export function WorkspaceTabs({
+  project,
+  initialTab = "DATA",
+  onProjectChanged,
+}: {
+  project: ProjectSummary;
+  initialTab?: TabKey;
+  /** Re-reads the parent Project summary (header StatusBadge + Lifecycle) after a lifecycle/publish mutation. */
+  onProjectChanged: () => void;
+}) {
   const [active, setActive] = useState<TabKey>(initialTab);
 
   return (
@@ -52,7 +61,7 @@ export function WorkspaceTabs({ project, initialTab = "DATA" }: { project: Proje
         {active === "DATA" && <DataTab project={project} />}
         {active === "DESIGN" && <DesignTab project={project} />}
         {active === "REVIEW" && <ReviewTab project={project} />}
-        {active === "PUBLISH" && <PublishTab project={project} />}
+        {active === "PUBLISH" && <PublishTab project={project} onProjectChanged={onProjectChanged} />}
         {active === "TASKS" && <TasksTab project={project} />}
         {active === "ACTIVITY" && <ActivityTab project={project} />}
       </div>

@@ -438,9 +438,16 @@ function PortalLinkIssuer({ projectId }: { projectId: string }) {
  * link), shown regardless of publication state; after issuing a new Portal
  * link, "Tải lại" re-reads the authoritative list.
  */
-export function PublishTab({ project }: { project: ProjectSummary }) {
+export function PublishTab({ project, onProjectChanged }: { project: ProjectSummary; onProjectChanged?: () => void }) {
   const { data, loading, error, reload } = useAdminQuery(() => fetchProjectPublishState(project.id), [project.id]);
   const paymentStep = data === null ? null : nextPaymentStep(data);
+
+  // A lifecycle/payment/publish mutation (or a 409/422 conflict) may change the
+  // Project itself, so re-read both this tab's state and the parent summary.
+  function handleChanged() {
+    reload();
+    onProjectChanged?.();
+  }
 
   return (
     <div className="space-y-4">
@@ -453,7 +460,7 @@ export function PublishTab({ project }: { project: ProjectSummary }) {
       </div>
 
       {paymentStep !== null && (
-        <PaymentLifecycleCard key={paymentStep} projectId={project.id} step={paymentStep} onChanged={reload} />
+        <PaymentLifecycleCard key={paymentStep} projectId={project.id} step={paymentStep} onChanged={handleChanged} />
       )}
 
       {loading && data === null && <LoadingState label="Đang tải trạng thái xuất bản..." />}
@@ -485,7 +492,7 @@ export function PublishTab({ project }: { project: ProjectSummary }) {
             )
           )}
           {data.variants.map((row) => (
-            <VariantPublishCard key={row.variant} projectId={project.id} row={row} onChanged={reload} />
+            <VariantPublishCard key={row.variant} projectId={project.id} row={row} onChanged={handleChanged} />
           ))}
           {data.variants.some((row) => row.publishedVersion !== null) && <PortalLinkIssuer projectId={project.id} />}
         </>

@@ -22,7 +22,10 @@ function ProjectDetail() {
     reload,
   } = useAdminQuery(() => fetchProjectById(projectId), [projectId]);
 
-  if (loading) {
+  // Only the first load (or a different projectId) replaces the page: a
+  // background reload after a Publish-tab mutation keeps the workspace mounted
+  // so its active tab survives while the authoritative summary is re-read.
+  if (loading && project?.id !== projectId) {
     return <LoadingState label="Đang tải dự án..." />;
   }
 
@@ -40,7 +43,7 @@ function ProjectDetail() {
       <div className="mt-6">
         <Lifecycle status={project.status} />
       </div>
-      <WorkspaceTabs project={project} initialTab={initialTab} />
+      <WorkspaceTabs project={project} initialTab={initialTab} onProjectChanged={reload} />
     </div>
   );
 }
