@@ -260,15 +260,15 @@ Observe real-world issues before high-volume sales.
 
 | ID | Item |
 |---|---|
-| P0-1 | Staff active access-link list + revoke — **implemented and verified** (Launch Hardening 02, `docs/API_CONTRACT.md` §33; pending freeze) |
-| P0-2 | Republish after `PUBLISHED` (owner decisions D2/D3) — **implemented; migration 0044 APPLIED and DEV-verified** (post-apply republish E2E PASS on 2026-10-07); freeze performed by the Launch Hardening 04 commit (Launch Hardening 04, `docs/API_CONTRACT.md` §35) |
-| P0-3 | Staff Customer + Project creation UI (owner decision D1) — **COMPLETE / FROZEN** at `01a4155494836650068f45788d8730f0d63078c7` (Launch Hardening 03, `docs/API_CONTRACT.md` §34) |
-| P0-4 | Separate Production Supabase, PRO plan (owner decision D4) |
-| P0-5 | Production Vercel Pro + environment + domain + isolated Production Upstash (owner decision D5) |
-| P0-6 | Minimum operations/recovery runbook |
-| P0-7 | Docs status synchronization — **done** (Launch Hardening 01) |
-| P0-8 | Facebook/Zalo crawler validation on Production HTTPS |
-| P0-9 | Final Production release smoke |
+| P0-1 | Staff active access-link list + revoke — **COMPLETE / FROZEN** at `29bcc141ad56e59f4b96d334fdd422e29901c95b` (Launch Hardening 02, `docs/API_CONTRACT.md` §33) |
+| P0-2 | Republish after `PUBLISHED` — **COMPLETE / FROZEN** at `69915dec1ae294554e969e605669e923a77d105b`; migration 0044 applied and DEV-verified (Launch Hardening 04, `docs/API_CONTRACT.md` §35) |
+| P0-3 | Staff Customer + Project creation UI — **COMPLETE / FROZEN** at `01a4155494836650068f45788d8730f0d63078c7` (Launch Hardening 03, `docs/API_CONTRACT.md` §34) |
+| P0-4 | Separate Production Supabase — **COMPLETE**. `WeddingClick Production` is a separate Singapore project on the Free plan for the no-charge pilot; clean Production has the canonical 46 migrations through 0044 and its initial active ADMIN profile. The paid-tier part of D4 is superseded for this pilot by Launch Hardening 05. |
+| P0-5 | Production host/environment — **COMPLETE for the lean-free pilot**. Vercel Hobby serves Production from `weddingclick-v2`; Production env is complete; `weddingclick-saas.vercel.app` is the temporary Production origin. Preview and Production temporarily share the same KV/Upstash store but use separate HMAC secrets; a dedicated store, paid tiers and a custom domain are deferred until commercial use / quota need / owner request (Launch Hardening 05). |
+| P0-6 | Minimum operations/recovery runbook — **COMPLETE**: `docs/PILOT_OPERATIONS_RUNBOOK.md`. |
+| P0-7 | Docs status synchronization — **COMPLETE** (Launch Hardening 05, 2026-10-07). |
+| P0-8 | Facebook/Zalo crawler validation on Production HTTPS — **PASS 2026-10-07** on the temporary Vercel Production origin. Both crawlers reached the public GROOM invitation and read the expected title/description. The smoke fixture had no configured `SOCIAL_SHARE_COVER`; inferred-image warnings/preview are not a blocker. |
+| P0-9 | Final Production release smoke — **PASS 2026-10-07**: staff login → Customer/Project → required data → Elegant Editorial v1 → Review/approval → payment → publish → both public invitations → generic RSVP → Portal → Guest Tool → personalized link → personalized RSVP; no runtime error observed during the gate. |
 
 ### Accepted debt
 
@@ -277,7 +277,10 @@ Observe real-world issues before high-volume sales.
 - Vietnamese glyph spot-check;
 - staff Auth hardening / MFA consideration;
 - verify Production PostgREST `max_rows` = 1000;
-- personalized OG enhancement (deferred by owner decision D7).
+- personalized OG enhancement (deferred by owner decision D7);
+- replace the temporary shared Preview/Production KV store with a dedicated Production store before commercial/high-volume use;
+- move from Supabase Free / Vercel Hobby only when the owner requests commercial launch or quota/reliability needs justify it;
+- attach and validate the owner's new custom domain when purchased, then rerun Facebook/Zalo crawler validation on that canonical origin.
 
 **P2 — after the pilot:**
 - Guest Excel import;
@@ -296,16 +299,19 @@ Observe real-world issues before high-volume sales.
 
 WeddingClick is **Pilot Ready** for **one closely-supported customer using Elegant Editorial only** when:
 
-- all P0 items are complete and frozen;
-- Production Supabase is separate;
-- Production Vercel and Upstash are isolated from Preview;
+- all P0 items are complete/frozen or explicitly satisfied by the owner-approved lean-free exception;
+- Production Supabase is a separate project from DEV/STAGING;
+- the Production Vercel environment is complete and tracks `weddingclick-v2`;
+- the temporary shared Preview/Production KV store is explicitly accepted for the no-charge pilot and the environments use different HMAC secrets;
 - the final Production smoke passes;
-- crawler/share validation passes;
+- Facebook/Zalo crawler/share validation passes;
 - the operations/recovery runbook exists;
 - the known P1/P2 debts are explicitly accepted;
-- Staff use desktop from the canonical Production domain.
+- Staff use desktop from the current Production origin (`weddingclick-saas.vercel.app`) until the owner buys the replacement custom domain.
 
-**Pilot Ready is not Production Ready.** It makes no claim of three-template commercial completeness; the Production Ready Definition below is unchanged.
+**Status 2026-10-07: PASSED — WEDDINGCLICK V2 IS PILOT READY** for the tightly supported, no-charge Elegant Editorial pilot described above.
+
+**Pilot Ready is not Production Ready.** It makes no claim of three-template commercial completeness, paid-infrastructure SLAs, high-volume readiness or a final custom domain; the Production Ready Definition below is unchanged.
 
 ---
 

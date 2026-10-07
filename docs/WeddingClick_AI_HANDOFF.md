@@ -1,10 +1,11 @@
 # WeddingClick AI Handoff
 
 > **STATUS:** CANONICAL HANDOFF
-> **HANDOFF_VALID_AT_COMMIT:** `ae28dcac144a4080075f0d11ce5ccf43d5fdfc51`
-> **CURRENT_CHECKPOINT:** `RF-06E`
-> **CURRENT_BRANCH:** `weddingclick-v2`
-> **Expected clean task state:** `HEAD == origin/weddingclick-v2`; worktree contains only the unrelated pre-existing `M CLAUDE.md`; nothing staged.
+> **RUNTIME_BASE_COMMIT:** `69915dec1ae294554e969e605669e923a77d105b` (Launch Hardening 04; no runtime/schema changes in the Pilot Ready docs checkpoint)
+> **DOCS_REFRESH:** `2026-10-07`
+> **CURRENT_CHECKPOINT:** `PILOT READY — controlled no-charge Elegant Editorial pilot`
+> **CURRENT_BRANCH / VERCEL PRODUCTION BRANCH:** `weddingclick-v2`
+> **Repository caution:** verify Git state before local work; preserve unrelated local changes, including the known `M CLAUDE.md` and `M app/admin/page.tsx`. Never clean/reset them.
 
 ---
 
@@ -38,7 +39,17 @@ This handoff is **navigation + current state**, not a replacement for Git, sourc
 
 `rggmsdnjnfmnzxdaxcra`
 
-Do not contact Supabase unless the active checkpoint explicitly allows it.
+### Production Supabase
+
+`bsaljltsgxismrgvjnov` — `WeddingClick Production`, Singapore (`ap-southeast-1`), separate from DEV/STAGING.
+
+Production was clean-replayed to the canonical 46 migrations through 0044. The initial Auth user has one active ADMIN profile. Do not copy DEV fixtures/users/projects into Production.
+
+### Production host
+
+Vercel project: `weddingclick-saas`. Production branch: `weddingclick-v2`. Temporary Production origin: `https://weddingclick-saas.vercel.app`.
+
+The owner intentionally deferred the old `weddingclick.online` domain and will provide a replacement domain later. Supabase Free + Vercel Hobby are the approved no-charge-pilot posture; Preview/Production temporarily share the same KV store with different HMAC secrets. See `docs/PILOT_OPERATIONS_RUNBOOK.md` and Launch Hardening 05 in `docs/DECISIONS.md`.
 
 ---
 
@@ -247,7 +258,7 @@ Missing required ceremony is blocking:
 - RF-L02: DEV/STAGING PASS
 - RF-L03 API/domain: commit begins `2b962a24`
 - RF-L03D preview: deployed; preview env override confirmed
-- Production env mapping remains future verification
+- Production env mapping: VERIFIED 2026-10-07; Production Supabase URL/anon/service-role + rate-limit HMAC are present, Production branch is `weddingclick-v2`, and the full Production smoke/crawler gate passed. Never record secret values in docs/reports.
 
 ### RF-01
 FROZEN at:
