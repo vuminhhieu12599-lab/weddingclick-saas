@@ -65,6 +65,8 @@ describe("MediaEditorView", () => {
     expect(roles).toEqual([
       "COVER",
       "PORTRAIT_GROOM",
+      // VH-M01: the couple portrait sits between the two side portraits.
+      "PORTRAIT_COUPLE",
       "PORTRAIT_BRIDE",
       "PHOTO_STORY",
       "LOVE_STORY_PHOTO",

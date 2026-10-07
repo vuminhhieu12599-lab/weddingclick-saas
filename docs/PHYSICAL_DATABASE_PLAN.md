@@ -379,7 +379,7 @@ Purpose: normalized media inventory for a Project.
 |---|---|---|---|---|
 | `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
 | `project_id` | `UUID` | NOT NULL | *(none)* | `REFERENCES projects(id) ON DELETE CASCADE` |
-| `media_type` | `TEXT` | NOT NULL | *(none)* | `CHECK (media_type IN ('COVER','GALLERY','AUDIO','QR_GROOM','QR_BRIDE','QR_COMMON','PORTRAIT_GROOM','PORTRAIT_BRIDE','PHOTO_STORY','LOVE_STORY_PHOTO','SOCIAL_SHARE_COVER'))` — portrait values added by migration 0028; PHOTO_STORY / LOVE_STORY_PHOTO by migration 0031; SOCIAL_SHARE_COVER by migration 0035 (`project_media_media_type_check` redefined; docs/DECISIONS.md RF7 Product Owner amendment) |
+| `media_type` | `TEXT` | NOT NULL | *(none)* | `CHECK (media_type IN ('COVER','GALLERY','AUDIO','QR_GROOM','QR_BRIDE','QR_COMMON','PORTRAIT_GROOM','PORTRAIT_BRIDE','PHOTO_STORY','LOVE_STORY_PHOTO','SOCIAL_SHARE_COVER','PORTRAIT_COUPLE'))` — portrait values added by migration 0028; PHOTO_STORY / LOVE_STORY_PHOTO by migration 0031; SOCIAL_SHARE_COVER by migration 0035; PORTRAIT_COUPLE by migration 0045 (`project_media_media_type_check` redefined; docs/DECISIONS.md RF7 Product Owner amendment) |
 | `storage_bucket` | `TEXT` | NOT NULL | *(none)* | New V2-only bucket (e.g. `project-media`), never V1's `wedding-photos` (§O) |
 | `storage_path` | `TEXT` | NOT NULL | *(none)* | Non-guessable object key (includes `project_id` + a random segment) |
 | `mime_type` | `TEXT` | NULL | *(none)* | |
@@ -396,7 +396,7 @@ Constraints: `UNIQUE (storage_bucket, storage_path)` — no two rows may claim t
 
 Indexes: `(project_id, media_type, sort_order)`.
 
-Portrait roles (migration 0028): `PORTRAIT_GROOM` / `PORTRAIT_BRIDE` are optional. "At most one per side" is an effective rule, like `COVER`: the Snapshot builder uses the first row of each role by `sort_order`, `id`. There is deliberately no uniqueness constraint, so a portrait referenced by a retained snapshot (undeletable, asset identity frozen; see the trigger below) can still be replaced by a new row.
+Portrait roles (migration 0028): `PORTRAIT_GROOM` / `PORTRAIT_BRIDE` are optional. "At most one per side" is an effective rule, like `COVER`: the Snapshot builder uses the first row of each role by `sort_order`, `id`. There is deliberately no uniqueness constraint, so a portrait referenced by a retained snapshot (undeletable, asset identity frozen; see the trigger below) can still be replaced by a new row. `PORTRAIT_COUPLE` (migration 0045, docs/DECISIONS.md "VH-M01") follows exactly the same optional, single-effective, no-uniqueness rule; it is its own role and is never filled from `COVER`/`GALLERY`/`PHOTO_STORY`/`LOVE_STORY_PHOTO`.
 
 Photo Story / Love Story photo roles (migration 0031): `PHOTO_STORY` keeps many ordered rows (`sort_order`, `id`), a separate role from `GALLERY`; `LOVE_STORY_PHOTO` has one effective row like `COVER` (first by `sort_order`, `id`). No uniqueness constraint for either. `SOCIAL_SHARE_COVER` (migration 0035) has one effective row the same way; it is publication metadata and never enters the Snapshot.
 
@@ -854,7 +854,7 @@ Unchanged general rule from Revision 1: `TEXT` + `CHECK` for controlled vocabula
 | InvitationVariant | `project_invitations.variant`, `guests.invitation_variant` | CHECK | `COMMON, GROOM, BRIDE` | Foundational, but CHECK's flexibility costs nothing |
 | AccessLinkType | `project_access_links.link_type` | CHECK | `INTAKE, REVIEW, PORTAL` | Stable capability set |
 | PaymentStatus | `projects.payment_status` | CHECK | `UNPAID, PAID` | Room for richer statuses later |
-| MediaType | `project_media.media_type` | CHECK | `COVER, GALLERY, AUDIO, QR_GROOM, QR_BRIDE, QR_COMMON, PORTRAIT_GROOM, PORTRAIT_BRIDE, PHOTO_STORY, LOVE_STORY_PHOTO, SOCIAL_SHARE_COVER` | Portrait values added by migration 0028, PHOTO_STORY / LOVE_STORY_PHOTO by 0031, SOCIAL_SHARE_COVER by 0035; anticipated future types |
+| MediaType | `project_media.media_type` | CHECK | `COVER, GALLERY, AUDIO, QR_GROOM, QR_BRIDE, QR_COMMON, PORTRAIT_GROOM, PORTRAIT_BRIDE, PHOTO_STORY, LOVE_STORY_PHOTO, SOCIAL_SHARE_COVER, PORTRAIT_COUPLE` | Portrait values added by migration 0028, PHOTO_STORY / LOVE_STORY_PHOTO by 0031, SOCIAL_SHARE_COVER by 0035, PORTRAIT_COUPLE by 0045; anticipated future types |
 | ProjectAddon status | *(none — revocation via `revoked_at`, §2.6)* | N/A | N/A | Entitlement = non-revoked row existence |
 | Review feedback type | `review_feedback.feedback_type` | CHECK | `COMMENT, REVISION_REQUEST, APPROVAL` | Stable event-type tag |
 | IntakeSubmissionStatus | `intake_submissions.status` | CHECK | `PENDING, APPLIED, REJECTED` | |
@@ -1383,6 +1383,7 @@ Both 0021 and 0022 are privilege/workflow tightening only, not schema shape chan
 | `0042_personalized_guest_link` | Task 033B1: personalized guest-link issuance and resolution (`docs/DECISIONS.md` "Task 033B1") | see status note below |
 | `0043_legacy_v1_lockdown` | Task 035B: Legacy V1 table/storage lockdown (`docs/SECURITY.md` §11.2) | applied by the Product Owner and live-verified in DEV/STAGING (2026-10-06) |
 | `0044_republish_after_published` | Launch Hardening 04: `create_review_version` replacement — RV010 rejects only `COMPLETED`/`ARCHIVED`, so a new REVIEW may be created from `PUBLISHED` (`docs/API_CONTRACT.md` §35) | **applied** by the Product Owner (DEV/STAGING); post-apply republish E2E PASS 2026-10-07 |
+| `0045_project_media_portrait_couple_type` | VH-M01: `PORTRAIT_COUPLE` media role (§2.9; docs/DECISIONS.md "VH-M01") — media_type CHECK widened only | authored; **not applied**, to be pushed by the Product Owner |
 
 **Status note (Launch Hardening 01, 2026-10-06).** A read-only `supabase migration list --linked` on 2026-10-06 showed local and DEV/STAGING remote history identical for every migration 0001–0043 (45 files, including 0006b and 0013b). Any "not applied" entry above records the state when that row was written and is superseded by this note.
 

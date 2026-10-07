@@ -456,9 +456,11 @@ function compareMedia(a: SnapshotMediaSource, b: SnapshotMediaSource): number {
  *
  * Portraits (RF7 Product Owner amendment): one effective portrait per side,
  * the first PORTRAIT_GROOM / PORTRAIT_BRIDE row in the same canonical order
- * (several rows may exist so a published portrait stays replaceable).
- * `portrait` is emitted only when at least one side has one, so a Project
- * without portraits builds exactly the payload it built before.
+ * (several rows may exist so a published portrait stays replaceable), and
+ * likewise one effective PORTRAIT_COUPLE (VH-M01, Product Owner correction
+ * 2026-10-07) from its own role only. `portrait` is emitted only when at
+ * least one of them exists, and `coupleMediaId` only with a couple portrait,
+ * so a Project without one builds exactly the payload it built before.
  */
 function projectMedia(media: readonly SnapshotMediaSource[], qr: SnapshotQrMedia): SnapshotMedia {
   const ordered = [...media].sort(compareMedia);
@@ -468,6 +470,7 @@ function projectMedia(media: readonly SnapshotMediaSource[], qr: SnapshotQrMedia
   const photoStory = ordered.filter((item) => item.mediaType === "PHOTO_STORY").map((item) => item.id);
   const loveStoryPhoto = ordered.find((item) => item.mediaType === "LOVE_STORY_PHOTO");
   const bridePortrait = ordered.find((item) => item.mediaType === "PORTRAIT_BRIDE");
+  const couplePortrait = ordered.find((item) => item.mediaType === "PORTRAIT_COUPLE");
 
   const result: SnapshotMedia = {
     galleryMediaIds: ordered.filter((item) => item.mediaType === "GALLERY").map((item) => item.id),
@@ -475,9 +478,10 @@ function projectMedia(media: readonly SnapshotMediaSource[], qr: SnapshotQrMedia
   };
   if (cover !== undefined) result.coverMediaId = cover.id;
   if (audio !== undefined) result.audioMediaId = audio.id;
-  if (groomPortrait !== undefined || bridePortrait !== undefined) {
+  if (groomPortrait !== undefined || couplePortrait !== undefined || bridePortrait !== undefined) {
     const portrait: SnapshotPortraitMedia = {};
     if (groomPortrait !== undefined) portrait.groomMediaId = groomPortrait.id;
+    if (couplePortrait !== undefined) portrait.coupleMediaId = couplePortrait.id;
     if (bridePortrait !== undefined) portrait.brideMediaId = bridePortrait.id;
     result.portrait = portrait;
   }

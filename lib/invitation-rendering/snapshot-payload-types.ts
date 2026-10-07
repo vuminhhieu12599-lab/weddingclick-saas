@@ -105,9 +105,16 @@ export interface SnapshotQrMedia {
  * v1: absent in payloads built before it and whenever the Project has no
  * portrait; a present side is the first PORTRAIT_<SIDE> row in RF11 rule C
  * order.
+ *
+ * `coupleMediaId` (Product Owner correction 2026-10-07, VH-M01): the first
+ * PORTRAIT_COUPLE row in the same order. Additive inside payload v1: absent
+ * whenever the Project has no couple portrait, so every earlier payload
+ * stays valid and unchanged. Never a COVER/GALLERY/PHOTO_STORY/
+ * LOVE_STORY_PHOTO id.
  */
 export interface SnapshotPortraitMedia {
   groomMediaId?: string;
+  coupleMediaId?: string;
   brideMediaId?: string;
 }
 

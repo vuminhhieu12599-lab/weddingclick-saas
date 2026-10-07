@@ -309,7 +309,8 @@ describe("static boundaries (X, AD, AE, AF)", () => {
 
   it("AE/AF: no migration 0044; Task 026 issue/rotate/revoke modules and Task 035A/035B runtime are byte-identical to HEAD", () => {
     // Launch Hardening 04 (owner-approved checkpoint maintenance): only the approved 0044; no 0045 or later.
-    expect(readdirSync(join(ROOT, "supabase/migrations")).filter((name) => /_(004[4-9]|00[5-9]\d|0[1-9]\d\d)_/.test(name))).toEqual(["20260911041204_0044_republish_after_published.sql"]);
+    // VH-M01 (owner-approved checkpoint maintenance): exactly the approved 0045 may follow 0044.
+    expect(readdirSync(join(ROOT, "supabase/migrations")).filter((name) => /_(004[4-9]|00[5-9]\d|0[1-9]\d\d)_/.test(name))).toEqual(["20260911041204_0044_republish_after_published.sql", "20260911041205_0045_project_media_portrait_couple_type.sql"]);
     const changed = execFileSync(
       "git",
       [

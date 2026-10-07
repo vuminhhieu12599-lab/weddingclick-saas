@@ -51,7 +51,7 @@ describe("role policy", () => {
     for (const type of NEVER_OPTIMIZED_MEDIA_TYPES) expect(isOptimizableImageMediaType(type), type).toBe(false);
     expect([...NEVER_OPTIMIZED_MEDIA_TYPES].sort()).toEqual(["AUDIO", "QR_BRIDE", "QR_COMMON", "QR_GROOM"]);
     expect([...OPTIMIZED_IMAGE_MEDIA_TYPES].sort()).toEqual(
-      ["COVER", "GALLERY", "LOVE_STORY_PHOTO", "PHOTO_STORY", "PORTRAIT_BRIDE", "PORTRAIT_GROOM", "SOCIAL_SHARE_COVER"].sort(),
+      ["COVER", "GALLERY", "LOVE_STORY_PHOTO", "PHOTO_STORY", "PORTRAIT_BRIDE", "PORTRAIT_COUPLE", "PORTRAIT_GROOM", "SOCIAL_SHARE_COVER"].sort(),
     );
     for (const type of OPTIMIZED_IMAGE_MEDIA_TYPES) expect(isOptimizableImageMediaType(type), type).toBe(true);
   });

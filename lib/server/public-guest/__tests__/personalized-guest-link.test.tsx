@@ -455,7 +455,8 @@ describe("migration 0042", () => {
     expect(readdirSync(join(ROOT, MIGRATIONS)).filter((f) => f.includes("_0043_"))).toEqual(["20260911041203_0043_legacy_v1_lockdown.sql"]);
     expect(sqlFile).toHaveLength(1);
     // Launch Hardening 04 (owner-approved checkpoint maintenance): exactly the approved 0044 may follow 0043.
-    expect(readdirSync(join(ROOT, MIGRATIONS)).sort().slice(-3)).toEqual([sqlFile[0], "20260911041203_0043_legacy_v1_lockdown.sql", "20260911041204_0044_republish_after_published.sql"]);
+    // VH-M01 (owner-approved checkpoint maintenance): exactly the approved 0045 may follow 0044.
+    expect(readdirSync(join(ROOT, MIGRATIONS)).sort().slice(-4)).toEqual([sqlFile[0], "20260911041203_0043_legacy_v1_lockdown.sql", "20260911041204_0044_republish_after_published.sql", "20260911041205_0045_project_media_portrait_couple_type.sql"]);
     expect(executable.match(/CREATE FUNCTION/g)).toHaveLength(3);
     expect(executable.match(/SECURITY DEFINER\s+SET search_path = ''/g)).toHaveLength(3);
   });
