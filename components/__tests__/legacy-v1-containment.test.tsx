@@ -78,8 +78,7 @@ describe("migration 0043 — database lockdown (A–E, I, S)", () => {
     expect(sql).toContain("AUTHORING ONLY — not applied.");
     const migrations = readdirSync(join(ROOT, "supabase/migrations")).sort();
     // Launch Hardening 04 (owner-approved checkpoint maintenance): exactly the approved 0044 may follow 0043.
-    // VH-M01 (owner-approved checkpoint maintenance): exactly the approved 0045 may follow 0044.
-    expect(migrations.slice(-4)).toEqual(["20260911041202_0042_personalized_guest_link.sql", "20260911041203_0043_legacy_v1_lockdown.sql", "20260911041204_0044_republish_after_published.sql", "20260911041205_0045_project_media_portrait_couple_type.sql"]);
+    expect(migrations.slice(-3)).toEqual(["20260911041202_0042_personalized_guest_link.sql", "20260911041203_0043_legacy_v1_lockdown.sql", "20260911041204_0044_republish_after_published.sql"]);
   });
 });
 

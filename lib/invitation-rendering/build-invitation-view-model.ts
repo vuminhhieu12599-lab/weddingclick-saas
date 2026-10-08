@@ -272,8 +272,7 @@ function slot(resolutions: ReadonlyMap<string, MediaResolution>, mediaId: string
  * Absent reference → absent slot; gallery keeps Snapshot order and count.
  * QR roles come only from `media.qr`; there is no common QR slot.
  * Portrait slots come only from the optional `media.portrait` (absent in
- * older v1 payloads, which therefore give absent portrait slots); the couple
- * slot only from `portrait.coupleMediaId` (VH-M01).
+ * older v1 payloads, which therefore give two absent portrait slots).
  */
 function projectMedia(
   snapshot: SnapshotPayloadV1,
@@ -293,7 +292,6 @@ function projectMedia(
   if (qr.groomMediaId !== undefined) media.qr.groom = slot(resolutions, qr.groomMediaId);
   if (qr.brideMediaId !== undefined) media.qr.bride = slot(resolutions, qr.brideMediaId);
   if (portrait?.groomMediaId !== undefined) media.portrait.groom = slot(resolutions, portrait.groomMediaId);
-  if (portrait?.coupleMediaId !== undefined) media.portrait.couple = slot(resolutions, portrait.coupleMediaId);
   if (portrait?.brideMediaId !== undefined) media.portrait.bride = slot(resolutions, portrait.brideMediaId);
   if (loveStoryPhotoMediaId !== undefined) media.loveStoryPhoto = slot(resolutions, loveStoryPhotoMediaId);
   return media;

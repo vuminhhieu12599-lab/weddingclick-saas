@@ -37,13 +37,6 @@ export interface MediaRoleConfig {
 export const MEDIA_EDITOR_ROLES: readonly MediaRoleConfig[] = [
   { mediaType: "COVER", label: "Ảnh bìa", hint: "Ảnh đầu tiên theo thứ tự đang được dùng.", cardinality: "SINGLE" },
   { mediaType: "PORTRAIT_GROOM", label: "Ảnh chân dung chú rể", hint: "Chỉ dùng cho chú rể.", cardinality: "SINGLE" },
-  // Product Owner correction 2026-10-07: the centre couple portrait is its own role, never Ảnh bìa (COVER).
-  {
-    mediaType: "PORTRAIT_COUPLE",
-    label: "Ảnh cặp đôi",
-    hint: "Ảnh chân dung cặp đôi đặt ở giữa ảnh chú rể và cô dâu. Tách biệt với Ảnh bìa.",
-    cardinality: "SINGLE",
-  },
   { mediaType: "PORTRAIT_BRIDE", label: "Ảnh chân dung cô dâu", hint: "Chỉ dùng cho cô dâu.", cardinality: "SINGLE" },
   {
     mediaType: "PHOTO_STORY",

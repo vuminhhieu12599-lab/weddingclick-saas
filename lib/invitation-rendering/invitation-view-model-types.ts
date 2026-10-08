@@ -128,14 +128,10 @@ export interface ViewModelMedia {
    * Portrait slots (RF7 Product Owner amendment), from the optional Snapshot
    * `media.portrait` refs only: an absent side means "no portrait referenced"
    * (always valid); a present side is RESOLVED or UNAVAILABLE. Never filled
-   * from COVER/GALLERY and never with substitute media. `couple` (VH-M01,
-   * Product Owner correction 2026-10-07) follows the same rule from
-   * `media.portrait.coupleMediaId` only; it is never derived from
-   * COVER/GALLERY/PHOTO_STORY/LOVE_STORY_PHOTO.
+   * from COVER/GALLERY and never with substitute media.
    */
   portrait: {
     groom?: MediaResolution;
-    couple?: MediaResolution;
     bride?: MediaResolution;
   };
   /** PHOTO_STORY slots in Snapshot order, all of them (`[]` for older payloads). Never GALLERY. */

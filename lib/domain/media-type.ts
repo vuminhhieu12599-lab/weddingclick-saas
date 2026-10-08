@@ -6,11 +6,8 @@
  * amendment, migration 0031. SOCIAL_SHARE_COVER (one effective, image): the
  * staff-chosen social-share / Open Graph image, independent of COVER and never
  * part of the invitation body (Product Owner decision, migration 0035).
- * PORTRAIT_COUPLE (one effective, image): the couple portrait, the centre of
- * Vietnamese Heritage's three-portrait composition; an independent role that
- * is never derived from COVER/GALLERY/PHOTO_STORY/LOVE_STORY_PHOTO (Product
- * Owner correction 2026-10-07, migration 0045). Appended last so earlier
- * migrations' value lists stay a prefix of this list.
+ * No per-template layout role is ever added here: template layout positions
+ * are template media slots (docs/DECISIONS.md "TE-01", TE-03A).
  */
 export const MEDIA_TYPES = [
   "COVER",
@@ -24,7 +21,6 @@ export const MEDIA_TYPES = [
   "PHOTO_STORY",
   "LOVE_STORY_PHOTO",
   "SOCIAL_SHARE_COVER",
-  "PORTRAIT_COUPLE",
 ] as const;
 
 export type MediaType = (typeof MEDIA_TYPES)[number];
@@ -33,7 +29,7 @@ export type MediaType = (typeof MEDIA_TYPES)[number];
  * Task 024 (Phase 1) frozen upload policy — docs/SECURITY.md §15 ("approved
  * MIME/type", "file-size limit"). Two policies only: IMAGE (every
  * image-bearing MediaType — COVER/GALLERY/QR_GROOM/QR_BRIDE/QR_COMMON/
- * the PORTRAIT_* roles, PHOTO_STORY, LOVE_STORY_PHOTO, SOCIAL_SHARE_COVER) and
+ * PORTRAIT_GROOM/PORTRAIT_BRIDE/PHOTO_STORY/LOVE_STORY_PHOTO/SOCIAL_SHARE_COVER) and
  * AUDIO. Values match the frozen `project-media` Storage bucket
  * configuration (supabase/migrations/..._0023_project_media_storage.sql)
  * exactly — the two must never diverge.

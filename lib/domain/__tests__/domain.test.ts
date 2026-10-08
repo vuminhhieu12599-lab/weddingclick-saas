@@ -133,8 +133,6 @@ describe("MediaType", () => {
       "PHOTO_STORY",
       "LOVE_STORY_PHOTO",
       "SOCIAL_SHARE_COVER",
-      // VH-M01 (Product Owner correction 2026-10-07, migration 0045).
-      "PORTRAIT_COUPLE",
     ]);
   });
 });
