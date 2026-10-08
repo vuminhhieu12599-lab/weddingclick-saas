@@ -77,7 +77,9 @@ describe("migration 0035", () => {
 
   it("recreates the media_type CHECK with every previous role plus SOCIAL_SHARE_COVER, in domain order", () => {
     const values = [...code.matchAll(/'([A-Z_]+)'/g)].map((match) => match[1]);
-    expect(values).toEqual([...MEDIA_TYPES]);
+    // TE-03B: PHOTO (0046) is appended after this migration, so 0035 is the domain prefix before it.
+    expect(values).toEqual(MEDIA_TYPES.filter((type) => type !== "PHOTO"));
+    expect(values.at(-1)).toBe("SOCIAL_SHARE_COVER");
   });
 
   it("is additive only: the one constraint and its comment, no data or other object touched", () => {

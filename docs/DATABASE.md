@@ -277,7 +277,7 @@ Suggested fields:
 
 - `id`.
 - `project_id` FK.
-- `media_type` — `COVER`, `GALLERY`, `AUDIO`, `QR_GROOM`, `QR_BRIDE`, `QR_COMMON`, `PORTRAIT_GROOM`, `PORTRAIT_BRIDE` (optional portrait roles: migration 0028), `PHOTO_STORY` (ordered editorial photo cluster, separate from `GALLERY`) and `LOVE_STORY_PHOTO` (one effective Love Story photo) (migration 0031; docs/DECISIONS.md RF7 Product Owner amendments) and `SOCIAL_SHARE_COVER` (one effective social-share / Open Graph image, independent of `COVER`, never in the Snapshot; migration 0035, docs/DECISIONS.md "Social Share Cover"). `GALLERY` has no maximum count. Template layout positions are never media types; they are template media slots (docs/DECISIONS.md "TE-01"; the never-applied `PORTRAIT_COUPLE`/0045 was removed by TE-03A).
+- `media_type` — `COVER`, `GALLERY`, `AUDIO`, `QR_GROOM`, `QR_BRIDE`, `QR_COMMON`, `PORTRAIT_GROOM`, `PORTRAIT_BRIDE` (optional portrait roles: migration 0028), `PHOTO_STORY` (ordered editorial photo cluster, separate from `GALLERY`) and `LOVE_STORY_PHOTO` (one effective Love Story photo) (migration 0031; docs/DECISIONS.md RF7 Product Owner amendments) and `SOCIAL_SHARE_COVER` (one effective social-share / Open Graph image, independent of `COVER`, never in the Snapshot; migration 0035, docs/DECISIONS.md "Social Share Cover") and `PHOTO` (TE-03B, migration 0046: an ordinary customer photograph in the Project media library, available for template media slot assignment, no layout meaning). `GALLERY` has no maximum count. Template layout positions are never media types; they are template media slots (docs/DECISIONS.md "TE-01"; the never-applied `PORTRAIT_COUPLE`/0045 was removed by TE-03A). Slot-assignable types are exactly `PHOTO`, `COVER`, `GALLERY`, `PORTRAIT_GROOM`, `PORTRAIT_BRIDE`, `PHOTO_STORY`, `LOVE_STORY_PHOTO`; `AUDIO`, every `QR_*` and `SOCIAL_SHARE_COVER` never are.
 - `storage_bucket`.
 - `storage_path`.
 - `mime_type` optional.
@@ -316,6 +316,10 @@ A Project's optional Dress Code (docs/DECISIONS.md RF7 "Dress Code (Product Owne
 - `project_dress_code_swatches`: `id`, `project_id` FK to `project_dress_codes` (`ON DELETE CASCADE`), `color` (canonical lowercase `#rrggbb` only), `sort_order` (then `id`), timestamps. Any number of swatches.
 
 Staff-only RLS like `project_media`. Published invitations read the Dress Code from the Snapshot.
+
+### 11c. `project_template_media_slot_items` (migration 0046, TE-03B)
+
+Draft template media slot assignments: per Project and **exact** template version, an ordered list of library photo ids per slot key (one row per occupied 0-based position). Shared by COMMON/GROOM/BRIDE (no variant column); retained per template version when the Project switches template (never auto-copied or auto-deleted). Staff read via RLS; written only by the trusted `set_project_template_media_slot` RPC, which compare-and-sets the Project design's current template version. The database validates structure (slot key pattern, same-Project media, slot-assignable type); the server validates the slot against the code-owned `TemplateEditorManifestV1`. Not read by renderers; Snapshot integration is TE-04. Full contract: `docs/PHYSICAL_DATABASE_PLAN.md` §2.9c.
 
 ---
 

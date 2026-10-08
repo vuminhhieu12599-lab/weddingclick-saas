@@ -65,11 +65,12 @@ export type UpdateProjectMediaOutcome =
  * storage_path` statement. `DELETED` carries the server-returned asset
  * location captured in the same statement that performed the delete — the
  * use case never re-derives or trusts a separately-fetched path.
- * `REFERENCED_CONFLICT` covers every current incoming RESTRICT FK toward
- * project_media (invitation_version_media, and wedding_details' groom/bride
- * bank-QR references) — blanket-mapping SQLSTATE 23503 to this outcome is
- * safe specifically because those three FKs are the only possible source of
- * a 23503 on this exact DELETE shape (see the Phase 3 preflight report).
+ * `REFERENCED_CONFLICT` covers every current incoming RESTRICT/NO ACTION FK
+ * toward project_media (invitation_version_media, wedding_details' groom/
+ * bride bank-QR references, and — TE-03B, migration 0046 — draft template
+ * media slot assignments) — blanket-mapping SQLSTATE 23503 to this outcome
+ * is safe specifically because those four FKs are the only possible source
+ * of a 23503 on this exact DELETE shape (see the Phase 3 preflight report).
  */
 export type DeleteProjectMediaOutcome =
   | { kind: "DELETED"; storageBucket: string; storagePath: string }

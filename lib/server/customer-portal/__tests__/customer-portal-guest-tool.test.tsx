@@ -691,10 +691,12 @@ describe("033E-B AG–AI: staff path, resolver and RSVP preserved", () => {
     expect(execFileSync("git", ["diff", "--name-only", "HEAD", "--", ...frozen], { cwd: ROOT, encoding: "utf8" })).toBe("");
     // Task 035B: the only migration allowed after 0042 is the owner-approved legacy V1 lockdown.
     // Launch Hardening 04 (owner-approved checkpoint maintenance): exactly the approved 0044 may follow 0043.
-    expect(readdirMigrations().slice(-3).map((name) => name.split("/").at(-1))).toEqual([
+    // TE-03B (checkpoint maintenance): exactly 0046 may follow 0044; 0045 is retired and must stay absent.
+    expect(readdirMigrations().slice(-4).map((name) => name.split("/").at(-1))).toEqual([
       "20260911041202_0042_personalized_guest_link.sql",
       "20260911041203_0043_legacy_v1_lockdown.sql",
       "20260911041204_0044_republish_after_published.sql",
+      "20260911041206_0046_project_template_media_slots.sql",
     ]);
   });
 });

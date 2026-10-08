@@ -48,10 +48,10 @@ export async function deleteProjectMedia<TClient>(
   }
 
   if (outcome.kind === "REFERENCED_CONFLICT") {
-    // Covers every current incoming RESTRICT FK toward project_media
-    // (invitation_version_media, and wedding_details' groom/bride bank-QR
-    // references) — the message is deliberately generic across both
-    // reasons. Storage is never touched: the DB delete did not happen.
+    // Covers every current incoming RESTRICT/NO ACTION FK toward
+    // project_media (invitation_version_media, wedding_details' groom/bride
+    // bank-QR references, and TE-03B template media slot assignments) — the
+    // message is deliberately generic across these reasons. Storage is never touched: the DB delete did not happen.
     throw new ApiError("CONFLICT", "This media item is still in use and cannot be deleted");
   }
 

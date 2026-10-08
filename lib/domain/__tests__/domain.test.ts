@@ -15,6 +15,8 @@ import { INVITATION_VERSION_TYPES } from "../invitation-version-type";
 import { PROJECT_TASK_STATUSES } from "../project-task-status";
 import {
   MEDIA_TYPES,
+  TEMPLATE_SLOT_ASSIGNABLE_MEDIA_TYPES,
+  isTemplateSlotAssignableMediaType,
   IMAGE_MEDIA_MIME_TYPES,
   AUDIO_MEDIA_MIME_TYPES,
   IMAGE_MEDIA_MAX_BYTES,
@@ -133,7 +135,34 @@ describe("MediaType", () => {
       "PHOTO_STORY",
       "LOVE_STORY_PHOTO",
       "SOCIAL_SHARE_COVER",
+      // TE-03B (migration 0046): the neutral library photograph, appended last.
+      "PHOTO",
     ]);
+  });
+
+  it("TE-03B: the template-slot assignable set is exactly PHOTO plus the legacy photo roles", () => {
+    expect(TEMPLATE_SLOT_ASSIGNABLE_MEDIA_TYPES).toEqual([
+      "PHOTO",
+      "COVER",
+      "GALLERY",
+      "PORTRAIT_GROOM",
+      "PORTRAIT_BRIDE",
+      "PHOTO_STORY",
+      "LOVE_STORY_PHOTO",
+    ]);
+    for (const mediaType of TEMPLATE_SLOT_ASSIGNABLE_MEDIA_TYPES) expect(isTemplateSlotAssignableMediaType(mediaType)).toBe(true);
+  });
+
+  it.each(["AUDIO", "QR_GROOM", "QR_BRIDE", "QR_COMMON", "SOCIAL_SHARE_COVER", "PORTRAIT_COUPLE", "photo", "", null, 1])(
+    "TE-03B: %p is never a template-slot photo",
+    (value) => {
+      expect(isTemplateSlotAssignableMediaType(value)).toBe(false);
+    },
+  );
+
+  it("TE-03B: every MediaType is either slot-assignable or one of the five semantic/system types", () => {
+    const semantic = MEDIA_TYPES.filter((type) => !isTemplateSlotAssignableMediaType(type));
+    expect([...semantic].sort()).toEqual(["AUDIO", "QR_BRIDE", "QR_COMMON", "QR_GROOM", "SOCIAL_SHARE_COVER"]);
   });
 });
 
@@ -161,7 +190,7 @@ describe("MediaUploadPolicy", () => {
     expect(PROJECT_MEDIA_BUCKET_MAX_BYTES).toBe(20971520);
   });
 
-  const imageMediaTypes: MediaType[] = ["COVER", "GALLERY", "QR_GROOM", "QR_BRIDE", "QR_COMMON", "PORTRAIT_GROOM", "PORTRAIT_BRIDE", "PHOTO_STORY", "LOVE_STORY_PHOTO", "SOCIAL_SHARE_COVER"];
+  const imageMediaTypes: MediaType[] = ["COVER", "GALLERY", "QR_GROOM", "QR_BRIDE", "QR_COMMON", "PORTRAIT_GROOM", "PORTRAIT_BRIDE", "PHOTO_STORY", "LOVE_STORY_PHOTO", "SOCIAL_SHARE_COVER", "PHOTO"];
 
   it.each(imageMediaTypes)("%s maps to the IMAGE MIME allow-list and 10 MiB limit", (mediaType) => {
     expect(allowedMimeTypesForMediaType(mediaType)).toEqual(IMAGE_MEDIA_MIME_TYPES);

@@ -32,6 +32,8 @@ export const OPTIMIZED_IMAGE_MEDIA_TYPES = [
   "PHOTO_STORY",
   "LOVE_STORY_PHOTO",
   "SOCIAL_SHARE_COVER",
+  // TE-03B: the neutral library photograph uses the same photograph policy.
+  "PHOTO",
 ] as const satisfies readonly MediaType[];
 
 /** Explicitly never lossy-optimized, whatever the caller. */

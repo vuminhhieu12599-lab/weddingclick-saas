@@ -20,6 +20,8 @@ const IMAGE_MEDIA_TYPES: MediaType[] = [
   "PHOTO_STORY",
   "LOVE_STORY_PHOTO",
   "SOCIAL_SHARE_COVER",
+  // TE-03B: the neutral library photograph is an ordinary image upload.
+  "PHOTO",
 ];
 
 function expectBadRequest(body: unknown) {

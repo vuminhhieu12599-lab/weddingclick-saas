@@ -6,8 +6,11 @@
  * amendment, migration 0031. SOCIAL_SHARE_COVER (one effective, image): the
  * staff-chosen social-share / Open Graph image, independent of COVER and never
  * part of the invitation body (Product Owner decision, migration 0035).
- * No per-template layout role is ever added here: template layout positions
- * are template media slots (docs/DECISIONS.md "TE-01", TE-03A).
+ * PHOTO (TE-03B, migration 0046): an ordinary customer photograph in the
+ * Project media library, available for template media slot assignment. It
+ * has no layout meaning. No per-template layout role is ever added here:
+ * template layout positions are template media slots (docs/DECISIONS.md
+ * "TE-01", TE-03A, TE-03B).
  */
 export const MEDIA_TYPES = [
   "COVER",
@@ -21,15 +24,39 @@ export const MEDIA_TYPES = [
   "PHOTO_STORY",
   "LOVE_STORY_PHOTO",
   "SOCIAL_SHARE_COVER",
+  "PHOTO",
 ] as const;
 
 export type MediaType = (typeof MEDIA_TYPES)[number];
 
 /**
+ * TE-03B: the media types that may fill a template media slot. PHOTO plus
+ * the legacy photo roles, so photographs uploaded for Elegant Editorial are
+ * reused without re-upload. Semantic/system media (AUDIO, every QR role,
+ * SOCIAL_SHARE_COVER) never become invitation layout photos. Migration 0046
+ * `set_project_template_media_slot` enforces exactly the same set.
+ */
+export const TEMPLATE_SLOT_ASSIGNABLE_MEDIA_TYPES = [
+  "PHOTO",
+  "COVER",
+  "GALLERY",
+  "PORTRAIT_GROOM",
+  "PORTRAIT_BRIDE",
+  "PHOTO_STORY",
+  "LOVE_STORY_PHOTO",
+] as const satisfies readonly MediaType[];
+
+export type TemplateSlotAssignableMediaType = (typeof TEMPLATE_SLOT_ASSIGNABLE_MEDIA_TYPES)[number];
+
+export function isTemplateSlotAssignableMediaType(value: unknown): value is TemplateSlotAssignableMediaType {
+  return typeof value === "string" && (TEMPLATE_SLOT_ASSIGNABLE_MEDIA_TYPES as readonly string[]).includes(value);
+}
+
+/**
  * Task 024 (Phase 1) frozen upload policy — docs/SECURITY.md §15 ("approved
  * MIME/type", "file-size limit"). Two policies only: IMAGE (every
  * image-bearing MediaType — COVER/GALLERY/QR_GROOM/QR_BRIDE/QR_COMMON/
- * PORTRAIT_GROOM/PORTRAIT_BRIDE/PHOTO_STORY/LOVE_STORY_PHOTO/SOCIAL_SHARE_COVER) and
+ * PORTRAIT_GROOM/PORTRAIT_BRIDE/PHOTO_STORY/LOVE_STORY_PHOTO/SOCIAL_SHARE_COVER/PHOTO) and
  * AUDIO. Values match the frozen `project-media` Storage bucket
  * configuration (supabase/migrations/..._0023_project_media_storage.sql)
  * exactly — the two must never diverge.

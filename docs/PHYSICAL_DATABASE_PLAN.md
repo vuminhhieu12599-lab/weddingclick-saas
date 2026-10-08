@@ -379,7 +379,7 @@ Purpose: normalized media inventory for a Project.
 |---|---|---|---|---|
 | `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
 | `project_id` | `UUID` | NOT NULL | *(none)* | `REFERENCES projects(id) ON DELETE CASCADE` |
-| `media_type` | `TEXT` | NOT NULL | *(none)* | `CHECK (media_type IN ('COVER','GALLERY','AUDIO','QR_GROOM','QR_BRIDE','QR_COMMON','PORTRAIT_GROOM','PORTRAIT_BRIDE','PHOTO_STORY','LOVE_STORY_PHOTO','SOCIAL_SHARE_COVER'))` — portrait values added by migration 0028; PHOTO_STORY / LOVE_STORY_PHOTO by migration 0031; SOCIAL_SHARE_COVER by migration 0035 (`project_media_media_type_check` redefined; docs/DECISIONS.md RF7 Product Owner amendment) |
+| `media_type` | `TEXT` | NOT NULL | *(none)* | `CHECK (media_type IN ('COVER','GALLERY','AUDIO','QR_GROOM','QR_BRIDE','QR_COMMON','PORTRAIT_GROOM','PORTRAIT_BRIDE','PHOTO_STORY','LOVE_STORY_PHOTO','SOCIAL_SHARE_COVER','PHOTO'))` — portrait values added by migration 0028; PHOTO_STORY / LOVE_STORY_PHOTO by migration 0031; SOCIAL_SHARE_COVER by migration 0035; PHOTO (neutral library photograph for template media slots) by migration 0046 (`project_media_media_type_check` redefined; docs/DECISIONS.md RF7 Product Owner amendment) |
 | `storage_bucket` | `TEXT` | NOT NULL | *(none)* | New V2-only bucket (e.g. `project-media`), never V1's `wedding-photos` (§O) |
 | `storage_path` | `TEXT` | NOT NULL | *(none)* | Non-guessable object key (includes `project_id` + a random segment) |
 | `mime_type` | `TEXT` | NULL | *(none)* | |
@@ -446,6 +446,22 @@ RLS: enabled + forced. SELECT/INSERT/UPDATE/DELETE for `authenticated` only thro
 Indexes: `(project_id, sort_order, id)` on swatches. No fixed swatch count; Task029's four colours are fixture data only.
 
 RLS: enabled + forced on both tables. SELECT/INSERT/UPDATE/DELETE for `authenticated` only through `is_staff()` (mirrors `project_media`); no anon access, no service-role business path. Published output reads the Snapshot copy only.
+
+### 2.9c Template media slot assignments — migration 0046 (TE-03B)
+
+`project_template_media_slot_items` (migration 0046, docs/DECISIONS.md "TE-03B"; authored, **not applied**):
+
+| Column | Type | Null | Default | Constraints |
+|---|---|---|---|---|
+| `project_id` | `UUID` | NOT NULL | *(none)* | FK `projects(id)` `ON DELETE CASCADE` |
+| `template_version_id` | `UUID` | NOT NULL | *(none)* | FK `template_versions(id)` `ON DELETE RESTRICT` |
+| `slot_key` | `TEXT` | NOT NULL | *(none)* | `CHECK (slot_key ~ '^[a-z][A-Za-z0-9]{0,47}$')` (structural only) |
+| `position` | `INTEGER` | NOT NULL | *(none)* | `CHECK (position >= 0)`; 0-based, contiguous per slot (written by the RPC) |
+| `project_media_id` | `UUID` | NOT NULL | *(none)* | composite FK `(project_media_id, project_id)` → `project_media(id, project_id)` `ON DELETE NO ACTION` |
+| `created_by` | `UUID` | NULL | *(none)* | FK `profiles(id)` `ON DELETE SET NULL`; always `auth.uid()` |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | no `updated_at` (rows are replaced, never updated) |
+
+PK `(project_id, template_version_id, slot_key, position)`; UNIQUE `(project_id, template_version_id, slot_key, project_media_id)` (a photo at most once per slot; it may fill different slots); index `(project_media_id, project_id)`. No variant column (shared by COMMON/GROOM/BRIDE). RLS enabled + forced; `authenticated` has SELECT only, policy `is_staff()`; no INSERT/UPDATE/DELETE grant or policy for any role; `anon`/`service_role` nothing. Every write goes through `set_project_template_media_slot(p_project_id uuid, p_template_version_id uuid, p_slot_key text, p_project_media_ids uuid[])` (`SECURITY DEFINER`, `search_path = ''`, `EXECUTE` to `authenticated` only, TMxxx errors). Delete semantics (proven on a disposable replay): a direct DELETE of an assigned `project_media` row fails (23503 → the existing media-delete `REFERENCED_CONFLICT` 409); a Project delete cascades both the slot rows and the media in one statement.
 
 ### 2.10 `templates`
 
@@ -854,7 +870,7 @@ Unchanged general rule from Revision 1: `TEXT` + `CHECK` for controlled vocabula
 | InvitationVariant | `project_invitations.variant`, `guests.invitation_variant` | CHECK | `COMMON, GROOM, BRIDE` | Foundational, but CHECK's flexibility costs nothing |
 | AccessLinkType | `project_access_links.link_type` | CHECK | `INTAKE, REVIEW, PORTAL` | Stable capability set |
 | PaymentStatus | `projects.payment_status` | CHECK | `UNPAID, PAID` | Room for richer statuses later |
-| MediaType | `project_media.media_type` | CHECK | `COVER, GALLERY, AUDIO, QR_GROOM, QR_BRIDE, QR_COMMON, PORTRAIT_GROOM, PORTRAIT_BRIDE, PHOTO_STORY, LOVE_STORY_PHOTO, SOCIAL_SHARE_COVER` | Portrait values added by migration 0028, PHOTO_STORY / LOVE_STORY_PHOTO by 0031, SOCIAL_SHARE_COVER by 0035; anticipated future types |
+| MediaType | `project_media.media_type` | CHECK | `COVER, GALLERY, AUDIO, QR_GROOM, QR_BRIDE, QR_COMMON, PORTRAIT_GROOM, PORTRAIT_BRIDE, PHOTO_STORY, LOVE_STORY_PHOTO, SOCIAL_SHARE_COVER, PHOTO` | Portrait values added by migration 0028, PHOTO_STORY / LOVE_STORY_PHOTO by 0031, SOCIAL_SHARE_COVER by 0035, PHOTO by 0046 (never a per-template layout value); anticipated future types |
 | ProjectAddon status | *(none — revocation via `revoked_at`, §2.6)* | N/A | N/A | Entitlement = non-revoked row existence |
 | Review feedback type | `review_feedback.feedback_type` | CHECK | `COMMENT, REVISION_REQUEST, APPROVAL` | Stable event-type tag |
 | IntakeSubmissionStatus | `intake_submissions.status` | CHECK | `PENDING, APPLIED, REJECTED` | |
@@ -1384,6 +1400,7 @@ Both 0021 and 0022 are privilege/workflow tightening only, not schema shape chan
 | `0043_legacy_v1_lockdown` | Task 035B: Legacy V1 table/storage lockdown (`docs/SECURITY.md` §11.2) | applied by the Product Owner and live-verified in DEV/STAGING (2026-10-06) |
 | `0044_republish_after_published` | Launch Hardening 04: `create_review_version` replacement — RV010 rejects only `COMPLETED`/`ARCHIVED`, so a new REVIEW may be created from `PUBLISHED` (`docs/API_CONTRACT.md` §35) | **applied** by the Product Owner (DEV/STAGING); post-apply republish E2E PASS 2026-10-07 |
 | `0045` | **Retired number — never applied, file removed by TE-03A** (was VH-M01 `PORTRAIT_COUPLE`; docs/DECISIONS.md "TE-03A"). DEV and Production heads were both 0044 when it was removed. The number 0045 must never be reused; the next migration is 0046 or later. | none (never applied) |
+| `0046_project_template_media_slots` | TE-03B: `PHOTO` media type, `project_template_media_slot_items`, `set_project_template_media_slot` (§2.9c; docs/DECISIONS.md "TE-03B") | authored; **not applied** (disposable local replay only) |
 
 **Status note (Launch Hardening 01, 2026-10-06).** A read-only `supabase migration list --linked` on 2026-10-06 showed local and DEV/STAGING remote history identical for every migration 0001–0043 (45 files, including 0006b and 0013b). Any "not applied" entry above records the state when that row was written and is superseded by this note.
 
