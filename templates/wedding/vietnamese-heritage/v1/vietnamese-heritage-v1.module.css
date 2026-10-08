@@ -519,6 +519,41 @@
   overflow-wrap: anywhere;
 }
 
+/*
+ * VH-02A-QA1 couple names: each full name is one block on one line, sized as
+ * available width ÷ (code points × 0.56) between the approved minimum and
+ * maximum (no JS measurement; `--vh-name-chars` comes from the markup).
+ * Names over 24 code points wrap onto balanced lines at the half-length size.
+ */
+.coupleName {
+  --vh-name-chars: 14;
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.coupleName[data-name-fit="wrap"] {
+  white-space: normal;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.coverNames .coupleName {
+  font-size: clamp(17px, calc((100cqw - 2 * var(--border-reach) - 12px) / (var(--vh-name-chars) * 0.56)), 41px);
+}
+
+.coverNames .coupleName[data-name-fit="wrap"] {
+  font-size: clamp(17px, calc((100cqw - 2 * var(--border-reach) - 12px) / (var(--vh-name-chars) * 0.3)), 30px);
+}
+
+.heroNames .coupleName {
+  font-size: clamp(17px, calc((100cqw - 60px) / (var(--vh-name-chars) * 0.56)), 38px);
+}
+
+.heroNames .coupleName[data-name-fit="wrap"] {
+  font-size: clamp(17px, calc((100cqw - 60px) / (var(--vh-name-chars) * 0.3)), 30px);
+}
+
 .heroAmp {
   font-family: var(--vh-font-serif), Georgia, serif;
   font-size: 0.5em;
@@ -1225,6 +1260,212 @@
 
 /* Gift (static entry / preview) -------------------------------------------------- */
 
+/* RSVP (VH-02B-E1): Task 029 ivory page, two-line title, deep red form panel ------- */
+
+.rsvp {
+  position: relative;
+  padding: 44px 24px 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: var(--vh-paper);
+  background-image: var(--vh-texture-ivory);
+  background-size: 620px auto;
+  container-type: inline-size;
+}
+
+.rsvpHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.rsvpDivider {
+  display: block;
+  width: 110px;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  margin-bottom: 8px;
+  opacity: 0.85;
+}
+
+.rsvpTitle {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--vh-font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(23px, 7cqw, 28px);
+  line-height: 1.25;
+  color: var(--vh-vermilion-deep);
+}
+
+.rsvpTitle span {
+  white-space: nowrap;
+}
+
+.rsvpPanel {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 360px;
+  padding: 22px 16px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, var(--vh-vermilion), var(--vh-vermilion-deep));
+  box-shadow: 0 16px 30px -22px color-mix(in srgb, var(--vh-door-shade) 55%, transparent);
+  text-align: left;
+}
+
+.rsvpFields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rsvpField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rsvpLabel {
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vh-gold-light);
+}
+
+.rsvpInput {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--vh-gold-soft) 40%, transparent);
+  border-radius: 8px;
+  background: var(--vh-card);
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-weight: 500;
+  font-size: 17px;
+  font-variant-numeric: lining-nums;
+  line-height: 1.45;
+  color: var(--vh-ink);
+}
+
+.rsvpInput::placeholder {
+  color: var(--vh-ink-soft);
+  opacity: 1;
+}
+
+.rsvpInput:focus-visible {
+  outline: 2px solid var(--vh-gold-light);
+  outline-offset: 2px;
+}
+
+.rsvpInput[aria-invalid="true"] {
+  border-color: var(--vh-gold-light);
+}
+
+.rsvpSelect {
+  appearance: auto;
+}
+
+.rsvpTextarea {
+  min-height: 104px;
+  resize: vertical;
+}
+
+.rsvpError,
+.rsvpHint,
+.rsvpResult {
+  margin: 0;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--vh-gold-pale);
+  overflow-wrap: anywhere;
+}
+
+.rsvpResult {
+  text-align: center;
+}
+
+.rsvpSubmit,
+.rsvpEdit {
+  min-height: 48px;
+  margin-top: 4px;
+  padding: 0 20px;
+  border: 1px solid color-mix(in srgb, var(--vh-gold-light) 85%, transparent);
+  border-radius: 10px;
+  background: var(--vh-lacquer);
+  box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--vh-shadow) 70%, transparent);
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--vh-white-warm);
+  cursor: pointer;
+}
+
+.rsvpSubmit[aria-disabled="true"] {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.rsvpSubmit:focus-visible,
+.rsvpEdit:focus-visible {
+  outline: 2px solid var(--vh-gold-light);
+  outline-offset: 3px;
+}
+
+.rsvpDone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--vh-lacquer-text);
+}
+
+.rsvpDone p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.rsvpDoneThanks {
+  font-family: var(--vh-font-display), Georgia, serif;
+  font-style: italic;
+  font-size: 24px;
+  line-height: 1.3;
+  color: var(--vh-white-warm);
+}
+
+.rsvpDoneChoice {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--vh-gold-light);
+}
+
+.rsvpDoneMessage {
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.rsvpEdit {
+  margin-top: 10px;
+}
+
+/* Wedding Gift --------------------------------------------------------------------- */
+
 .gift {
   position: relative;
   padding: 44px 28px 56px;
@@ -1249,7 +1490,111 @@
   position: relative;
 }
 
-.giftLotus {
+.giftIntro {
+  max-width: 320px;
+  margin: 0 0 22px;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 16.5px;
+  line-height: 1.6;
+  color: var(--vh-ink-muted);
+  text-wrap: balance;
+}
+
+/* Task 029 gift CTA: the only gift element on the page. */
+.giftOpen {
+  min-height: 48px;
+  padding: 0 28px;
+  border: 1px solid color-mix(in srgb, var(--vh-gold-light) 85%, transparent);
+  border-radius: 10px;
+  background: var(--vh-vermilion);
+  box-shadow: 0 8px 18px -12px color-mix(in srgb, var(--vh-door-shade) 60%, transparent);
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 13.5px;
+  letter-spacing: 0.26em;
+  margin-right: -0.26em;
+  text-transform: uppercase;
+  color: var(--vh-white-warm);
+  cursor: pointer;
+}
+
+.giftOpen:focus-visible,
+.giftClose:focus-visible,
+.giftTab:focus-visible,
+.giftCopy:focus-visible {
+  outline: 2px solid var(--vh-gold-deep);
+  outline-offset: 3px;
+}
+
+/* Native modal dialog: bottom sheet on phones, centred modal from 600px. */
+.giftDialog {
+  width: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  margin: auto auto 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--vh-ink);
+  font-family: var(--vh-font-serif), Georgia, "Times New Roman", serif;
+  font-variant-numeric: lining-nums;
+  overflow: visible;
+}
+
+.giftDialog::backdrop {
+  background: color-mix(in srgb, var(--vh-shadow) 55%, transparent);
+}
+
+.giftSheet {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-height: 88svh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 30px 22px calc(26px + env(safe-area-inset-bottom));
+  border-top: 1px solid color-mix(in srgb, var(--vh-gold) 55%, transparent);
+  border-radius: 18px 18px 0 0;
+  background-color: var(--vh-card);
+  background-image: var(--vh-texture-ivory);
+  background-size: 620px auto;
+  box-shadow: 0 -18px 40px -20px color-mix(in srgb, var(--vh-shadow) 50%, transparent);
+  text-align: center;
+}
+
+@media (min-width: 600px) {
+  .giftDialog {
+    width: calc(100% - 32px);
+    max-width: 400px;
+    margin: auto;
+  }
+
+  .giftSheet {
+    max-height: 86svh;
+    padding-bottom: 24px;
+    border: 1px solid color-mix(in srgb, var(--vh-gold) 55%, transparent);
+    border-radius: 16px;
+    box-shadow: 0 24px 50px -20px color-mix(in srgb, var(--vh-shadow) 50%, transparent);
+  }
+}
+
+.giftClose {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--vh-ink-soft);
+  cursor: pointer;
+}
+
+.giftSheetLotus {
   display: block;
   width: 36px;
   margin: 0 auto 4px;
@@ -1266,39 +1611,39 @@
   color: var(--vh-vermilion-deep);
 }
 
-.giftIntro {
-  max-width: 320px;
-  margin: 12px 0 22px;
-  font-style: italic;
-  font-weight: 500;
-  font-size: 16.5px;
-  line-height: 1.6;
-  color: var(--vh-ink-muted);
-  text-wrap: balance;
-}
-
-.giftPanel {
+.giftTabs {
+  display: flex;
+  gap: 2px;
   width: 100%;
-  max-width: 340px;
-  margin-bottom: 16px;
-  padding: 22px 20px 12px;
-  border: 1px solid color-mix(in srgb, var(--vh-gold) 55%, transparent);
-  border-radius: 16px;
-  background: var(--vh-card);
-  box-shadow: 0 18px 36px -24px color-mix(in srgb, var(--vh-shadow) 50%, transparent);
+  max-width: 260px;
+  margin: 16px auto 0;
+  padding: 3px;
+  border: 1px solid color-mix(in srgb, var(--vh-vermilion) 35%, transparent);
+  border-radius: 999px;
 }
 
-.giftPanel::before {
-  content: "";
-  position: absolute;
-  inset: 6px;
-  border: 0.5px solid color-mix(in srgb, var(--vh-vermilion) 22%, transparent);
-  border-radius: 11px;
-  pointer-events: none;
+.giftTab {
+  flex: 1;
+  min-height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vh-vermilion);
+  cursor: pointer;
 }
 
-.giftSide {
-  margin: 0 0 14px;
+.giftTab[aria-pressed="true"] {
+  background: var(--vh-vermilion);
+  color: var(--vh-cream);
+}
+
+.giftSideLabel {
+  margin: 14px 0 0;
   font-weight: 600;
   font-size: 12.5px;
   letter-spacing: 0.3em;
@@ -1307,8 +1652,23 @@
   color: var(--vh-vermilion);
 }
 
+.giftPanel {
+  margin-top: 18px;
+}
+
+.giftPanel[hidden] {
+  display: none;
+}
+
+.giftDetails {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .giftQr {
-  width: 176px;
+  box-sizing: border-box;
+  width: 196px;
   max-width: 100%;
   aspect-ratio: 1;
   margin: 0 auto 6px;
@@ -1327,8 +1687,10 @@
 }
 
 .giftLines {
+  width: 100%;
   margin: 12px 0 0;
   padding: 0;
+  text-align: center;
 }
 
 .giftLine {
@@ -1358,6 +1720,48 @@
   font-size: 21px;
   letter-spacing: 0.08em;
   font-variant-numeric: lining-nums tabular-nums;
+  color: var(--vh-vermilion-deep);
+  user-select: all;
+}
+
+.giftLine .giftLineAction {
+  margin-top: 8px;
+}
+
+.giftCopyControl {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.giftCopy {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid color-mix(in srgb, var(--vh-vermilion) 55%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--vh-vermilion);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.giftCopy[data-copy-feedback="success"] {
+  background: var(--vh-vermilion);
+  color: var(--vh-cream);
+}
+
+.giftCopyNote {
+  max-width: 260px;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 13.5px;
+  line-height: 1.45;
   color: var(--vh-vermilion-deep);
 }
 
@@ -1555,18 +1959,36 @@
     0 12px 24px -18px color-mix(in srgb, var(--vh-door-shade) 35%, transparent);
 }
 
+/*
+ * VH-02A-QA1 safe album prints: the whole photograph is always shown
+ * (`object-fit: contain`) on the print's silk mat, never cropped to the tile.
+ * Full-width rows take the photo's own ratio, bounded 4:5 – 3:2, through
+ * `--vh-print-ratio` (set from MediaResolution dimensions in markup); paired
+ * rows keep their shared shape so the heritage rhythm holds.
+ */
 .albumPhoto,
 .albumUnavailable {
   display: block;
   width: 100%;
   height: auto;
   aspect-ratio: 4 / 5;
-  object-fit: cover;
+  object-fit: contain;
+  background: var(--vh-silk);
 }
 
+.albumRowLarge .albumPrint {
+  --vh-print-ratio: 4 / 5;
+}
+
+.albumRowWide .albumPrint {
+  --vh-print-ratio: 3 / 2;
+}
+
+.albumRowLarge .albumPhoto,
+.albumRowLarge .albumUnavailable,
 .albumRowWide .albumPhoto,
 .albumRowWide .albumUnavailable {
-  aspect-ratio: 3 / 2;
+  aspect-ratio: var(--vh-print-ratio);
 }
 
 .albumRowTall .albumPhoto,

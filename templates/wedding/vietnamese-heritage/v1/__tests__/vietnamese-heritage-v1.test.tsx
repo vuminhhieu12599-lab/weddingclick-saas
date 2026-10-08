@@ -1,3 +1,7 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -45,6 +49,10 @@ const { VietnameseHeritageV1 } = await import("../vietnamese-heritage-v1");
 const { ElegantEditorialV1 } = await import("../../../elegant-editorial/v1/elegant-editorial-v1");
 const { InvitationRendererHost } = await import("../../../../core/invitation-renderer-host");
 const { VIETNAMESE_HERITAGE_V1_COPY: COPY } = await import("../copy");
+const { Rsvp } = await import("../interactive/rsvp");
+const { Gift } = await import("../sections/gift");
+const { CoupleName, COUPLE_NAME_SINGLE_LINE_MAX_CHARS, coupleNameLength } = await import("../sections/couple-name");
+const { albumPrintRatio } = await import("../sections/gallery-layout");
 
 /**
  * VH-01 / VH-02A — Vietnamese Heritage v1 identity, compatibility, registry
@@ -568,7 +576,11 @@ describe("E. canonical mapping", () => {
     // The audio reference never becomes an element (VH-02B owns music).
     expect(fixture.viewModel.media.audio?.mediaId).toBe(FIXTURE_MEDIA_IDS.AUDIO);
     expect(html).not.toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.AUDIO));
-    expect(html).not.toMatch(/<audio|<button|<form|<dialog/);
+    expect(html).not.toMatch(/<audio|<form/);
+    // No capability → no RSVP; the only controls are the gift CTA and, inside its closed dialog,
+    // the close control and the two COMMON side tabs (VH-02B-E1).
+    expect(html.match(/<button/g)).toHaveLength(4);
+    expect(html.match(/<dialog/g)).toHaveLength(1);
   });
 
   it("gift: one panel per operational side with canonical lines; GROOM shows only the groom side", async () => {
@@ -637,9 +649,12 @@ describe("E. canonical mapping", () => {
       ]),
     );
     expect(html).not.toMatch(/lantern|corner-ornament/);
-    // Static VH-02A: the closed door is art only; no tap target, timer or interactive island yet.
+    // The closed door is still art only (opening is a later VH-02B checkpoint); no tap target or timer.
     expect(html).toContain('data-opening="closed"');
-    expect(html).not.toMatch(/<button|<form|<dialog|onclick|tabindex/i);
+    const opening = html.slice(html.indexOf('data-opening="closed"'), html.indexOf('id="vh-hero-names"'));
+    expect(opening).not.toMatch(/<button|<form|<dialog|onclick|tabindex/i);
+    // Without capabilities: no RSVP form, no copy control.
+    expect(html).not.toMatch(/<form|Xác Nhận Tham Dự|Sao chép/);
   });
 
   it("Song Hỷ: deterministic vector marks with an accessible name, never a font glyph; medallion raster only on opening/hero", async () => {
@@ -894,7 +909,8 @@ describe("G. template slots", () => {
   });
 
   describe("gallery", () => {
-    const tiles = (html: string) => [...html.matchAll(/albumPrint[^"]*" data-status="(\w+)" data-index="(\d+)"/g)].map((match) => `${match[2]}:${match[1]}`);
+    const tiles = (html: string) =>
+      [...html.matchAll(/class="[^"]*albumPrint[^"]*"[^>]*?data-status="(\w+)" data-index="(\d+)"/g)].map((match) => `${match[2]}:${match[1]}`);
 
     it("exact frozen slot order, never the legacy GALLERY rows", async () => {
       const { html } = await renderVh(ALL_MEDIA);
@@ -925,5 +941,344 @@ describe("G. template slots", () => {
       const { html } = await renderVh({ ...ALL_MEDIA, slots: { gallery: ids } });
       expect(imageIds(html.slice(html.indexOf('data-island="gallery"')))).toStrictEqual(ids);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// H. VH-02A-QA1 (names, safe gallery, directions) and VH-02B-E1 (RSVP, gift)
+// ---------------------------------------------------------------------------
+
+const VH_DIR = join(__dirname, "..");
+const cssSource = readFileSync(join(VH_DIR, "vietnamese-heritage-v1.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+
+function cssRule(selector: string): string {
+  const start = cssSource.indexOf(`${selector} {`);
+  expect(start, selector).toBeGreaterThan(-1);
+  return cssSource.slice(start, cssSource.indexOf("}", start));
+}
+
+function rsvpDouble(): InvitationRendererCapabilitiesV1["rsvp"] & { submit: ReturnType<typeof vi.fn> } {
+  return { submit: vi.fn(async () => ({ status: "SUCCESS" as const })) };
+}
+
+function clipboardDouble(): NonNullable<InvitationRendererCapabilitiesV1["clipboard"]> & { copyText: ReturnType<typeof vi.fn> } {
+  return { copyText: vi.fn(async () => ({ status: "SUCCESS" as const })) };
+}
+
+function renderWith(fixture: RendererFixture, capabilities: InvitationRendererCapabilitiesV1): string {
+  return renderToStaticMarkup(
+    <VietnameseHeritageV1 viewModel={fixture.viewModel} sections={fixture.selection.effectiveSections} capabilities={capabilities} />,
+  );
+}
+
+function findElements(node: ReactNode, type: unknown): ReactElement<Record<string, unknown>>[] {
+  if (Array.isArray(node)) return node.flatMap((child) => findElements(child as ReactNode, type));
+  if (!isValidElement<Record<string, unknown>>(node)) return [];
+  const own = node.type === type ? [node] : [];
+  return [...own, ...findElements(node.props.children as ReactNode, type)];
+}
+
+async function namedFixture(groomName: string, brideName: string, variant: InvitationVariant = "GROOM"): Promise<RendererFixture> {
+  const input = vhSource({ variant });
+  const details = input.weddingDetails as NonNullable<BuildSnapshotPayloadInput["weddingDetails"]>;
+  input.weddingDetails = { ...details, groomName, brideName };
+  return runRendererFixturePipeline(input, { resolver: createFixtureMediaResolver() });
+}
+
+describe("H. long couple names (VH-02A-QA1)", () => {
+  const NAMES = ["Nguyễn Văn Nam", "Nguyễn Thị Hà", "Nguyễn Hoàng Minh Anh", "Trần Nguyễn Phương Thảo"] as const;
+
+  it.each([
+    ["Nguyễn Văn Nam", 14],
+    ["Nguyễn Thị Hà", 13],
+    ["Nguyễn Hoàng Minh Anh", 21],
+    ["Trần Nguyễn Phương Thảo", 23],
+    ["Tôn Nữ Hoàng Bảo Ngọc Quyên Anh", 31],
+  ] as const)("%s counts %i code points", (name, chars) => {
+    expect(coupleNameLength(name)).toBe(chars);
+  });
+
+  it("each name is its own verbatim block on the cover and the hero, one-line up to the limit", async () => {
+    for (const [groom, bride] of [
+      [NAMES[0], NAMES[1]],
+      [NAMES[2], NAMES[3]],
+    ] as const) {
+      const fixture = await namedFixture(groom, bride);
+      const html = render(fixture.viewModel, fixture.selection.effectiveSections);
+      for (const name of [groom, bride]) {
+        const blocks = [...html.matchAll(/<span class="[^"]*coupleName[^"]*" style="--vh-name-chars:(\d+)" data-name-fit="(\w+)">([^<]*)<\/span>/g)].filter(
+          (match) => match[3] === name,
+        );
+        // Opening cover + hero, the full name unsplit in one span each.
+        expect(blocks, name).toHaveLength(2);
+        for (const block of blocks) {
+          expect(block[1]).toBe(String(coupleNameLength(name)));
+          expect(block[2]).toBe("line");
+        }
+      }
+    }
+  });
+
+  it("only a name over the single-line limit takes the balanced-wrap fallback", () => {
+    expect(COUPLE_NAME_SINGLE_LINE_MAX_CHARS).toBe(24);
+    const long = renderToStaticMarkup(<CoupleName name="Tôn Nữ Hoàng Bảo Ngọc Quyên Anh" />);
+    expect(long).toContain('data-name-fit="wrap"');
+    expect(long).toContain(">Tôn Nữ Hoàng Bảo Ngọc Quyên Anh<");
+    expect(renderToStaticMarkup(<CoupleName name={"A".repeat(24)} />)).toContain('data-name-fit="line"');
+  });
+
+  it("CSS: nowrap one-line blocks sized from the code-point count, clamped; no fixed width; balanced fallback", () => {
+    const base = cssRule(".coupleName");
+    expect(base).toMatch(/white-space: nowrap/);
+    expect(base).toMatch(/max-width: 100%/);
+    expect(base).not.toMatch(/(^|\s)width:/);
+    expect(cssRule('.coupleName[data-name-fit="wrap"]')).toMatch(/white-space: normal;[\s\S]*text-wrap: balance/);
+    expect(cssRule(".coverNames .coupleName")).toMatch(
+      /font-size: clamp\(17px, calc\(\(100cqw - 2 \* var\(--border-reach\) - 12px\) \/ \(var\(--vh-name-chars\) \* 0\.56\)\), 41px\)/,
+    );
+    expect(cssRule(".heroNames .coupleName")).toMatch(/font-size: clamp\(17px, calc\(\(100cqw - 60px\) \/ \(var\(--vh-name-chars\) \* 0\.56\)\), 38px\)/);
+    // No measurement loop or token splitting in the name module.
+    const nameModule = readFileSync(join(VH_DIR, "sections", "couple-name.tsx"), "utf8");
+    expect(nameModule).not.toMatch(/\.split\(|getBoundingClientRect|offsetWidth|scrollWidth|useEffect|ResizeObserver/);
+  });
+});
+
+describe("H. safe gallery prints (VH-02A-QA1)", () => {
+  const ratios = (html: string) =>
+    [...html.matchAll(/<div class="[^"]*albumPrint[^"]*"( style="--vh-print-ratio:([\d.]+)")? data-status="(\w+)" data-index="(\d+)" data-fit="contain"/g)].map(
+      (match) => `${match[4]}:${match[2] ?? "row"}`,
+    );
+
+  it("albumPrintRatio: full-width rows take the photo ratio bounded 4:5–3:2; pairs, unknown sizes and UNAVAILABLE keep the row shape", () => {
+    const resolved = (width: number | null, height: number | null) => ({ status: "RESOLVED" as const, mediaId: "m", url: "u", width, height });
+    expect(albumPrintRatio("wide", resolved(800, 1200))).toBe(0.8);
+    expect(albumPrintRatio("large", resolved(1200, 800))).toBe(1.5);
+    expect(albumPrintRatio("large", resolved(1200, 1200))).toBe(1);
+    expect(albumPrintRatio("wide", resolved(4000, 1000))).toBe(1.5);
+    expect(albumPrintRatio("wide", resolved(1000, 1100))).toBe(0.9091);
+    expect(albumPrintRatio("pair", resolved(800, 1200))).toBeNull();
+    expect(albumPrintRatio("tall", resolved(800, 1200))).toBeNull();
+    expect(albumPrintRatio("wide", resolved(null, null))).toBeNull();
+    expect(albumPrintRatio("wide", { status: "UNAVAILABLE", mediaId: "m" })).toBeNull();
+  });
+
+  it.each([
+    ["portrait", FIXTURE_MEDIA_IDS.GALLERY_2, "0.8"],
+    ["landscape", FIXTURE_MEDIA_IDS.GALLERY_1, "1.5"],
+    ["square", FIXTURE_MEDIA_IDS.GALLERY_3, "1"],
+  ] as const)("a single %s photo gets its own bounded print ratio", async (_label, id, ratio) => {
+    const { html } = await renderVh({ ...ALL_MEDIA, slots: { gallery: [id] } });
+    expect(ratios(html)).toStrictEqual([`0:${ratio}`]);
+  });
+
+  it("mixed gallery: slot order kept, full-width rows ratio-aware, paired rows keep their shape, UNAVAILABLE stays", async () => {
+    const ids = [FIXTURE_MEDIA_IDS.GALLERY_2, FIXTURE_MEDIA_IDS.GALLERY_1, FIXTURE_MEDIA_IDS.GALLERY_3, FIXTURE_MEDIA_IDS.COVER, PHOTO.P1];
+    const { html } = await renderVh({ ...ALL_MEDIA, slots: { gallery: ids }, unavailableMediaIds: [FIXTURE_MEDIA_IDS.GALLERY_3] });
+    // large(0) · pair(1, 2) · tall(3, 4)
+    expect(ratios(html)).toStrictEqual(["0:0.8", "1:row", "2:row", "3:row", "4:row"]);
+    expect([...html.matchAll(/data-status="(\w+)" data-index="\d+" data-fit/g)].map((match) => match[1])).toStrictEqual([
+      "RESOLVED",
+      "RESOLVED",
+      "UNAVAILABLE",
+      "RESOLVED",
+      "RESOLVED",
+    ]);
+  });
+
+  it("CSS: album photos are contained on the print mat, never cover-cropped; no lightbox", async () => {
+    expect(cssRule(".albumPhoto,\n.albumUnavailable")).toMatch(/object-fit: contain/);
+    const albumRules = [...cssSource.matchAll(/(\.album[^{]*)\{([^}]*)\}/g)];
+    for (const [, selector, body] of albumRules) expect(body, selector).not.toMatch(/object-fit: cover/);
+    const { html } = await renderVh(ALL_MEDIA);
+    const album = html.slice(html.indexOf('data-island="gallery"'));
+    expect(album).not.toMatch(/<button|<dialog|onclick/i);
+  });
+});
+
+describe("H. directions CTA (VH-02A-QA1)", () => {
+  const links = (html: string) =>
+    [...html.matchAll(/<a class="[^"]*venueMapLink[^"]*" href="([^"]+)" target="_blank" rel="noopener noreferrer">([^<]+)</g)].map((match) => [
+      match[1],
+      match[2],
+    ]);
+
+  it("COMMON: each ceremony card links its own canonical mapUrl with the visible CTA", async () => {
+    const { html } = await renderVh({ variant: "COMMON" });
+    expect(links(html)).toStrictEqual([
+      ["https://maps.example.invalid/groom-home", "Xem chỉ đường"],
+      ["https://maps.example.invalid/bride-home", "Xem chỉ đường"],
+    ]);
+    const cta = cssRule(".venueMapLink");
+    expect(cta).toMatch(/min-height: 44px/);
+    expect(cta).toMatch(/background: var\(--vh-vermilion\)/);
+  });
+
+  it("GROOM / BRIDE use only their own ceremony card URL", async () => {
+    expect(links((await renderVh({ variant: "GROOM" })).html)).toStrictEqual([["https://maps.example.invalid/groom-home", "Xem chỉ đường"]]);
+    expect(links((await renderVh({ variant: "BRIDE" })).html)).toStrictEqual([["https://maps.example.invalid/bride-home", "Xem chỉ đường"]]);
+  });
+
+  it("a null mapUrl renders no actionable link and nothing is fabricated from the venue or address", async () => {
+    const input = vhSource({ variant: "COMMON" });
+    input.events = input.events.map((event) => (event.mapUrl === "https://maps.example.invalid/groom-home" ? { ...event, mapUrl: null } : event));
+    const fixture = await runRendererFixturePipeline(input, { resolver: createFixtureMediaResolver() });
+    const html = render(fixture.viewModel, fixture.selection.effectiveSections);
+    expect(links(html)).toStrictEqual([["https://maps.example.invalid/bride-home", "Xem chỉ đường"]]);
+    expect(html).not.toMatch(/google\.[a-z]+\/maps|maps\.google|maps\.apple|geo:/);
+    expect(count(html, "Xem chỉ đường")).toBe(1);
+    // The canonical event is untouched.
+    expect(fixture.viewModel.ceremonyCards.find((card) => card.side === "GROOM")?.event.mapUrl).toBeNull();
+  });
+});
+
+describe("H. RSVP island (VH-02B-E1)", () => {
+  it("no capabilities.rsvp → no RSVP section", async () => {
+    const fixture = await vhFixture(ALL_MEDIA);
+    const html = renderWith(fixture, { clipboard: clipboardDouble() });
+    expect(html).not.toContain("vh-rsvp-heading");
+    expect(html).not.toContain(COPY.rsvp.heading);
+  });
+
+  it("with the capability: placed after Love Story and before Gift, the root hands over exactly that capability", async () => {
+    const fixture = await vhFixture(ALL_MEDIA);
+    const rsvp = rsvpDouble();
+    const html = renderWith(fixture, { rsvp });
+    const at = (needle: string) => html.indexOf(needle);
+    expect(at("vh-love-story-heading")).toBeLessThan(at("vh-rsvp-heading"));
+    expect(at("vh-rsvp-heading")).toBeLessThan(at("vh-gift-heading"));
+    expect(at("vh-gift-heading")).toBeLessThan(at("vh-dress-code-heading"));
+    const tree = VietnameseHeritageV1({ viewModel: fixture.viewModel, sections: fixture.selection.effectiveSections, capabilities: { rsvp } });
+    const [element] = findElements(tree, Rsvp);
+    expect(element?.props.rsvp).toBe(rsvp);
+    expect(rsvp.submit).not.toHaveBeenCalled();
+  });
+
+  it("Task 029 form: title, empty name, three attendance choices starting on ATTENDING, party size 1–20, wish, submit", async () => {
+    const html = renderToStaticMarkup(<Rsvp rsvp={rsvpDouble()} />);
+    expect(html).toContain(">Xác Nhận Tham Dự</span> <span>&amp; Gửi Lời Chúc</span>");
+    const nameInput = html.match(/<input id="vh-rsvp-guest-name"[^>]*>/)?.[0] ?? "";
+    for (const attribute of ['placeholder="Tên của bạn"', 'maxLength="200"', 'required=""', 'name="guestName"', 'value=""', 'autoComplete="name"']) {
+      expect(nameInput, attribute).toContain(attribute);
+    }
+    const options = [...html.matchAll(/<option value="(\w+)"( selected="")?>([^<]+)<\/option>/g)].map((match) => [match[1], match[3], Boolean(match[2])]);
+    expect(options.slice(0, 3)).toStrictEqual([
+      ["ATTENDING", "Sẽ tham dự", true],
+      ["MAYBE", "Sẽ cố gắng tham dự", false],
+      ["NOT_ATTENDING", "Tiếc quá, không tham dự được", false],
+    ]);
+    const sizes = [...html.matchAll(/<option value="(\d+)"/g)].map((match) => Number(match[1]));
+    expect(sizes).toStrictEqual(Array.from({ length: 20 }, (_, index) => index + 1));
+    expect(html).toContain(">Số người tham dự</label>");
+    expect(html).toContain('placeholder="Gửi lời chúc đến cô dâu &amp; chú rể..."');
+    expect(html).toMatch(/<button type="submit" class="[^"]*">Gửi ngay<\/button>/);
+    expect(html).toContain('data-rsvp-phase="idle"');
+    // No success before the capability resolved SUCCESS.
+    expect(html).not.toContain(COPY.rsvp.successThanks);
+  });
+});
+
+describe("H. wedding gift CTA and dialog (VH-02B-E1)", () => {
+  type GiftProps = Parameters<typeof Gift>[0];
+  const QR_RESOLVED = { status: "RESOLVED" as const, mediaId: FIXTURE_MEDIA_IDS.QR_GROOM, url: fixtureMediaUrl(FIXTURE_MEDIA_IDS.QR_GROOM), width: 600, height: 600 };
+  const QR_BRIDE = { status: "RESOLVED" as const, mediaId: FIXTURE_MEDIA_IDS.QR_BRIDE, url: fixtureMediaUrl(FIXTURE_MEDIA_IDS.QR_BRIDE), width: 600, height: 600 };
+  const GROOM_LINES = {
+    side: "GROOM" as const,
+    bankName: "Ngân hàng Hoa Sữa",
+    bankAccountName: "NGUYEN MINH KHOI",
+    bankAccountNumber: "9001000000001",
+    bankQrMediaId: null,
+  };
+  const BRIDE_LINES = {
+    side: "BRIDE" as const,
+    bankName: "Ngân hàng Phượng Vĩ",
+    bankAccountName: "TRAN NGOC HAN",
+    bankAccountNumber: "9001000000002",
+    bankQrMediaId: null,
+  };
+  const giftHtml = (props: Partial<GiftProps>) =>
+    renderToStaticMarkup(<Gift operationalSides={["GROOM"]} gift={{}} qr={{}} clipboard={undefined} {...props} />);
+
+  it("no honest gift content → nothing: no empty CTA, no empty dialog", () => {
+    expect(giftHtml({})).toBe("");
+    expect(giftHtml({ gift: { groom: { ...GROOM_LINES, bankName: " ", bankAccountName: null, bankAccountNumber: null } } })).toBe("");
+    expect(giftHtml({ qr: { groom: { status: "UNAVAILABLE", mediaId: FIXTURE_MEDIA_IDS.QR_GROOM } } })).toBe("");
+  });
+
+  it("the page shows only the note and the visible “Gửi Quà Cưới” CTA; details live in the closed dialog", () => {
+    const html = giftHtml({ gift: { groom: GROOM_LINES }, qr: { groom: QR_RESOLVED } });
+    const page = html.slice(0, html.indexOf("<dialog"));
+    expect(page).toContain(COPY.gift.intro);
+    expect(page).toMatch(/<button type="button" class="[^"]*giftOpen[^"]*" aria-haspopup="dialog">Gửi Quà Cưới<\/button>/);
+    expect(page).not.toContain("9001000000001");
+    const dialog = html.slice(html.indexOf("<dialog"));
+    expect(dialog).not.toMatch(/<dialog[^>]* open/);
+    expect(dialog).toContain('aria-labelledby="vh-gift-dialog-title"');
+    expect(dialog).toContain('aria-label="Đóng"');
+    expect(dialog).toContain(">Gửi Quà Cưới</h2>");
+  });
+
+  it("one side: one panel with its label, no side controls", () => {
+    const html = giftHtml({ gift: { groom: GROOM_LINES } });
+    expect(html).not.toMatch(/giftTab/);
+    expect(html).toMatch(/class="[^"]*giftSideLabel[^"]*">Nhà Trai</);
+    expect(html.match(/data-side="(\w+)"/g)).toStrictEqual(['data-side="GROOM"']);
+  });
+
+  it("two sides: explicit Nhà Trai / Nhà Gái controls in operationalSides order, first selected", () => {
+    const html = giftHtml({ operationalSides: ["GROOM", "BRIDE"], gift: { groom: GROOM_LINES, bride: BRIDE_LINES } });
+    const tabs = [...html.matchAll(/class="[^"]*giftTab[^"]*" aria-pressed="(\w+)" aria-controls="vh-gift-panel-(\w+)">([^<]+)</g)].map((match) => match.slice(1));
+    expect(tabs).toStrictEqual([
+      ["true", "GROOM", "Nhà Trai"],
+      ["false", "BRIDE", "Nhà Gái"],
+    ]);
+    expect(html).toMatch(/id="vh-gift-panel-BRIDE" class="[^"]*" data-side="BRIDE" hidden=""/);
+    expect(html).not.toMatch(/giftSideLabel/);
+  });
+
+  it("QR: RESOLVED renders in its plate; UNAVAILABLE is absent and never replaced; bank text stays", () => {
+    const resolved = giftHtml({ operationalSides: ["GROOM", "BRIDE"], gift: { groom: GROOM_LINES, bride: BRIDE_LINES }, qr: { groom: QR_RESOLVED, bride: QR_BRIDE } });
+    expect(resolved).toContain(src(FIXTURE_MEDIA_IDS.QR_GROOM));
+    expect(resolved).toContain(src(FIXTURE_MEDIA_IDS.QR_BRIDE));
+    const html = giftHtml({ gift: { groom: GROOM_LINES }, qr: { groom: { status: "UNAVAILABLE", mediaId: FIXTURE_MEDIA_IDS.QR_GROOM } } });
+    expect(html).not.toMatch(/<img/);
+    expect(html).toContain("9001000000001");
+    expect(html).toContain("Ngân hàng Hoa Sữa");
+  });
+
+  it("clipboard absent → no copy control (number still shown); present → one control per account number", () => {
+    const without = giftHtml({ operationalSides: ["GROOM", "BRIDE"], gift: { groom: GROOM_LINES, bride: BRIDE_LINES } });
+    expect(without).not.toMatch(/giftCopy|Sao chép/);
+    expect(without).toContain("9001000000002");
+    const clipboard = clipboardDouble();
+    const withCopy = giftHtml({ operationalSides: ["GROOM", "BRIDE"], gift: { groom: GROOM_LINES, bride: BRIDE_LINES }, clipboard });
+    expect(withCopy.match(/<button type="button" class="[^"]*giftCopy[^"]*" data-copy-feedback="idle">Sao chép/g)).toHaveLength(2);
+    expect(withCopy).toContain("số tài khoản Nhà Gái");
+    expect(clipboard.copyText).not.toHaveBeenCalled();
+    // No account number → no copy control.
+    expect(giftHtml({ gift: { groom: { ...GROOM_LINES, bankAccountNumber: null } }, clipboard })).not.toMatch(/giftCopy/);
+  });
+
+  it("the root passes clipboard only through the gift section and keeps sections.gift as the visibility gate", async () => {
+    const fixture = await vhFixture(ALL_MEDIA);
+    const clipboard = clipboardDouble();
+    const tree = VietnameseHeritageV1({ viewModel: fixture.viewModel, sections: fixture.selection.effectiveSections, capabilities: { clipboard } });
+    const [gift] = findElements(tree, Gift);
+    expect(gift?.props.clipboard).toBe(clipboard);
+    const hidden = await vhFixture({ ...ALL_MEDIA, sectionSettings: { gift: false } });
+    const hiddenTree = VietnameseHeritageV1({ viewModel: hidden.viewModel, sections: hidden.selection.effectiveSections, capabilities: { clipboard } });
+    expect(findElements(hiddenTree, Gift)).toHaveLength(0);
+  });
+
+  it("dialog contract: native modal, every close path returns focus to the CTA, backdrop closes", () => {
+    const code = readFileSync(join(VH_DIR, "interactive", "gift-dialog.tsx"), "utf8");
+    expect(code).toMatch(/if \(open && !dialog\.open\) dialog\.showModal\(\);/);
+    expect(code).toMatch(/function finishClose\(\) \{[\s\S]*?setActiveSide\(null\);[\s\S]*?setGeneration[\s\S]*?openerRef\.current\?\.focus\(\);/);
+    // ✕ and backdrop finish immediately; Escape finishes through the native close event, ignored once reopened.
+    expect(code).toMatch(/function requestClose\(\) \{[\s\S]*?dialog\.close\(\);\s*finishClose\(\);/);
+    expect(code).toMatch(/onClick=\{requestClose\}/);
+    expect(code).toMatch(/if \(event\.target === event\.currentTarget\) requestClose\(\);/);
+    expect(code).toMatch(/onClose=\{handleNativeClose\}/);
+    expect(code).toMatch(/function handleNativeClose\(\) \{\s*if \(dialogRef\.current\?\.open === true\) return;\s*if \(open\) finishClose\(\);/);
+    expect(code).not.toMatch(/router|history\.|location\.|localStorage|sessionStorage/);
   });
 });

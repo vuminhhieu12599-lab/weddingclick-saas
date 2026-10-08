@@ -301,7 +301,7 @@ describe("templates/** production tree (P39)", () => {
   // TE-02 extension: plus exactly the editor-manifest files (rules in editor-manifest-static-boundary.test.ts).
   it("templates/** contains exactly the RF-06A, RF-06B, RF-06C, RF-06D, VH-01 and TE-02 files", () => {
     expect([...sources].sort()).toStrictEqual(
-      [...RF06A_FILES, ...RF06B_TEMPLATE_FILES, ...RF06C_FILES, ...RF06D_FILES, ...VH01_FILES, ...TE02_FILES].sort(),
+      [...RF06A_FILES, ...RF06B_TEMPLATE_FILES, ...RF06C_FILES, ...RF06D_FILES, ...VH01_FILES, ...VH02B_ISLAND_FILES, ...TE02_FILES].sort(),
     );
   });
 
@@ -584,7 +584,16 @@ describe("RF-06B template files", () => {
     const sources = listSources(TEMPLATES_ROOT);
     for (const file of sources.filter((source) => /\.(tsx|css)$/.test(source))) {
       expect(
-        [HOST_MODULE, RF06C_HOST_CORE_MODULE, RF06B_CSS_FILE, ...RF06B_RENDERER_FILES, ...RF06D_ISLAND_FILES, VH01_CSS_FILE, ...VH01_RENDERER_FILES],
+        [
+          HOST_MODULE,
+          RF06C_HOST_CORE_MODULE,
+          RF06B_CSS_FILE,
+          ...RF06B_RENDERER_FILES,
+          ...RF06D_ISLAND_FILES,
+          VH01_CSS_FILE,
+          ...VH01_RENDERER_FILES,
+          ...VH02B_ISLAND_FILES,
+        ],
         file,
       ).toContain(file);
     }
@@ -1258,7 +1267,8 @@ describe("client import graph from the host (P26, P45)", () => {
           (statement) => !statement.typeOnly && resolveSpecifier(file, statement.specifier) === RSVP_CONTRACT,
         ),
     );
-    expect(valueImporters.sort()).toStrictEqual([RF06D_RSVP, RF06D_RSVP_MODEL].sort());
+    // VH-02B-E1: plus the shared renderer RSVP form model (Vietnamese Heritage imports the contract type-only).
+    expect(valueImporters.sort()).toStrictEqual([RF06D_RSVP, RF06D_RSVP_MODEL, VH02B_SHARED_RSVP_MODEL].sort());
   });
 
   it.each(graph.files.filter((file) => /\.(ts|tsx)$/.test(file)))(
@@ -1708,6 +1718,7 @@ const VH01_MEDIA_IMAGE = `${VH}/sections/media-image.tsx`;
 const VH01_SECTIONS = [
   "ceremonial",
   "closing",
+  "couple-name",
   "decor",
   "dress-code",
   "events",
@@ -1741,6 +1752,15 @@ const VH_SECTION_COMMON = [`${VH}/copy`, VH_CSS];
 const VH_TYPES = `${LIB}/invitation-view-model-types`;
 const VH_DATE = `${LIB}/event-date-time-presentation`;
 
+/** VH-02B-E1: the Vietnamese Heritage interaction islands (rules in "VH-02B-E1 islands" below). */
+const VH02B_RSVP = `${VH}/interactive/rsvp.tsx`;
+const VH02B_GIFT_DIALOG = `${VH}/interactive/gift-dialog.tsx`;
+const VH02B_COPY_BUTTON = `${VH}/interactive/copy-account-button.tsx`;
+const VH02B_ISLAND_FILES = [VH02B_COPY_BUTTON, VH02B_GIFT_DIALOG, VH02B_RSVP] as const;
+/** VH-02B-E1: the shared, framework-free interaction models the VH islands use. */
+const VH02B_SHARED_RSVP_MODEL = `${LIB}/rsvp-form-model.ts`;
+const VH02B_SHARED_COPY_MODEL = `${LIB}/clipboard-copy-feedback.ts`;
+
 const VH_DECOR = `${VH}/sections/decor`;
 const VH_DECOR_FILE = `${VH_DECOR}.tsx`;
 /** VH-02A: the eight Product Owner-authorized WebP derivatives (on disk and as public URLs). */
@@ -1766,6 +1786,7 @@ const VH01_ALLOWED_IMPORTS: Readonly<Record<string, readonly string[]>> = {
     `${VH}/palette`,
     VH_CSS,
     VH_DECOR,
+    `${VH}/interactive/rsvp`,
     ...["ceremonial", "closing", "dress-code", "events", "gallery", "gift", "hero", "love-story", "opening-cover", "timeline"].map(
       (section) => `${VH}/sections/${section}`,
     ),
@@ -1774,12 +1795,28 @@ const VH01_ALLOWED_IMPORTS: Readonly<Record<string, readonly string[]>> = {
   [`${VH}/palette.ts`]: ["react"],
   [VH01_FONTS]: ["next/font/google"],
   [`${VH}/sections/date-text.ts`]: [VH_DATE],
-  [`${VH}/sections/gallery-layout.ts`]: [],
+  [`${VH}/sections/gallery-layout.ts`]: [VH_TYPES],
+  [`${VH}/sections/couple-name.tsx`]: ["react", VH_CSS],
   [VH01_MEDIA_IMAGE]: [VH_TYPES],
   [VH_DECOR_FILE]: [VH_CSS],
   [`${VH}/sections/song-hy.tsx`]: [...VH_SECTION_COMMON, VH_DECOR],
-  [`${VH}/sections/opening-cover.tsx`]: [VH_DATE, VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/date-text`, VH_DECOR],
-  [`${VH}/sections/hero.tsx`]: [VH_DATE, VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/date-text`, VH_DECOR, `${VH}/sections/media-image`],
+  [`${VH}/sections/opening-cover.tsx`]: [
+    VH_DATE,
+    VH_TYPES,
+    ...VH_SECTION_COMMON,
+    `${VH}/sections/couple-name`,
+    `${VH}/sections/date-text`,
+    VH_DECOR,
+  ],
+  [`${VH}/sections/hero.tsx`]: [
+    VH_DATE,
+    VH_TYPES,
+    ...VH_SECTION_COMMON,
+    `${VH}/sections/couple-name`,
+    `${VH}/sections/date-text`,
+    VH_DECOR,
+    `${VH}/sections/media-image`,
+  ],
   [`${VH}/sections/ceremonial.tsx`]: [
     "react",
     VH_DATE,
@@ -1792,15 +1829,26 @@ const VH01_ALLOWED_IMPORTS: Readonly<Record<string, readonly string[]>> = {
   [`${VH}/sections/events.tsx`]: [VH_DATE, VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/date-text`],
   [`${VH}/sections/timeline.tsx`]: [VH_TYPES, ...VH_SECTION_COMMON],
   [`${VH}/sections/love-story.tsx`]: [VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/media-image`],
-  [`${VH}/sections/gift.tsx`]: [VH_TYPES, `${LIB}/wedding-domain-types`, ...VH_SECTION_COMMON, VH_DECOR, `${VH}/sections/media-image`],
+  // VH-02B-E1: the gift section renders the gift dialog and copy islands and types the clipboard capability.
+  [`${VH}/sections/gift.tsx`]: [
+    VH_TYPES,
+    `${LIB}/renderer-capabilities`,
+    `${LIB}/wedding-domain-types`,
+    ...VH_SECTION_COMMON,
+    `${VH}/interactive/copy-account-button`,
+    `${VH}/interactive/gift-dialog`,
+    `${VH}/sections/media-image`,
+  ],
   [`${VH}/sections/dress-code.tsx`]: [VH_TYPES, ...VH_SECTION_COMMON],
-  [`${VH}/sections/gallery.tsx`]: [VH_TYPES, ...VH_SECTION_COMMON, VH_DECOR, `${VH}/sections/gallery-layout`, `${VH}/sections/media-image`],
+  [`${VH}/sections/gallery.tsx`]: ["react", VH_TYPES, ...VH_SECTION_COMMON, VH_DECOR, `${VH}/sections/gallery-layout`, `${VH}/sections/media-image`],
   [`${VH}/sections/closing.tsx`]: [VH_DATE, VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/date-text`, VH_DECOR, `${VH}/sections/song-hy`],
 };
 
 /** VH-01 additions to the RF-06B forbidden list: static renderer, own graph only. */
 const VH01_EXTRA_FORBIDDEN: readonly [string, RegExp][] = [
-  ["capabilities read (VH-01 is static)", /\bcapabilities\b/],
+  // VH-02B-E1: only the root reads `capabilities` (exempted below); a module path such as
+  // `renderer-capabilities` is not a read.
+  ["capabilities read outside the root", /(?<![-/])\bcapabilities\b/],
   ["Elegant Editorial coupling", /elegant-editorial|ELEGANT_EDITORIAL|ElegantEditorial/],
   ["templates/core import", /templates\/core|\.\.\/core\//],
   ["countdown / clock derivation", /ceremony-countdown|deriveCeremonyCountdown|ceremony-month-grid/],
@@ -1841,6 +1889,7 @@ describe("VH-01 Vietnamese Heritage v1 files", () => {
   it.each(VH01_CODE_FILES)("%s contains no forbidden runtime, data, browser, prototype, interaction or capability code", (file) => {
     const code = codeOf(file);
     for (const [label, pattern] of [...RF06B_FORBIDDEN, ...VH01_EXTRA_FORBIDDEN]) {
+      if (file === VH01_ROOT && label === "capabilities read outside the root") continue;
       expect(pattern.test(code), `${file}: ${label}`).toBe(false);
     }
     expect(ALL_HOOKS.test(code), `${file}: hooks`).toBe(false);
@@ -1870,17 +1919,21 @@ describe("VH-01 Vietnamese Heritage v1 files", () => {
     }
   });
 
-  it("the root reads only viewModel and sections (no capabilities, manifest or renderer key)", () => {
+  it("the root reads only the K6 props, and capabilities only as the RSVP gate and the clipboard passthrough", () => {
     const code = codeOf(VH01_ROOT);
-    expect(code).toMatch(/export function VietnameseHeritageV1\(\{ viewModel, sections \}: InvitationRendererPropsV1\)/);
-    expect(code).not.toMatch(/manifest|rendererKey|capabilities/);
+    expect(code).toMatch(/export function VietnameseHeritageV1\(\{ viewModel, sections, capabilities \}: InvitationRendererPropsV1\)/);
+    expect(code).not.toMatch(/manifest|rendererKey/);
+    expect([...code.matchAll(/\bcapabilities\.(\w+)/g)].map((match) => match[1]).sort()).toStrictEqual(["clipboard", "rsvp", "rsvp"]);
+    expect(code).toMatch(/\{capabilities\.rsvp !== undefined \? <Rsvp rsvp=\{capabilities\.rsvp\} \/> : null\}/);
+    expect(code).toMatch(/\{sections\.gift \? <Gift [^>]*clipboard=\{capabilities\.clipboard\} \/> : null\}/);
+    expect(code).not.toMatch(/capabilities\.(music|clock)/);
   });
 
   it("only the binding module imports the VH renderer component, and no VH file imports a template outside its own tree", () => {
     for (const file of [...RF06A_FILES, ...RF06B_CODE_FILES, ...RF06C_FILES, ...RF06D_FILES, ...VH01_CODE_FILES]) {
       expect(resolvedImportsOf(file).includes(`${VH}/vietnamese-heritage-v1`), file).toBe(file === BINDINGS_MODULE);
     }
-    for (const file of VH01_CODE_FILES) {
+    for (const file of [...VH01_CODE_FILES, ...VH02B_ISLAND_FILES]) {
       for (const modulePath of resolvedImportsOf(file)) {
         if (modulePath.startsWith("templates/")) expect(modulePath.startsWith(`${VH}/`), `${file} → ${modulePath}`).toBe(true);
       }
@@ -1961,6 +2014,99 @@ describe("VH-01 Vietnamese Heritage v1 files", () => {
       expect(row, file).toContain(`| ${String(bytes.length)} |`);
       expect(row, file).toContain(sha);
     }
+  });
+});
+
+describe("VH-02B-E1 islands", () => {
+  const ALLOWED: Readonly<Record<(typeof VH02B_ISLAND_FILES)[number], readonly string[]>> = {
+    [VH02B_RSVP]: ["react", "lib/domain", `${LIB}/rsvp-capability`, `${LIB}/rsvp-form-model`, `${VH}/copy`, VH_DECOR, VH_CSS],
+    [VH02B_GIFT_DIALOG]: ["react", `${LIB}/wedding-domain-types`, `${VH}/copy`, VH_DECOR, VH_CSS],
+    [VH02B_COPY_BUTTON]: ["react", `${LIB}/clipboard-copy-feedback`, `${LIB}/renderer-capabilities`, `${VH}/copy`, VH_CSS],
+  };
+
+  /** Each interaction primitive only in its owning VH island (least privilege, as RF-06D). */
+  const PRIVILEGE: readonly [string, RegExp, readonly string[]][] = [
+    ["useState", /\buseState\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_COPY_BUTTON]],
+    ["useReducer", /\buseReducer\b/, [VH02B_RSVP]],
+    ["useRef", /\buseRef\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG]],
+    ["useEffect", /\buseEffect\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG]],
+    [
+      "other hooks",
+      /\buse(LayoutEffect|InsertionEffect|Memo|Callback|SyncExternalStore|Context|Transition|Optimistic|ActionState|Id|DeferredValue|ImperativeHandle)\b/,
+      [],
+    ],
+    ["dialog element / API", /<dialog\b|role="dialog"|showModal|HTMLDialogElement|\.close\(\)|onClose\b|onCancel\b/, [VH02B_GIFT_DIALOG]],
+    ["programmatic focus", /\.focus\(/, [VH02B_RSVP, VH02B_GIFT_DIALOG]],
+    ["form events", /\bonSubmit\b|\bonChange\b|preventDefault/, [VH02B_RSVP]],
+    ["form controls", /<form\b|<input\b|<select\b|<textarea\b|<fieldset\b|<label\b/, [VH02B_RSVP]],
+    ["clipboard capability action", /copyWithFeedback|copyText/, [VH02B_COPY_BUTTON]],
+    ["RSVP capability action", /\.submit\(|gate\.run\(/, [VH02B_RSVP]],
+    ["music / clock / countdown", /\.play\(|\.pause\(|MusicCapabilityV1|nowEpochMs|ClockCapabilityV1|deriveCeremonyCountdownV1/, []],
+    ["tabindex", /\btabIndex\b/, []],
+  ];
+
+  it("every island exists, is .tsx, and imports only its exact allowlist (no other template, no templates/core)", () => {
+    expect(Object.keys(ALLOWED).sort()).toStrictEqual([...VH02B_ISLAND_FILES].sort());
+    for (const file of VH02B_ISLAND_FILES) {
+      expect(file.endsWith(".tsx"), file).toBe(true);
+      expect([...new Set(resolvedImportsOf(file))].sort(), file).toStrictEqual([...ALLOWED[file]].sort());
+    }
+  });
+
+  it.each(VH02B_ISLAND_FILES)("%s has no data, network, persistence, browser-global, time, identity or prototype code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of RF06D_FORBIDDEN) {
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+    for (const [label, pattern] of VH01_EXTRA_FORBIDDEN) {
+      // The RSVP island is the one VH consumer of the frozen RSVP capability contract.
+      if (file === VH02B_RSVP && label === "RSVP contract") continue;
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+    expect(/<img\b|<svg\b/.test(code), file).toBe(false);
+  });
+
+  it.each(PRIVILEGE)("interaction: %s appears only in its owning VH island(s), never in a VH static file", (_label, pattern, owners) => {
+    for (const file of VH02B_ISLAND_FILES) expect(pattern.test(codeOf(file)), file).toBe(owners.includes(file));
+    for (const file of VH01_CODE_FILES) expect(pattern.test(codeOf(file)), file).toBe(false);
+  });
+
+  it("buttons and click handlers only in the islands; VH static files stay hook-free", () => {
+    for (const file of VH01_CODE_FILES) {
+      const code = codeOf(file);
+      expect(/<button\b|\bonClick\b/.test(code), file).toBe(false);
+      expect(ALL_HOOKS.test(code), file).toBe(false);
+    }
+  });
+
+  it("only the root renders RSVP and only the gift section renders the gift islands", () => {
+    const importersOf = (island: string) =>
+      [...VH01_CODE_FILES, ...VH02B_ISLAND_FILES].filter((file) => resolvedImportsOf(file).includes(island.replace(/\.tsx$/, "")));
+    expect(importersOf(VH02B_RSVP)).toStrictEqual([VH01_ROOT]);
+    expect(importersOf(VH02B_GIFT_DIALOG)).toStrictEqual([`${VH}/sections/gift.tsx`]);
+    expect(importersOf(VH02B_COPY_BUTTON)).toStrictEqual([`${VH}/sections/gift.tsx`]);
+    const gift = codeOf(`${VH}/sections/gift.tsx`);
+    expect(gift).toMatch(
+      /\{line\.key === "accountNumber" && clipboard !== undefined \? \(\s*<dd className=\{styles\.giftLineAction\}>\s*<CopyAccountButton clipboard=\{clipboard\} value=\{line\.value\} sideLabel=\{sideLabel\} \/>/,
+    );
+    expect(gift.match(/<CopyAccountButton\b/g)).toHaveLength(1);
+    expect(gift.match(/<GiftDialog\b/g)).toHaveLength(1);
+    expect(gift).toMatch(/if \(panels\.length === 0\) \{\s*return null;\s*\}/);
+  });
+
+  it("no island declares a client or server boundary", () => {
+    for (const file of VH02B_ISLAND_FILES) expect(/["']use (client|server)["']/.test(readRepoFile(file)), file).toBe(false);
+  });
+
+  it("the shared interaction models are pure: no React, DOM, browser API, storage, network or rendering", () => {
+    for (const file of [VH02B_SHARED_RSVP_MODEL, VH02B_SHARED_COPY_MODEL]) {
+      const code = codeOf(file);
+      expect(code, file).not.toMatch(/from\s+["']react|\/>|<\/[A-Za-z]|return\s*\(?\s*<[A-Za-z]/);
+      expect(ALL_HOOKS.test(code), file).toBe(false);
+      for (const [label, pattern] of RF06D_FORBIDDEN) expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+    expect(resolvedImportsOf(VH02B_SHARED_RSVP_MODEL).sort()).toStrictEqual(["lib/domain", `${LIB}/rsvp-capability`].sort());
+    expect(resolvedImportsOf(VH02B_SHARED_COPY_MODEL)).toStrictEqual([`${LIB}/renderer-capabilities`]);
   });
 });
 

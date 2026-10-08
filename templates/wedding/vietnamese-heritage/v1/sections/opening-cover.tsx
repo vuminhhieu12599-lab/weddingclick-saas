@@ -2,6 +2,7 @@ import type { EventDateTimePresentationV1 } from "../../../../../lib/invitation-
 import type { InvitationViewModel } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
 import { VIETNAMESE_HERITAGE_V1_COPY } from "../copy";
 import styles from "../vietnamese-heritage-v1.module.css";
+import { CoupleName } from "./couple-name";
 import { formatDottedDate } from "./date-text";
 import { DecorImage } from "./decor";
 
@@ -64,12 +65,12 @@ export function OpeningCover({ people, ceremonyDate }: OpeningCoverProps) {
         <p className={styles.coverTitle}>{COPY.opening.label}</p>
         <DecorImage decor="divider" className={styles.coverDivider} eager />
         <p className={styles.coverNames}>
-          <span>{people.primary.name}</span>
+          <CoupleName name={people.primary.name} />
           <span className={styles.coverAmp} aria-hidden="true">
             &amp;
           </span>
           <span className={styles.srOnly}>{COPY.a11y.and}</span>
-          <span>{people.secondary.name}</span>
+          <CoupleName name={people.secondary.name} />
         </p>
         <p className={styles.coverDate}>
           <span className={styles.coverWeekday}>{ceremonyDate.weekday}</span>

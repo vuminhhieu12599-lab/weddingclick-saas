@@ -2,6 +2,7 @@ import type { EventDateTimePresentationV1 } from "../../../../../lib/invitation-
 import type { InvitationViewModel, MediaResolution } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
 import { VIETNAMESE_HERITAGE_V1_COPY } from "../copy";
 import styles from "../vietnamese-heritage-v1.module.css";
+import { CoupleName } from "./couple-name";
 import { formatDottedDate } from "./date-text";
 import { DecorImage, LotusMark } from "./decor";
 import { MediaImage } from "./media-image";
@@ -56,12 +57,12 @@ export function Hero({ people, ceremony, photo: heroPhoto, ceremonyDate }: HeroP
       )}
       <p className={styles.heroCeremony}>{ceremony.title}</p>
       <h1 id="vh-hero-names" className={styles.heroNames}>
-        <span>{people.primary.name}</span>
+        <CoupleName name={people.primary.name} />
         <span className={styles.heroAmp} aria-hidden="true">
           &amp;
         </span>
         <span className={styles.srOnly}>{COPY.a11y.and}</span>
-        <span>{people.secondary.name}</span>
+        <CoupleName name={people.secondary.name} />
       </h1>
       <p className={styles.heroDate}>
         <span>{ceremonyDate.weekday}</span>

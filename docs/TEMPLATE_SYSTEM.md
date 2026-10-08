@@ -647,6 +647,8 @@ Initial launch targets:
 
 Status: `wedding.vietnamese-heritage.v1` static production visuals complete (VH-02A): Task 029 heritage-vermilion direction, eight Product Owner-authorized WebP decor derivatives (renderer-specific, ≈ 0.56 MiB), WeddingClick-owned vector Song Hỷ, `TEMPLATE_SLOTS` media (§11a). Not production-ready: interactions (VH-02B), DEV catalog seed + visual QA, RS-01 and certification (§25) remain.
 
+VH-02A-QA1 / VH-02B-E1 (`docs/DECISIONS.md`): couple names fit one line by CSS from their code-point count (balanced-wrap fallback over 24 code points); album photos are never cropped (`contain` on the print mat, full-width rows use the photo's bounded ratio); "Xem chỉ đường" only for a canonical `mapUrl`; RSVP island only with `capabilities.rsvp`; "Gửi Quà Cưới" CTA opening a native gift dialog, copy control only with `capabilities.clipboard`. Shared pure renderer interaction models: `lib/invitation-rendering/rsvp-form-model.ts`, `clipboard-copy-feedback.ts`. Still deferred: door opening, countdown, music, lightbox, reveal motion.
+
 ### Romantic Minimal
 
 - soft/minimal/romantic direction;
