@@ -1526,7 +1526,7 @@ Errors are shown as fixed Vietnamese messages keyed by HTTP status (0/401/403/40
 
 ## 36. TE-03B — Template Media Slot Persistence (server seam only, no HTTP route)
 
-Migration 0046 (authored, **not applied**). No HTTP route is frozen yet; the Staff route arrives with the TE-05A editor. Contract: `docs/DECISIONS.md` "TE-03B", `docs/PHYSICAL_DATABASE_PLAN.md` §2.9c.
+Migration 0046 (applied and structurally verified on **DEV** (2026-10-08, Product/Architecture lead); **not applied to Production** (Production ends at 0044)). No HTTP route is frozen yet; the Staff route arrives with the TE-05A editor. Contract: `docs/DECISIONS.md` "TE-03B", `docs/PHYSICAL_DATABASE_PLAN.md` §2.9c.
 
 - **Upload:** `PHOTO` is accepted by the existing Task 024 upload-intent / finalize routes as an ordinary image (image MIME, 10 MiB, P1-MEDIA-01 optimization). No new upload path, no Storage change. The legacy media editor does not expose it yet.
 - **Trusted RPC:** `set_project_template_media_slot(p_project_id uuid, p_template_version_id uuid, p_slot_key text, p_project_media_ids uuid[]) RETURNS TABLE (slot_key text, "position" integer, project_media_id uuid)`, `EXECUTE` to `authenticated` only, self-authorizing (STAFF/ADMIN), atomic full replace of one slot (`[]` clears it), result in position order, no URLs or Storage paths.
@@ -1534,3 +1534,11 @@ Migration 0046 (authored, **not applied**). No HTTP route is frozen yet; the Sta
 - **Server use case `setTemplateMediaSlot(projectId, body, staff, deps)`:** body is exactly `{ templateVersionId, slotKey, projectMediaIds }` (UUIDs, structural key pattern, ≤ 500 ids, no duplicates). `templateVersionId` is only the compare-and-set expectation and must equal the Project design's current version (409 otherwise). The renderer key comes from that exact `template_versions` row and the slot contract from `lookupTemplateEditorManifest(rendererKey)`: unknown manifest → 422; `LEGACY_ROLES` → 422; undeclared slot → 422; SINGLE with more than one id or more than a finite `maxCount` → 422. Ids keep their order into the RPC. `rendererKey`, `maxCount`, cardinality or media model are never accepted from the caller.
 - **Read `listTemplateMediaSlots(projectId, templateVersionId, staff, gateway)`:** staff RLS SELECT of one Project + exact version; items `{ slotKey, position, projectMediaId }` ordered by slot key then position; each slot must be contiguous `0..N-1` and duplicate-free, otherwise a generic 500.
 - **Media delete:** deleting an assigned `project_media` row returns the existing `409 CONFLICT` "This media item is still in use and cannot be deleted" (SQLSTATE 23503 → `REFERENCED_CONFLICT`); the Storage object is untouched.
+
+## 37. TE-04 — Template Media Slots in Snapshot, Pins and ViewModel
+
+No route, RPC or migration change. Contract: `docs/DECISIONS.md` "TE-04".
+
+- **Staff Preview / Create Review (`POST …/review/versions`):** unchanged request/response shapes. For a `TEMPLATE_SLOTS` renderer the server freezes the CURRENT exact template version's slot rows into `payload.media.templateSlots`, and the existing `create_review_version` call pins `extractSnapshotMediaRefs(payload)` (now including every slot id). An invalid draft slot set (undeclared slot, overflow, duplicate, missing or no-longer-assignable media) fails the request as a generic 500 and writes nothing; an unregistered renderer keeps its existing `422 INVARIANT` ("The selected template cannot render this invitation") / `RENDERER_KEY_NOT_REGISTERED`.
+- **Persisted reads (staff REVIEW preview, customer REVIEW `/review/[token]`, public `/i/[slug]`, personalized `/i/[slug]/g/[token]`, Portal):** after the existing row-binding check, the pinned renderer's editor manifest must exist and the stored media model must match it (`assertStoredTemplateSlots`); any mismatch is a fail-closed 500 / not-found per the existing route behaviour, never a draft fallback. Elegant Editorial payloads are accepted unchanged.
+- **Renderer props:** `viewModel.media.templateSlots` (TEMPLATE_SLOTS only) holds `RESOLVED`/`UNAVAILABLE` entries in frozen order; no URL is persisted.

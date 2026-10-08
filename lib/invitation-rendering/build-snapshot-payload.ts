@@ -1,4 +1,4 @@
-import { MEDIA_TYPES } from "../domain";
+import { MEDIA_TYPES, isTemplateSlotAssignableMediaType } from "../domain";
 import type { ProjectEventRecord } from "../server/project-events/project-events-types";
 import { resolveWeddingDomain } from "./resolve-wedding-domain";
 import {
@@ -19,6 +19,7 @@ import {
   type SnapshotPortraitMedia,
   type SnapshotQrMedia,
   type SnapshotSections,
+  type SnapshotTemplateMediaSource,
   type SnapshotTimelineItem,
   type SnapshotTimelineSource,
   type SnapshotDressCode,
@@ -101,7 +102,7 @@ export function buildSnapshotPayload(input: BuildSnapshotPayloadInput): BuildSna
     timeline: projectTimeline(timelineItems),
     dressCode: projectDressCode(dressCode, dressCodeSwatches),
   };
-  const snapshotMedia = projectMedia(media, qr);
+  const snapshotMedia = input.templateMedia === undefined ? projectMedia(media, qr) : projectTemplateSlotMedia(media, qr, input.templateMedia);
 
   const payload: SnapshotPayloadV1 = {
     payloadSchemaVersion: SNAPSHOT_PAYLOAD_SCHEMA_VERSION,
@@ -137,7 +138,7 @@ export function buildSnapshotPayload(input: BuildSnapshotPayloadInput): BuildSna
     content,
     gift,
     media: snapshotMedia,
-    sections: projectSections(content, snapshotMedia, gift),
+    sections: projectSections(content, snapshotMedia, gift, input.templateMedia),
     design: projectDesign(design),
   };
 
@@ -199,6 +200,7 @@ function assertSourceInvariants(input: BuildSnapshotPayloadInput): void {
   }
 
   assertCanonicalMedia(media, project.id);
+  if (input.templateMedia !== undefined) assertTemplateMediaSource(input.templateMedia, media);
   assertCanonicalTimeline(timelineItems, project.id);
   assertCanonicalDressCode(dressCode, dressCodeSwatches, project.id);
 }
@@ -315,6 +317,42 @@ function assertCanonicalMedia(media: readonly SnapshotMediaSource[], projectId: 
     if (!Number.isInteger(item.sortOrder)) {
       throw new SnapshotPayloadInvariantError(`Project media ${item.id} has a non-integer sortOrder`);
     }
+  }
+}
+
+/** The TE-02/TE-03B structural slot key pattern. */
+const TEMPLATE_SLOT_KEY_PATTERN = /^[a-z][A-Za-z0-9]{0,47}$/;
+
+/**
+ * TE-04 defense in depth: the server already validated the slot rows
+ * against the editor manifest; the pure builder re-checks the structure and
+ * that every id is a currently slot-assignable photo of this Project.
+ */
+function assertTemplateMediaSource(source: SnapshotTemplateMediaSource, media: readonly SnapshotMediaSource[]): void {
+  if (typeof source.slots !== "object" || source.slots === null || Array.isArray(source.slots)) {
+    throw new SnapshotPayloadInvariantError("Template media slots must be an object");
+  }
+  const mediaTypeById = new Map(media.map((item) => [item.id, item.mediaType]));
+  const keys = Object.keys(source.slots);
+  if (keys.length === 0) {
+    throw new SnapshotPayloadInvariantError("Template media source must declare at least one slot");
+  }
+  for (const key of keys) {
+    const ids = source.slots[key];
+    if (!TEMPLATE_SLOT_KEY_PATTERN.test(key) || !Array.isArray(ids)) {
+      throw new SnapshotPayloadInvariantError("Template media slot is malformed");
+    }
+    if (new Set(ids).size !== ids.length) {
+      throw new SnapshotPayloadInvariantError("Template media slot contains duplicate media");
+    }
+    for (const id of ids) {
+      if (typeof id !== "string" || !isTemplateSlotAssignableMediaType(mediaTypeById.get(id))) {
+        throw new SnapshotPayloadInvariantError("Template media slot references media that is not an assignable Project photo");
+      }
+    }
+  }
+  if (!Array.isArray(source.gallerySlotKeys) || source.gallerySlotKeys.some((key) => !keys.includes(key))) {
+    throw new SnapshotPayloadInvariantError("Template media gallery slot keys must be declared slots");
   }
 }
 
@@ -487,16 +525,45 @@ function projectMedia(media: readonly SnapshotMediaSource[], qr: SnapshotQrMedia
   return result;
 }
 
+/**
+ * TE-04 `TEMPLATE_SLOTS` media: semantic media (audio; QR via `qr`) exactly
+ * as `projectMedia`, plus the frozen slot assignments in lexical key order
+ * (JSON key order is not semantic). Legacy layout roles are never read: no
+ * cover, portrait, Photo Story or Love Story photo, and `galleryMediaIds`
+ * is `[]`. Only explicit assignments enter `templateSlots`.
+ */
+function projectTemplateSlotMedia(
+  media: readonly SnapshotMediaSource[],
+  qr: SnapshotQrMedia,
+  source: SnapshotTemplateMediaSource,
+): SnapshotMedia {
+  const audio = [...media].sort(compareMedia).find((item) => item.mediaType === "AUDIO");
+  const templateSlots: Record<string, string[]> = {};
+  for (const key of Object.keys(source.slots).sort()) {
+    templateSlots[key] = [...(source.slots[key] ?? [])];
+  }
+  const result: SnapshotMedia = { galleryMediaIds: [], qr };
+  if (audio !== undefined) result.audioMediaId = audio.id;
+  result.templateSlots = templateSlots;
+  return result;
+}
+
 /** S3–S7: content availability only; `design.sectionSettings` is never consulted (S10). */
 function projectSections(
   content: SnapshotPayloadV1["content"],
   media: SnapshotMedia,
   gift: SnapshotGift,
+  templateMedia: SnapshotTemplateMediaSource | undefined,
 ): SnapshotSections {
   return {
     invitationMessage: hasText(content.invitationMessage),
+    // Text only: a Love Story photo never creates or hides the section (TE-04).
     loveStory: hasText(content.loveStory),
-    gallery: media.galleryMediaIds.length > 0,
+    // TE-04: TEMPLATE_SLOTS gallery availability = a manifest gallery-linked slot is non-empty.
+    gallery:
+      templateMedia === undefined
+        ? media.galleryMediaIds.length > 0
+        : templateMedia.gallerySlotKeys.some((key) => (media.templateSlots?.[key] ?? []).length > 0),
     music: media.audioMediaId !== undefined,
     gift: gift.groom !== undefined || gift.bride !== undefined,
     timeline: (content.timeline ?? []).length > 0,

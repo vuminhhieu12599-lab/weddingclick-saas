@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
+import { lookupTemplateEditorManifest } from "../../../../templates/core/production-editor-manifests";
 import { buildRendererFixtureSourceInput, FIXTURE_MEDIA_IDS, FIXTURE_PROJECT_ID } from "../../../../templates/core/fixtures/renderer-fixture-sources";
 import {
   buildSnapshotPayload,
@@ -74,6 +75,9 @@ function gateways(sources: {
     dressCode: {
       getProjectDressCode: (client, projectId) => (seen.push(["dressCode", client, projectId]), settle(sources.dressCode ?? null)),
     },
+    // TE-04: legacy (Elegant Editorial) inputs never read template slot rows.
+    templateSlots: { listSlotItems: () => Promise.reject(new Error("LEGACY_ROLES must not read template slots")) },
+    lookupEditorManifest: lookupTemplateEditorManifest,
   };
   return { result, seen };
 }

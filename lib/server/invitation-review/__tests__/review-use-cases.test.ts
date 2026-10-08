@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { lookupTemplateEditorManifest } from "../../../../templates/core/production-editor-manifests";
 import { PRODUCTION_COMPATIBILITY_REGISTRY } from "../../../../templates/core/production-renderer-manifests";
 import {
   buildRendererFixtureSourceInput,
@@ -126,6 +127,9 @@ function setup(o: Overrides = {}) {
       ],
     },
     dressCode: { getProjectDressCode: async () => null },
+    // TE-04: legacy (Elegant Editorial) inputs never read template slot rows.
+    templateSlots: { listSlotItems: () => Promise.reject(new Error("LEGACY_ROLES must not read template slots")) },
+    lookupEditorManifest: lookupTemplateEditorManifest,
     async createMediaResolver() {
       return {
         async resolveMedia(mediaId): Promise<MediaResolution> {

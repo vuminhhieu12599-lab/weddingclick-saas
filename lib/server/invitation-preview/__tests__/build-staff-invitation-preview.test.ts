@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { lookupTemplateEditorManifest } from "../../../../templates/core/production-editor-manifests";
 import { PRODUCTION_COMPATIBILITY_REGISTRY } from "../../../../templates/core/production-renderer-manifests";
 import {
   buildRendererFixtureSourceInput,
@@ -135,6 +136,9 @@ function setup(sources: Sources = {}) {
     media: { listProjectMedia: (c, id) => (calls.push(["media", c, id]), settle(pick("media", [media(coverId, "COVER")])!)) },
     timeline: { listProjectTimelineItems: (c, id) => (calls.push(["timeline", c, id]), settle(pick("timeline", [])!)) },
     dressCode: { getProjectDressCode: (c, id) => (calls.push(["dressCode", c, id]), settle(pick("dressCode", null)!)) },
+    // TE-04: legacy (Elegant Editorial) inputs never read template slot rows.
+    templateSlots: { listSlotItems: () => Promise.reject(new Error("LEGACY_ROLES must not read template slots")) },
+    lookupEditorManifest: lookupTemplateEditorManifest,
     async createMediaResolver(c, projectId, mediaIds) {
       calls.push(["createMediaResolver", c, projectId, [...mediaIds]]);
       if (sources.resolver) throw sources.resolver;

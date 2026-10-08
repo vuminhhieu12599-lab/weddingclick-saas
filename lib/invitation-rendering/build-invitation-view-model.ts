@@ -278,7 +278,7 @@ function projectMedia(
   snapshot: SnapshotPayloadV1,
   resolutions: ReadonlyMap<string, MediaResolution>,
 ): ViewModelMedia {
-  const { coverMediaId, galleryMediaIds, audioMediaId, qr, portrait, photoStoryMediaIds, loveStoryPhotoMediaId } =
+  const { coverMediaId, galleryMediaIds, audioMediaId, qr, portrait, photoStoryMediaIds, loveStoryPhotoMediaId, templateSlots } =
     snapshot.media;
 
   const media: ViewModelMedia = {
@@ -294,6 +294,15 @@ function projectMedia(
   if (portrait?.groomMediaId !== undefined) media.portrait.groom = slot(resolutions, portrait.groomMediaId);
   if (portrait?.brideMediaId !== undefined) media.portrait.bride = slot(resolutions, portrait.brideMediaId);
   if (loveStoryPhotoMediaId !== undefined) media.loveStoryPhoto = slot(resolutions, loveStoryPhotoMediaId);
+  // TE-04: one fresh slot object per position (an id used by two slots is
+  // resolved once and projected twice); absent for legacy payloads.
+  if (templateSlots !== undefined) {
+    const projected: Record<string, MediaResolution[]> = {};
+    for (const key of Object.keys(templateSlots).sort()) {
+      projected[key] = (templateSlots[key] ?? []).map((mediaId) => slot(resolutions, mediaId));
+    }
+    media.templateSlots = projected;
+  }
   return media;
 }
 

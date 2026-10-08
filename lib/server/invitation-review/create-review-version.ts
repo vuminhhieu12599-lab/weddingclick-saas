@@ -101,7 +101,17 @@ export async function createReviewVersion<TClient>(
   }
   const command = parseCreateReviewVersionCommand(rawBody);
 
-  const draft = await loadStaffDraftSnapshot(rawProjectId, command.variant, staff, deps);
+  // TE-04: an unregistered renderer can now fail already while loading the
+  // draft (no editor manifest); it maps exactly like a compose failure.
+  let draft: Awaited<ReturnType<typeof loadStaffDraftSnapshot>>;
+  try {
+    draft = await loadStaffDraftSnapshot(rawProjectId, command.variant, staff, deps);
+  } catch (error) {
+    if (error instanceof RendererSelectionError) {
+      throw new ApiError("INVARIANT", "The selected template cannot render this invitation");
+    }
+    throw error;
+  }
   if (draft.status !== "SUCCESS") {
     return draft;
   }

@@ -138,6 +138,13 @@ export interface ViewModelMedia {
   photoStory: MediaResolution[];
   /** The Love Story photo slot; absent when not referenced. Never COVER/GALLERY. */
   loveStoryPhoto?: MediaResolution;
+  /**
+   * TE-04: frozen template media slots, present iff the Snapshot has
+   * `media.templateSlots` (TEMPLATE_SLOTS renderers only). Same keys, same
+   * count and order per slot; each entry RESOLVED or UNAVAILABLE, kept in
+   * place, never dropped or substituted from another role.
+   */
+  templateSlots?: Record<string, MediaResolution[]>;
 }
 
 /**

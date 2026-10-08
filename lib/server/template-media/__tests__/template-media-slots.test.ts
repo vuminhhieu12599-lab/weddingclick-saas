@@ -541,15 +541,19 @@ describe("TE-03B boundaries", () => {
     }
   });
 
-  it("Snapshot, ViewModel and media-ref extraction are not integrated yet (TE-04)", () => {
+  it("TE-04 reads draft slot rows only through the Snapshot input loader (never a renderer or stored-Snapshot read path)", () => {
+    const loader = readFileSync(join(ROOT, "lib/server/invitation-snapshot/load-snapshot-payload-input.ts"), "utf8");
+    expect(loader).toMatch(/templateSlots\.listSlotItems\(/);
     for (const file of [
-      "lib/invitation-rendering/snapshot-payload-types.ts",
       "lib/invitation-rendering/build-snapshot-payload.ts",
       "lib/invitation-rendering/extract-snapshot-media-refs.ts",
-      "lib/invitation-rendering/invitation-view-model-types.ts",
       "lib/invitation-rendering/build-invitation-view-model.ts",
+      "lib/server/invitation-review/assert-stored-review-snapshot.ts",
+      "lib/server/public-invitation/load-public-invitation.ts",
+      "lib/server/customer-review/load-customer-review.ts",
+      "lib/server/customer-portal/load-customer-portal.ts",
     ]) {
-      expect(readFileSync(join(ROOT, file), "utf8"), file).not.toMatch(/templateSlots|template_media_slot|TemplateMediaSlot/);
+      expect(readFileSync(join(ROOT, file), "utf8"), file).not.toMatch(/listSlotItems|template-media-slot-gateway|project_template_media_slot_items/);
     }
   });
 

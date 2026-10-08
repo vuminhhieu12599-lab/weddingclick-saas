@@ -130,6 +130,18 @@ export interface SnapshotMedia {
    * COVER. Additive to payload v1: absent without one. Never COVER/GALLERY.
    */
   loveStoryPhotoMediaId?: string;
+  /**
+   * TE-04: frozen template media slot assignments, present only for a
+   * `TEMPLATE_SLOTS` renderer (absent for every `LEGACY_ROLES` renderer, so
+   * Elegant Editorial payloads are unchanged). Exactly every slot the pinned
+   * renderer's TemplateEditorManifestV1 declares; value = ordered
+   * `project_media` ids for positions 0..N-1 (`[]` when empty). Ids only:
+   * no URL, path, dimension or template metadata. Object key order is not
+   * semantic; array order is. Additive to payload v1. When present, the
+   * legacy layout fields (`coverMediaId`, `portrait`, `photoStoryMediaIds`,
+   * `loveStoryPhotoMediaId`) are absent and `galleryMediaIds` is `[]`.
+   */
+  templateSlots?: Record<string, string[]>;
 }
 
 /**
@@ -284,6 +296,21 @@ export type SnapshotDesignSource = Pick<
 /** The exact immutable template version selected by `design.templateVersionId`. */
 export type SnapshotTemplateVersionSource = Pick<RawTemplateVersionRow, "id" | "rendererKey">;
 
+/**
+ * TE-04: the trusted template media source of a `TEMPLATE_SLOTS` renderer,
+ * built server-side from the exact template version's draft slot rows after
+ * validation against its TemplateEditorManifestV1. Absent = `LEGACY_ROLES`.
+ *
+ * - `slots`: every declared slot key → ordered media ids (possibly `[]`).
+ * - `gallerySlotKeys`: the declared slots whose manifest `sectionKey` is
+ *   `gallery`; `sections.gallery` is true iff one of them is non-empty. No
+ *   other manifest metadata reaches the builder or the payload.
+ */
+export interface SnapshotTemplateMediaSource {
+  readonly slots: Readonly<Record<string, readonly string[]>>;
+  readonly gallerySlotKeys: readonly string[];
+}
+
 export interface BuildSnapshotPayloadInput {
   project: SnapshotProjectSource;
   variant: InvitationVariant;
@@ -299,6 +326,8 @@ export interface BuildSnapshotPayloadInput {
   dressCodeSwatches: readonly SnapshotDressCodeSwatchSource[];
   design: SnapshotDesignSource;
   templateVersion: SnapshotTemplateVersionSource;
+  /** TE-04: present iff the pinned renderer is `TEMPLATE_SLOTS`; see `SnapshotTemplateMediaSource`. */
+  templateMedia?: SnapshotTemplateMediaSource;
 }
 
 // ---------------------------------------------------------------------------

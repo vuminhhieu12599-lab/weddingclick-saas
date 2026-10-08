@@ -449,7 +449,7 @@ RLS: enabled + forced on both tables. SELECT/INSERT/UPDATE/DELETE for `authentic
 
 ### 2.9c Template media slot assignments — migration 0046 (TE-03B)
 
-`project_template_media_slot_items` (migration 0046, docs/DECISIONS.md "TE-03B"; authored, **not applied**):
+`project_template_media_slot_items` (migration 0046, docs/DECISIONS.md "TE-03B"; applied and structurally verified on **DEV** (2026-10-08, Product/Architecture lead); **not applied to Production** (Production ends at 0044)):
 
 | Column | Type | Null | Default | Constraints |
 |---|---|---|---|---|
@@ -1019,6 +1019,8 @@ Unchanged from Revision 1: `TIMESTAMPTZ` for every canonical instant, `project_e
 
 ## 8. F. Publish Snapshot Model (updated for pointer integrity and stale-approval rejection)
 
+**TE-04 note.** For a `TEMPLATE_SLOTS` renderer the REVIEW payload freezes `media.templateSlots` (ordered `project_media` ids per declared slot) from the draft rows of the exact current template version; every slot id enters `invitation_version_media` through the unchanged `create_review_version` pin list, so assigned photos are undeletable while any REVIEW/PUBLISHED version references them. Publish copies the REVIEW payload and pins verbatim; no stored version ever reads `project_template_media_slot_items` (`docs/DECISIONS.md` "TE-04").
+
 ```text
 Mutable draft (wedding_details, project_events, project_media, project_design, ...)
         │  (Preview reads this live, unversioned)
@@ -1400,7 +1402,7 @@ Both 0021 and 0022 are privilege/workflow tightening only, not schema shape chan
 | `0043_legacy_v1_lockdown` | Task 035B: Legacy V1 table/storage lockdown (`docs/SECURITY.md` §11.2) | applied by the Product Owner and live-verified in DEV/STAGING (2026-10-06) |
 | `0044_republish_after_published` | Launch Hardening 04: `create_review_version` replacement — RV010 rejects only `COMPLETED`/`ARCHIVED`, so a new REVIEW may be created from `PUBLISHED` (`docs/API_CONTRACT.md` §35) | **applied** by the Product Owner (DEV/STAGING); post-apply republish E2E PASS 2026-10-07 |
 | `0045` | **Retired number — never applied, file removed by TE-03A** (was VH-M01 `PORTRAIT_COUPLE`; docs/DECISIONS.md "TE-03A"). DEV and Production heads were both 0044 when it was removed. The number 0045 must never be reused; the next migration is 0046 or later. | none (never applied) |
-| `0046_project_template_media_slots` | TE-03B: `PHOTO` media type, `project_template_media_slot_items`, `set_project_template_media_slot` (§2.9c; docs/DECISIONS.md "TE-03B") | authored; **not applied** (disposable local replay only) |
+| `0046_project_template_media_slots` | TE-03B: `PHOTO` media type, `project_template_media_slot_items`, `set_project_template_media_slot` (§2.9c; docs/DECISIONS.md "TE-03B") | applied and structurally verified on **DEV** (2026-10-08, Product/Architecture lead); **not applied to Production** (Production ends at 0044); earlier proven on a disposable local replay |
 
 **Status note (Launch Hardening 01, 2026-10-06).** A read-only `supabase migration list --linked` on 2026-10-06 showed local and DEV/STAGING remote history identical for every migration 0001–0043 (45 files, including 0006b and 0013b). Any "not applied" entry above records the state when that row was written and is superseded by this note.
 

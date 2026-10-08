@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { lookupTemplateEditorManifest } from "../../../templates/core/production-editor-manifests";
 import { PRODUCTION_COMPATIBILITY_REGISTRY } from "../../../templates/core/production-renderer-manifests";
 import { supabaseProjectDesignGateway } from "../supabase/project-design-repository";
 import { supabaseProjectDressCodeGateway } from "../supabase/project-dress-code-repository";
@@ -8,6 +9,7 @@ import { supabaseProjectMediaGateway } from "../supabase/project-media-repositor
 import { supabaseProjectGateway } from "../supabase/project-repository";
 import { supabaseProjectTimelineGateway } from "../supabase/project-timeline-repository";
 import { createSupabaseMediaResolver } from "../supabase/supabase-media-resolver";
+import { supabaseTemplateMediaSlotGateway } from "../supabase/template-media-slot-repository";
 import { supabaseTemplateVersionBindingGateway } from "../supabase/template-version-binding-repository";
 import { supabaseWeddingDetailsGateway } from "../supabase/wedding-details-repository";
 import type { StaffInvitationPreviewDependencies } from "./build-staff-invitation-preview";
@@ -27,6 +29,8 @@ export const supabaseStaffInvitationPreviewDependencies: StaffInvitationPreviewD
   media: supabaseProjectMediaGateway,
   timeline: supabaseProjectTimelineGateway,
   dressCode: supabaseProjectDressCodeGateway,
+  templateSlots: supabaseTemplateMediaSlotGateway,
+  lookupEditorManifest: lookupTemplateEditorManifest,
   createMediaResolver: createSupabaseMediaResolver,
   rendererRegistry: PRODUCTION_COMPATIBILITY_REGISTRY.compatibility,
 };
