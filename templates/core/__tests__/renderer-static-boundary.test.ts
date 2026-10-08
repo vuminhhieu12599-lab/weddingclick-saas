@@ -301,7 +301,16 @@ describe("templates/** production tree (P39)", () => {
   // TE-02 extension: plus exactly the editor-manifest files (rules in editor-manifest-static-boundary.test.ts).
   it("templates/** contains exactly the RF-06A, RF-06B, RF-06C, RF-06D, VH-01 and TE-02 files", () => {
     expect([...sources].sort()).toStrictEqual(
-      [...RF06A_FILES, ...RF06B_TEMPLATE_FILES, ...RF06C_FILES, ...RF06D_FILES, ...VH01_FILES, ...VH02B_ISLAND_FILES, ...TE02_FILES].sort(),
+      [
+        ...RF06A_FILES,
+        ...RF06B_TEMPLATE_FILES,
+        ...RF06C_FILES,
+        ...RF06D_FILES,
+        ...VH01_FILES,
+        ...VH02B_ISLAND_FILES,
+        ...VH02B_MODEL_FILES,
+        ...TE02_FILES,
+      ].sort(),
     );
   });
 
@@ -1756,7 +1765,14 @@ const VH_DATE = `${LIB}/event-date-time-presentation`;
 const VH02B_RSVP = `${VH}/interactive/rsvp.tsx`;
 const VH02B_GIFT_DIALOG = `${VH}/interactive/gift-dialog.tsx`;
 const VH02B_COPY_BUTTON = `${VH}/interactive/copy-account-button.tsx`;
-const VH02B_ISLAND_FILES = [VH02B_COPY_BUTTON, VH02B_GIFT_DIALOG, VH02B_RSVP] as const;
+/** VH-02B-M1: the split-door opening, music control and countdown islands, and the pure opening model. */
+const VH02B_OPENING = `${VH}/interactive/opening-interaction.tsx`;
+const VH02B_MUSIC = `${VH}/interactive/music-control.tsx`;
+const VH02B_COUNTDOWN = `${VH}/interactive/countdown.tsx`;
+const VH02B_OPENING_STATE = `${VH}/interactive/opening-state.ts`;
+const VH02B_ISLAND_FILES = [VH02B_COPY_BUTTON, VH02B_COUNTDOWN, VH02B_GIFT_DIALOG, VH02B_MUSIC, VH02B_OPENING, VH02B_RSVP] as const;
+const VH02B_MODEL_FILES = [VH02B_OPENING_STATE] as const;
+const VH02B_SHARED_MUSIC_MODEL = `${LIB}/music-control-model.ts`;
 /** VH-02B-E1: the shared, framework-free interaction models the VH islands use. */
 const VH02B_SHARED_RSVP_MODEL = `${LIB}/rsvp-form-model.ts`;
 const VH02B_SHARED_COPY_MODEL = `${LIB}/clipboard-copy-feedback.ts`;
@@ -1786,6 +1802,9 @@ const VH01_ALLOWED_IMPORTS: Readonly<Record<string, readonly string[]>> = {
     `${VH}/palette`,
     VH_CSS,
     VH_DECOR,
+    `${LIB}/music-control-model`,
+    `${VH}/interactive/countdown`,
+    `${VH}/interactive/music-control`,
     `${VH}/interactive/rsvp`,
     ...["ceremonial", "closing", "dress-code", "events", "gallery", "gift", "hero", "love-story", "opening-cover", "timeline"].map(
       (section) => `${VH}/sections/${section}`,
@@ -1804,6 +1823,7 @@ const VH01_ALLOWED_IMPORTS: Readonly<Record<string, readonly string[]>> = {
     VH_DATE,
     VH_TYPES,
     ...VH_SECTION_COMMON,
+    `${VH}/interactive/opening-interaction`,
     `${VH}/sections/couple-name`,
     `${VH}/sections/date-text`,
     VH_DECOR,
@@ -1919,14 +1939,25 @@ describe("VH-01 Vietnamese Heritage v1 files", () => {
     }
   });
 
-  it("the root reads only the K6 props, and capabilities only as the RSVP gate and the clipboard passthrough", () => {
+  it("the root reads only the K6 props, and capabilities only as presence gates and passthroughs", () => {
     const code = codeOf(VH01_ROOT);
     expect(code).toMatch(/export function VietnameseHeritageV1\(\{ viewModel, sections, capabilities \}: InvitationRendererPropsV1\)/);
     expect(code).not.toMatch(/manifest|rendererKey/);
-    expect([...code.matchAll(/\bcapabilities\.(\w+)/g)].map((match) => match[1]).sort()).toStrictEqual(["clipboard", "rsvp", "rsvp"]);
+    expect([...code.matchAll(/\bcapabilities\.(\w+)/g)].map((match) => match[1]).sort()).toStrictEqual([
+      "clipboard",
+      "clock",
+      "clock",
+      "music",
+      "rsvp",
+      "rsvp",
+    ]);
+    // VH-02B-M1: music only with the effective section; the countdown only with a clock.
+    expect(code).toMatch(/const music = sections\.music \? capabilities\.music : undefined;/);
+    expect(code).toMatch(/\{music !== undefined \? <MusicControl music=\{music\} \/> : null\}/);
+    expect(code).toMatch(/\{\.\.\.\(music === undefined \? \{\} : \{ onOpen: startMusicOnOpen\(music\) \}\)\}/);
+    expect(code).toMatch(/\{capabilities\.clock !== undefined \? <Countdown ceremony=\{ceremony\} clock=\{capabilities\.clock\} \/> : null\}/);
     expect(code).toMatch(/\{capabilities\.rsvp !== undefined \? <Rsvp rsvp=\{capabilities\.rsvp\} \/> : null\}/);
     expect(code).toMatch(/\{sections\.gift \? <Gift [^>]*clipboard=\{capabilities\.clipboard\} \/> : null\}/);
-    expect(code).not.toMatch(/capabilities\.(music|clock)/);
   });
 
   it("only the binding module imports the VH renderer component, and no VH file imports a template outside its own tree", () => {
@@ -2022,27 +2053,34 @@ describe("VH-02B-E1 islands", () => {
     [VH02B_RSVP]: ["react", "lib/domain", `${LIB}/rsvp-capability`, `${LIB}/rsvp-form-model`, `${VH}/copy`, VH_DECOR, VH_CSS],
     [VH02B_GIFT_DIALOG]: ["react", `${LIB}/wedding-domain-types`, `${VH}/copy`, VH_DECOR, VH_CSS],
     [VH02B_COPY_BUTTON]: ["react", `${LIB}/clipboard-copy-feedback`, `${LIB}/renderer-capabilities`, `${VH}/copy`, VH_CSS],
+    [VH02B_OPENING]: ["react", `${VH}/copy`, `${VH}/interactive/opening-state`, VH_CSS],
+    [VH02B_MUSIC]: ["react", `${LIB}/music-control-model`, `${LIB}/renderer-capabilities`, `${VH}/copy`, VH_CSS],
+    [VH02B_COUNTDOWN]: [`${LIB}/ceremony-countdown`, VH_TYPES, `${LIB}/renderer-capabilities`, `${VH}/copy`, VH_CSS],
   };
 
   /** Each interaction primitive only in its owning VH island (least privilege, as RF-06D). */
   const PRIVILEGE: readonly [string, RegExp, readonly string[]][] = [
-    ["useState", /\buseState\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_COPY_BUTTON]],
-    ["useReducer", /\buseReducer\b/, [VH02B_RSVP]],
-    ["useRef", /\buseRef\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG]],
+    ["useState", /\buseState\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_COPY_BUTTON, VH02B_MUSIC]],
+    ["useReducer", /\buseReducer\b/, [VH02B_RSVP, VH02B_OPENING]],
+    ["useRef", /\buseRef\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_OPENING]],
     ["useEffect", /\buseEffect\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG]],
+    // VH-02B-M1: the opening's hydration marker (server snapshot false, client true; no subscription).
+    ["useSyncExternalStore", /\buseSyncExternalStore\b/, [VH02B_OPENING]],
     [
       "other hooks",
-      /\buse(LayoutEffect|InsertionEffect|Memo|Callback|SyncExternalStore|Context|Transition|Optimistic|ActionState|Id|DeferredValue|ImperativeHandle)\b/,
+      /\buse(LayoutEffect|InsertionEffect|Memo|Callback|Context|Transition|Optimistic|ActionState|Id|DeferredValue|ImperativeHandle)\b/,
       [],
     ],
     ["dialog element / API", /<dialog\b|role="dialog"|showModal|HTMLDialogElement|\.close\(\)|onClose\b|onCancel\b/, [VH02B_GIFT_DIALOG]],
-    ["programmatic focus", /\.focus\(/, [VH02B_RSVP, VH02B_GIFT_DIALOG]],
+    ["programmatic focus", /\.focus\(/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_OPENING]],
+    ["animationend handler", /onAnimationEnd|AnimationEvent/, [VH02B_OPENING]],
     ["form events", /\bonSubmit\b|\bonChange\b|preventDefault/, [VH02B_RSVP]],
     ["form controls", /<form\b|<input\b|<select\b|<textarea\b|<fieldset\b|<label\b/, [VH02B_RSVP]],
     ["clipboard capability action", /copyWithFeedback|copyText/, [VH02B_COPY_BUTTON]],
     ["RSVP capability action", /\.submit\(|gate\.run\(/, [VH02B_RSVP]],
-    ["music / clock / countdown", /\.play\(|\.pause\(|MusicCapabilityV1|nowEpochMs|ClockCapabilityV1|deriveCeremonyCountdownV1/, []],
-    ["tabindex", /\btabIndex\b/, []],
+    ["music capability action", /\.play\(|\.pause\(|runMusicToggle|MusicCapabilityV1/, [VH02B_MUSIC]],
+    ["clock capability consumption", /nowEpochMs|ClockCapabilityV1|deriveCeremonyCountdownV1/, [VH02B_COUNTDOWN]],
+    ["tabindex", /\btabIndex\b/, [VH02B_OPENING]],
   ];
 
   it("every island exists, is .tsx, and imports only its exact allowlist (no other template, no templates/core)", () => {
@@ -2061,6 +2099,8 @@ describe("VH-02B-E1 islands", () => {
     for (const [label, pattern] of VH01_EXTRA_FORBIDDEN) {
       // The RSVP island is the one VH consumer of the frozen RSVP capability contract.
       if (file === VH02B_RSVP && label === "RSVP contract") continue;
+      // The countdown island is the one VH consumer of the frozen RF-05C countdown derivation.
+      if (file === VH02B_COUNTDOWN && label === "countdown / clock derivation") continue;
       expect(pattern.test(code), `${file}: ${label}`).toBe(false);
     }
     expect(/<img\b|<svg\b/.test(code), file).toBe(false);
@@ -2085,6 +2125,9 @@ describe("VH-02B-E1 islands", () => {
     expect(importersOf(VH02B_RSVP)).toStrictEqual([VH01_ROOT]);
     expect(importersOf(VH02B_GIFT_DIALOG)).toStrictEqual([`${VH}/sections/gift.tsx`]);
     expect(importersOf(VH02B_COPY_BUTTON)).toStrictEqual([`${VH}/sections/gift.tsx`]);
+    expect(importersOf(VH02B_MUSIC)).toStrictEqual([VH01_ROOT]);
+    expect(importersOf(VH02B_COUNTDOWN)).toStrictEqual([VH01_ROOT]);
+    expect(importersOf(VH02B_OPENING)).toStrictEqual([`${VH}/sections/opening-cover.tsx`]);
     const gift = codeOf(`${VH}/sections/gift.tsx`);
     expect(gift).toMatch(
       /\{line\.key === "accountNumber" && clipboard !== undefined \? \(\s*<dd className=\{styles\.giftLineAction\}>\s*<CopyAccountButton clipboard=\{clipboard\} value=\{line\.value\} sideLabel=\{sideLabel\} \/>/,
@@ -2099,7 +2142,7 @@ describe("VH-02B-E1 islands", () => {
   });
 
   it("the shared interaction models are pure: no React, DOM, browser API, storage, network or rendering", () => {
-    for (const file of [VH02B_SHARED_RSVP_MODEL, VH02B_SHARED_COPY_MODEL]) {
+    for (const file of [VH02B_SHARED_RSVP_MODEL, VH02B_SHARED_COPY_MODEL, VH02B_SHARED_MUSIC_MODEL, VH02B_OPENING_STATE]) {
       const code = codeOf(file);
       expect(code, file).not.toMatch(/from\s+["']react|\/>|<\/[A-Za-z]|return\s*\(?\s*<[A-Za-z]/);
       expect(ALL_HOOKS.test(code), file).toBe(false);
@@ -2107,6 +2150,10 @@ describe("VH-02B-E1 islands", () => {
     }
     expect(resolvedImportsOf(VH02B_SHARED_RSVP_MODEL).sort()).toStrictEqual(["lib/domain", `${LIB}/rsvp-capability`].sort());
     expect(resolvedImportsOf(VH02B_SHARED_COPY_MODEL)).toStrictEqual([`${LIB}/renderer-capabilities`]);
+    expect(resolvedImportsOf(VH02B_SHARED_MUSIC_MODEL)).toStrictEqual([`${LIB}/renderer-capabilities`]);
+    expect(resolvedImportsOf(VH02B_OPENING_STATE)).toStrictEqual([]);
+    // No timer, clock or storage drives the opening: it ends only on the cover's own animationend.
+    expect(codeOf(VH02B_OPENING_STATE)).not.toMatch(/setTimeout|setInterval|Date|storage/i);
   });
 });
 
@@ -2187,7 +2234,8 @@ describe("VH-01 renderer CSS", () => {
     ["!important", /!important/],
     ["raw hex colour (palette.ts owns colours)", /#[0-9a-fA-F]{3,8}\b/],
     ["Elegant Editorial tokens", /--ee-/],
-    ["VH-01 motion (VH-02 owns motion with its reduced-motion fallback)", /@keyframes|\banimation\b|\btransition\b/],
+    // VH-02B-M1 owns motion (opening, music pulse) with its reduced-motion fallback, checked below.
+    ["transitions (VH motion is keyframes only)", /\btransition\b/],
   ])("has no %s", (_label, pattern) => {
     expect(pattern.test(cssCode)).toBe(false);
   });
@@ -2212,8 +2260,37 @@ describe("VH-01 renderer CSS", () => {
     }
   });
 
+  it("motion: only the named VH-02B-M1 keyframes, and every animation is neutralised under reduced motion", () => {
+    const names = [...cssCode.matchAll(/@keyframes ([\w-]+)/g)].map((match) => match[1]).sort();
+    expect(names).toStrictEqual(
+      [
+        "vh-cover-text-out",
+        "vh-door-left",
+        "vh-door-right",
+        "vh-fade-in",
+        "vh-fade-out",
+        "vh-inner-settle",
+        "vh-medallion-pulse",
+        "vh-music-pulse",
+        "vh-opening-fade",
+        "vh-opening-finish",
+      ].sort(),
+    );
+    expect(cssCode.match(/infinite/g)).toHaveLength(1);
+    expect(cssCode).toMatch(/\.musicButton\[aria-pressed="true"\] \.musicGlyph \{\s*animation: vh-music-pulse 1\.2s ease-in-out infinite;/);
+    const reduceStart = cssCode.indexOf("@media (prefers-reduced-motion: reduce)");
+    expect(reduceStart).toBeGreaterThan(-1);
+    const reduce = cssCode.slice(reduceStart, cssCode.indexOf("\n}\n", reduceStart));
+    const outside = cssCode.slice(0, reduceStart) + cssCode.slice(cssCode.indexOf("\n}\n", reduceStart));
+    const animated = [...outside.replace(/@keyframes[\s\S]*?\n\}\n/g, "").matchAll(/([^{}]+)\{[^}]*\banimation:/g)].map((match) => (match[1] as string).trim());
+    expect(animated.length).toBeGreaterThan(5);
+    for (const selector of animated) expect(reduce, selector).toContain(selector);
+    expect(reduce).toMatch(/\.opening\[data-opening="opening"\] \{\s*animation: vh-opening-fade 220ms ease-out both;/);
+  });
+
   it("every rule's selector list starts from a module class", () => {
-    const selectors = [...cssCode.matchAll(/(^|[{}])\s*([^{}@;]+)\{/g)].map((match) => (match[2] as string).trim());
+    const withoutKeyframes = cssCode.replace(/@keyframes[\s\S]*?\n\}\n/g, "");
+    const selectors = [...withoutKeyframes.matchAll(/(^|[{}])\s*([^{}@;]+)\{/g)].map((match) => (match[2] as string).trim());
     expect(selectors.length).toBeGreaterThan(20);
     for (const list of selectors) {
       for (const selector of list.split(",").map((part) => part.trim())) {

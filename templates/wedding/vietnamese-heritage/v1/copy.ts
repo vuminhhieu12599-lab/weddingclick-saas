@@ -19,7 +19,7 @@ export const VIETNAMESE_HERITAGE_V1_COPY = Object.freeze({
   opening: Object.freeze({
     /** Task 029 cover title. */
     label: "Thiệp Mời Cưới",
-    /** Task 029 cover hint; the tap target arrives with the VH-02B opening island. */
+    /** Task 029 cover hint, also the opening button's accessible name (VH-02B-M1). */
     hint: "Chạm để mở thiệp",
   }),
   hero: Object.freeze({
@@ -57,6 +57,19 @@ export const VIETNAMESE_HERITAGE_V1_COPY = Object.freeze({
   }),
   timeline: Object.freeze({
     heading: "Lịch trình",
+  }),
+  countdown: Object.freeze({
+    /** Accessible name only; Task 029 shows the four cells without a visible heading. */
+    heading: "Đếm ngược đến lễ cưới",
+    /** Task 029 unit labels. */
+    units: Object.freeze({ days: "Ngày", hours: "Giờ", minutes: "Phút", seconds: "Giây" }),
+  }),
+  music: Object.freeze({
+    /** Accessible name; the pressed state says whether it is playing. */
+    toggle: "Nhạc nền",
+    blocked: "Trình duyệt chưa cho phát nhạc. Chạm nút nhạc để thử lại.",
+    error: "Chưa phát được nhạc nền.",
+    commandFailed: "Chưa điều khiển được nhạc nền. Vui lòng thử lại.",
   }),
   loveStory: Object.freeze({
     eyebrow: "Love Story",

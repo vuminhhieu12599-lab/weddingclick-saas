@@ -53,6 +53,11 @@ const { Rsvp } = await import("../interactive/rsvp");
 const { Gift } = await import("../sections/gift");
 const { CoupleName, COUPLE_NAME_SINGLE_LINE_MAX_CHARS, coupleNameLength } = await import("../sections/couple-name");
 const { albumPrintRatio } = await import("../sections/gallery-layout");
+const { OpeningCover } = await import("../sections/opening-cover");
+const { MusicControl, musicStatusNote } = await import("../interactive/music-control");
+const { Countdown, ceremonyCountdownParts } = await import("../interactive/countdown");
+const { OPENING_TIMING_MS, activateOpening, openingReducer } = await import("../interactive/opening-state");
+const { runMusicToggle, startMusicOnOpen } = await import("../../../../../lib/invitation-rendering/music-control-model");
 
 /**
  * VH-01 / VH-02A — Vietnamese Heritage v1 identity, compatibility, registry
@@ -577,9 +582,9 @@ describe("E. canonical mapping", () => {
     expect(fixture.viewModel.media.audio?.mediaId).toBe(FIXTURE_MEDIA_IDS.AUDIO);
     expect(html).not.toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.AUDIO));
     expect(html).not.toMatch(/<audio|<form/);
-    // No capability → no RSVP; the only controls are the gift CTA and, inside its closed dialog,
-    // the close control and the two COMMON side tabs (VH-02B-E1).
-    expect(html.match(/<button/g)).toHaveLength(4);
+    // No capability → no RSVP or music; the controls are the opening button (VH-02B-M1), the gift CTA
+    // and, inside its closed dialog, the close control and the two COMMON side tabs (VH-02B-E1).
+    expect(html.match(/<button/g)).toHaveLength(5);
     expect(html.match(/<dialog/g)).toHaveLength(1);
   });
 
@@ -649,10 +654,13 @@ describe("E. canonical mapping", () => {
       ]),
     );
     expect(html).not.toMatch(/lantern|corner-ornament/);
-    // The closed door is still art only (opening is a later VH-02B checkpoint); no tap target or timer.
+    // VH-02B-M1: the closed cover's only control is the explicit opening button; no form, dialog or tab stop.
     expect(html).toContain('data-opening="closed"');
     const opening = html.slice(html.indexOf('data-opening="closed"'), html.indexOf('id="vh-hero-names"'));
-    expect(opening).not.toMatch(/<button|<form|<dialog|onclick|tabindex/i);
+    const buttons = opening.match(/<button[^>]*>/g) ?? [];
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toMatch(/^<button type="button" class="[^"]*coverOpenButton[^"]*" aria-label="Chạm để mở thiệp">$/);
+    expect(opening).not.toMatch(/<form|<dialog|onclick|tabindex/i);
     // Without capabilities: no RSVP form, no copy control.
     expect(html).not.toMatch(/<form|Xác Nhận Tham Dự|Sao chép/);
   });
@@ -665,8 +673,13 @@ describe("E. canonical mapping", () => {
     expect(marks).toHaveLength(2);
     // The medallion artwork: opening cover + hero seal, each named.
     const medallions = [...html.matchAll(/<img [^>]*>/g)].map((match) => match[0]).filter((tag) => tag.includes("medallion-double-happiness.webp"));
-    expect(medallions).toHaveLength(2);
+    // Left door, right door (VH-02B-M1: the face is drawn on both doors) and hero seal.
+    expect(medallions).toHaveLength(3);
     for (const tag of medallions) expect(tag).toContain('alt="Song Hỷ"');
+    // The right door's copy is hidden from assistive technology.
+    const rightDoor = html.slice(html.indexOf('data-door="right"'), html.indexOf("</header>"));
+    expect(html).toMatch(/data-door="right" aria-hidden="true"/);
+    expect(rightDoor.match(/medallion-double-happiness/g)).toHaveLength(1);
     expect(html.indexOf("medallion-double-happiness.webp", html.indexOf("<footer"))).toBe(-1);
   });
 
@@ -1009,8 +1022,8 @@ describe("H. long couple names (VH-02A-QA1)", () => {
         const blocks = [...html.matchAll(/<span class="[^"]*coupleName[^"]*" style="--vh-name-chars:(\d+)" data-name-fit="(\w+)">([^<]*)<\/span>/g)].filter(
           (match) => match[3] === name,
         );
-        // Opening cover + hero, the full name unsplit in one span each.
-        expect(blocks, name).toHaveLength(2);
+        // Left door, right door (aria-hidden visual copy) and hero: the full name unsplit in one span each.
+        expect(blocks, name).toHaveLength(3);
         for (const block of blocks) {
           expect(block[1]).toBe(String(coupleNameLength(name)));
           expect(block[2]).toBe("line");
@@ -1280,5 +1293,219 @@ describe("H. wedding gift CTA and dialog (VH-02B-E1)", () => {
     expect(code).toMatch(/onClose=\{handleNativeClose\}/);
     expect(code).toMatch(/function handleNativeClose\(\) \{\s*if \(dialogRef\.current\?\.open === true\) return;\s*if \(open\) finishClose\(\);/);
     expect(code).not.toMatch(/router|history\.|location\.|localStorage|sessionStorage/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// I. VH-02B-M1 — split-door opening, music, countdown
+// ---------------------------------------------------------------------------
+
+type MusicStatus = "PAUSED" | "PLAYING" | "BLOCKED" | "ERROR";
+
+function musicDouble(status: MusicStatus, reject = false) {
+  return {
+    status,
+    play: vi.fn(async () => {
+      if (reject) throw new Error("fault");
+    }),
+    pause: vi.fn(async () => undefined),
+  };
+}
+
+const keyframes = (name: string): string => {
+  const start = cssSource.indexOf(`@keyframes ${name} {`);
+  expect(start, name).toBeGreaterThan(-1);
+  // A top-level @keyframes block ends at the first closing brace in column 0.
+  return cssSource.slice(start, cssSource.indexOf("\n}", start) + 2);
+};
+
+describe("I. split-door opening (VH-02B-M1)", () => {
+  it("state machine: CLOSED → OPENING only by OPEN, → DONE only by FINISHED; DONE is final", () => {
+    expect(openingReducer("CLOSED", "FINISHED")).toBe("CLOSED");
+    expect(openingReducer("CLOSED", "OPEN")).toBe("OPENING");
+    expect(openingReducer("OPENING", "OPEN")).toBe("OPENING");
+    expect(openingReducer("OPENING", "FINISHED")).toBe("DONE");
+    expect(openingReducer("DONE", "OPEN")).toBe("DONE");
+    expect(openingReducer("DONE", "FINISHED")).toBe("DONE");
+  });
+
+  it("activation runs onOpen once inside the click and never again once opening", () => {
+    const onOpen = vi.fn();
+    const dispatch = vi.fn();
+    activateOpening("CLOSED", onOpen, dispatch);
+    activateOpening("OPENING", onOpen, dispatch);
+    activateOpening("DONE", onOpen, dispatch);
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(dispatch.mock.calls).toStrictEqual([["OPEN"]]);
+    activateOpening("CLOSED", undefined, dispatch);
+    expect(dispatch).toHaveBeenCalledTimes(2);
+  });
+
+  it("renders CLOSED with one real button named by the hint, the right door and hint hidden from assistive tech", async () => {
+    const { html } = await renderVh({ variant: "GROOM" });
+    const cover = html.slice(html.indexOf("<header"), html.indexOf("</header>"));
+    expect(cover).toMatch(/^<header class="[^"]*opening[^"]*" data-opening="closed" data-island="opening">/);
+    // Server markup is never "interactive": the scroll hold only starts after hydration.
+    expect(cover).not.toContain("data-interactive");
+    expect(cover.match(/<button type="button"[^>]*aria-label="Chạm để mở thiệp"/g)).toHaveLength(1);
+    expect(cover).toMatch(/data-door="left">/);
+    expect(cover).toMatch(/data-door="right" aria-hidden="true">/);
+    expect(cover.match(/<p class="[^"]*coverHint[^"]*" aria-hidden="true">Chạm để mở thiệp<\/p>/g)).toHaveLength(2);
+    // Accessible cover text appears once: only in the left door.
+    const left = cover.slice(cover.indexOf('data-door="left"'), cover.indexOf('data-door="right"'));
+    expect(left).toContain("Thiệp Mời Cưới");
+    expect(left).toContain("Nguyễn Minh Khôi");
+  });
+
+  it("the island: explicit button only, no timer, cover leaves the tree at DONE, focus to the Hero without scrolling", () => {
+    const code = readFileSync(join(VH_DIR, "interactive", "opening-interaction.tsx"), "utf8");
+    // A synchronous guard: presses that land before the OPENING rerender cannot run onOpen again.
+    expect(code).toMatch(/onClick=\{\(\) => \{\s*if \(activated\.current\) return;\s*activated\.current = true;\s*activateOpening\(phase, onOpen, dispatch\);/);
+    expect(code).not.toMatch(/setTimeout|setInterval|requestAnimationFrame|Date\.now|localStorage|sessionStorage|cookie|router|history\./);
+    expect(code).toMatch(/if \(phase === "DONE"\) return null;/);
+    expect(code).toMatch(/if \(event\.target !== event\.currentTarget \|\| phase !== "OPENING"\) return;/);
+    expect(code).toMatch(/heading\.focus\(\{ preventScroll: true \}\);/);
+  });
+
+  it("CSS: Task 029 timing — text/medallion first, doors from 260 ms for 880 ms in opposite directions, 1180 ms total", () => {
+    expect(OPENING_TIMING_MS).toStrictEqual({ doorsStart: 260, doorsDuration: 880, total: 1180, reducedTotal: 220 });
+    expect(cssRule('.opening[data-opening="opening"]')).toMatch(/animation: vh-opening-finish 1180ms linear both/);
+    expect(cssRule('.opening[data-opening="opening"] .door[data-door="left"]')).toMatch(/vh-door-left 880ms cubic-bezier\(0\.65, 0, 0\.35, 1\) 260ms both/);
+    expect(cssRule('.opening[data-opening="opening"] .door[data-door="right"]')).toMatch(/vh-door-right 880ms cubic-bezier\(0\.65, 0, 0\.35, 1\) 260ms both/);
+    expect(keyframes("vh-door-left")).toMatch(/translateX\(-100%\)/);
+    expect(keyframes("vh-door-right")).toMatch(/translateX\(100%\)/);
+    expect(cssRule('.opening[data-opening="opening"] .coverText')).toMatch(/vh-cover-text-out 300ms/);
+    expect(cssRule('.opening[data-opening="opening"] .coverMedallionWrap')).toMatch(/vh-medallion-pulse 450ms/);
+    expect(cssRule(".column:has(> .opening[data-opening=\"opening\"]) > :not(.opening)")).toMatch(/vh-inner-settle 700ms ease-out 260ms both/);
+    // While opening the cover no longer takes pointer input; the scroll hold applies only while closed + interactive.
+    expect(cssRule('.opening[data-opening="opening"]')).toMatch(/pointer-events: none/);
+    expect(cssSource).toContain('.column:has(> .opening[data-opening="closed"][data-interactive="true"]) {');
+  });
+
+  it("long names survive the motion: keyframes move and fade only, never resize or rewrap text", () => {
+    for (const name of ["vh-opening-finish", "vh-cover-text-out", "vh-fade-out", "vh-fade-in", "vh-medallion-pulse", "vh-door-left", "vh-door-right", "vh-inner-settle", "vh-opening-fade"]) {
+      expect(keyframes(name), name).not.toMatch(/width|font-size|letter-spacing|white-space|max-width/);
+    }
+    // The couple-name sizing rules are unchanged by the opening.
+    expect(cssRule(".coverNames .coupleName")).toMatch(/0\.56\)\), 41px\)/);
+  });
+
+  it("reduced motion: still an explicit tap; no door travel, the cover fades in 220 ms", () => {
+    const reduce = cssSource.slice(cssSource.indexOf("@media (prefers-reduced-motion: reduce) {\n  .opening"));
+    const block = reduce.slice(0, reduce.indexOf("\n}\n") + 3);
+    expect(block).toMatch(/\.opening\[data-opening="opening"\] \{\s*animation: vh-opening-fade 220ms ease-out both;/);
+    for (const selector of [".door[data-door=\"left\"]", ".door[data-door=\"right\"]", ".coverText", ".coverMedallionWrap", ".doorEdge", "> :not(.opening)"]) {
+      expect(block, selector).toContain(selector);
+    }
+    expect(block).toMatch(/animation: none;/);
+    expect(keyframes("vh-opening-fade")).toMatch(/opacity: 0/);
+  });
+});
+
+describe("I. music (VH-02B-M1)", () => {
+  it("control only with sections.music AND capabilities.music", async () => {
+    const withMusic = await vhFixture(ALL_MEDIA);
+    expect(withMusic.selection.effectiveSections.music).toBe(true);
+    expect(renderWith(withMusic, { music: musicDouble("PAUSED") })).toMatch(/class="[^"]*musicButton[^"]*" aria-pressed="false"/);
+    expect(renderWith(withMusic, {})).not.toMatch(/musicButton/);
+    const sectionOff = await vhFixture({ ...ALL_MEDIA, sectionSettings: { music: false } });
+    const music = musicDouble("PAUSED");
+    const tree = VietnameseHeritageV1({ viewModel: sectionOff.viewModel, sections: sectionOff.selection.effectiveSections, capabilities: { music } });
+    expect(findElements(tree, MusicControl)).toHaveLength(0);
+    expect(findElements(tree, OpeningCover)[0]?.props.onOpen).toBeUndefined();
+    expect(renderWith(sectionOff, { music })).not.toMatch(/musicButton/);
+  });
+
+  it("the opening makes exactly one play attempt, never when already PLAYING", async () => {
+    const fixture = await vhFixture(ALL_MEDIA);
+    const paused = musicDouble("PAUSED");
+    const tree = VietnameseHeritageV1({ viewModel: fixture.viewModel, sections: fixture.selection.effectiveSections, capabilities: { music: paused } });
+    const onOpen = findElements(tree, OpeningCover)[0]?.props.onOpen as () => void;
+    const dispatch = vi.fn();
+    activateOpening("CLOSED", onOpen, dispatch);
+    activateOpening("OPENING", onOpen, dispatch);
+    expect(paused.play).toHaveBeenCalledTimes(1);
+    expect(paused.pause).not.toHaveBeenCalled();
+    const playing = musicDouble("PLAYING");
+    startMusicOnOpen(playing)();
+    expect(playing.play).not.toHaveBeenCalled();
+    expect(playing.pause).not.toHaveBeenCalled();
+    // No music → the opening has no hook at all.
+    const silent = VietnameseHeritageV1({ viewModel: fixture.viewModel, sections: fixture.selection.effectiveSections, capabilities: {} });
+    expect(findElements(silent, OpeningCover)[0]?.props.onOpen).toBeUndefined();
+  });
+
+  it("toggle: status is the only truth; BLOCKED / ERROR retry with play; rejection absorbed", async () => {
+    for (const status of ["PAUSED", "BLOCKED", "ERROR"] as const) {
+      const music = musicDouble(status);
+      await expect(runMusicToggle(music)).resolves.toBe("COMPLETED");
+      expect(music.play).toHaveBeenCalledTimes(1);
+    }
+    const playing = musicDouble("PLAYING");
+    await runMusicToggle(playing);
+    expect(playing.pause).toHaveBeenCalledTimes(1);
+    expect(playing.play).not.toHaveBeenCalled();
+    await expect(runMusicToggle(musicDouble("BLOCKED", true))).resolves.toBe("FAULTED");
+    expect(() => startMusicOnOpen(musicDouble("PAUSED", true))()).not.toThrow();
+  });
+
+  it.each([
+    ["PLAYING", "true", "♫", null],
+    ["PAUSED", "false", "♪", null],
+    ["BLOCKED", "false", "♪", "Trình duyệt chưa cho phát nhạc. Chạm nút nhạc để thử lại."],
+    ["ERROR", "false", "♪", "Chưa phát được nhạc nền."],
+  ] as const)("%s → pressed=%s, glyph %s, honest note", (status, pressed, glyph, note) => {
+    const html = renderToStaticMarkup(<MusicControl music={musicDouble(status)} />);
+    expect(html).toContain(`data-music-status="${status.toLowerCase()}"`);
+    expect(html).toContain(`aria-pressed="${pressed}"`);
+    expect(html).toContain(`aria-hidden="true">${glyph}</span>`);
+    expect(html).toContain(">Nhạc nền</span>");
+    expect(musicStatusNote(status, false)).toBe(note);
+    expect(musicStatusNote(status, true)).toBe(COPY.music.commandFailed);
+  });
+});
+
+describe("I. countdown (VH-02B-M1)", () => {
+  // GROOM ceremony: 2026-10-18T02:00:00Z.
+  const clockAt = (iso: string) => ({ nowEpochMs: Date.parse(iso) });
+
+  it("no capabilities.clock → no countdown (no zero placeholder)", async () => {
+    const { html } = await renderVh({ variant: "GROOM" });
+    expect(html).not.toMatch(/countdown|role="timer"/i);
+  });
+
+  it("upcoming: the four Task 029 cells from ceremony.startsAt and clock.nowEpochMs, after the schedule", async () => {
+    const fixture = await vhFixture({ variant: "GROOM" });
+    const html = renderWith(fixture, { clock: clockAt("2026-10-16T00:58:57Z") });
+    const cells = [...html.matchAll(/countdownValue[^"]*">(\d+)<\/span><span class="[^"]*countdownLabel[^"]*">([^<]+)</g)].map((match) => `${match[1]} ${match[2]}`);
+    expect(cells).toStrictEqual(["2 Ngày", "1 Giờ", "1 Phút", "3 Giây"]);
+    expect(html).toContain('role="timer"');
+    expect(html.indexOf("Đón khách")).toBeLessThan(html.indexOf('data-countdown="upcoming"'));
+    expect(html.indexOf('data-countdown="upcoming"')).toBeLessThan(html.indexOf("vh-love-story-heading"));
+  });
+
+  it("a refreshed clock rerenders new values; never negative", async () => {
+    const fixture = await vhFixture({ variant: "GROOM" });
+    const ceremony = fixture.viewModel.ceremony;
+    expect(ceremonyCountdownParts(ceremony, clockAt("2026-10-18T01:59:59Z"))?.map((part) => part.value)).toStrictEqual(["0", "0", "0", "1"]);
+    expect(ceremonyCountdownParts(ceremony, clockAt("2026-10-17T02:00:00Z"))?.map((part) => part.value)).toStrictEqual(["1", "0", "0", "0"]);
+  });
+
+  it("passed (or exactly now): hidden, as in the approved Task 029 direction — no negative values, no ended message", async () => {
+    const fixture = await vhFixture({ variant: "GROOM" });
+    for (const iso of ["2026-10-18T02:00:00Z", "2026-10-19T00:00:00Z"]) {
+      expect(ceremonyCountdownParts(fixture.viewModel.ceremony, clockAt(iso))).toBeNull();
+      expect(renderToStaticMarkup(<Countdown ceremony={fixture.viewModel.ceremony} clock={clockAt(iso)} />)).toBe("");
+      expect(renderWith(fixture, { clock: clockAt(iso) })).not.toMatch(/role="timer"|-\d+<\/span>/);
+    }
+  });
+
+  it("the root gates the countdown on capabilities.clock only and reads no ambient time", () => {
+    const root = readFileSync(join(VH_DIR, "vietnamese-heritage-v1.tsx"), "utf8");
+    expect(root).toMatch(/\{capabilities\.clock !== undefined \? <Countdown ceremony=\{ceremony\} clock=\{capabilities\.clock\} \/> : null\}/);
+    for (const file of ["interactive/countdown.tsx", "vietnamese-heritage-v1.tsx", "interactive/music-control.tsx", "interactive/opening-interaction.tsx"]) {
+      const code = readFileSync(join(VH_DIR, file), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+      expect(code, file).not.toMatch(/Date\.now|new Date|setInterval|setTimeout|performance\.now|<audio|HTMLAudioElement|navigator/);
+    }
   });
 });

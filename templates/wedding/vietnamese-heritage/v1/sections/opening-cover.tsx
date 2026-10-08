@@ -1,6 +1,7 @@
 import type { EventDateTimePresentationV1 } from "../../../../../lib/invitation-rendering/event-date-time-presentation";
 import type { InvitationViewModel } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
 import { VIETNAMESE_HERITAGE_V1_COPY } from "../copy";
+import { OpeningInteraction } from "../interactive/opening-interaction";
 import styles from "../vietnamese-heritage-v1.module.css";
 import { CoupleName } from "./couple-name";
 import { formatDottedDate } from "./date-text";
@@ -8,10 +9,46 @@ import { DecorImage } from "./decor";
 
 const COPY = VIETNAMESE_HERITAGE_V1_COPY;
 
-/** One red door: the full cover face, clipped to its half (Task 029 split-door construction). */
-function Door({ side }: { side: "left" | "right" }) {
+/** The cover text and medallion, drawn on each door face so the medallion splits with the doors. */
+function CoverContent({ people, ceremonyDate }: OpeningCoverProps) {
   return (
-    <div className={styles.door} data-door={side}>
+    <div className={styles.coverContent}>
+      <div className={styles.coverText}>
+        <p className={styles.coverTitle}>{COPY.opening.label}</p>
+        <DecorImage decor="divider" className={styles.coverDivider} eager />
+        <p className={styles.coverNames}>
+          <CoupleName name={people.primary.name} />
+          <span className={styles.coverAmp} aria-hidden="true">
+            &amp;
+          </span>
+          <span className={styles.srOnly}>{COPY.a11y.and}</span>
+          <CoupleName name={people.secondary.name} />
+        </p>
+        <p className={styles.coverDate}>
+          <span className={styles.coverWeekday}>{ceremonyDate.weekday}</span>
+          <span>{formatDottedDate(ceremonyDate)}</span>
+        </p>
+      </div>
+      <span className={styles.coverMedallionWrap}>
+        <DecorImage decor="medallion" className={styles.coverMedallion} alt={COPY.a11y.songHy} eager />
+      </span>
+      {/* Visual hint only: the opening button carries the same words as its accessible name. */}
+      <p className={styles.coverHint} aria-hidden="true">
+        {COPY.opening.hint}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * One red door: the full cover face, clipped to its half (Task 029 split-door
+ * construction), so the closed cover is one seamless composition. The right
+ * door repeats the face purely for the visual split and is hidden from
+ * assistive technology.
+ */
+function Door({ side, content }: { side: "left" | "right"; content: OpeningCoverProps }) {
+  return (
+    <div className={styles.door} data-door={side} aria-hidden={side === "right" ? true : undefined}>
       <div className={styles.doorFace}>
         <span className={styles.doorFrame} />
         {(["Top", "Bottom"] as const).map((end) => (
@@ -32,7 +69,9 @@ function Door({ side }: { side: "left" | "right" }) {
         ))}
         <DecorImage decor="floralTopLeft" className={`${styles.coverFloral} ${styles.coverFloralTopLeft}`} eager />
         <DecorImage decor="floralBottomRight" className={`${styles.coverFloral} ${styles.coverFloralBottomRight}`} eager />
+        <CoverContent {...content} />
       </div>
+      <span className={styles.doorEdge} aria-hidden="true" />
     </div>
   );
 }
@@ -43,42 +82,24 @@ interface OpeningCoverProps {
 }
 
 /**
- * Task 029 ceremonial red double-door cover, CLOSED state (VH-02A static
- * visual): lacquer paper, gold frame, ceremonial borders, florals, the cover
- * title, the canonical primary/secondary names (explicit side order), the
- * RF-05C weekday and date, the Song Hỷ medallion artwork and the hint.
+ * Task 029 ceremonial red double-door cover (VH-02A visual, VH-02B-M1
+ * interaction): lacquer paper, gold frame, ceremonial borders, florals, the
+ * cover title, the canonical primary/secondary names (explicit side order),
+ * the RF-05C weekday and date, the Song Hỷ medallion artwork and the hint.
  *
- * Structure for VH-02B: two decorative door layers (`data-door`) that the
- * opening island will part left/right, and one content layer above them.
- * The cover is an in-flow first panel sized with `svh` (fixed-height
- * fallback first), so nothing hides the invitation until that island
- * exists; there is no tap target yet.
+ * Two door layers (`data-door`), each carrying the whole face clipped to its
+ * half; the opening island owns the phase, the "Chạm để mở thiệp" button and
+ * the split (docs/DECISIONS.md "VH-02B-M1"). `onOpen` is the start-on-open
+ * music hook, passed only when music exists.
  */
-export function OpeningCover({ people, ceremonyDate }: OpeningCoverProps) {
+export function OpeningCover({ people, ceremonyDate, onOpen }: OpeningCoverProps & { onOpen?: () => void }) {
+  const content: OpeningCoverProps = { people, ceremonyDate };
   return (
-    <header className={styles.opening} data-opening="closed" data-island="opening">
-      <div className={styles.doors} aria-hidden="true">
-        <Door side="left" />
-        <Door side="right" />
+    <OpeningInteraction {...(onOpen === undefined ? {} : { onOpen })}>
+      <div className={styles.doors}>
+        <Door side="left" content={content} />
+        <Door side="right" content={content} />
       </div>
-      <div className={styles.coverContent}>
-        <p className={styles.coverTitle}>{COPY.opening.label}</p>
-        <DecorImage decor="divider" className={styles.coverDivider} eager />
-        <p className={styles.coverNames}>
-          <CoupleName name={people.primary.name} />
-          <span className={styles.coverAmp} aria-hidden="true">
-            &amp;
-          </span>
-          <span className={styles.srOnly}>{COPY.a11y.and}</span>
-          <CoupleName name={people.secondary.name} />
-        </p>
-        <p className={styles.coverDate}>
-          <span className={styles.coverWeekday}>{ceremonyDate.weekday}</span>
-          <span>{formatDottedDate(ceremonyDate)}</span>
-        </p>
-        <DecorImage decor="medallion" className={styles.coverMedallion} alt={COPY.a11y.songHy} eager />
-        <p className={styles.coverHint}>{COPY.opening.hint}</p>
-      </div>
-    </header>
+    </OpeningInteraction>
   );
 }

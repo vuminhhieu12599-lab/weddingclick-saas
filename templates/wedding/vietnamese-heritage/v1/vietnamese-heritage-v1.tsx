@@ -1,6 +1,9 @@
 import { deriveEventDateTimePresentationV1 } from "../../../../lib/invitation-rendering/event-date-time-presentation";
+import { startMusicOnOpen } from "../../../../lib/invitation-rendering/music-control-model";
 import type { InvitationRendererPropsV1 } from "../../../../lib/invitation-rendering/renderer-component";
 import { VIETNAMESE_HERITAGE_V1_FONT_VARIABLES_CLASS_NAME } from "./fonts";
+import { Countdown } from "./interactive/countdown";
+import { MusicControl } from "./interactive/music-control";
 import { Rsvp } from "./interactive/rsvp";
 import { VIETNAMESE_HERITAGE_V1_PALETTE_STYLE } from "./palette";
 import { Ceremonial } from "./sections/ceremonial";
@@ -33,13 +36,15 @@ const ROOT_STYLE = Object.freeze({ ...VIETNAMESE_HERITAGE_V1_PALETTE_STYLE, ...V
  * RF-05C derivation. The approved Task 029 direction is a visual reference
  * only; nothing here imports or reproduces prototype code, data or media.
  *
- * VH-02B-E1 islands: the root reads `capabilities` only as presence gates.
- * RSVP renders only with `capabilities.rsvp`; the gift CTA/dialog follows
- * `sections.gift` plus honest gift content, and its copy control exists only
- * with `capabilities.clipboard`. An absent capability is never success and
- * never a disabled stand-in. Still deferred to later VH-02B checkpoints: the
- * split-door opening, countdown, music, the album lightbox and reveal motion
- * (`data-island` marks their static entry points).
+ * Islands (VH-02B-E1, VH-02B-M1): the root reads `capabilities` only as
+ * presence gates. The split-door opening always exists (explicit tap only);
+ * music exists only with `sections.music` and `capabilities.music`, and the
+ * opening then makes one start-on-open play attempt; the countdown only with
+ * `capabilities.clock`; RSVP only with `capabilities.rsvp`; the gift
+ * CTA/dialog follows `sections.gift` plus honest gift content, its copy
+ * control only with `capabilities.clipboard`. An absent capability is never
+ * success and never a disabled stand-in. Still deferred: the album lightbox
+ * and reveal motion.
  *
  * Layout media come only from `viewModel.media.templateSlots` (`heroPhoto`,
  * `portraitCluster`, `loveStoryPhoto`, `gallery`); `media.qr` is the only
@@ -66,6 +71,8 @@ export function VietnameseHeritageV1({ viewModel, sections, capabilities }: Invi
   // `sections.*` alone decides visibility. The null checks only narrow the
   // type: RF-04 R9 makes a visible section with null content impossible.
   const loveStory = sections.loveStory ? content.loveStory : null;
+  // Music exists only with the effective section AND the runtime capability; never a fallback.
+  const music = sections.music ? capabilities.music : undefined;
   const dressCode = sections.dressCode ? content.dressCode : null;
 
   return (
@@ -75,8 +82,9 @@ export function VietnameseHeritageV1({ viewModel, sections, capabilities }: Invi
       data-renderer="vietnamese-heritage-v1"
       data-variant={viewModel.variant}
     >
+      {music !== undefined ? <MusicControl music={music} /> : null}
       <main className={styles.column}>
-        <OpeningCover people={people} ceremonyDate={ceremonyDate} />
+        <OpeningCover people={people} ceremonyDate={ceremonyDate} {...(music === undefined ? {} : { onOpen: startMusicOnOpen(music) })} />
         <Hero people={people} ceremony={ceremony} photo={heroPhoto} ceremonyDate={ceremonyDate} />
         <Ceremonial
           families={families}
@@ -87,6 +95,7 @@ export function VietnameseHeritageV1({ viewModel, sections, capabilities }: Invi
         >
           <Events cards={viewModel.ceremonyCards} />
           {sections.timeline ? <Timeline items={content.timeline} /> : null}
+          {capabilities.clock !== undefined ? <Countdown ceremony={ceremony} clock={capabilities.clock} /> : null}
         </Ceremonial>
         {loveStory !== null ? <LoveStory story={loveStory} photo={loveStoryPhoto} /> : null}
         {capabilities.rsvp !== undefined ? <Rsvp rsvp={capabilities.rsvp} /> : null}

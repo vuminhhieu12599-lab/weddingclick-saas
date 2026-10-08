@@ -23,6 +23,7 @@
 }
 
 .column {
+  position: relative;
   max-width: 480px;
   margin: 0 auto;
   overflow: hidden;
@@ -107,10 +108,19 @@
 
 /* Opening: ceremonial double-door cover, closed state -------------------------- */
 
+/*
+ * VH-02B-M1: the cover lies over the top of the invitation (the Hero is
+ * rendered underneath and shows through the parting doors), with the same
+ * size and composition as the VH-02A closed cover.
+ */
 .opening {
   --border-piece-h: calc((100cqh - 28px) * 0.64);
   --border-reach: calc(var(--border-piece-h) * 0.105 + 12px);
-  position: relative;
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 20;
   height: 640px;
   height: clamp(560px, 100svh, 920px);
   overflow: hidden;
@@ -248,6 +258,13 @@
   margin: 0;
 }
 
+.coverText {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
 .coverTitle {
   font-weight: 500;
   font-size: 12px;
@@ -313,13 +330,30 @@
   color: var(--vh-gold-soft);
 }
 
-.coverMedallion {
+.coverMedallionWrap {
+  position: relative;
   display: block;
   flex-shrink: 0;
+  margin-top: 3.6cqh;
+}
+
+/* Task 029 medallion glow, shown only while the doors open. */
+.coverMedallionWrap::before {
+  content: "";
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--vh-gold-light) 50%, transparent), transparent 65%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.coverMedallion {
+  position: relative;
+  display: block;
   width: min(39cqw, 19.5cqh);
   height: auto;
   aspect-ratio: 1;
-  margin-top: 3.6cqh;
   filter: saturate(0.82) drop-shadow(0 6px 12px color-mix(in srgb, var(--vh-shadow) 32%, transparent));
 }
 
@@ -333,6 +367,269 @@
   white-space: nowrap;
   opacity: 0.9;
   text-shadow: 0 1px 6px color-mix(in srgb, var(--vh-shadow) 45%, transparent);
+}
+
+/* Opening interaction (VH-02B-M1) ------------------------------------------------- */
+
+/* The explicit opening control covers the whole closed cover; its accessible name is the hint. */
+.coverOpenButton {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.coverOpenButton:focus-visible {
+  outline: 2px solid var(--vh-gold-soft);
+  outline-offset: -8px;
+}
+
+/* Inner shading on each door's meeting edge, shown only once a real gap has opened. */
+.doorEdge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.door[data-door="left"] .doorEdge {
+  right: 0;
+  background: linear-gradient(to left, color-mix(in srgb, var(--vh-shadow) 28%, transparent), transparent);
+}
+
+.door[data-door="right"] .doorEdge {
+  left: 0;
+  background: linear-gradient(to right, color-mix(in srgb, var(--vh-shadow) 28%, transparent), transparent);
+}
+
+/* While closed (and only once the island is interactive) the page is held at the cover. */
+.column:has(> .opening[data-opening="closed"][data-interactive="true"]) {
+  height: 640px;
+  height: clamp(560px, 100svh, 920px);
+}
+
+/*
+ * Task 029 sequence, 1180 ms: the cover text settles away (300 ms) and the
+ * medallion glows and pulses (450 ms); from 260 ms the doors part for
+ * 880 ms; the invitation behind settles in from 260 ms over 700 ms. The
+ * cover's own no-op animation marks the end (animationend → DONE).
+ */
+.opening[data-opening="opening"] {
+  /* The invitation behind must show through the widening gap, not the cover's own fill. */
+  background: transparent;
+  pointer-events: none;
+  animation: vh-opening-finish 1180ms linear both;
+}
+
+.opening[data-opening="opening"] .coverText {
+  animation: vh-cover-text-out 300ms ease-out both;
+}
+
+.opening[data-opening="opening"] .coverHint {
+  animation: vh-fade-out 200ms ease-out both;
+}
+
+.opening[data-opening="opening"] .coverMedallionWrap {
+  animation: vh-medallion-pulse 450ms ease-out both;
+}
+
+.opening[data-opening="opening"] .coverMedallionWrap::before {
+  animation: vh-fade-in 300ms ease-out both;
+}
+
+.opening[data-opening="opening"] .door[data-door="left"] {
+  animation: vh-door-left 880ms cubic-bezier(0.65, 0, 0.35, 1) 260ms both;
+}
+
+.opening[data-opening="opening"] .door[data-door="right"] {
+  animation: vh-door-right 880ms cubic-bezier(0.65, 0, 0.35, 1) 260ms both;
+}
+
+.opening[data-opening="opening"] .doorEdge {
+  animation: vh-fade-in 300ms ease-out 560ms both;
+}
+
+.column:has(> .opening[data-opening="opening"]) > :not(.opening) {
+  animation: vh-inner-settle 700ms ease-out 260ms both;
+}
+
+@keyframes vh-opening-finish {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes vh-cover-text-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes vh-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vh-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes vh-medallion-pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  60% {
+    transform: scale(1.05);
+  }
+
+  100% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes vh-door-left {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes vh-door-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes vh-inner-settle {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Reduced motion: still an explicit tap, but no door travel: a 220 ms fade of the whole cover. */
+@media (prefers-reduced-motion: reduce) {
+  .opening[data-opening="opening"] {
+    animation: vh-opening-fade 220ms ease-out both;
+  }
+
+  .opening[data-opening="opening"] .coverText,
+  .opening[data-opening="opening"] .coverHint,
+  .opening[data-opening="opening"] .coverMedallionWrap,
+  .opening[data-opening="opening"] .coverMedallionWrap::before,
+  .opening[data-opening="opening"] .door[data-door="left"],
+  .opening[data-opening="opening"] .door[data-door="right"],
+  .opening[data-opening="opening"] .doorEdge,
+  .column:has(> .opening[data-opening="opening"]) > :not(.opening) {
+    animation: none;
+  }
+
+  .musicButton[aria-pressed="true"] .musicGlyph {
+    animation: none;
+  }
+}
+
+@keyframes vh-opening-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Music control (VH-02B-M1): Task 029 small round heritage control, top right of the column. */
+.music {
+  position: fixed;
+  top: 16px;
+  right: max(16px, calc((100vw - 480px) / 2 + 16px));
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: calc(100vw - 32px);
+  pointer-events: none;
+}
+
+.musicButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--vh-gold);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--vh-ivory) 92%, transparent);
+  box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--vh-ink) 40%, transparent);
+  color: var(--vh-vermilion);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.musicButton[aria-pressed="true"] {
+  background: var(--vh-vermilion);
+  color: var(--vh-silk);
+}
+
+.musicButton:focus-visible {
+  outline: 2px solid var(--vh-gold-deep);
+  outline-offset: 3px;
+}
+
+.musicGlyph {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.musicButton[aria-pressed="true"] .musicGlyph {
+  animation: vh-music-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes vh-music-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+.musicNote {
+  max-width: 220px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--vh-gold) 55%, transparent);
+  border-radius: 10px;
+  background: var(--vh-card);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: right;
+  color: var(--vh-vermilion-deep);
+  pointer-events: auto;
 }
 
 /* Hero ------------------------------------------------------------------------ */
@@ -1165,6 +1462,47 @@
 }
 
 /* Love Story --------------------------------------------------------------------- */
+
+/* Countdown (VH-02B-M1): Task 029 four cells under a gold rule on the ceremonial sheet. */
+.countdown {
+  width: 100%;
+  max-width: 340px;
+  margin-top: 26px;
+}
+
+.countdownRow {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 20px;
+  padding: 18px 0 0;
+  border-top: 1px solid color-mix(in srgb, var(--vh-gold) 45%, transparent);
+  list-style: none;
+}
+
+.countdownCell {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.countdownValue {
+  display: block;
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 21px;
+  line-height: 1.2;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--vh-vermilion);
+}
+
+.countdownLabel {
+  display: block;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vh-ink-soft);
+}
 
 .loveStory {
   position: relative;
