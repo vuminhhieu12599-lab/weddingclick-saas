@@ -6,6 +6,7 @@ import {
   handleSaveProjectDesignRequest,
 } from "../../../../../../../lib/server/routes/project-design";
 import { supabaseProjectDesignGateway } from "../../../../../../../lib/server/supabase/project-design-repository";
+import { lookupTemplateEditorManifest } from "../../../../../../../templates/core/production-editor-manifests";
 
 /** GET /api/v2/internal/projects/[id]/design — read the current project design (Task 028). */
 export async function GET(
@@ -46,6 +47,8 @@ export async function PUT(
     () => request.json(),
     supabaseStaffAuthGateway,
     supabaseProjectDesignGateway,
+    // TE-05A-H1: exact-key production editor registry; a new selection of an unregistered renderer fails closed.
+    lookupTemplateEditorManifest,
   );
 
   return NextResponse.json(result.body, { status: result.status, headers: result.headers });

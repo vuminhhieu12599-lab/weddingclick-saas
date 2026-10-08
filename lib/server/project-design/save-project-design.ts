@@ -1,3 +1,4 @@
+import type { TemplateEditorManifestV1 } from "../../../templates/core/editor-manifest";
 import type { StaffContext } from "../auth/staff-context";
 import { ApiError } from "../errors/api-error";
 import { isValidUuid } from "../validation/uuid";
@@ -18,12 +19,21 @@ import { validateTemplateDesignManifest } from "./validate-template-design-manif
  * compatibility -> retired/inactive selection rule (grandfathering an
  * unchanged templateVersionId) -> validate config against the manifest ->
  * upsert -> return.
+ *
+ * TE-05A-H1: a NEW selection additionally requires the requested version's
+ * exact stored `renderer_key` (read from the DB row, never the body) to be a
+ * registered production renderer — `lookupEditorManifest` is the TE-02
+ * exact-key registry (no fallback, alias, "latest" or normalization). An
+ * unchanged `templateVersionId` stays grandfathered exactly like a retired
+ * version, so this can never become a path to switch to an unsupported
+ * renderer.
  */
 export async function saveProjectDesign<TClient>(
   rawProjectId: string,
   rawBody: unknown,
   staff: StaffContext<TClient>,
   gateway: ProjectDesignGateway<TClient>,
+  lookupEditorManifest: (rendererKey: string) => TemplateEditorManifestV1 | undefined,
 ): Promise<ProjectDesignRecord> {
   if (!isValidUuid(rawProjectId)) {
     throw new ApiError("BAD_REQUEST", "Project id must be a valid UUID");
@@ -73,7 +83,10 @@ export async function saveProjectDesign<TClient>(
     existingDesign !== null && existingDesign.templateVersionId === input.templateVersionId;
 
   if (!isUnchangedSelection) {
-    const selectable = template.isActive === true && templateVersion.retiredAt === null;
+    const selectable =
+      template.isActive === true &&
+      templateVersion.retiredAt === null &&
+      lookupEditorManifest(templateVersion.rendererKey) !== undefined;
     if (!selectable) {
       throw new ApiError(
         "INVARIANT",

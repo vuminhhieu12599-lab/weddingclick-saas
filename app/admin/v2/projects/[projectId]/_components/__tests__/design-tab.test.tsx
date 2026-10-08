@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { lookupTemplateEditorManifest } from "../../../../../../../templates/core/production-editor-manifests";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ProjectDesignRecord } from "../../../../../../../lib/server/project-design/project-design-types";
@@ -49,7 +50,7 @@ const CATALOG: TemplateCatalogEntry[] = [
           sectionSettingsSchema: {},
           designSettingsSchema: {},
         },
-        editorManifest: null,
+        editorManifest: lookupTemplateEditorManifest("wedding.elegant-editorial.v1")!,
         retiredAt: null,
         selectable: true,
       },
@@ -115,5 +116,45 @@ describe("DesignAssignmentView", () => {
     const html = render(null, VERSION_ID, { kind: "ERROR", message: "Không thể lưu mẫu: boom" });
     expect(html).toContain("Không thể lưu mẫu: boom");
     expect(html).not.toContain("Đã lưu mẫu thiệp");
+  });
+});
+
+describe("DesignAssignmentView — TE-05A-H1 unsupported renderer", () => {
+  const UNSUPPORTED_ID = "99999999-9999-4999-8999-999999999999";
+  const withUnsupported: TemplateCatalogEntry[] = [
+    {
+      ...CATALOG[0]!,
+      versions: [
+        ...CATALOG[0]!.versions,
+        { ...CATALOG[0]!.versions[0]!, id: UNSUPPORTED_ID, versionNumber: 9, rendererKey: "wedding.unknown.v9", editorManifest: null, selectable: false },
+      ],
+    },
+  ];
+  const view = (design: ProjectDesignRecord | null, selected: string) =>
+    renderToStaticMarkup(
+      <DesignAssignmentView
+        projectId={PROJECT_ID}
+        project={{ eventType: "WEDDING" }}
+        catalog={withUnsupported}
+        design={design}
+        selectedVersionId={selected}
+        onSelect={() => {}}
+        onSave={() => {}}
+        saveStatus={{ kind: "IDLE" }}
+      />,
+    );
+
+  it("an unsupported version is not offered for new selection", () => {
+    const html = view(null, "");
+    expect(html).not.toContain(`value="${UNSUPPORTED_ID}"`);
+    expect(html).not.toContain("phiên bản 9");
+  });
+
+  it("an unsupported CURRENT version stays visible with a warning, is marked, and cannot be re-saved as a new pick", () => {
+    const current = { ...DESIGN, templateVersionId: UNSUPPORTED_ID };
+    const html = view(current, UNSUPPORTED_ID);
+    expect(html).toContain("Mẫu này không còn được hệ thống hỗ trợ.");
+    expect(html).toContain("data-unsupported-version");
+    expect(html).toContain(`value="${UNSUPPORTED_ID}"`);
   });
 });

@@ -224,6 +224,7 @@ describe("supabaseProjectDesignGateway.getTemplateVersionForDesign", () => {
       data: {
         id: "22222222-2222-2222-2222-222222222222",
         template_id: "33333333-3333-3333-3333-333333333333",
+        renderer_key: "wedding.elegant-editorial.v1",
         manifest: rawManifest,
         retired_at: null,
       },
@@ -237,6 +238,7 @@ describe("supabaseProjectDesignGateway.getTemplateVersionForDesign", () => {
     expect(result).toEqual({
       id: "22222222-2222-2222-2222-222222222222",
       templateId: "33333333-3333-3333-3333-333333333333",
+      rendererKey: "wedding.elegant-editorial.v1",
       manifest: rawManifest,
       retiredAt: null,
     });
@@ -247,6 +249,7 @@ describe("supabaseProjectDesignGateway.getTemplateVersionForDesign", () => {
       data: {
         id: "22222222-2222-2222-2222-222222222222",
         template_id: "33333333-3333-3333-3333-333333333333",
+        renderer_key: "wedding.elegant-editorial.v1",
         manifest: {},
         retired_at: 12345,
       },
@@ -265,6 +268,7 @@ describe("supabaseProjectDesignGateway.getTemplateVersionForDesign", () => {
       data: {
         id: "77777777-7777-7777-7777-777777777777",
         template_id: "33333333-3333-3333-3333-333333333333",
+        renderer_key: "wedding.elegant-editorial.v1",
         manifest: {},
         retired_at: null,
       },
@@ -276,6 +280,15 @@ describe("supabaseProjectDesignGateway.getTemplateVersionForDesign", () => {
         "22222222-2222-2222-2222-222222222222",
       ),
     ).rejects.toThrow();
+  });
+
+  it("TE-05A-H1: selects and returns the exact renderer_key; a missing/blank key is a malformed row", async () => {
+    for (const renderer_key of [undefined, "", 7]) {
+      const client = fakeReadClient("template_versions", {
+        data: { id: "22222222-2222-2222-2222-222222222222", template_id: "33333333-3333-3333-3333-333333333333", renderer_key, manifest: {}, retired_at: null },
+      });
+      await expect(supabaseProjectDesignGateway.getTemplateVersionForDesign(client, "22222222-2222-2222-2222-222222222222")).rejects.toThrow();
+    }
   });
 });
 

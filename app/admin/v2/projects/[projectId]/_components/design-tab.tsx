@@ -11,7 +11,9 @@ import {
 import {
   buildDesignAssignmentBody,
   findTemplateVersionOption,
+  isSupportedTemplateVersion,
   listTemplateVersionOptions,
+  UNSUPPORTED_TEMPLATE_VERSION_MESSAGE,
 } from "../../../../../../lib/admin/design-assignment";
 import { useAdminQuery } from "../../../../../../lib/admin/use-admin-query";
 import type { ProjectDesignRecord } from "../../../../../../lib/server/project-design/project-design-types";
@@ -81,6 +83,11 @@ export function DesignAssignmentView({
               : "Chưa chọn mẫu"}
         </span>
       </div>
+      {current && !isSupportedTemplateVersion(current.version) && (
+        <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800" data-unsupported-current>
+          {UNSUPPORTED_TEMPLATE_VERSION_MESSAGE}
+        </p>
+      )}
 
       {options.length === 0 ? (
         <div className="mt-4">
@@ -110,8 +117,12 @@ export function DesignAssignmentView({
                 {version.id === currentTemplateVersionId && (
                   <span className="ml-2 text-xs text-emerald-700">(đang dùng)</span>
                 )}
-                {!version.selectable && (
-                  <span className="ml-2 text-xs text-amber-700">(không còn chọn mới)</span>
+                {!isSupportedTemplateVersion(version) ? (
+                  <span className="ml-2 text-xs text-amber-700" data-unsupported-version>
+                    (không được hỗ trợ)
+                  </span>
+                ) : (
+                  !version.selectable && <span className="ml-2 text-xs text-amber-700">(không còn chọn mới)</span>
                 )}
                 {template.description && (
                   <span className="mt-0.5 block text-xs text-slate-500">{template.description}</span>

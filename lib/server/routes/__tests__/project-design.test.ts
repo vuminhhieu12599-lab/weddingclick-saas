@@ -1,3 +1,4 @@
+import { lookupTemplateEditorManifest } from "../../../../templates/core/production-editor-manifests";
 import { describe, expect, it } from "vitest";
 
 import type { StaffAuthGateway } from "../../auth/staff-context";
@@ -65,6 +66,7 @@ function createFakeGateway(options?: {
       return {
         id: "22222222-2222-2222-2222-222222222222",
         templateId: "33333333-3333-3333-3333-333333333333",
+        rendererKey: "wedding.elegant-editorial.v1",
         manifest: {
           schemaVersion: 1,
           palettes: ["ivory-champagne"],
@@ -187,6 +189,7 @@ describe("handleSaveProjectDesignRequest — auth/body ordering", () => {
       readBody,
       activeStaffAuth,
       createFakeGateway(),
+      lookupTemplateEditorManifest,
     );
 
     expect(result.status).toBe(401);
@@ -207,6 +210,7 @@ describe("handleSaveProjectDesignRequest — auth/body ordering", () => {
       readBody,
       activeStaffAuth,
       createFakeGateway(),
+      lookupTemplateEditorManifest,
     );
 
     expect(result.status).toBe(401);
@@ -228,6 +232,7 @@ describe("handleSaveProjectDesignRequest — auth/body ordering", () => {
       readBody,
       invalidTokenAuth,
       createFakeGateway(),
+      lookupTemplateEditorManifest,
     );
 
     expect(result.status).toBe(401);
@@ -247,6 +252,7 @@ describe("handleSaveProjectDesignRequest — auth/body ordering", () => {
       readBody,
       nonStaffAuth,
       createFakeGateway(),
+      lookupTemplateEditorManifest,
     );
 
     expect(result.status).toBe(403);
@@ -264,6 +270,7 @@ describe("handleSaveProjectDesignRequest — auth/body ordering", () => {
       readBody,
       activeStaffAuth,
       createFakeGateway(),
+      lookupTemplateEditorManifest,
     );
 
     expect(result.status).toBe(400);
@@ -273,6 +280,20 @@ describe("handleSaveProjectDesignRequest — auth/body ordering", () => {
 });
 
 describe("handleSaveProjectDesignRequest", () => {
+  it("TE-05A-H1: a direct PUT newly selecting an unregistered renderer fails server-side with 422 (UI bypass impossible)", async () => {
+    const base = createFakeGateway();
+    const gateway = {
+      ...base,
+      async getTemplateVersionForDesign(client: Parameters<typeof base.getTemplateVersionForDesign>[0], id: string) {
+        const version = await base.getTemplateVersionForDesign(client, id);
+        return version === null ? null : { ...version, rendererKey: "wedding.unknown.v1" };
+      },
+    };
+    const result = await handleSaveProjectDesignRequest("Bearer good-token", existingProjectId, async () => validPutBody, activeStaffAuth, gateway, lookupTemplateEditorManifest);
+    expect(result.status).toBe(422);
+    expect(JSON.stringify(result.body)).not.toContain("wedding.unknown.v1");
+  });
+
   it("returns 200 with the saved record on success", async () => {
     const result = await handleSaveProjectDesignRequest(
       "Bearer good-token",
@@ -280,6 +301,7 @@ describe("handleSaveProjectDesignRequest", () => {
       async () => validPutBody,
       activeStaffAuth,
       createFakeGateway(),
+      lookupTemplateEditorManifest,
     );
 
     expect(result.status).toBe(200);
@@ -300,6 +322,7 @@ describe("handleSaveProjectDesignRequest", () => {
       async () => validPutBody,
       activeStaffAuth,
       gateway,
+      lookupTemplateEditorManifest,
     );
 
     expect(result.status).toBe(422);
@@ -319,6 +342,7 @@ describe("handleSaveProjectDesignRequest", () => {
       async () => validPutBody,
       activeStaffAuth,
       gateway,
+      lookupTemplateEditorManifest,
     );
 
     expect(result.status).toBe(500);
@@ -341,6 +365,7 @@ describe("handleSaveProjectDesignRequest", () => {
       async () => ({ ...validPutBody, isActive: true }),
       activeStaffAuth,
       gateway,
+      lookupTemplateEditorManifest,
     );
 
     expect(result.status).toBe(400);

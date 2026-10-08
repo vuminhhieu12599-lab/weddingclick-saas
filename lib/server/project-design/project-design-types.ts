@@ -53,6 +53,8 @@ export interface ProjectForDesign {
 export interface TemplateVersionForDesign {
   id: string;
   templateId: string;
+  /** TE-05A-H1: the version's exact stored renderer key (server-read, never from a request). */
+  rendererKey: string;
   manifest: unknown;
   retiredAt: string | null;
 }

@@ -6,6 +6,7 @@ import { getProjectDesignByProjectId } from "../project-design/get-project-desig
 import type { ProjectDesignGateway } from "../project-design/project-design-gateway";
 import type { ProjectDesignRecord } from "../project-design/project-design-types";
 import { saveProjectDesign } from "../project-design/save-project-design";
+import type { TemplateEditorManifestV1 } from "../../../templates/core/editor-manifest";
 
 /**
  * Pure, framework-agnostic handlers backing the Project Design HTTP
@@ -86,6 +87,7 @@ export async function handleSaveProjectDesignRequest<TClient>(
   readBody: () => Promise<unknown>,
   authGateway: StaffAuthGateway<TClient>,
   projectDesignGateway: ProjectDesignGateway<TClient>,
+  lookupEditorManifest: (rendererKey: string) => TemplateEditorManifestV1 | undefined,
 ): Promise<ApiResult<{ data: ProjectDesignRecord }>> {
   const token = parseBearerToken(authorizationHeader);
   if (!token) {
@@ -105,7 +107,7 @@ export async function handleSaveProjectDesignRequest<TClient>(
       throw new ApiError("BAD_REQUEST", "Request body must be valid JSON");
     }
 
-    const data = await saveProjectDesign(projectId, rawBody, staff, projectDesignGateway);
+    const data = await saveProjectDesign(projectId, rawBody, staff, projectDesignGateway, lookupEditorManifest);
     return withNoStore({ status: 200, body: { data } });
   } catch (error) {
     return withNoStore(toErrorResult(error, "[handleSaveProjectDesignRequest] Unexpected error"));

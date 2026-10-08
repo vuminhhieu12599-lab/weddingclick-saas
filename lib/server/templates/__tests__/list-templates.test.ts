@@ -86,7 +86,7 @@ describe("listTemplates", () => {
     expect(result[1].versions[0].retiredAt).toBe("2026-01-01T00:00:00.000Z");
   });
 
-  it("derives selectable = isActive && retiredAt === null", async () => {
+  it("derives selectable = isActive && retiredAt === null && registered production renderer (TE-05A-H1)", async () => {
     const rows: RawTemplateCatalogRow[] = [
       {
         id: "t1",
@@ -98,11 +98,11 @@ describe("listTemplates", () => {
         sortOrder: 1,
         previewMediaPath: null,
         versions: [
-          { id: "v1", versionNumber: 1, rendererKey: "r1", manifest: VALID_MANIFEST, retiredAt: null },
+          { id: "v1", versionNumber: 1, rendererKey: "wedding.elegant-editorial.v1", manifest: VALID_MANIFEST, retiredAt: null },
           {
             id: "v2",
             versionNumber: 2,
-            rendererKey: "r2",
+            rendererKey: "wedding.elegant-editorial.v1",
             manifest: VALID_MANIFEST,
             retiredAt: "2026-01-01T00:00:00.000Z",
           },
@@ -118,7 +118,7 @@ describe("listTemplates", () => {
         sortOrder: 2,
         previewMediaPath: null,
         versions: [
-          { id: "v3", versionNumber: 1, rendererKey: "r3", manifest: VALID_MANIFEST, retiredAt: null },
+          { id: "v3", versionNumber: 1, rendererKey: "wedding.vietnamese-heritage.v1", manifest: VALID_MANIFEST, retiredAt: null },
         ],
       },
     ];
@@ -128,6 +128,29 @@ describe("listTemplates", () => {
     expect(result[0].versions[0].selectable).toBe(true);
     expect(result[0].versions[1].selectable).toBe(false);
     expect(result[1].versions[0].selectable).toBe(false);
+  });
+
+  it("TE-05A-H1: an unregistered renderer stays listed with editorManifest null and is never selectable (exact key, no alias)", async () => {
+    const keys = ["wedding.unknown.v1", "wedding.elegant-editorial", "wedding.elegant-editorial.v2", "Wedding.elegant-editorial.v1", " wedding.elegant-editorial.v1", "latest"];
+    const rows: RawTemplateCatalogRow[] = [
+      {
+        id: "t1",
+        code: "diagnostic",
+        eventType: "WEDDING",
+        name: "Diagnostic",
+        description: null,
+        isActive: true,
+        sortOrder: 1,
+        previewMediaPath: null,
+        versions: keys.map((rendererKey, index) => ({ id: `v${index}`, versionNumber: index + 1, rendererKey, manifest: VALID_MANIFEST, retiredAt: null })),
+      },
+    ];
+    const [template] = await listTemplates(staff, createFakeGateway(rows), lookupTemplateEditorManifest);
+    expect(template.versions).toHaveLength(keys.length);
+    for (const version of template.versions) {
+      expect(version.editorManifest, version.rendererKey).toBeNull();
+      expect(version.selectable, version.rendererKey).toBe(false);
+    }
   });
 
   it("exposes only the validated six-field design-manifest subset, never raw renderer metadata", async () => {

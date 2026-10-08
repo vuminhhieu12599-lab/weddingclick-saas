@@ -47,7 +47,8 @@ export async function listTemplates<TClient>(
       designManifest: validateTemplateDesignManifest(version.manifest),
       editorManifest: lookupEditorManifest(version.rendererKey) ?? null,
       retiredAt: version.retiredAt,
-      selectable: template.isActive === true && version.retiredAt === null,
+      // TE-05A-H1: an unregistered renderer stays visible (diagnosis/history) but is never newly selectable.
+      selectable: template.isActive === true && version.retiredAt === null && lookupEditorManifest(version.rendererKey) !== undefined,
     })),
   }));
 }

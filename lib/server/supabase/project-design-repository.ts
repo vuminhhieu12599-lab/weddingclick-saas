@@ -232,7 +232,7 @@ export const supabaseProjectDesignGateway: ProjectDesignGateway<SupabaseClient> 
   ): Promise<TemplateVersionForDesign | null> {
     const { data, error } = await client
       .from("template_versions")
-      .select("id, template_id, manifest, retired_at")
+      .select("id, template_id, renderer_key, manifest, retired_at")
       .eq("id", templateVersionId)
       .maybeSingle();
 
@@ -251,6 +251,7 @@ export const supabaseProjectDesignGateway: ProjectDesignGateway<SupabaseClient> 
     const row = data as {
       id: unknown;
       template_id: unknown;
+      renderer_key: unknown;
       manifest: unknown;
       retired_at: unknown;
     };
@@ -258,6 +259,8 @@ export const supabaseProjectDesignGateway: ProjectDesignGateway<SupabaseClient> 
     if (
       !isUuidString(row.id) ||
       !isUuidString(row.template_id) ||
+      typeof row.renderer_key !== "string" ||
+      row.renderer_key.length === 0 ||
       !isNullableTimestamptzString(row.retired_at)
     ) {
       fail();
@@ -270,6 +273,7 @@ export const supabaseProjectDesignGateway: ProjectDesignGateway<SupabaseClient> 
     return {
       id: row.id,
       templateId: row.template_id,
+      rendererKey: row.renderer_key,
       manifest: row.manifest,
       retiredAt: row.retired_at,
     };

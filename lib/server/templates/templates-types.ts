@@ -18,7 +18,8 @@ export interface TemplateVersionCatalogEntry {
    * (never read from the DB manifest JSON, never accepted from a client).
    * `null` only when the renderer key is not a production renderer at all
    * (such a version cannot render); every production renderer has one
-   * (TE-02 key-set equality).
+   * (TE-02 key-set equality). TE-05A-H1: such a version is listed for
+   * diagnosis but `selectable` is always false.
    */
   editorManifest: TemplateEditorManifestV1 | null;
   retiredAt: string | null;

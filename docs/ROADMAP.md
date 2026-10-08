@@ -334,6 +334,8 @@ WeddingClick is **Pilot Ready** for **one closely-supported customer using Elega
 | **RS-01** | `rendererKey`-based lazy renderer loading (T14) | None | Shared client host for all invitations | `templates/core/production-renderer-bindings.ts`, host core, tests | Medium–High | EE pages ship no VH chunk/CSS/font; fail-closed unknown key; all render paths regression-tested |
 | **VH catalog / QA** | Catalog seeding (data-only migration) + certification matrix | **Yes** (seed) | Production only after certification and RS-01 | seed migration, docs | Medium | TEMPLATE_SYSTEM §25 matrix passed |
 
+**TE-05A-H1 — COMPLETE (2026-10-08):** unsupported-renderer versions are never newly selectable (catalog, Design tab, server save). No schema change.
+
 **Approved order after TE-05A:** VH-02A resume → VH-02B → TE-05B → TE-06 → RS-01 → Vietnamese Heritage DEV catalog seed + full Preview QA.
 
 Ordering rules: TE-03A precedes any DEV migration run; TE-04 needs TE-02 + TE-03B; VH-02A resumes only after TE-04; RS-01 precedes any merge of Vietnamese Heritage into the Production branch. TE-06 is independent of the template track and may be scheduled earlier by the Product Owner.

@@ -4,12 +4,15 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { TemplateDesignManifestV1 } from "../../domain";
+import { lookupTemplateEditorManifest } from "../../../templates/core/production-editor-manifests";
 import type { ProjectDesignRecord } from "../../server/project-design/project-design-types";
 import type { TemplateCatalogEntry, TemplateVersionCatalogEntry } from "../../server/templates/templates-types";
 import {
   buildDesignAssignmentBody,
   findTemplateVersionOption,
+  isSupportedTemplateVersion,
   listTemplateVersionOptions,
+  UNSUPPORTED_TEMPLATE_VERSION_MESSAGE,
 } from "../design-assignment";
 
 /**
@@ -29,13 +32,15 @@ const SINGLE: TemplateDesignManifestV1 = {
 
 const MULTI: TemplateDesignManifestV1 = { ...SINGLE, palettes: ["a", "b"] };
 
+const SUPPORTED_EDITOR_MANIFEST = lookupTemplateEditorManifest("wedding.elegant-editorial.v1")!;
+
 function version(id: string, versionNumber: number, overrides: Partial<TemplateVersionCatalogEntry> = {}): TemplateVersionCatalogEntry {
   return {
     id,
     versionNumber,
     rendererKey: `wedding.fixture.v${versionNumber}`,
     designManifest: SINGLE,
-    editorManifest: null,
+    editorManifest: SUPPORTED_EDITOR_MANIFEST,
     retiredAt: null,
     selectable: true,
     ...overrides,
@@ -191,6 +196,38 @@ describe("static boundaries", () => {
   it("never picks a version implicitly (no latest/first/sort-based choice)", () => {
     for (const source of files) {
       expect(source).not.toMatch(/versions\[0\]|\.at\(-1\)|Math\.max|\.sort\(/);
+    }
+  });
+});
+
+describe("TE-05A-H1 unsupported renderer versions", () => {
+  const catalogWith = (entry: TemplateVersionCatalogEntry): TemplateCatalogEntry[] => [
+    { id: "t", code: "x", eventType: "WEDDING", name: "X", description: null, isActive: true, sortOrder: 1, previewMediaPath: null, versions: [entry] },
+  ];
+
+  it("cannot be newly selected through the shared helper, even if a stale entry claims selectable", () => {
+    const unsupported = version("v-unsupported", 1, { editorManifest: null, selectable: true });
+    expect(isSupportedTemplateVersion(unsupported)).toBe(false);
+    expect(buildDesignAssignmentBody(unsupported, null)).toEqual({ ok: false, reason: UNSUPPORTED_TEMPLATE_VERSION_MESSAGE });
+  });
+
+  it("is not offered as a new option, but the Project's current one stays listed (diagnostic, not switched)", () => {
+    const unsupported = version("v-unsupported", 1, { editorManifest: null, selectable: false });
+    expect(listTemplateVersionOptions(catalogWith(unsupported), "WEDDING", null)).toEqual([]);
+    expect(listTemplateVersionOptions(catalogWith(unsupported), "WEDDING", "v-unsupported")).toHaveLength(1);
+  });
+
+  it("an unchanged current unsupported selection keeps its own values (no invented replacement)", () => {
+    const unsupported = version("v-unsupported", 1, { editorManifest: null, selectable: false });
+    const current = design({ templateVersionId: "v-unsupported" });
+    const result = buildDesignAssignmentBody(unsupported, current);
+    expect(result.ok && result.body.templateVersionId).toBe("v-unsupported");
+  });
+
+  it("supported Elegant Editorial / Vietnamese Heritage versions assign as before", () => {
+    for (const key of ["wedding.elegant-editorial.v1", "wedding.vietnamese-heritage.v1"]) {
+      const supported = version(`v-${key}`, 1, { rendererKey: key, editorManifest: lookupTemplateEditorManifest(key)! });
+      expect(buildDesignAssignmentBody(supported, null).ok, key).toBe(true);
     }
   });
 });

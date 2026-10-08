@@ -1,3 +1,4 @@
+import { lookupTemplateEditorManifest } from "../../../../templates/core/production-editor-manifests";
 import { describe, expect, it, vi } from "vitest";
 
 import type { EventType } from "../../../domain";
@@ -53,36 +54,42 @@ const templateVersions: Record<string, TemplateVersionForDesign> = {
   [ACTIVE_VERSION_ID]: {
     id: ACTIVE_VERSION_ID,
     templateId: TEMPLATE_ID,
+    rendererKey: "wedding.elegant-editorial.v1",
     manifest: VALID_MANIFEST,
     retiredAt: null,
   },
   [OTHER_ACTIVE_VERSION_ID]: {
     id: OTHER_ACTIVE_VERSION_ID,
     templateId: TEMPLATE_ID,
+    rendererKey: "wedding.elegant-editorial.v1",
     manifest: VALID_MANIFEST,
     retiredAt: null,
   },
   [RETIRED_VERSION_ID]: {
     id: RETIRED_VERSION_ID,
     templateId: TEMPLATE_ID,
+    rendererKey: "wedding.elegant-editorial.v1",
     manifest: VALID_MANIFEST,
     retiredAt: "2026-01-01T00:00:00.000Z",
   },
   [INACTIVE_PARENT_VERSION_ID]: {
     id: INACTIVE_PARENT_VERSION_ID,
     templateId: INACTIVE_TEMPLATE_ID,
+    rendererKey: "wedding.elegant-editorial.v1",
     manifest: VALID_MANIFEST,
     retiredAt: null,
   },
   [MISMATCHED_EVENT_VERSION_ID]: {
     id: MISMATCHED_EVENT_VERSION_ID,
     templateId: MISMATCHED_EVENT_TEMPLATE_ID,
+    rendererKey: "wedding.elegant-editorial.v1",
     manifest: VALID_MANIFEST,
     retiredAt: null,
   },
   [MISSING_PARENT_VERSION_ID]: {
     id: MISSING_PARENT_VERSION_ID,
     templateId: MISSING_PARENT_TEMPLATE_ID,
+    rendererKey: "wedding.elegant-editorial.v1",
     manifest: VALID_MANIFEST,
     retiredAt: null,
   },
@@ -180,7 +187,7 @@ function createFakeGateway(options?: {
 describe("saveProjectDesign", () => {
   it("rejects a malformed project id", async () => {
     const { gateway } = createFakeGateway();
-    await expect(saveProjectDesign("not-a-uuid", validBody(), staff, gateway)).rejects.toThrow(
+    await expect(saveProjectDesign("not-a-uuid", validBody(), staff, gateway, lookupTemplateEditorManifest)).rejects.toThrow(
       ApiError,
     );
   });
@@ -188,7 +195,7 @@ describe("saveProjectDesign", () => {
   it("throws NOT_FOUND when the Project does not exist", async () => {
     const { gateway } = createFakeGateway({ projectExists: false });
     await expect(
-      saveProjectDesign(PROJECT_ID, validBody(), staff, gateway),
+      saveProjectDesign(PROJECT_ID, validBody(), staff, gateway, lookupTemplateEditorManifest),
     ).rejects.toMatchObject({ kind: "NOT_FOUND" });
   });
 
@@ -199,7 +206,7 @@ describe("saveProjectDesign", () => {
         PROJECT_ID,
         validBody({ templateVersionId: UNKNOWN_VERSION_ID }),
         staff,
-        gateway,
+        gateway, lookupTemplateEditorManifest
       ),
     ).rejects.toMatchObject({ kind: "NOT_FOUND" });
   });
@@ -211,7 +218,7 @@ describe("saveProjectDesign", () => {
         PROJECT_ID,
         validBody({ templateVersionId: MISSING_PARENT_VERSION_ID }),
         staff,
-        gateway,
+        gateway, lookupTemplateEditorManifest
       ),
     ).rejects.toThrow(Error);
     await expect(
@@ -219,7 +226,7 @@ describe("saveProjectDesign", () => {
         PROJECT_ID,
         validBody({ templateVersionId: MISSING_PARENT_VERSION_ID }),
         staff,
-        gateway,
+        gateway, lookupTemplateEditorManifest
       ),
     ).rejects.not.toBeInstanceOf(ApiError);
   });
@@ -229,12 +236,13 @@ describe("saveProjectDesign", () => {
       templateVersionOverride: {
         id: ACTIVE_VERSION_ID,
         templateId: TEMPLATE_ID,
+        rendererKey: "wedding.elegant-editorial.v1",
         manifest: MALFORMED_MANIFEST,
         retiredAt: null,
       },
     });
 
-    await expect(saveProjectDesign(PROJECT_ID, validBody(), staff, gateway)).rejects.not.toBeInstanceOf(
+    await expect(saveProjectDesign(PROJECT_ID, validBody(), staff, gateway, lookupTemplateEditorManifest)).rejects.not.toBeInstanceOf(
       ApiError,
     );
   });
@@ -246,7 +254,7 @@ describe("saveProjectDesign", () => {
         PROJECT_ID,
         validBody({ templateVersionId: MISMATCHED_EVENT_VERSION_ID }),
         staff,
-        gateway,
+        gateway, lookupTemplateEditorManifest
       ),
     ).rejects.toMatchObject({ kind: "INVARIANT" });
   });
@@ -258,7 +266,7 @@ describe("saveProjectDesign", () => {
         PROJECT_ID,
         validBody({ templateVersionId: INACTIVE_PARENT_VERSION_ID }),
         staff,
-        gateway,
+        gateway, lookupTemplateEditorManifest
       ),
     ).rejects.toMatchObject({ kind: "INVARIANT" });
   });
@@ -270,7 +278,7 @@ describe("saveProjectDesign", () => {
         PROJECT_ID,
         validBody({ templateVersionId: RETIRED_VERSION_ID }),
         staff,
-        gateway,
+        gateway, lookupTemplateEditorManifest
       ),
     ).rejects.toMatchObject({ kind: "INVARIANT" });
   });
@@ -282,7 +290,7 @@ describe("saveProjectDesign", () => {
         PROJECT_ID,
         validBody({ templateVersionId: INACTIVE_PARENT_VERSION_ID }),
         staff,
-        gateway,
+        gateway, lookupTemplateEditorManifest
       ),
     ).rejects.toMatchObject({ kind: "INVARIANT" });
   });
@@ -294,7 +302,7 @@ describe("saveProjectDesign", () => {
         PROJECT_ID,
         validBody({ templateVersionId: RETIRED_VERSION_ID }),
         staff,
-        gateway,
+        gateway, lookupTemplateEditorManifest
       ),
     ).rejects.toMatchObject({ kind: "INVARIANT" });
   });
@@ -308,7 +316,7 @@ describe("saveProjectDesign", () => {
       PROJECT_ID,
       validBody({ templateVersionId: RETIRED_VERSION_ID }),
       staff,
-      gateway,
+      gateway, lookupTemplateEditorManifest
     );
 
     expect(upsertSpy).toHaveBeenCalledTimes(1);
@@ -323,7 +331,7 @@ describe("saveProjectDesign", () => {
       PROJECT_ID,
       validBody({ templateVersionId: INACTIVE_PARENT_VERSION_ID }),
       staff,
-      gateway,
+      gateway, lookupTemplateEditorManifest
     );
 
     expect(upsertSpy).toHaveBeenCalledTimes(1);
@@ -338,7 +346,7 @@ describe("saveProjectDesign", () => {
       PROJECT_ID,
       validBody({ templateVersionId: OTHER_ACTIVE_VERSION_ID }),
       staff,
-      gateway,
+      gateway, lookupTemplateEditorManifest
     );
 
     expect(upsertSpy).toHaveBeenCalledTimes(1);
@@ -347,7 +355,7 @@ describe("saveProjectDesign", () => {
   it("accepts a supported palette/font/effect combination and returns the saved record", async () => {
     const { gateway } = createFakeGateway();
 
-    const result = await saveProjectDesign(PROJECT_ID, validBody(), staff, gateway);
+    const result = await saveProjectDesign(PROJECT_ID, validBody(), staff, gateway, lookupTemplateEditorManifest);
 
     expect(result.templateVersionId).toBe(ACTIVE_VERSION_ID);
     expect(result.paletteKey).toBe("ivory-champagne");
@@ -356,7 +364,7 @@ describe("saveProjectDesign", () => {
   it("throws INVARIANT for an unsupported preset key", async () => {
     const { gateway } = createFakeGateway();
     await expect(
-      saveProjectDesign(PROJECT_ID, validBody({ paletteKey: "not-declared" }), staff, gateway),
+      saveProjectDesign(PROJECT_ID, validBody({ paletteKey: "not-declared" }), staff, gateway, lookupTemplateEditorManifest),
     ).rejects.toMatchObject({ kind: "INVARIANT" });
   });
 
@@ -367,7 +375,7 @@ describe("saveProjectDesign", () => {
         PROJECT_ID,
         validBody({ sectionSettings: { undeclaredKey: true } }),
         staff,
-        gateway,
+        gateway, lookupTemplateEditorManifest
       ),
     ).rejects.toMatchObject({ kind: "INVARIANT" });
   });
@@ -379,7 +387,7 @@ describe("saveProjectDesign", () => {
         PROJECT_ID,
         validBody({ sectionSettings: { showGallery: "not-a-boolean" } }),
         staff,
-        gateway,
+        gateway, lookupTemplateEditorManifest
       ),
     ).rejects.toMatchObject({ kind: "INVARIANT" });
   });
@@ -391,7 +399,7 @@ describe("saveProjectDesign", () => {
       PROJECT_ID,
       validBody({ paletteKey: "  ivory-champagne  " }),
       staff,
-      gateway,
+      gateway, lookupTemplateEditorManifest
     );
 
     expect(upsertSpy).toHaveBeenCalledWith(
@@ -399,5 +407,64 @@ describe("saveProjectDesign", () => {
       PROJECT_ID,
       expect.objectContaining({ paletteKey: "ivory-champagne" }),
     );
+  });
+});
+
+describe("saveProjectDesign — TE-05A-H1 registered renderer guard", () => {
+  const unsupported: TemplateVersionForDesign = {
+    id: OTHER_ACTIVE_VERSION_ID,
+    templateId: TEMPLATE_ID,
+    rendererKey: "wedding.unknown.v1",
+    manifest: VALID_MANIFEST,
+    retiredAt: null,
+  };
+  const body = () => validBody({ templateVersionId: OTHER_ACTIVE_VERSION_ID });
+
+  it("rejects a NEW selection whose DB renderer key is not a registered production renderer (422, no write)", async () => {
+    const { gateway, upsertSpy } = createFakeGateway({ templateVersionOverride: unsupported });
+    await expect(saveProjectDesign(PROJECT_ID, body(), staff, gateway, lookupTemplateEditorManifest)).rejects.toMatchObject({
+      kind: "INVARIANT",
+      message: "Selected template version is not available for new selection",
+    });
+    expect(upsertSpy).not.toHaveBeenCalled();
+  });
+
+  it("uses exact lookup only: near-miss keys never alias a registered renderer", async () => {
+    for (const rendererKey of ["wedding.elegant-editorial", "wedding.elegant-editorial.v2", "Wedding.Elegant-Editorial.v1", " wedding.elegant-editorial.v1", "latest"]) {
+      const { gateway, upsertSpy } = createFakeGateway({ templateVersionOverride: { ...unsupported, rendererKey } });
+      await expect(saveProjectDesign(PROJECT_ID, body(), staff, gateway, lookupTemplateEditorManifest)).rejects.toMatchObject({ kind: "INVARIANT" });
+      expect(upsertSpy).not.toHaveBeenCalled();
+    }
+  });
+
+  it("looks up the renderer key read from the DB version row, never from the request body", async () => {
+    const lookup = vi.fn(lookupTemplateEditorManifest);
+    const { gateway } = createFakeGateway({ templateVersionOverride: unsupported });
+    await expect(saveProjectDesign(PROJECT_ID, { ...(body() as object), rendererKey: "wedding.elegant-editorial.v1" }, staff, gateway, lookup)).rejects.toMatchObject({
+      kind: "BAD_REQUEST",
+    });
+    expect(lookup).not.toHaveBeenCalled();
+    await expect(saveProjectDesign(PROJECT_ID, body(), staff, gateway, lookup)).rejects.toMatchObject({ kind: "INVARIANT" });
+    expect(lookup.mock.calls).toEqual([["wedding.unknown.v1"]]);
+  });
+
+  it("keeps an UNCHANGED historical selection editable (grandfathered like a retired version)", async () => {
+    const { gateway, upsertSpy } = createFakeGateway({ templateVersionOverride: unsupported, existingDesign: existingDesign(OTHER_ACTIVE_VERSION_ID) });
+    await saveProjectDesign(PROJECT_ID, body(), staff, gateway, lookupTemplateEditorManifest);
+    expect(upsertSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("supported Elegant Editorial and Vietnamese Heritage new selections are unchanged", async () => {
+    for (const rendererKey of ["wedding.elegant-editorial.v1", "wedding.vietnamese-heritage.v1"]) {
+      const { gateway, upsertSpy } = createFakeGateway({ templateVersionOverride: { ...unsupported, rendererKey } });
+      await saveProjectDesign(PROJECT_ID, body(), staff, gateway, lookupTemplateEditorManifest);
+      expect(upsertSpy, rendererKey).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it("retired / inactive rules are unchanged for a registered renderer", async () => {
+    const { gateway } = createFakeGateway();
+    await expect(saveProjectDesign(PROJECT_ID, validBody({ templateVersionId: RETIRED_VERSION_ID }), staff, gateway, lookupTemplateEditorManifest)).rejects.toMatchObject({ kind: "INVARIANT" });
+    await expect(saveProjectDesign(PROJECT_ID, validBody({ templateVersionId: INACTIVE_PARENT_VERSION_ID }), staff, gateway, lookupTemplateEditorManifest)).rejects.toMatchObject({ kind: "INVARIANT" });
   });
 });

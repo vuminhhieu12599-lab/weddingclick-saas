@@ -58,6 +58,14 @@ export function listTemplateVersionOptions(
   return options;
 }
 
+/** TE-05A-H1 Staff message for a version whose renderer is not a registered production renderer. */
+export const UNSUPPORTED_TEMPLATE_VERSION_MESSAGE = "Mẫu này không còn được hệ thống hỗ trợ.";
+
+/** TE-05A-H1: supported = the server found a registry-owned editor manifest for its exact renderer key. */
+export function isSupportedTemplateVersion(version: Pick<TemplateVersionCatalogEntry, "editorManifest">): boolean {
+  return version.editorManifest !== null;
+}
+
 export function findTemplateVersionOption(
   catalog: readonly TemplateCatalogEntry[],
   templateVersionId: string,
@@ -125,6 +133,12 @@ export function buildDesignAssignmentBody(
         designSettings: currentDesign.designSettings,
       },
     };
+  }
+
+  // TE-05A-H1: an unregistered renderer (no editor manifest) is never newly
+  // selectable, independent of `selectable` (the server enforces it again).
+  if (!isSupportedTemplateVersion(version)) {
+    return { ok: false, reason: UNSUPPORTED_TEMPLATE_VERSION_MESSAGE };
   }
 
   if (!version.selectable) {
