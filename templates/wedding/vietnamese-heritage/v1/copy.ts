@@ -143,6 +143,12 @@ export const VIETNAMESE_HERITAGE_V1_COPY = Object.freeze({
     heading: "Khoảnh Khắc Của Chúng Mình",
     imageAlt: "Ảnh cưới",
     unavailable: "Ảnh hiện chưa khả dụng",
+    /** VH-02B-M2 lightbox: "Xem ảnh cưới {slot position}" on each resolved print. */
+    open: "Xem ảnh cưới",
+    viewerLabel: "Album ảnh cưới",
+    close: "Đóng album ảnh",
+    previous: "Ảnh trước",
+    next: "Ảnh tiếp theo",
   }),
   closing: Object.freeze({
     heading: "Lời cảm ơn",

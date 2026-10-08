@@ -58,6 +58,10 @@ const { MusicControl, musicStatusNote } = await import("../interactive/music-con
 const { Countdown, ceremonyCountdownParts } = await import("../interactive/countdown");
 const { OPENING_TIMING_MS, activateOpening, openingReducer } = await import("../interactive/opening-state");
 const { runMusicToggle, startMusicOnOpen } = await import("../../../../../lib/invitation-rendering/music-control-model");
+const { GalleryLightbox, slotAlt, stepViewer, viewerSequence } = await import("../interactive/gallery-lightbox");
+const { VH_REVEAL_TARGETS, VH_REVEAL_VARIANTS, albumPrintVariant, portraitVariant, SectionReveal } = await import("../interactive/section-reveal");
+const { revealDelaysMs, startSectionReveal } = await import("../../../../../lib/invitation-rendering/section-reveal-controller");
+const styles = (await import("../vietnamese-heritage-v1.module.css")).default as Record<string, string>;
 
 /**
  * VH-01 / VH-02A — Vietnamese Heritage v1 identity, compatibility, registry
@@ -582,10 +586,11 @@ describe("E. canonical mapping", () => {
     expect(fixture.viewModel.media.audio?.mediaId).toBe(FIXTURE_MEDIA_IDS.AUDIO);
     expect(html).not.toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.AUDIO));
     expect(html).not.toMatch(/<audio|<form/);
-    // No capability → no RSVP or music; the controls are the opening button (VH-02B-M1), the gift CTA
-    // and, inside its closed dialog, the close control and the two COMMON side tabs (VH-02B-E1).
-    expect(html.match(/<button/g)).toHaveLength(5);
-    expect(html.match(/<dialog/g)).toHaveLength(1);
+    // No capability → no RSVP or music. Controls: the opening button (VH-02B-M1); the gift CTA and, in
+    // its closed dialog, the close control and the two COMMON side tabs (VH-02B-E1); one open control
+    // per RESOLVED album print (4 here; VH-02B-M2). The closed album viewer renders no controls yet.
+    expect(html.match(/<button/g)).toHaveLength(9);
+    expect(html.match(/<dialog/g)).toHaveLength(2);
   });
 
   it("gift: one panel per operational side with canonical lines; GROOM shows only the groom side", async () => {
@@ -1098,13 +1103,12 @@ describe("H. safe gallery prints (VH-02A-QA1)", () => {
     ]);
   });
 
-  it("CSS: album photos are contained on the print mat, never cover-cropped; no lightbox", async () => {
+  it("CSS: album photos are contained on the print mat, never cover-cropped (the lightbox too)", () => {
     expect(cssRule(".albumPhoto,\n.albumUnavailable")).toMatch(/object-fit: contain/);
-    const albumRules = [...cssSource.matchAll(/(\.album[^{]*)\{([^}]*)\}/g)];
-    for (const [, selector, body] of albumRules) expect(body, selector).not.toMatch(/object-fit: cover/);
-    const { html } = await renderVh(ALL_MEDIA);
-    const album = html.slice(html.indexOf('data-island="gallery"'));
-    expect(album).not.toMatch(/<button|<dialog|onclick/i);
+    const albumRules = [...cssSource.matchAll(/(\.(album|viewer)[^{]*)\{([^}]*)\}/g)];
+    expect(albumRules.length).toBeGreaterThan(10);
+    for (const [, selector, , body] of albumRules) expect(body, selector).not.toMatch(/object-fit: cover|object-position/);
+    expect(cssRule(".viewerImage")).toMatch(/object-fit: contain/);
   });
 });
 
@@ -1507,5 +1511,299 @@ describe("I. countdown (VH-02B-M1)", () => {
       const code = readFileSync(join(VH_DIR, file), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
       expect(code, file).not.toMatch(/Date\.now|new Date|setInterval|setTimeout|performance\.now|<audio|HTMLAudioElement|navigator/);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// J. VH-02B-M2 — album lightbox and progressive section reveal
+// ---------------------------------------------------------------------------
+
+describe("J. album lightbox (VH-02B-M2)", () => {
+  const GALLERY_WITH_GAP = [PHOTO.P6, PHOTO.P3, PHOTO.P1, FIXTURE_MEDIA_IDS.GALLERY_2];
+
+  async function album(unavailable: readonly string[] = [PHOTO.P3]) {
+    const { html, fixture } = await renderVh({ ...ALL_MEDIA, slots: { gallery: GALLERY_WITH_GAP }, unavailableMediaIds: unavailable });
+    return { html: html.slice(html.indexOf('data-island="gallery"'), html.indexOf("<footer")), fixture };
+  }
+
+  it("the UNAVAILABLE tile stays in place and is not interactive; RESOLVED prints get a real open button named by slot", async () => {
+    const { html } = await album();
+    const prints = [...html.matchAll(/<div class="[^"]*albumPrint[^"]*"[^>]*data-status="(\w+)" data-index="(\d+)"[^>]*>(<button[^>]*>|<span[^>]*>)/g)].map(
+      (match) => [match[2], match[1], (match[3] as string).startsWith("<button")],
+    );
+    expect(prints).toStrictEqual([
+      ["0", "RESOLVED", true],
+      ["1", "UNAVAILABLE", false],
+      ["2", "RESOLVED", true],
+      ["3", "RESOLVED", true],
+    ]);
+    const buttons = [...html.matchAll(/<button type="button" class="[^"]*albumOpen[^"]*" aria-haspopup="dialog" aria-label="([^"]+)">/g)].map((m) => m[1]);
+    expect(buttons).toStrictEqual(["Xem ảnh cưới 1", "Xem ảnh cưới 3", "Xem ảnh cưới 4"]);
+    expect(html).toContain(COPY.gallery.unavailable);
+    // Photo alt text is the slot position, inside the open control.
+    expect(html).toMatch(/aria-label="Xem ảnh cưới 3"><img [^>]*alt="Ảnh cưới 3"/);
+  });
+
+  it("viewer sequence: RESOLVED only, original slot order; navigation wraps both ways", async () => {
+    const { fixture } = await album();
+    const gallery = fixture.viewModel.media.templateSlots?.gallery ?? [];
+    const rows = [{ kind: "large" as const, className: "", items: gallery.map((media, index) => ({ index, media, ratio: null })) }];
+    const sequence = viewerSequence(rows);
+    expect(sequence.map((photo) => photo.index)).toStrictEqual([0, 2, 3]);
+    expect(sequence.map((photo) => photo.media.mediaId)).toStrictEqual([PHOTO.P6, PHOTO.P1, FIXTURE_MEDIA_IDS.GALLERY_2]);
+    expect(stepViewer(0, 1, 3)).toBe(1);
+    expect(stepViewer(2, 1, 3)).toBe(0);
+    expect(stepViewer(0, -1, 3)).toBe(2);
+    expect(stepViewer(0, 1, 1)).toBe(0);
+    expect(slotAlt(2)).toBe("Ảnh cưới 3");
+  });
+
+  it("the closed viewer is a native dialog with no image, caption or extra controls", async () => {
+    const { html } = await album();
+    const dialog = html.slice(html.indexOf("<dialog"), html.indexOf("</dialog>") + 9);
+    expect(dialog).toMatch(/^<dialog class="[^"]*viewer[^"]*" aria-label="Album ảnh cưới"><\/dialog>$/);
+  });
+
+  it("source contract: open exact photo, ✕/backdrop immediate, Escape via native close, arrows, focus back to the opener", () => {
+    const code = readFileSync(join(VH_DIR, "interactive", "gallery-lightbox.tsx"), "utf8");
+    expect(code).toMatch(/onClick=\{\(event\) => openAt\(index, event\.currentTarget\)\}/);
+    expect(code).toMatch(/const at = sequence\.findIndex\(\(photo\) => photo\.index === index\);/);
+    expect(code).toMatch(/if \(open && !dialog\.open\) dialog\.showModal\(\);/);
+    expect(code).toMatch(/function requestClose\(\) \{[\s\S]*?dialog\.close\(\);\s*finishClose\(\);/);
+    expect(code).toMatch(/aria-label=\{COPY\.close\} onClick=\{requestClose\}/);
+    expect(code).toMatch(/if \(event\.target === event\.currentTarget\) requestClose\(\);/);
+    expect(code).toMatch(/function handleNativeClose\(\) \{\s*if \(dialogRef\.current\?\.open === true\) return;\s*if \(open\) finishClose\(\);/);
+    expect(code).toMatch(/openerRef\.current\?\.focus\(\{ preventScroll: true \}\);/);
+    expect(code).toMatch(/event\.key === "ArrowRight"[\s\S]*?step\(1\)[\s\S]*?event\.key === "ArrowLeft"[\s\S]*?step\(-1\)/);
+    // Previous / next exist only with more than one photo; the count is the viewer position.
+    expect(code).toMatch(/const navigable = sequence\.length > 1;/);
+    expect(code).toMatch(/\{navigable \? \(/);
+    expect(code).toMatch(/\{String\(\(position \?\? 0\) \+ 1\)\} \/ \{String\(sequence\.length\)\}/);
+    const executable = code.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+    expect(executable).not.toMatch(/figcaption|download|share|fetch|mediaId\s*\+|\.split\(/);
+  });
+
+  it("the gallery section still lays out every slot position and is the only lightbox host", async () => {
+    const { html } = await renderVh({ ...ALL_MEDIA, slots: { gallery: [] } });
+    expect(html).not.toContain('class="' + styles.viewer);
+    const tree = findElements(VietnameseHeritageV1({ viewModel: (await vhFixture(ALL_MEDIA)).viewModel, sections: (await vhFixture(ALL_MEDIA)).selection.effectiveSections, capabilities: {} }), GalleryLightbox);
+    // The lightbox is rendered by the gallery section, not by the root.
+    expect(tree).toHaveLength(0);
+  });
+});
+
+// A minimal DOM double for the shared reveal controller.
+class FakeElement {
+  readonly children: FakeElement[] = [];
+  parentElement: FakeElement | null = null;
+  readonly attributes = new Map<string, string>();
+  readonly styleProps = new Map<string, string>();
+  readonly style = {
+    setProperty: (name: string, value: string) => void this.styleProps.set(name, value),
+    removeProperty: (name: string) => void this.styleProps.delete(name),
+  };
+  constructor(
+    readonly classes: readonly string[],
+    readonly order: { value: number },
+    readonly position = order.value++,
+  ) {}
+  get previousElementSibling(): FakeElement | null {
+    const siblings = this.parentElement?.children ?? [];
+    return siblings[siblings.indexOf(this) - 1] ?? null;
+  }
+  append(...elements: FakeElement[]): this {
+    for (const element of elements) {
+      element.parentElement = this;
+      this.children.push(element);
+    }
+    return this;
+  }
+  getAttribute(name: string): string | null {
+    return this.attributes.get(name) ?? null;
+  }
+  setAttribute(name: string, value: string): void {
+    this.attributes.set(name, value);
+  }
+  removeAttribute(name: string): void {
+    this.attributes.delete(name);
+  }
+  matches(selectors: string): boolean {
+    return selectors.split(",").some((selector) => this.classes.includes(selector.trim().slice(1)));
+  }
+  querySelectorAll(selectors: string): FakeElement[] {
+    return this.children.flatMap((child) => [...(child.matches(selectors) ? [child] : []), ...child.querySelectorAll(selectors)]);
+  }
+  compareDocumentPosition(other: FakeElement): number {
+    return other.position > this.position ? 4 : 2;
+  }
+}
+
+function fakeObserverEnvironment() {
+  const instances: { callback: (entries: { target: FakeElement; isIntersecting: boolean; boundingClientRect: { bottom: number } }[]) => void; observed: Set<FakeElement>; unobserved: FakeElement[] }[] = [];
+  class FakeObserver {
+    readonly record;
+    constructor(callback: (typeof instances)[number]["callback"]) {
+      this.record = { callback, observed: new Set<FakeElement>(), unobserved: [] as FakeElement[] };
+      instances.push(this.record);
+    }
+    observe(target: FakeElement) {
+      this.record.observed.add(target);
+    }
+    unobserve(target: FakeElement) {
+      this.record.observed.delete(target);
+      this.record.unobserved.push(target);
+    }
+    disconnect() {
+      this.record.observed.clear();
+    }
+  }
+  return { environment: { IntersectionObserver: FakeObserver }, instances };
+}
+
+const REVEAL_OPTIONS = { attribute: "data-vh-reveal", delayProperty: "--vh-reveal-delay", staggerMs: 110, maxStaggerSteps: 5, rootMargin: "0px 0px -40px 0px" };
+const cls = (name: string) => styles[name] ?? name;
+
+function revealColumn() {
+  const order = { value: 0 };
+  const column = new FakeElement(["column"], order);
+  const hero = new FakeElement([cls("hero")], order);
+  const opening = new FakeElement([cls("opening")], order);
+  const page = new FakeElement([cls("page")], order);
+  const song = new FakeElement([cls("songHy")], order);
+  const row = new FakeElement([cls("portraitRow")], order);
+  row.setAttribute("data-count", "3");
+  const frames = [0, 1, 2].map(() => new FakeElement([cls("portraitFrame")], order));
+  row.append(...frames);
+  const items = Array.from({ length: 8 }, () => new FakeElement([cls("scheduleItem")], order));
+  page.append(song, row, ...items);
+  column.append(opening, hero, page);
+  return { column, hero, opening, song, frames, items, order, page };
+}
+
+describe("J. progressive section reveal (VH-02B-M2)", () => {
+  it("server markup is never hidden: no reveal attribute, and the controller island is an inert hidden anchor", async () => {
+    const { html } = await renderVh(ALL_MEDIA);
+    expect(html).not.toContain("data-vh-reveal");
+    expect(renderToStaticMarkup(<SectionReveal hasCountdown={false} />)).toBe('<span hidden=""></span>');
+  });
+
+  it("without IntersectionObserver nothing is marked, so everything stays visible", () => {
+    const { column, song, items } = revealColumn();
+    const controller = startSectionReveal(column, {}, VH_REVEAL_TARGETS, REVEAL_OPTIONS);
+    controller.rescan();
+    for (const element of [song, ...items]) expect(element.getAttribute("data-vh-reveal")).toBeNull();
+  });
+
+  it("one shared observer marks targets after start; Opening and Hero are never targets", () => {
+    const { column, song, frames, items, hero, opening } = revealColumn();
+    const { environment, instances } = fakeObserverEnvironment();
+    startSectionReveal(column, environment, VH_REVEAL_TARGETS, REVEAL_OPTIONS);
+    expect(instances).toHaveLength(1);
+    expect(song.getAttribute("data-vh-reveal")).toBe("scale");
+    expect(frames.map((frame) => frame.getAttribute("data-vh-reveal"))).toStrictEqual(["left", "image", "right"]);
+    expect(items.every((item) => item.getAttribute("data-vh-reveal") === "rise")).toBe(true);
+    expect(hero.getAttribute("data-vh-reveal")).toBeNull();
+    expect(opening.getAttribute("data-vh-reveal")).toBeNull();
+    expect(instances[0]?.observed.size).toBe(1 + 3 + 8);
+    // No Hero, opening or cover class is in the target map.
+    const targetSelectors = VH_REVEAL_TARGETS.map((target) => target.selector);
+    for (const name of ["hero", "heroPhoto", "heroNames", "heroSeal", "heroDate", "opening", "door", "coverContent", "coverNames", "coupleName"]) {
+      expect(targetSelectors, name).not.toContain(`.${cls(name)}`);
+    }
+  });
+
+  it("reveals once with a per-batch stagger capped at 5 steps, then unobserves; no replay on re-entry", () => {
+    const { column, items } = revealColumn();
+    const { environment, instances } = fakeObserverEnvironment();
+    startSectionReveal(column, environment, VH_REVEAL_TARGETS, REVEAL_OPTIONS);
+    const record = instances[0]!;
+    record.callback([...items].reverse().map((target) => ({ target, isIntersecting: true, boundingClientRect: { bottom: 100 } })));
+    expect(items.map((item) => item.styleProps.get("--vh-reveal-delay"))).toStrictEqual(["0ms", "110ms", "220ms", "330ms", "440ms", "550ms", "550ms", "550ms"]);
+    expect(items.every((item) => item.getAttribute("data-vh-reveal") === "rise shown")).toBe(true);
+    for (const item of items) expect(record.observed.has(item)).toBe(false);
+    // Scrolling back: a further entry is ignored (already shown, no longer observed).
+    record.callback([{ target: items[0]!, isIntersecting: true, boundingClientRect: { bottom: 100 } }]);
+    expect(items[0]?.getAttribute("data-vh-reveal")).toBe("rise shown");
+    // A new batch restarts at 0.
+    expect(revealDelaysMs(3, 110, 5)).toStrictEqual([0, 110, 220]);
+  });
+
+  it("a target already scrolled past is revealed too, never left hidden; stop() removes every mark", () => {
+    const { column, song, items } = revealColumn();
+    const { environment, instances } = fakeObserverEnvironment();
+    const controller = startSectionReveal(column, environment, VH_REVEAL_TARGETS, REVEAL_OPTIONS);
+    instances[0]!.callback([{ target: song, isIntersecting: false, boundingClientRect: { bottom: -5 } }]);
+    expect(song.getAttribute("data-vh-reveal")).toBe("scale shown");
+    controller.stop();
+    for (const element of [song, ...items]) {
+      expect(element.getAttribute("data-vh-reveal")).toBeNull();
+      expect(element.styleProps.size).toBe(0);
+    }
+  });
+
+  it("rescan marks a capability-mounted countdown once, never inside an already-handled target", () => {
+    const { column, page, order } = revealColumn();
+    const { environment, instances } = fakeObserverEnvironment();
+    const controller = startSectionReveal(column, environment, VH_REVEAL_TARGETS, REVEAL_OPTIONS);
+    const cells = Array.from({ length: 4 }, () => new FakeElement([cls("countdownCell")], order));
+    page.append(new FakeElement([cls("countdown")], order).append(...cells));
+    controller.rescan();
+    controller.rescan();
+    expect(cells.map((cell) => cell.getAttribute("data-vh-reveal"))).toStrictEqual(["scale", "scale", "scale", "scale"]);
+    expect(instances).toHaveLength(1);
+    const nested = new FakeElement([cls("rsvpField")], order);
+    const panel = new FakeElement([cls("rsvpPanel")], order);
+    panel.setAttribute("data-vh-reveal", "card");
+    page.append(panel.append(nested));
+    controller.rescan();
+    expect(nested.getAttribute("data-vh-reveal")).toBeNull();
+  });
+
+  it("variant derivation: cluster 3 → left/image/right, 2 → left/right, 1 → image; album pairs by side, full rows image", () => {
+    const order = { value: 0 };
+    const build = (attribute: string, value: string, count: number) => {
+      const parent = new FakeElement(["x"], order);
+      parent.setAttribute(attribute, value);
+      const children = Array.from({ length: count }, () => new FakeElement(["y"], order));
+      parent.append(...children);
+      return children;
+    };
+    expect(build("data-count", "3", 3).map(portraitVariant)).toStrictEqual(["left", "image", "right"]);
+    expect(build("data-count", "2", 2).map(portraitVariant)).toStrictEqual(["left", "right"]);
+    expect(build("data-count", "1", 1).map(portraitVariant)).toStrictEqual(["image"]);
+    expect(build("data-row", "pair", 2).map(albumPrintVariant)).toStrictEqual(["left", "right"]);
+    expect(build("data-row", "tall", 2).map(albumPrintVariant)).toStrictEqual(["left", "right"]);
+    expect(build("data-row", "wide", 1).map(albumPrintVariant)).toStrictEqual(["image"]);
+    expect(build("data-row", "large", 1).map(albumPrintVariant)).toStrictEqual(["image"]);
+  });
+
+  it("CSS: seven variants, safe properties only, settled state natural; reduced motion keeps every target visible and still", () => {
+    expect([...VH_REVEAL_VARIANTS]).toStrictEqual(["rise", "fade", "card", "image", "left", "right", "scale"]);
+    for (const variant of VH_REVEAL_VARIANTS) {
+      expect(cssSource, variant).toContain(`.column [data-vh-reveal="${variant}"] {`);
+      expect(cssSource, variant).not.toMatch(new RegExp(`\\[data-vh-reveal="${variant}"\\] \\{[^}]*(width|height|margin|font-size)`));
+      const shown = cssRule(`.column [data-vh-reveal="${variant} shown"]`);
+      expect(shown).toMatch(new RegExp(`animation: vh-reveal-${variant} \\d+ms [^;]* var\\(--vh-reveal-delay\\) backwards;`));
+      const properties = [...keyframes(`vh-reveal-${variant}`).matchAll(/^\s*([a-z-]+):/gm)].map((match) => match[1]);
+      for (const property of properties) expect(["opacity", "translate", "scale", "clip-path"], `${variant}: ${String(property)}`).toContain(property);
+    }
+    // Every pending state and entrance exists only without a reduced-motion preference: under reduce no
+    // reveal rule applies, so each target keeps its natural style (designed translucencies included).
+    const noPreference = [...cssSource.matchAll(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}/g)].map((m) => m[0]);
+    expect(noPreference).toHaveLength(2);
+    const outside = noPreference.reduce((css, block) => css.replace(block, ""), cssSource);
+    expect(outside).not.toContain("[data-vh-reveal");
+    expect(outside).not.toMatch(/animation: vh-viewer-in/);
+    expect(noPreference.join("\n")).toMatch(/\.viewerImage \{\s*animation: vh-viewer-in 240ms ease-out both;/);
+    // The opening's own reduced-motion rule is unchanged.
+    expect(cssSource).toMatch(/\.opening\[data-opening="opening"\] \{\s*animation: vh-opening-fade 220ms ease-out both;/);
+    // Safe-fit album prints are unchanged.
+    expect(cssRule(".albumPhoto,\n.albumUnavailable")).toMatch(/object-fit: contain/);
+  });
+
+  it("the root mounts one reveal island, last in the column, with the countdown signal", () => {
+    const root = readFileSync(join(VH_DIR, "vietnamese-heritage-v1.tsx"), "utf8");
+    expect(root.match(/<SectionReveal\b/g)).toHaveLength(1);
+    expect(root).toMatch(/<Closing [^>]*\/>\s*<SectionReveal hasCountdown=\{capabilities\.clock !== undefined\} \/>\s*<\/main>/);
   });
 });

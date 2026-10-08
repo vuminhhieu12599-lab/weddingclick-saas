@@ -1770,7 +1770,20 @@ const VH02B_OPENING = `${VH}/interactive/opening-interaction.tsx`;
 const VH02B_MUSIC = `${VH}/interactive/music-control.tsx`;
 const VH02B_COUNTDOWN = `${VH}/interactive/countdown.tsx`;
 const VH02B_OPENING_STATE = `${VH}/interactive/opening-state.ts`;
-const VH02B_ISLAND_FILES = [VH02B_COPY_BUTTON, VH02B_COUNTDOWN, VH02B_GIFT_DIALOG, VH02B_MUSIC, VH02B_OPENING, VH02B_RSVP] as const;
+/** VH-02B-M2: the album lightbox and the section-reveal islands, and the shared reveal controller. */
+const VH02B_LIGHTBOX = `${VH}/interactive/gallery-lightbox.tsx`;
+const VH02B_REVEAL = `${VH}/interactive/section-reveal.tsx`;
+const VH02B_SHARED_REVEAL = `${LIB}/section-reveal-controller.ts`;
+const VH02B_ISLAND_FILES = [
+  VH02B_COPY_BUTTON,
+  VH02B_COUNTDOWN,
+  VH02B_GIFT_DIALOG,
+  VH02B_LIGHTBOX,
+  VH02B_MUSIC,
+  VH02B_OPENING,
+  VH02B_REVEAL,
+  VH02B_RSVP,
+] as const;
 const VH02B_MODEL_FILES = [VH02B_OPENING_STATE] as const;
 const VH02B_SHARED_MUSIC_MODEL = `${LIB}/music-control-model.ts`;
 /** VH-02B-E1: the shared, framework-free interaction models the VH islands use. */
@@ -1806,6 +1819,7 @@ const VH01_ALLOWED_IMPORTS: Readonly<Record<string, readonly string[]>> = {
     `${VH}/interactive/countdown`,
     `${VH}/interactive/music-control`,
     `${VH}/interactive/rsvp`,
+    `${VH}/interactive/section-reveal`,
     ...["ceremonial", "closing", "dress-code", "events", "gallery", "gift", "hero", "love-story", "opening-cover", "timeline"].map(
       (section) => `${VH}/sections/${section}`,
     ),
@@ -1860,7 +1874,8 @@ const VH01_ALLOWED_IMPORTS: Readonly<Record<string, readonly string[]>> = {
     `${VH}/sections/media-image`,
   ],
   [`${VH}/sections/dress-code.tsx`]: [VH_TYPES, ...VH_SECTION_COMMON],
-  [`${VH}/sections/gallery.tsx`]: ["react", VH_TYPES, ...VH_SECTION_COMMON, VH_DECOR, `${VH}/sections/gallery-layout`, `${VH}/sections/media-image`],
+  // VH-02B-M2: the album rows (with their open controls) and the viewer are the lightbox island.
+  [`${VH}/sections/gallery.tsx`]: [VH_TYPES, ...VH_SECTION_COMMON, VH_DECOR, `${VH}/interactive/gallery-lightbox`, `${VH}/sections/gallery-layout`],
   [`${VH}/sections/closing.tsx`]: [VH_DATE, VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/date-text`, VH_DECOR, `${VH}/sections/song-hy`],
 };
 
@@ -1947,10 +1962,13 @@ describe("VH-01 Vietnamese Heritage v1 files", () => {
       "clipboard",
       "clock",
       "clock",
+      "clock",
       "music",
       "rsvp",
       "rsvp",
     ]);
+    // VH-02B-M2: the reveal island only learns whether a countdown can mount (for one rescan).
+    expect(code).toMatch(/<SectionReveal hasCountdown=\{capabilities\.clock !== undefined\} \/>/);
     // VH-02B-M1: music only with the effective section; the countdown only with a clock.
     expect(code).toMatch(/const music = sections\.music \? capabilities\.music : undefined;/);
     expect(code).toMatch(/\{music !== undefined \? <MusicControl music=\{music\} \/> : null\}/);
@@ -2056,14 +2074,16 @@ describe("VH-02B-E1 islands", () => {
     [VH02B_OPENING]: ["react", `${VH}/copy`, `${VH}/interactive/opening-state`, VH_CSS],
     [VH02B_MUSIC]: ["react", `${LIB}/music-control-model`, `${LIB}/renderer-capabilities`, `${VH}/copy`, VH_CSS],
     [VH02B_COUNTDOWN]: [`${LIB}/ceremony-countdown`, VH_TYPES, `${LIB}/renderer-capabilities`, `${VH}/copy`, VH_CSS],
+    [VH02B_LIGHTBOX]: ["react", VH_TYPES, `${VH}/copy`, `${VH}/sections/gallery-layout`, `${VH}/sections/media-image`, VH_CSS],
+    [VH02B_REVEAL]: ["react", `${LIB}/section-reveal-controller`, VH_CSS],
   };
 
   /** Each interaction primitive only in its owning VH island (least privilege, as RF-06D). */
   const PRIVILEGE: readonly [string, RegExp, readonly string[]][] = [
-    ["useState", /\buseState\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_COPY_BUTTON, VH02B_MUSIC]],
+    ["useState", /\buseState\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_COPY_BUTTON, VH02B_MUSIC, VH02B_LIGHTBOX]],
     ["useReducer", /\buseReducer\b/, [VH02B_RSVP, VH02B_OPENING]],
-    ["useRef", /\buseRef\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_OPENING]],
-    ["useEffect", /\buseEffect\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG]],
+    ["useRef", /\buseRef\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_OPENING, VH02B_LIGHTBOX, VH02B_REVEAL]],
+    ["useEffect", /\buseEffect\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_LIGHTBOX, VH02B_REVEAL]],
     // VH-02B-M1: the opening's hydration marker (server snapshot false, client true; no subscription).
     ["useSyncExternalStore", /\buseSyncExternalStore\b/, [VH02B_OPENING]],
     [
@@ -2071,10 +2091,15 @@ describe("VH-02B-E1 islands", () => {
       /\buse(LayoutEffect|InsertionEffect|Memo|Callback|Context|Transition|Optimistic|ActionState|Id|DeferredValue|ImperativeHandle)\b/,
       [],
     ],
-    ["dialog element / API", /<dialog\b|role="dialog"|showModal|HTMLDialogElement|\.close\(\)|onClose\b|onCancel\b/, [VH02B_GIFT_DIALOG]],
-    ["programmatic focus", /\.focus\(/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_OPENING]],
+    ["dialog element / API", /<dialog\b|role="dialog"|showModal|HTMLDialogElement|\.close\(\)|onClose\b|onCancel\b/, [VH02B_GIFT_DIALOG, VH02B_LIGHTBOX]],
+    ["programmatic focus", /\.focus\(/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_OPENING, VH02B_LIGHTBOX]],
+    // VH-02B-M2: the one shared observer is started only by the reveal island; keys only in the lightbox.
+    ["IntersectionObserver", /IntersectionObserver/, [VH02B_REVEAL]],
+    ["reveal controller", /startSectionReveal|data-vh-reveal/, [VH02B_REVEAL]],
+    ["keyboard handler", /onKeyDown|ArrowLeft|ArrowRight/, [VH02B_LIGHTBOX]],
     ["animationend handler", /onAnimationEnd|AnimationEvent/, [VH02B_OPENING]],
-    ["form events", /\bonSubmit\b|\bonChange\b|preventDefault/, [VH02B_RSVP]],
+    ["form events", /\bonSubmit\b|\bonChange\b/, [VH02B_RSVP]],
+    ["preventDefault", /preventDefault/, [VH02B_RSVP, VH02B_LIGHTBOX]],
     ["form controls", /<form\b|<input\b|<select\b|<textarea\b|<fieldset\b|<label\b/, [VH02B_RSVP]],
     ["clipboard capability action", /copyWithFeedback|copyText/, [VH02B_COPY_BUTTON]],
     ["RSVP capability action", /\.submit\(|gate\.run\(/, [VH02B_RSVP]],
@@ -2101,6 +2126,11 @@ describe("VH-02B-E1 islands", () => {
       if (file === VH02B_RSVP && label === "RSVP contract") continue;
       // The countdown island is the one VH consumer of the frozen RF-05C countdown derivation.
       if (file === VH02B_COUNTDOWN && label === "countdown / clock derivation") continue;
+      // The reveal island is the one VH owner of IntersectionObserver (still no matchMedia or animation library).
+      if (file === VH02B_REVEAL && label === "IntersectionObserver / matchMedia / animation") {
+        expect(/matchMedia|framer|\banimate\b/.test(code), `${file}: matchMedia / animation library`).toBe(false);
+        continue;
+      }
       expect(pattern.test(code), `${file}: ${label}`).toBe(false);
     }
     expect(/<img\b|<svg\b/.test(code), file).toBe(false);
@@ -2128,6 +2158,8 @@ describe("VH-02B-E1 islands", () => {
     expect(importersOf(VH02B_MUSIC)).toStrictEqual([VH01_ROOT]);
     expect(importersOf(VH02B_COUNTDOWN)).toStrictEqual([VH01_ROOT]);
     expect(importersOf(VH02B_OPENING)).toStrictEqual([`${VH}/sections/opening-cover.tsx`]);
+    expect(importersOf(VH02B_LIGHTBOX)).toStrictEqual([`${VH}/sections/gallery.tsx`]);
+    expect(importersOf(VH02B_REVEAL)).toStrictEqual([VH01_ROOT]);
     const gift = codeOf(`${VH}/sections/gift.tsx`);
     expect(gift).toMatch(
       /\{line\.key === "accountNumber" && clipboard !== undefined \? \(\s*<dd className=\{styles\.giftLineAction\}>\s*<CopyAccountButton clipboard=\{clipboard\} value=\{line\.value\} sideLabel=\{sideLabel\} \/>/,
@@ -2142,7 +2174,7 @@ describe("VH-02B-E1 islands", () => {
   });
 
   it("the shared interaction models are pure: no React, DOM, browser API, storage, network or rendering", () => {
-    for (const file of [VH02B_SHARED_RSVP_MODEL, VH02B_SHARED_COPY_MODEL, VH02B_SHARED_MUSIC_MODEL, VH02B_OPENING_STATE]) {
+    for (const file of [VH02B_SHARED_RSVP_MODEL, VH02B_SHARED_COPY_MODEL, VH02B_SHARED_MUSIC_MODEL, VH02B_OPENING_STATE, VH02B_SHARED_REVEAL]) {
       const code = codeOf(file);
       expect(code, file).not.toMatch(/from\s+["']react|\/>|<\/[A-Za-z]|return\s*\(?\s*<[A-Za-z]/);
       expect(ALL_HOOKS.test(code), file).toBe(false);
@@ -2152,6 +2184,9 @@ describe("VH-02B-E1 islands", () => {
     expect(resolvedImportsOf(VH02B_SHARED_COPY_MODEL)).toStrictEqual([`${LIB}/renderer-capabilities`]);
     expect(resolvedImportsOf(VH02B_SHARED_MUSIC_MODEL)).toStrictEqual([`${LIB}/renderer-capabilities`]);
     expect(resolvedImportsOf(VH02B_OPENING_STATE)).toStrictEqual([]);
+    // The shared reveal controller reads no browser global: the observer constructor is injected.
+    expect(resolvedImportsOf(VH02B_SHARED_REVEAL)).toStrictEqual([]);
+    expect(codeOf(VH02B_SHARED_REVEAL)).not.toMatch(/\bnew IntersectionObserver\b|globalThis|addEventListener|setTimeout|setInterval|requestAnimationFrame/);
     // No timer, clock or storage drives the opening: it ends only on the cover's own animationend.
     expect(codeOf(VH02B_OPENING_STATE)).not.toMatch(/setTimeout|setInterval|Date|storage/i);
   });
@@ -2260,7 +2295,7 @@ describe("VH-01 renderer CSS", () => {
     }
   });
 
-  it("motion: only the named VH-02B-M1 keyframes, and every animation is neutralised under reduced motion", () => {
+  it("motion: only the named VH-02B keyframes, and every animation is neutralised under reduced motion", () => {
     const names = [...cssCode.matchAll(/@keyframes ([\w-]+)/g)].map((match) => match[1]).sort();
     expect(names).toStrictEqual(
       [
@@ -2274,15 +2309,29 @@ describe("VH-01 renderer CSS", () => {
         "vh-music-pulse",
         "vh-opening-fade",
         "vh-opening-finish",
+        // VH-02B-M2: the seven reveal variants and the lightbox image entrance.
+        "vh-reveal-card",
+        "vh-reveal-fade",
+        "vh-reveal-image",
+        "vh-reveal-left",
+        "vh-reveal-right",
+        "vh-reveal-rise",
+        "vh-reveal-scale",
+        "vh-viewer-in",
       ].sort(),
     );
     expect(cssCode.match(/infinite/g)).toHaveLength(1);
     expect(cssCode).toMatch(/\.musicButton\[aria-pressed="true"\] \.musicGlyph \{\s*animation: vh-music-pulse 1\.2s ease-in-out infinite;/);
-    const reduceStart = cssCode.indexOf("@media (prefers-reduced-motion: reduce)");
-    expect(reduceStart).toBeGreaterThan(-1);
-    const reduce = cssCode.slice(reduceStart, cssCode.indexOf("\n}\n", reduceStart));
-    const outside = cssCode.slice(0, reduceStart) + cssCode.slice(cssCode.indexOf("\n}\n", reduceStart));
-    const animated = [...outside.replace(/@keyframes[\s\S]*?\n\}\n/g, "").matchAll(/([^{}]+)\{[^}]*\banimation:/g)].map((match) => (match[1] as string).trim());
+    // The opening/music reduced-motion block neutralises its animations; VH-02B-M2 reveal and lightbox
+    // motion lives only inside no-preference blocks, so it can never run under reduced motion.
+    const reduceBlocks = [...cssCode.matchAll(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/g)].map((match) => match[0]);
+    expect(reduceBlocks).toHaveLength(1);
+    const reduce = reduceBlocks.join("\n");
+    const noPreferenceBlocks = [...cssCode.matchAll(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}/g)].map((match) => match[0]);
+    expect(noPreferenceBlocks).toHaveLength(2);
+    let outside = cssCode;
+    for (const block of [...reduceBlocks, ...noPreferenceBlocks]) outside = outside.replace(block, "");
+    const animated = [...outside.replace(/@keyframes[\s\S]*?\n\}/g, "").matchAll(/([^{}]+)\{[^}]*\banimation:/g)].map((match) => (match[1] as string).trim());
     expect(animated.length).toBeGreaterThan(5);
     for (const selector of animated) expect(reduce, selector).toContain(selector);
     expect(reduce).toMatch(/\.opening\[data-opening="opening"\] \{\s*animation: vh-opening-fade 220ms ease-out both;/);

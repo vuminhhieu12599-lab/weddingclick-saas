@@ -5,6 +5,7 @@ import { VIETNAMESE_HERITAGE_V1_FONT_VARIABLES_CLASS_NAME } from "./fonts";
 import { Countdown } from "./interactive/countdown";
 import { MusicControl } from "./interactive/music-control";
 import { Rsvp } from "./interactive/rsvp";
+import { SectionReveal } from "./interactive/section-reveal";
 import { VIETNAMESE_HERITAGE_V1_PALETTE_STYLE } from "./palette";
 import { Ceremonial } from "./sections/ceremonial";
 import { Closing } from "./sections/closing";
@@ -43,8 +44,9 @@ const ROOT_STYLE = Object.freeze({ ...VIETNAMESE_HERITAGE_V1_PALETTE_STYLE, ...V
  * `capabilities.clock`; RSVP only with `capabilities.rsvp`; the gift
  * CTA/dialog follows `sections.gift` plus honest gift content, its copy
  * control only with `capabilities.clipboard`. An absent capability is never
- * success and never a disabled stand-in. Still deferred: the album lightbox
- * and reveal motion.
+ * success and never a disabled stand-in. VH-02B-M2: the album lightbox
+ * lives in the gallery section; `SectionReveal` progressively reveals the
+ * content after the Hero (never the opening or the Hero itself).
  *
  * Layout media come only from `viewModel.media.templateSlots` (`heroPhoto`,
  * `portraitCluster`, `loveStoryPhoto`, `gallery`); `media.qr` is the only
@@ -103,6 +105,7 @@ export function VietnameseHeritageV1({ viewModel, sections, capabilities }: Invi
         {dressCode !== null ? <DressCode dressCode={dressCode} /> : null}
         {sections.gallery ? <Gallery gallery={gallery} /> : null}
         <Closing people={people} ceremonyDate={ceremonyDate} />
+        <SectionReveal hasCountdown={capabilities.clock !== undefined} />
       </main>
     </div>
   );

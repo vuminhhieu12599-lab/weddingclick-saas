@@ -1,11 +1,9 @@
-import type { CSSProperties } from "react";
-
 import type { MediaResolution } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
 import { VIETNAMESE_HERITAGE_V1_COPY } from "../copy";
+import { GalleryLightbox, type AlbumRowItems } from "../interactive/gallery-lightbox";
 import styles from "../vietnamese-heritage-v1.module.css";
 import { DecorImage } from "./decor";
 import { albumPrintRatio, layoutHeritageAlbum, type HeritageAlbumRowKind } from "./gallery-layout";
-import { MediaImage } from "./media-image";
 
 const COPY = VIETNAMESE_HERITAGE_V1_COPY.gallery;
 
@@ -25,10 +23,18 @@ const ROW_CLASS: Readonly<Record<HeritageAlbumRowKind, string | undefined>> = {
  * print's mat, never cropped; full-width rows take the photo's bounded own
  * ratio from `albumPrintRatio`); an `UNAVAILABLE` item keeps its slot as a neutral tile with
  * fixed copy, never removed, reordered or replaced (RF-04 R11). The
- * lightbox is VH-02B.
+ * lightbox (VH-02B-M2) is the `GalleryLightbox` island, which renders these
+ * rows with a real open button on every `RESOLVED` print.
  */
 export function Gallery({ gallery }: { gallery: readonly MediaResolution[] }) {
-  const rows = layoutHeritageAlbum(gallery.length);
+  const rows: AlbumRowItems[] = layoutHeritageAlbum(gallery.length).map((row) => ({
+    kind: row.kind,
+    className: ROW_CLASS[row.kind] ?? "",
+    items: row.indices.map((index) => {
+      const media = gallery[index] as MediaResolution;
+      return { index, media, ratio: albumPrintRatio(row.kind, media) };
+    }),
+  }));
   return (
     <section className={styles.album} aria-labelledby="vh-gallery-heading" data-island="gallery">
       <header className={styles.albumHeader}>
@@ -38,34 +44,7 @@ export function Gallery({ gallery }: { gallery: readonly MediaResolution[] }) {
           {COPY.heading}
         </h2>
       </header>
-      <ul className={styles.albumRows}>
-        {rows.map((row) => (
-          <li key={row.indices[0]} className={`${styles.albumRow} ${ROW_CLASS[row.kind] ?? ""}`} data-row={row.kind}>
-            {row.indices.map((index) => {
-              const item = gallery[index] as MediaResolution;
-              const ratio = albumPrintRatio(row.kind, item);
-              const style: (CSSProperties & Readonly<Record<"--vh-print-ratio", string>>) | undefined =
-                ratio === null ? undefined : { "--vh-print-ratio": String(ratio) };
-              return (
-                <div
-                  key={`${item.mediaId}-${String(index)}`}
-                  className={styles.albumPrint}
-                  style={style}
-                  data-status={item.status}
-                  data-index={index}
-                  data-fit="contain"
-                >
-                  {item.status === "RESOLVED" ? (
-                    <MediaImage media={item} alt={`${COPY.imageAlt} ${String(index + 1)}`} className={styles.albumPhoto} />
-                  ) : (
-                    <span className={styles.albumUnavailable}>{COPY.unavailable}</span>
-                  )}
-                </div>
-              );
-            })}
-          </li>
-        ))}
-      </ul>
+      <GalleryLightbox rows={rows} />
     </section>
   );
 }
