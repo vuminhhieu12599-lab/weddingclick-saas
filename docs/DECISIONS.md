@@ -2321,6 +2321,8 @@ Checkpoint VH-01 of Template 02, on branch `template-02-vietnamese-heritage-v1` 
 
 Contract checkpoint on branch `template-02-vietnamese-heritage-v1`. **Migration authored only, not applied**; no DEV or Production change. Supersedes the VH-02A two-photo portrait ruling (D2) before it was committed.
 
+> **TE-01 status (2026-10-08):** recommended for removal before it is ever applied (TE-01 T6). The centre photo is a template layout position (`portraitCluster` position 2), not a media role. The migration and code stay committed until checkpoint TE-03A removes them; **do not apply 0045** to any environment.
+
 1. **Product Owner correction.** Vietnamese Heritage's approved portrait composition is three independently managed images: `PORTRAIT_GROOM`, `PORTRAIT_COUPLE`, `PORTRAIT_BRIDE`. `PORTRAIT_COUPLE` is now a canonical media role. `COVER`, `GALLERY`, `PHOTO_STORY` and `LOVE_STORY_PHOTO` are **never** reused as the couple portrait, by any builder, ViewModel or renderer.
 2. **Schema (migration `20260911041205_0045_project_media_portrait_couple_type.sql`).** Only `project_media_media_type_check` is dropped and recreated with every previous value plus `PORTRAIT_COUPLE` (appended last, matching `MEDIA_TYPES`). No table, column, uniqueness constraint, index, trigger, RLS, grant or Storage change; no data rewritten.
 3. **Role semantics.** Optional at Project level and SINGLE-effective like `COVER` and the side portraits: several rows may coexist, the effective one is first by `sort_order` ASC, `id` ASC, and there is deliberately no uniqueness constraint, so a couple portrait pinned by a retained snapshot stays replaceable (0013b). It is an image role under the existing image MIME/size policy and the existing P1-MEDIA-01 photo optimization (1600 px long edge, WebP ≈0.86, never upscaled/cropped, original kept when not smaller).
@@ -2330,3 +2332,249 @@ Contract checkpoint on branch `template-02-vietnamese-heritage-v1`. **Migration 
 7. **ViewModel.** `media.portrait: { groom?, couple?, bride? }`: a referenced id becomes `RESOLVED` or `UNAVAILABLE`, an absent id stays absent, nothing is substituted. Renderers decide presentation; Elegant Editorial v1 does not render the couple slot (its frozen composition is unchanged).
 8. **Vietnamese Heritage display semantics (implemented when VH-02A resumes).** Three resolved → GROOM | COUPLE | BRIDE with the couple portrait dominant in the centre; any two → those two, balanced; one → centred; none → no portrait block. `UNAVAILABLE` stays honest and is never replaced by another role.
 9. **Checkpoint test maintenance.** Six historical assertions that pinned the migration list to end at 0044 (Task 035B `legacy-v1-containment`, the Portal guest tool, Task 033B1 personalized guest link, Launch Hardening 02 access-link inventory, Launch Hardening 03 project creation, Launch Hardening 04 republish) now allow exactly `20260911041205_0045_project_media_portrait_couple_type.sql` after 0044 and nothing later, as Launch Hardening 04 item 6 did for 0044. The migration 0035 assertion now compares against the domain list without `PORTRAIT_COUPLE`, which 0045 appends. No other assertion was weakened.
+
+## TE-01 — Template-first Editor, Template Media Slots and Staff Approval-on-Behalf (Contract Closure, 2026-10-08)
+
+Architecture/product-contract checkpoint on branch `template-02-vietnamese-heritage-v1` at `da246de3b987804639ed52c19b9c664bbc13dded`. **Docs only:** no runtime code, migration, test, catalog row, DEV or Production change. Nothing below is implemented; each item names the later checkpoint (TE-02 … TE-06, RS-01) that implements it. Every frozen contract (RF-00 … RF-06, Task 028/030/030B/031/032/033, Launch Hardening 01–05) stays in force unless an item here says otherwise. Overview of the editor/media model: `docs/TEMPLATE_SYSTEM.md` §6a and §11a. Checkpoint sequence: `docs/ROADMAP.md` "Template-first Editor Track".
+
+**Product Owner principle (frozen).** Approved invitation designs are frozen visual requirements. Architecture adapts to the approved design; it never simplifies composition, photo count, hierarchy, copy, colours, motion, section order or media treatment to fit a data model. Any implementation that would require such a change stops and asks the Product Owner first.
+
+### Problems confirmed in code (audit)
+
+1. **A media file is welded to one layout meaning.** `project_media.media_type` (0007, extended by 0028/0031/0035 and the unapplied 0045) is both the upload category and the layout position. The same photo cannot be the Elegant Editorial cover and a Vietnamese Heritage portrait without a second upload; each new template layout would need another global `MediaType` (0045 `PORTRAIT_COUPLE` is the first instance). This breaks the CLAUDE.md §17 rule "changing templates must not require re-uploading Project media" as soon as two templates disagree on layout.
+2. **The editor is not template-aware.** `WorkspaceTabs` (`Dữ liệu`, `Thiết kế`, `Duyệt`, `Xuất bản`, `Công việc`, `Lịch sử`) puts all content and media under `Dữ liệu` (`DataTab` → `RequiredInvitationData` + `OptionalInvitationContent` → `MediaEditor`, `FamilyEditor`, `TimelineEditor`, `DressCodeEditor`, `GiftContentEditor`) and the template choice under `Thiết kế` (`DesignTab`, template assignment only). `MEDIA_EDITOR_ROLES` (`lib/admin/optional-content-editor.ts`) is one fixed list of ten roles for every template, so Staff fill roles the selected template never renders (Photo Story for Vietnamese Heritage) and cannot see what the template needs.
+3. **No template-side description of what Staff must configure.** `TemplateDesignManifestV1` (Task 028) covers palettes/fonts/effects/section switches; `RendererCompatibilityManifestV1` (RF-04) covers payload versions, variants and section capabilities; `RendererProductionManifestV1` (RF-06) composes those two plus identity. None describes media positions, counts, hints or readiness.
+4. **No readiness view.** Staff discover gaps only when the Snapshot builder blocks (`WEDDING_DETAILS_MISSING`, `GROOM_NAME_MISSING`, `BRIDE_NAME_MISSING`, `REQUIRED_CEREMONY_EVENT_MISSING`) or by reading the preview.
+5. **Approval requires the customer's REVIEW link.** `submit_review_feedback` (0037) is `service_role`-only behind a validated REVIEW token; there is no audited path for Staff to record an approval the customer gave by Zalo, phone or in person.
+6. **All renderers ship on every invitation.** `templates/core/production-renderer-bindings.ts` statically imports `ElegantEditorialV1` and `VietnameseHeritageV1` into the one client host graph (already recorded as VH-01 item 6 debt).
+
+### Frozen architecture preserved (re-confirmed, unchanged)
+
+Immutable REVIEW/PUBLISHED Snapshots; `invitation_version_media` `ON DELETE RESTRICT` protection of pinned media (R15) and the asset-identity freeze (R16); fail-closed renderer registry with no fallback; renderer-version immutability after release; explicit `template_version_id` pinning; the canonical Wedding Domain Resolver (RF2–RF6); REVIEW, PORTAL and personalized-guest token scopes; RSVP ownership; published invitations never rebuilt from the draft; no Supabase in templates; no free-form/Canva editor; `template_versions.manifest` immutability (0010 trigger). TE-01 found **no contradiction** that requires changing any of them.
+
+### T1 — TemplateEditorManifestV1: code-owned registry keyed by `rendererKey` (Option A)
+
+Decision: a new, separate, **code-owned** contract `TemplateEditorManifestV1`, one per production renderer version, in that version's immutable directory (`templates/wedding/<code>/v<n>/editor-manifest.ts`), collected into an explicit ordered server-safe list (`templates/core/production-editor-manifests.ts`). Rejected alternatives:
+
+- **B (persist in `template_versions.manifest`)** — rejected. `manifest` is frozen at row creation (0010 immutability trigger), and the Elegant Editorial v1 row is already seeded in DEV and Production (0033), so adding editor metadata would need a new template version (a visual-version bump for a non-visual reason) or weakening the trigger. It would also split one renderer's truth between code (slots the renderer actually reads) and data.
+- **Folding it into `RendererProductionManifestV1`** — rejected. RF-06 freezes that shape at exactly three members (P15) with strict exact-key validation; changing it would touch a released, frozen contract.
+
+Rules:
+
+1. **Separate type, separate validator, same discipline.** Pure TypeScript, no React, no I/O; validated at module load with fixed, content-free error messages (RF-06 P20 style). The editor-manifest key set must equal the `PRODUCTION_RENDERER_MANIFESTS` key set exactly (no unbound/orphan entry), duplicate keys fail closed.
+2. **Immutable with the renderer.** Once a renderer version is released, its editor manifest's slot keys, cardinality and `maxCount` are frozen like the renderer directory (TEMPLATE_SYSTEM §7). Labels/hints may be wording-corrected without a version bump because they never reach a Snapshot or renderer. A slot-contract change needs a new renderer version.
+3. **Never read by a renderer at runtime.** The renderer imports only its own slot-key constants (a static, pure module in its own directory) to read already-resolved ViewModel data. The editor manifest is consumed by Staff API/UI, the readiness evaluator and the server-side Snapshot builder input (T7).
+4. **Not customer content.** Customer-authored content never goes into `designSettings` or the editor manifest.
+5. **Cross-checks at module load:** every section-backed content item and every `sectionKey` on a slot must name a section that is `true` in the same renderer's `compatibility.sectionCapabilities`; `mediaModel: "TEMPLATE_SLOTS"` requires at least one slot; `"LEGACY_ROLES"` requires zero slots.
+
+Conceptual shape (exact TypeScript frozen in TE-02):
+
+```text
+TemplateEditorManifestV1 {
+  schemaVersion: 1
+  rendererKey: string                          // must equal a production manifest key
+  mediaModel: "LEGACY_ROLES" | "TEMPLATE_SLOTS"
+  legacyMediaRoles: MediaType[]                // LEGACY_ROLES only: roles Staff edit, in display order
+  content: TemplateEditorContentItemV1[]       // ordered; what Staff is asked to fill
+  mediaSlots: TemplateMediaSlotV1[]            // ordered; [] for LEGACY_ROLES
+}
+
+TemplateEditorContentItemV1 {
+  key: "COUPLE" | "FAMILIES" | "EVENTS" | "INVITATION_MESSAGE" | "LOVE_STORY"
+     | "TIMELINE" | "DRESS_CODE" | "GIFT" | "MUSIC"   // closed; maps to existing editors / canonical tables
+  requirement: "REQUIRED" | "RECOMMENDED" | "OPTIONAL"
+  label: string; hint: string
+}
+
+TemplateMediaSlotV1 {
+  key: string                       // ^[a-z][A-Za-z0-9]{0,47}$, unique within the manifest
+  label: string; hint: string       // Vietnamese Staff copy
+  cardinality: "SINGLE" | "ORDERED_MULTI"
+  minCount: number                  // v1: always 0 (see T10)
+  recommendedCount: number          // readiness target; 0 <= min <= recommended <= max
+  maxCount: number | null           // SINGLE -> 1; null = unbounded (server cap still applies)
+  requirement: "RECOMMENDED" | "OPTIONAL"   // REQUIRED is reserved, rejected in v1 (T10)
+  orientation: "PORTRAIT" | "LANDSCAPE" | "SQUARE" | "ANY"
+  aspectRatioHint: string | null    // display hint only, e.g. "3:4"; never crops
+  sectionKey: "gallery" | "photoStory" | null   // slot that feeds a Snapshot section bit (T7.4)
+}
+```
+
+`AUDIO` (music), QR images and `SOCIAL_SHARE_COVER` are never slots (T3). `COUPLE`, `FAMILIES` and `EVENTS` are always `REQUIRED` because the existing builder already blocks without them; they are listed so the editor/readiness can show them, not to add new rules.
+
+**Elegant Editorial v1** gets `mediaModel: "LEGACY_ROLES"` with exactly the roles it renders today; its renderer, Snapshot output and visuals stay byte-identical. **Vietnamese Heritage v1** (unreleased) is the first `TEMPLATE_SLOTS` renderer. Proposed slots, mirroring the media the approved direction composes (TE-02 freezes them after Product Owner confirmation; nothing about the visual composition changes):
+
+| Slot key | Label (Staff) | Cardinality | max | recommended | Requirement | Orientation | sectionKey |
+|---|---|---|---|---|---|---|---|
+| `heroPhoto` | Ảnh mở đầu | SINGLE | 1 | 1 | RECOMMENDED | PORTRAIT | — |
+| `portraitCluster` | Cụm ảnh ba khung | ORDERED_MULTI | 3 | 3 | RECOMMENDED | PORTRAIT (3:4) | — |
+| `loveStoryPhoto` | Ảnh Chuyện tình yêu | SINGLE | 1 | 1 | OPTIONAL | ANY | — |
+| `gallery` | Album ảnh | ORDERED_MULTI | null | 6 | OPTIONAL | ANY | `gallery` |
+
+`portraitCluster` means **position 1, 2, 3** only. It never means groom | couple | bride; all three may be couple photos. The renderer owns how the positions are composed; the 3/2/1/0 degradation already ruled for the cluster (VH-M01 item 8: three → full composition, two → balanced pair, one → centred, none → no block) is kept as the renderer's behaviour over positions instead of over roles.
+
+### T2 — Two media layers
+
+**Layer 1 — Project Media Library.** The `project_media` rows of a Project: uploaded assets with storage identity, MIME, size, dimensions. A library photo does not know which layout positions it may occupy. Upload, optimization (P1-MEDIA-01), Storage policy, staff-only RLS and R15/R16 protections are unchanged.
+
+**Layer 2 — Template Media Slot Assignment.** For one Project and one exact `template_version_id`, an ordered list of library media ids per slot key (T4). Only Staff mutate it. Renderers never see it; they see only the frozen Snapshot copy (T7) resolved into the ViewModel (T8).
+
+### T3 — Which media stay globally semantic
+
+| Media | Decision | Reason |
+|---|---|---|
+| `AUDIO` | **Semantic (unchanged)** | One background track per Project, driven by the shared RF-05 music capability; independent of layout. |
+| `QR_GROOM`, `QR_BRIDE` | **Semantic (unchanged)** | Business data tied to a side's bank account (`wedding_details` composite FKs, gift operational sides); a QR placed by layout could show the wrong side's account. |
+| `SOCIAL_SHARE_COVER` | **Semantic (unchanged)** | Publication metadata outside the Snapshot (Task 032B). |
+| `QR_COMMON` | Unchanged legacy value | Absent from payload v1 (S9). No new use. |
+| `COVER`, `GALLERY`, `PORTRAIT_GROOM`, `PORTRAIT_BRIDE`, `PHOTO_STORY`, `LOVE_STORY_PHOTO` | **Legacy layout roles, frozen for `LEGACY_ROLES` renderers** | Elegant Editorial v1 keeps reading them unchanged. No `TEMPLATE_SLOTS` renderer reads them, and no new template may add a consumer. Their uploaded files are also library photos (T5.1), so nothing is re-uploaded. |
+| New `PHOTO` value | **Add (TE-03)** | The neutral library category for photos uploaded through the template-first editor. One generic value, added once; never a per-template value. |
+
+**COVER trade-off (decided, not by convenience).** Keeping COVER globally semantic would give one "main photo" usable outside a template (Portal summary, Open Graph fallback). But Task 032B already decided there is **no** Open Graph fallback to COVER (SOCIAL_SHARE_COVER owns sharing), and the Portal shows no photo; COVER's only consumers are renderer heroes, whose crop/orientation needs differ per template (a portrait hero for Vietnamese Heritage vs Elegant Editorial's composition). COVER is therefore a layout role: it stays for Elegant Editorial v1 (frozen) and slot-based templates declare their own hero slot. If a future product surface needs a template-independent "Project main photo", that is a new decision with its own semantic name, not a reuse of COVER.
+
+### T4 — Assignment persistence (proposed schema; TE-03 writes the migration)
+
+Table `project_template_media_slot_items` (one row per filled position):
+
+| Column | Type | Rule |
+|---|---|---|
+| `project_id` | UUID NOT NULL | `REFERENCES projects(id) ON DELETE CASCADE` |
+| `template_version_id` | UUID NOT NULL | `REFERENCES template_versions(id) ON DELETE RESTRICT` (versions are never deleted) |
+| `slot_key` | TEXT NOT NULL | `CHECK (slot_key ~ '^[a-z][A-Za-z0-9]{0,47}$')` |
+| `position` | INTEGER NOT NULL | `CHECK (position BETWEEN 0 AND 499)`; 0-based, contiguous per slot (enforced by the write RPC) |
+| `project_media_id` | UUID NOT NULL | composite `FOREIGN KEY (project_media_id, project_id) REFERENCES project_media(id, project_id) ON DELETE NO ACTION` (same-Project integrity via the existing 0007 `project_media_id_project_id_unique` target) |
+| `created_by` | UUID NULL | `REFERENCES profiles(id) ON DELETE SET NULL` |
+| `created_at` | TIMESTAMPTZ NOT NULL DEFAULT now() | |
+
+- **PK** `(project_id, template_version_id, slot_key, position)` — deterministic order.
+- **UNIQUE** `(project_id, template_version_id, slot_key, project_media_id)` — the same photo cannot fill two positions of one slot. The same photo **may** fill different slots (hero and gallery).
+- **Index** `(project_media_id, project_id)` for "where is this photo used" and delete checks.
+- **Why `NO ACTION`, not `RESTRICT`, on the media FK:** a Project hard-delete cascades both `project_media` and these rows in one statement; `NO ACTION` is checked at statement end, so the cascade succeeds, while a direct delete of an assigned photo still fails. TE-03 proves both cases on a disposable replay. (Composite `SET NULL` is rejected for the same reason as PHYSICAL_DATABASE_PLAN §2.9: it would null `project_id`.)
+- **RLS:** enabled + forced. `SELECT` for `is_staff()`. **No** direct INSERT/UPDATE/DELETE grant or policy for any role; `anon` and customer/`service_role` paths get nothing. All writes go through one `SECURITY DEFINER` RPC, `set_project_template_media_slot(p_project_id, p_template_version_id, p_slot_key, p_project_media_ids uuid[])`, `EXECUTE` to `authenticated`, internally `is_staff()` (STAFF or ADMIN), `search_path = ''`.
+- **Replace / reorder:** the RPC replaces the whole slot list atomically (delete that slot's rows, insert the new ordered list as positions 0..n-1) under a Project row lock. Reorder and replace are the same call; an empty array clears the slot. Duplicate ids, a foreign Project's media, a non-image or non-assignable media type (T5.1), or more than 500 items fail with typed errors. Slot-key and `maxCount` conformity are checked by the server use case against the code-owned editor manifest before the RPC (the database cannot see code manifests; the database enforces structure and same-Project integrity).
+- **Delete of a library photo:** blocked while any assignment row references it (FK) and while any snapshot pins it (R15, unchanged). Staff see where it is used (all template versions) and may run an explicit "gỡ khỏi các vị trí" action first. Nothing is unassigned silently.
+- **Snapshot safety:** these rows are draft state only. REVIEW/PUBLISHED versions copy the ids into the payload (T7) and pin them in `invitation_version_media`; later assignment edits never touch a stored version.
+- **Activity:** no per-assignment activity row (draft design edits are not logged today either).
+
+### T5 — Template switching
+
+1. **Library survives everything.** Changing `project_design.template_version_id` never deletes, re-types or re-uploads `project_media`. Unused photos stay in the library with a "Chưa dùng" badge; there is no automatic cleanup. For `TEMPLATE_SLOTS` templates, every image row of type `PHOTO`, `COVER`, `GALLERY`, `PORTRAIT_GROOM`, `PORTRAIT_BRIDE`, `PHOTO_STORY` or `LOVE_STORY_PHOTO` is assignable, so photos uploaded under Elegant Editorial are reused without re-upload. `AUDIO`, `QR_*`, `SOCIAL_SHARE_COVER` are never assignable.
+2. **Assignments are retained per exact `template_version_id`.** Switching A → Vietnamese Heritage leaves A's rows untouched and inert; switching back to A makes them effective again. (Elegant Editorial v1 is `LEGACY_ROLES`, so for it "assignments" are its legacy role rows, which are likewise untouched.)
+3. **v1 → v2 of the same template is a different contract.** Nothing is copied implicitly. Staff get an explicit action "Sao chép vị trí ảnh từ phiên bản trước": it copies only slot keys present in both versions whose items fit the new `maxCount`; any slot that does not fit is reported and left empty, never truncated.
+4. **Retired version** (`template_versions.retired_at` set): not offered for new selection; a Project already pinned to it keeps rendering (renderer immutability) and keeps its assignments. Its rows remain until the Project is archived; no purge job in v1.
+5. **Readiness after a switch** is evaluated only for the newly selected version (T10), e.g. "Đã chuyển sang Vietnamese Heritage — cần chọn ảnh cho 2 vị trí". It never reports the previous template's slots.
+6. **Never across templates.** No automatic mapping from one template's slots to another's (their meanings differ); a future "copy" helper is DEFERRED.
+
+### T6 — PORTRAIT_COUPLE / migration 0045: **remove before it is ever applied (Option B)**
+
+The centre photo is a layout position (`portraitCluster` position 2), not a business meaning. Keeping `PORTRAIT_COUPLE` would establish the "one global MediaType per template layout" pattern T1–T3 replace, and would add a third side-like portrait role whose GROOM/BRIDE/COMMON meaning is undefined. No other genuine semantic use exists: no surface outside the Vietnamese Heritage cluster consumes a "couple portrait". Sunk cost is not a reason: 0045 is **authored only, never applied** to DEV or Production, so removal costs one reviewed revert and no data migration.
+
+- **Recorded recommendation only.** TE-01 deletes nothing. The VH-M01 decision above, migration `20260911041205_0045_project_media_portrait_couple_type.sql` and its code propagation (`MEDIA_TYPES`, `MEDIA_EDITOR_ROLES` "Ảnh cặp đôi", `SnapshotPortraitMedia.coupleMediaId`, media-ref traversal, `ViewModelMedia.portrait.couple`, `portrait-couple.test.tsx`, the six migration-head test guards) stay committed until checkpoint **TE-03A** removes them.
+- **Until TE-03A: do not apply 0045 anywhere.** TE-03A first verifies that neither DEV nor Production `supabase_migrations.schema_migrations` lists version `20260911041205`; the replacement migration (TE-03B) uses a new, distinct filename/timestamp so no environment can confuse the two.
+- `PORTRAIT_GROOM`/`PORTRAIT_BRIDE` (0028, applied) stay as Elegant Editorial legacy roles (T3).
+
+### T7 — Snapshot: additive `media.templateSlots` in payload v1 (no v2)
+
+`payloadSchemaVersion: 1` can safely take this addition: readers already treat absent additive fields as "none" (precedents: `media.portrait`, `photoStoryMediaIds`, `loveStoryPhotoMediaId`, `content.timeline`, `content.dressCode`, `sections.timeline/dressCode/photoStory`), and the stored-payload check (`assertStoredReviewSnapshot`) validates only the version/variant/template identity. No reader breaks; no v2 is justified.
+
+1. **Shape:** `media.templateSlots?: { [slotKey: string]: string[] }` — `project_media` ids only, array order = position order. JSONB key order is not significant; order lives only in the arrays.
+2. **Presence:** present **iff** the pinned renderer's editor manifest is `TEMPLATE_SLOTS`; then it has exactly every declared slot key (empty array allowed) and nothing else. Absent for `LEGACY_ROLES` renderers, so every Elegant Editorial payload — historical and future — is byte-identical to today's.
+3. **Layout-role fields for `TEMPLATE_SLOTS` renderers:** `coverMediaId`, `portrait`, `photoStoryMediaIds`, `loveStoryPhotoMediaId` are omitted and `galleryMediaIds` is `[]`, so no legacy-role media is pinned that the template never renders. `audioMediaId`, `qr`, gift, content and design fields are unchanged.
+4. **Section bits:** for `TEMPLATE_SLOTS` renderers, `sections.gallery` / `sections.photoStory` are derived from the slot whose `sectionKey` names them (non-empty → `true`); all other section bits are derived exactly as today. This keeps RF-04 effective visibility (`payload bit && capability && setting`) the only authority.
+5. **Builder purity:** the server loader resolves the editor-manifest slot contract by the pinned `rendererKey` and passes it, with the assignment rows of that exact `template_version_id`, into the pure builder input. The builder validates (known keys, count ≤ `maxCount`, same Project, assignable type) and emits a new BLOCKING builder issue on violation; it never truncates or substitutes.
+6. **Pinning (release-critical):** `extractSnapshotMediaRefs` appends every `templateSlots` id (slot keys in manifest order, positions ascending) after the existing traversal, deduplicated as today, so every slot photo is pinned in `invitation_version_media` and protected by R15. Missing this would let a published invitation lose a photo (CLAUDE.md §30 blocker).
+7. **Read-side validation:** REVIEW/PUBLISHED read paths add a structural check of `templateSlots` (plain object; string-array values; key format; each id in the version's pins; agreement with the pinned renderer's slot contract); any failure is fail-closed like other snapshot mismatches.
+8. **Public rendering** reads only the immutable Snapshot's `templateSlots`, never `project_template_media_slot_items`.
+
+### T8 — InvitationViewModel: `media.templateSlots`
+
+- `viewModel.media.templateSlots?: { readonly [slotKey: string]: readonly MediaResolution[] }`, present iff the payload has it, one `RESOLVED`/`UNAVAILABLE` entry per payload id in the same order (RF-03 M2/M6 semantics: never dropped, substituted or faked). Naming mirrors the existing payload → ViewModel convention (`media.galleryMediaIds` → `media.gallery`).
+- Renderers read it through a small typed accessor in their own directory built from their own slot-key constants; no Storage, Supabase, assignment table or editor-manifest access from a renderer.
+- **Compatibility bridge:** Elegant Editorial v1 never reads `templateSlots` and keeps its legacy fields; no rewrite. Vietnamese Heritage v1, unreleased, switches its media reads from `media.cover` / `media.portrait.*` / `media.gallery` / `media.loveStoryPhoto` to `templateSlots` when VH-02A resumes (this re-points data; it changes no visual decision). VH-01's mapping rows "Hero photo → `media.cover`" and "Centre couple portrait → `media.portrait.couple`" are superseded by this item.
+
+### T9 — Variant behaviour of slots (Rule of Three) — **open Product Owner question**
+
+Proposed default: one assignment set per Project + template version, shared by COMMON, GROOM and BRIDE (slots are positions, not people). Risk: if Staff place a groom-only photo in position 1, the BRIDE invitation shows it first. Alternatives: per-variant assignment sets, or Staff-chosen mirroring for BRIDE. **TE-04 cannot freeze until the Product Owner answers** (CLAUDE.md §5/§23).
+
+### T10 — Template-aware readiness (Staff guidance only)
+
+- **Item states (closed):** `COMPLETE`, `BLOCKING`, `WARNING`, `NOT_USED`. **Overall (closed):** `BLOCKING` if any item is BLOCKING, else `WARNING` if any is WARNING, else `READY`.
+- **Mapping:** REQUIRED unmet → `BLOCKING`; RECOMMENDED unmet → `WARNING` with a count ("Cụm ảnh: 2 / 3"); OPTIONAL unmet → `NOT_USED` (neutral, e.g. "Không dùng nhạc"), never ❌. The illustrative "❌ Chưa có nhạc" is therefore shown as neutral because music is optional.
+- **BLOCKING comes only from rules that already block today:** the existing builder/resolver BLOCKING issues (couple names, wedding details, ceremony event) plus a missing template selection. In v1 no media slot may be REQUIRED (`minCount` is 0), because every renderer must degrade gracefully (TEMPLATE_SYSTEM §10) and a new review-blocking rule would change the Task 030 review invariants. Making any slot REQUIRED later is a separate Product Owner + API-contract decision.
+- **Next action:** the first non-complete item in manifest order becomes the single "Việc cần làm tiếp theo", e.g. "Thêm 1 ảnh vào Cụm ảnh ba khung".
+- **Placement:** a pure evaluator in `lib/` (draft data + editor manifest + the existing builder result); the server returns it to Staff only. `create_review_version` validation is unchanged.
+
+### T11 — Simplified Staff workspace (presentation only)
+
+Tabs: **Tổng quan · Nội dung & Thiết kế · Duyệt · Xuất bản · Lịch sử**.
+
+- **Tổng quan** — customer/package/add-ons/price snapshot (today's `DataTab` commercial block), selected template + version, readiness summary, current review state per required variant, payment, publish state with links, one "Việc cần làm tiếp theo", and the existing Tasks list as a panel (`Công việc` folds in here; nothing removed).
+- **Nội dung & Thiết kế** — in order: (1) Mẫu thiệp (template + version, first); (2) readiness checklist; (3) required wedding information (couple, families, events); (4) Ảnh: library upload + the selected template's slots (or its legacy roles for Elegant Editorial v1); (5) only the optional content the template supports; (6) palette/font/effect controls only when the manifest offers more than one option; (7) Xem trước.
+- **Template-first without over-gating:** canonical wedding data is template-independent, so it stays editable before a template is chosen; only slots and template-specific optional content wait for the choice.
+- **Duyệt** — review creation, REVIEW link, feedback, and the new "Xác nhận thay khách hàng" (T12).
+- **Xuất bản** — payment confirmation, lifecycle steps, publish/republish, access-link inventory (unchanged features, new home for payment in the stage model).
+- **Lịch sử** — unchanged.
+
+### T12 — Staff approval on behalf: additive columns on `review_feedback` (TE-06)
+
+Decision: extend `review_feedback` instead of a new table. A staff-confirmed approval **is** an `APPROVAL` row for the exact version, so the existing one-approval-per-version unique index (0016), `guard_feedback_targets_review_version`, `guard_approval_targets_current_review`, the "first decision is final" rules, `review_outcome_for_project()` and `reviewVersionStateOf` all apply unchanged. A separate table would force every outcome computation to union two sources (higher regression risk, two places to get approval wrong).
+
+Additive columns (TE-06 migration; existing rows default to the customer path):
+
+| Column | Rule |
+|---|---|
+| `actor_type` TEXT NOT NULL DEFAULT `'CUSTOMER'` | `CHECK (actor_type IN ('CUSTOMER','STAFF'))` |
+| `staff_profile_id` UUID NULL | `REFERENCES profiles(id) ON DELETE RESTRICT` (approval evidence must not lose its actor) |
+| `approval_channel` TEXT NULL | `CHECK (approval_channel IN ('ZALO','PHONE','IN_PERSON','OTHER'))` |
+
+Row CHECK: `actor_type = 'CUSTOMER'` ⇒ `access_link_id IS NOT NULL AND staff_profile_id IS NULL AND approval_channel IS NULL`; `actor_type = 'STAFF'` ⇒ `feedback_type = 'APPROVAL' AND access_link_id IS NULL AND staff_profile_id IS NOT NULL AND approval_channel IS NOT NULL`. The optional note uses the existing `message` (≤ 2000); `created_at` is the timestamp; `invitation_version_id` is the exact REVIEW version. TE-06 must first verify that no existing row has `access_link_id IS NULL` (otherwise the CHECK cannot be added as written).
+
+Write path: new RPC `staff_confirm_review_approval(p_project_id, p_invitation_version_id, p_expected_current_review_version_id, p_channel, p_note)`, `SECURITY DEFINER`, `search_path = ''`, `EXECUTE` to `authenticated` only, `is_staff()` (STAFF and ADMIN) inside, actor = `auth.uid()` (never a parameter). It applies the same rules as `submit_review_feedback`: target must be the CURRENT REVIEW of a required variant (CAS on the expected id → 409 on mismatch), Project status in `CUSTOMER_REVIEW`/`REVISION_REQUIRED`/`APPROVED`, no approval after a revision request or a second approval; then recomputes `projects.status` in the same transaction. Activity: the existing `CUSTOMER_APPROVED` (and `PROJECT_STATUS_CHANGED` when status moves) with `actor_type = 'STAFF'`, metadata ids plus `channel` only (the note is not copied into activity metadata). The customer REVIEW-link path is unchanged.
+
+Integrity: Staff can only approve an immutable REVIEW version; drafts have no approval path. Publish copies the approved REVIEW payload verbatim (Task 031), so editing the draft after approval cannot reach the public page without a new REVIEW and a new approval. UI: per variant, shows "Bản duyệt #N" with its preview link and creation time, requires the channel and an explicit confirmation ("Tôi xác nhận khách hàng đã duyệt đúng bản #N").
+
+### T13 — Technical status → Staff stage (presentation only; backend lifecycle unchanged)
+
+Every status is a needed invariant: review statuses are derived by 0037 from per-version decisions, `AWAITING_PAYMENT`/`READY_TO_PUBLISH` separate approval from payment (D3), `PUBLISHED`/`COMPLETED`/`ARCHIVED` gate review creation and publication. None is removed or merged in the database.
+
+| Technical status (+ payment) | Staff stage | Next action shown |
+|---|---|---|
+| `NEW` | Thiết lập | Chọn mẫu thiệp và nhập thông tin cưới |
+| `WAITING_FOR_INFO` | Thiết lập | Chờ / nhắc khách gửi thông tin |
+| `IN_PROGRESS` | Nội dung & Thiết kế | Readiness next item, else "Tạo bản duyệt" |
+| `INTERNAL_REVIEW` | Nội dung & Thiết kế | Kiểm tra bản xem trước, rồi tạo bản duyệt |
+| `CUSTOMER_REVIEW` | Duyệt | Gửi link duyệt hoặc "Xác nhận thay khách hàng" |
+| `REVISION_REQUIRED` | Duyệt | Sửa theo góp ý, tạo bản duyệt mới |
+| `APPROVED` | Thanh toán | Chuyển sang "Chờ thanh toán" |
+| `AWAITING_PAYMENT` + `UNPAID` | Thanh toán | Xác nhận đã thanh toán |
+| `AWAITING_PAYMENT` + `PAID` | Thanh toán | Chuyển sang "Sẵn sàng xuất bản" |
+| `READY_TO_PUBLISH` | Xuất bản | Xuất bản |
+| `PUBLISHED` | Xuất bản (đã xuất bản) | Gửi link thiệp / Portal; "Chỉnh sửa & duyệt lại" when needed |
+| `COMPLETED` | Hoàn tất | Lưu trữ khi phù hợp |
+| `ARCHIVED` | Lưu trữ | — |
+
+A republish cycle re-enters Duyệt → Thanh toán → Xuất bản through the same rows (D3). The Overview may offer a single button for the one legal next manual edge; it calls the existing `transition_project_status` / `mark_project_paid` unchanged.
+
+### T14 — Renderer code splitting (RS-01)
+
+Needed **before Vietnamese Heritage is merged to the Production branch or seeded in a Production catalog**, not merely before Template 03: once VH is in the Production graph, every Elegant Editorial pilot invitation downloads VH's JS, CSS module and `@font-face` rules (VH-01 item 6), violating TEMPLATE_SYSTEM §22. Expected architecture: the client binding table becomes an explicit closed map `rendererKey → () => import("…/v<n>/…")` (literal paths so the bundler emits one chunk per renderer), loaded with `React.lazy` inside the existing client host; manifests stay eager and server-safe; key-set equality and unbound/orphan checks remain at module load. Fail-closed: unknown key throws before any import (unchanged RF-04/RF-05 order); a chunk-load failure surfaces as an error, never another renderer. Server/client boundary unchanged (host still receives only the three serializable props). Tests: binding-registry key-set tests, a build-output assertion that `/i/[slug]` client chunks for an Elegant Editorial page contain no VH module/CSS/font, and full regression of Staff preview, Customer review, public and personalized pages for both renderers.
+
+### T15 — Review findings
+
+| # | Finding | Severity |
+|---|---|---|
+| F1 | Slot media must be pinned via `extractSnapshotMediaRefs`; otherwise a published photo can be deleted (T7.6). | **BLOCKER** for TE-04 acceptance |
+| F2 | Variant behaviour of slots undefined (T9). | **BLOCKER** for TE-04 freeze (PO question) |
+| F3 | 0045 must never be applied; TE-03A removes it before any DEV migration run (T6). | **BLOCKER** for any next DEV migration |
+| F4 | Stored payloads are only shallowly checked; `templateSlots` needs read-side structural validation (T7.7). | IMPORTANT |
+| F5 | Gallery/photoStory section bits must follow slots for `TEMPLATE_SLOTS` renderers or the section silently disappears (T7.4). | IMPORTANT |
+| F6 | Code-owned editor manifests can drift after release; slot keys/cardinality/max must be frozen and test-pinned with the renderer (T1.2). | IMPORTANT |
+| F7 | VH in the shared client graph penalises Elegant Editorial pilot pages; RS-01 before VH reaches Production (T14). | IMPORTANT |
+| F8 | Media FK delete action: `NO ACTION` vs `RESTRICT` cascade interaction must be proven on replay (T4). | IMPORTANT |
+| F9 | `review_feedback` CHECK requires no legacy NULL-link rows (T12). | IMPORTANT |
+| F10 | Uncommitted VH-02A code reads `media.cover`/`portrait.*`/`gallery`/`loveStoryPhoto`; it must be re-pointed to `templateSlots` on resume (T8). | IMPORTANT (sequencing) |
+| F11 | Staff approval-on-behalf is template-independent and useful for the Elegant Editorial pilot; it may be pulled forward. | DEFERRED (scheduling choice) |
+| F12 | Pre-approval payment cannot be recorded (`mark_project_paid` only in `AWAITING_PAYMENT`). Operational friction, unchanged here. | DEFERRED |
+| F13 | Staff revision-request on behalf, approval evidence attachments, cross-template slot copy, COVER retirement in a future Elegant Editorial v2. | DEFERRED |
+
+No contradiction with a frozen contract was found; unnecessary complexity was avoided by reusing `review_feedback`, payload v1 and the existing media/RLS model.

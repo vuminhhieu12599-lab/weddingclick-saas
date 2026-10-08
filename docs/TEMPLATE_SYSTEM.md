@@ -1,7 +1,7 @@
 # WeddingClick V2 — Template System Specification
 
 **Status:** Approved architectural baseline  
-**Last updated:** 2026-09-26
+**Last updated:** 2026-10-08 (TE-01 proposed editor/media contract, §6a and §11a)
 
 ## 1. Purpose
 
@@ -225,6 +225,17 @@ Task 028 validates every `project_design` write against this subset, and `GET /a
 
 `template_versions` themselves remain immutable once created (`docs/PHYSICAL_DATABASE_PLAN.md` §2.11) — renderer/manifest changes still happen only through a new `template_version` row, never an in-place edit, unchanged by Task 028.
 
+### 6a. `TemplateEditorManifestV1` (TE-01, proposed; implemented by TE-02)
+
+A third, separate, **code-owned** manifest per production renderer version, describing what Staff are asked to configure for that template. It does not change `RendererCompatibilityManifestV1`, `TemplateDesignManifestV1` or `RendererProductionManifestV1`, and it is not stored in `template_versions.manifest` (that column is immutable and the Elegant Editorial v1 row is already seeded). Full contract and rationale: `docs/DECISIONS.md` "TE-01" T1.
+
+- Lives in the renderer version directory (`editor-manifest.ts`) and is collected in an explicit server-safe list whose key set must equal the production renderer manifests' key set; validated at module load, fail-closed.
+- Declares `mediaModel`: `LEGACY_ROLES` (Elegant Editorial v1: the legacy semantic media roles it already renders) or `TEMPLATE_SLOTS` (Vietnamese Heritage v1 onward: template media slots, §11a).
+- Lists ordered **content items** (`COUPLE`, `FAMILIES`, `EVENTS`, `INVITATION_MESSAGE`, `LOVE_STORY`, `TIMELINE`, `DRESS_CODE`, `GIFT`, `MUSIC`) with `REQUIRED`/`RECOMMENDED`/`OPTIONAL`, Staff label and hint; section-backed items must be capable in the compatibility manifest.
+- Lists ordered **media slots**: key, label, hint, `SINGLE`/`ORDERED_MULTI`, `minCount`/`recommendedCount`/`maxCount`, requirement (`RECOMMENDED`/`OPTIONAL` in v1), orientation, aspect-ratio hint, optional `sectionKey`.
+- Frozen with the renderer once released (slot keys, cardinality, `maxCount`); a slot-contract change needs a new renderer version.
+- Never read by a renderer at runtime and never holds customer content. It drives the Staff editor, the template-aware readiness evaluator (Staff guidance only, `BLOCKING`/`WARNING`/`READY`; TE-01 T10) and the server-side Snapshot builder input.
+
 ---
 
 ## 7. Template Code Versioning
@@ -353,6 +364,17 @@ Per-variant visual overrides are not a V1 requirement.
 
 Task 028 froze the persistence/API layer for this configuration — see `docs/API_CONTRACT.md` §13 and §6's `TemplateDesignManifestV1` subsection above. `template version`/`palette key`/`font preset key`/`effect preset key`/`section visibility/settings`/`template-approved settings` above map directly onto `project_design.template_version_id`/`palette_key`/`font_preset_key`/`effect_preset_key`/`section_settings`/`design_settings`.
 
+### 11a. Project Media Library and Template Media Slots (TE-01, proposed; TE-03/TE-04)
+
+Two layers (`docs/DECISIONS.md` "TE-01" T2–T8):
+
+1. **Project Media Library** — the Project's `project_media` rows. A library photo has no layout meaning; a new neutral `PHOTO` value is the upload category for the template-first editor. Photos already uploaded under legacy layout roles are also library photos, so switching template never requires re-upload.
+2. **Template Media Slot Assignment** — per Project and exact `template_version_id`, an ordered list of library photo ids per slot key (`project_template_media_slot_items`, staff-only RPC writes). A slot is a visual position the template's art direction owns: Vietnamese Heritage `portraitCluster` means positions 1–3, never groom/couple/bride.
+
+Semantic media stay global: `AUDIO`, `QR_GROOM`, `QR_BRIDE`, `SOCIAL_SHARE_COVER`. `COVER`, `GALLERY`, `PORTRAIT_GROOM`, `PORTRAIT_BRIDE`, `PHOTO_STORY` and `LOVE_STORY_PHOTO` are legacy layout roles kept unchanged for Elegant Editorial v1; no new template consumes them and no per-template `MediaType` is ever added (`PORTRAIT_COUPLE`/0045 is recommended for removal before application).
+
+Switching templates keeps the library and keeps each template version's assignments (switching back restores them). Review/Published Snapshots freeze slot assignments as the additive payload v1 field `media.templateSlots` (ids only; pinned in `invitation_version_media`), and the ViewModel exposes them as `media.templateSlots` (`RESOLVED`/`UNAVAILABLE` per position, in order). Renderers read only that frozen, resolved structure, never assignment rows. Elegant Editorial v1 payloads and rendering are unchanged.
+
 ---
 
 ## 12. Editor Constraints
@@ -369,6 +391,8 @@ Allowed categories may include:
 - music choice;
 - gallery selection/order;
 - template-approved options.
+
+TE-01 makes the editor **template-first**: the selected template version's `TemplateEditorManifestV1` (§6a) decides which optional content and which media slots Staff see. Canonical wedding data stays editable before a template is chosen. The Staff workspace target is Tổng quan · Nội dung & Thiết kế · Duyệt · Xuất bản · Lịch sử, a presentation layer over the unchanged backend lifecycle (`docs/DECISIONS.md` "TE-01" T11, T13).
 
 Avoid arbitrary free-form visual editing that lets operators accidentally destroy the intended design.
 
@@ -562,6 +586,8 @@ Only load:
 - active font resources;
 - media needed for the page;
 - motion capabilities actually used.
+
+Today every production renderer is statically bound into one client graph (VH-01 item 6 debt). Checkpoint RS-01 adds `rendererKey`-based lazy loading, fail-closed, before Vietnamese Heritage reaches the Production branch (`docs/DECISIONS.md` "TE-01" T14).
 
 Optimize large images appropriately.
 

@@ -315,6 +315,29 @@ WeddingClick is **Pilot Ready** for **one closely-supported customer using Elega
 
 ---
 
+## Template-first Editor Track
+
+**Recorded:** 2026-10-08 (TE-01, docs-only contract closure). Contract: `docs/DECISIONS.md` "TE-01 — Template-first Editor, Template Media Slots and Staff Approval-on-Behalf". VH-02A is **paused** until TE-04; its uncommitted work is preserved and resumes after TE-04. Nothing in this track changes an approved invitation design; any implementation that would requires a Product Owner decision first.
+
+| Checkpoint | Purpose | Schema / migration | Production impact | Likely files | Risk | Acceptance gate |
+|---|---|---|---|---|---|---|
+| **TE-01** | Contract closure (this record) | None | None | `docs/DECISIONS.md`, `docs/TEMPLATE_SYSTEM.md`, `docs/ROADMAP.md` | Low | Docs reviewed; no runtime/VH-02A file touched |
+| **TE-02** | `TemplateEditorManifestV1` type + validator; Elegant Editorial v1 (`LEGACY_ROLES`) and Vietnamese Heritage v1 (`TEMPLATE_SLOTS`) editor manifests; Staff catalog API projection. Requires PO answers: VH slot list confirmation, T9 variant behaviour | None | None at runtime (code only, merged later) | `templates/wedding/*/v1/editor-manifest.ts`, `templates/core/production-editor-manifests.ts`, `lib/domain` editor types, templates catalog route/types, tests | Low–Medium (manifest drift) | Key-set equality with production manifests; fail-closed validator tests; EE output unchanged |
+| **TE-03A** | Remove unapplied `PORTRAIT_COUPLE` / 0045 and its propagation; supersede VH-M01 | Deletes the unapplied 0045 file only, after verifying DEV + Production migration history lacks it | None | 0045 file, `lib/domain/media-type.ts`, `lib/admin/optional-content-editor.ts`, snapshot/ViewModel types + builder + media refs, `portrait-couple.test.tsx`, six migration-head guards, docs | Low (never applied) | Typecheck/tests green; migration list ends at 0044; no environment lists 0045 |
+| **TE-03B** | Project media library (`PHOTO`) + `project_template_media_slot_items` + `set_project_template_media_slot` RPC + staff gateway/route | **Yes**: one new migration (new filename/timestamp); DEV first, owner-applied | None until applied to Production with a release | migration, `lib/server/template-media/*`, internal API route, `docs/PHYSICAL_DATABASE_PLAN.md`, `docs/API_CONTRACT.md`, `docs/DATABASE.md`, tests | Medium (RLS, FK delete semantics) | Disposable replay: RLS denies anon/customer, same-Project FK, cascade vs direct delete (T4), atomic replace/reorder, R15 untouched |
+| **TE-04** | Snapshot `media.templateSlots` + builder branching + media-ref pinning + read-side validation + ViewModel `media.templateSlots` | None | Shared rendering pipeline (EE must be byte-identical) | `lib/invitation-rendering/*`, `lib/server/invitation-snapshot/*`, review/public read paths, tests | **High** (shared pipeline, pinning) | EE payloads byte-identical; slot ids pinned; historical snapshots render unchanged; COMMON/GROOM/BRIDE tested; T9 answered |
+| **TE-05A** | Template-first "Nội dung & Thiết kế" editor: library + slot picker + template-filtered optional content + readiness evaluator | None | Staff UI only | `app/admin/v2/projects/[projectId]/_components/*`, `lib/admin/*`, `lib/invitation-editor/*` | Medium (UX regression of the pilot editor) | EE legacy roles still editable; VH slots assignable; readiness states per T10; 360/390/430 + desktop |
+| **TE-05B** | Workspace restructure: Tổng quan + stage model (T11, T13) | None | Staff UI only | `workspace-tabs.tsx`, new overview component, presentation labels | Low–Medium | Every existing action still reachable; stage table matches T13; no backend change |
+| **TE-06** | Staff approval on behalf (T12) | **Yes**: additive `review_feedback` columns + `staff_confirm_review_approval` RPC | Production on release (may be pulled forward for the EE pilot, F11) | migration, `lib/server/invitation-review/*`, internal route, Duyệt tab, `docs/API_CONTRACT.md` | Medium (approval correctness) | Exact current REVIEW only; CAS 409; STAFF/ADMIN only; customer path unchanged; outcome recompute; activity actor STAFF |
+| **VH-02A resume** | Re-point VH media reads to `templateSlots`; finish approved visuals | None | None (VH not in Production) | VH-02A files | Medium | Visual acceptance vs approved direction; no composition change |
+| **VH-02B** | Interactions (doors, countdown, RSVP, gift dialog, music, lightbox) | None | None | VH renderer | Medium | RF-05 capability rules; reduced motion |
+| **RS-01** | `rendererKey`-based lazy renderer loading (T14) | None | Shared client host for all invitations | `templates/core/production-renderer-bindings.ts`, host core, tests | Medium–High | EE pages ship no VH chunk/CSS/font; fail-closed unknown key; all render paths regression-tested |
+| **VH catalog / QA** | Catalog seeding (data-only migration) + certification matrix | **Yes** (seed) | Production only after certification and RS-01 | seed migration, docs | Medium | TEMPLATE_SYSTEM §25 matrix passed |
+
+Ordering rules: TE-03A precedes any DEV migration run; TE-04 needs TE-02 + TE-03B and the T9 answer; VH-02A resumes only after TE-04; RS-01 precedes any merge of Vietnamese Heritage into the Production branch. TE-06 is independent of the template track and may be scheduled earlier by the Product Owner.
+
+---
+
 ## Production Ready Definition
 
 WeddingClick should not be considered Production Ready merely because deployment succeeds.
