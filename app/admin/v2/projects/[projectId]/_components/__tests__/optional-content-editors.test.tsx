@@ -1,3 +1,4 @@
+import { lookupTemplateEditorManifest } from "../../../../../../../templates/core/production-editor-manifests";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -118,7 +119,8 @@ describe("FamilyEditorView", () => {
 
 describe("OptionalInvitationContent", () => {
   it("shows no preview link before any confirmed save", () => {
-    const html = renderToStaticMarkup(<OptionalInvitationContent projectId={PROJECT_ID} />);
+    const manifest = lookupTemplateEditorManifest("wedding.elegant-editorial.v1")!;
+    const html = renderToStaticMarkup(<OptionalInvitationContent projectId={PROJECT_ID} templateVersionId={PROJECT_ID} manifest={manifest} />);
     expect(html).toContain("Ảnh &amp; âm thanh");
     expect(html).not.toContain("Xem trước thiệp");
   });

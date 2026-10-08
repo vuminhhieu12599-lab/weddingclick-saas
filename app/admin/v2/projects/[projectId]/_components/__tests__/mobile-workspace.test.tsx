@@ -125,3 +125,28 @@ describe("action groups and one-time links", () => {
     expect(input).toContain("event.currentTarget.select()");
   });
 });
+
+describe("TE-05A template-first editor at 360/390/430 px", () => {
+  const files = ["template-media-slot-editor.tsx", "editor-readiness-panel.tsx", "optional-invitation-content.tsx", "data-tab.tsx", "design-tab.tsx"];
+
+  it.each(files)("%s has no fixed pixel widths or tables that force horizontal scroll", (file) => {
+    const code = source(file);
+    expect(code).not.toMatch(/<table|w-\[\d{3,}px\]|min-w-\[\d{3,}px\]|whitespace-nowrap/);
+  });
+
+  it("photo grids start at two/three columns on phones and the picker is a bottom sheet", () => {
+    const code = source("template-media-slot-editor.tsx");
+    expect(code).toMatch(/grid grid-cols-2 gap-3 sm:grid-cols-4/);
+    expect(code).toMatch(/grid grid-cols-2 gap-3 sm:grid-cols-3/);
+    expect(code).toMatch(/grid grid-cols-3 gap-2 sm:grid-cols-5/);
+    expect(code).toMatch(/items-end justify-center[^"]*sm:items-center/);
+    expect(code).toMatch(/max-h-\[90vh\]/);
+  });
+
+  it("slot actions stack on phones and keep ~44px touch targets; reorder uses buttons, never drag-and-drop", () => {
+    const code = source("template-media-slot-editor.tsx");
+    expect(code).toMatch(/flex flex-col gap-2 sm:flex-row/);
+    expect(code).toMatch(/min-h-11/);
+    expect(code).not.toMatch(/draggable|onDrag/);
+  });
+});

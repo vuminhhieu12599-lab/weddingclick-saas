@@ -63,10 +63,15 @@ export function GiftContentEditorView({
   projectId,
   initialDetails,
   onSaved,
+  showLoveStory = true,
+  showGift = true,
 }: {
   projectId: string;
   initialDetails: WeddingDetailsRecord | null;
   onSaved: () => void;
+  /** TE-05A: shown only when the selected template's manifest lists LOVE_STORY / GIFT. Saving still rebuilds the full row, so hidden fields are never reverted. */
+  showLoveStory?: boolean;
+  showGift?: boolean;
 }) {
   const [details, setDetails] = useState(initialDetails);
   const [form, setForm] = useState<GiftContentForm>(() => giftContentFormFrom(initialDetails));
@@ -112,14 +117,19 @@ export function GiftContentEditorView({
 
   return (
     <div className="rounded-lg border border-slate-200 p-4">
-      <h4 className="text-sm font-medium text-slate-800">Chuyện tình yêu & quà mừng</h4>
+      <h4 className="text-sm font-medium text-slate-800">
+        {showLoveStory && showGift ? "Chuyện tình yêu & quà mừng" : showLoveStory ? "Chuyện tình yêu" : "Quà mừng"}
+      </h4>
       {details === null && <p className="mt-1 text-xs text-amber-700">Cần lưu tên cô dâu và chú rể trước.</p>}
 
-      <label className="mt-3 block text-sm">
-        <span className="font-medium text-slate-700">Chuyện tình yêu</span>
-        <textarea rows={4} className={`${INPUT_CLASS} mt-1`} value={form.loveStory} onChange={(e) => update("loveStory", e.target.value)} />
-      </label>
+      {showLoveStory && (
+        <label className="mt-3 block text-sm">
+          <span className="font-medium text-slate-700">Chuyện tình yêu</span>
+          <textarea rows={4} className={`${INPUT_CLASS} mt-1`} value={form.loveStory} onChange={(e) => update("loveStory", e.target.value)} />
+        </label>
+      )}
 
+      {showGift && (
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {GIFT_SIDES.map((side) => {
           const qrId = details?.[side.qrField] ?? null;
@@ -158,6 +168,7 @@ export function GiftContentEditorView({
           );
         })}
       </div>
+      )}
 
       <button type="button" className={`${PRIMARY_BUTTON_CLASS} mt-4`} disabled={busy} onClick={() => void persist({ form })}>
         {busy ? "Đang lưu..." : "Lưu"}
@@ -167,9 +178,19 @@ export function GiftContentEditorView({
   );
 }
 
-export function GiftContentEditor({ projectId, onSaved }: { projectId: string; onSaved: () => void }) {
+export function GiftContentEditor({
+  projectId,
+  onSaved,
+  showLoveStory,
+  showGift,
+}: {
+  projectId: string;
+  onSaved: () => void;
+  showLoveStory?: boolean;
+  showGift?: boolean;
+}) {
   const { data, loading, error, reload } = useAdminQuery(() => fetchWeddingDetails(projectId), [projectId]);
   if (loading) return <LoadingState label="Đang tải nội dung..." />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
-  return <GiftContentEditorView projectId={projectId} initialDetails={data} onSaved={onSaved} />;
+  return <GiftContentEditorView projectId={projectId} initialDetails={data} onSaved={onSaved} showLoveStory={showLoveStory} showGift={showGift} />;
 }

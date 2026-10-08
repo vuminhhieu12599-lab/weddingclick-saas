@@ -1,4 +1,5 @@
 import type { EventType, TemplateDesignManifestV1 } from "../../domain";
+import type { TemplateEditorManifestV1 } from "../../../templates/core/editor-manifest";
 
 /**
  * Template catalog DTO shapes (Task 028). `designManifest` is the validated
@@ -11,6 +12,15 @@ export interface TemplateVersionCatalogEntry {
   versionNumber: number;
   rendererKey: string;
   designManifest: TemplateDesignManifestV1;
+  /**
+   * TE-05A: the validated, registry-owned TemplateEditorManifestV1 of this
+   * version's renderer, looked up server-side by the exact `rendererKey`
+   * (never read from the DB manifest JSON, never accepted from a client).
+   * `null` only when the renderer key is not a production renderer at all
+   * (such a version cannot render); every production renderer has one
+   * (TE-02 key-set equality).
+   */
+  editorManifest: TemplateEditorManifestV1 | null;
   retiredAt: string | null;
   /** Server-derived only — never accepted from a client. */
   selectable: boolean;

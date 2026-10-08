@@ -141,7 +141,11 @@ describe("TE-02 editor-manifest static boundary", () => {
     expect(/["'`]wedding\.[\w-]+\.v\d+/.test(code)).toBe(false);
   });
 
-  it("no renderer, client or app module imports the editor manifests (never read at render time)", () => {
+  // TE-05A re-scope (checkpoint maintenance): the Staff catalog route
+  // (app/api/v2/internal/**) may look manifests up server-side and the admin
+  // UI may import the editor-manifest TYPES; renderers, invitation-facing
+  // pages and every client module still never import manifest values.
+  it("no renderer, invitation-facing page or client module imports editor manifest values (never read at render time)", () => {
     const roots = ["templates/wedding", "templates/core/client", "app"];
     const offenders: string[] = [];
     const walk = (dir: string): void => {
@@ -149,8 +153,16 @@ describe("TE-02 editor-manifest static boundary", () => {
         const path = `${dir}/${entry.name}`;
         if (entry.isDirectory()) {
           if (entry.name !== "node_modules" && entry.name !== "__tests__") walk(path);
-        } else if (/\.(ts|tsx)$/.test(entry.name) && /editor-manifest|templates\/editor\//.test(readRepoFile(path))) {
-          offenders.push(path);
+        } else if (/\.(ts|tsx)$/.test(entry.name)) {
+          const code = readRepoFile(path);
+          const valueImport = importSpecifiers(code.replace(/^\s*import\s+type\s[^;]*;/gm, "")).some((specifier) =>
+            /editor-manifest|templates\/editor\/|\.\.\/editor\//.test(specifier),
+          );
+          const typeImport = /editor-manifest|templates\/editor\//.test(code);
+          const staffServerRoute = path.startsWith("app/api/v2/internal/") && !/["']use client["']/.test(code);
+          if ((valueImport && !staffServerRoute) || (typeImport && /^(templates\/|app\/(i|review|portal|internal)\/)/.test(path))) {
+            offenders.push(path);
+          }
         }
       }
     };

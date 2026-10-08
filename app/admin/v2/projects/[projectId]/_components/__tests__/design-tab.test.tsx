@@ -49,6 +49,7 @@ const CATALOG: TemplateCatalogEntry[] = [
           sectionSettingsSchema: {},
           designSettingsSchema: {},
         },
+        editorManifest: null,
         retiredAt: null,
         selectable: true,
       },
@@ -87,7 +88,8 @@ function render(design: ProjectDesignRecord | null, selectedVersionId: string, s
 describe("DesignAssignmentView", () => {
   it("no current design: shows 'Chưa chọn mẫu', nothing pre-selected, save disabled, no preview link", () => {
     const html = render(null, "");
-    expect(html).toContain("Thiết kế thiệp");
+    // TE-05A: template choice is presented as the primary first step.
+    expect(html).toContain("Bước 1 — Chọn mẫu thiệp");
     expect(html).toContain("Chưa chọn mẫu");
     expect(html).toContain("Fixture Editorial — phiên bản 1");
     expect(html).not.toContain("checked");

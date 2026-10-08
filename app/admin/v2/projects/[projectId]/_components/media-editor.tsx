@@ -121,10 +121,13 @@ export function MediaEditorView({
   projectId,
   initialMedia,
   onSaved,
+  roles = MEDIA_EDITOR_ROLES,
 }: {
   projectId: string;
   initialMedia: readonly ProjectMediaRecord[];
   onSaved: () => void;
+  /** TE-05A: the role cards to show; defaults to every legacy role (Elegant Editorial behaviour unchanged). */
+  roles?: readonly MediaRoleConfig[];
 }) {
   const [rows, setRows] = useState<ProjectMediaRecord[]>([...initialMedia]);
   const [status, setStatus] = useState<Record<string, CardStatus>>({});
@@ -189,7 +192,7 @@ export function MediaEditorView({
 
   return (
     <div className="space-y-3">
-      {MEDIA_EDITOR_ROLES.map((role) => (
+      {roles.map((role) => (
         <MediaRoleCard
           key={role.mediaType}
           role={role}
@@ -204,9 +207,17 @@ export function MediaEditorView({
   );
 }
 
-export function MediaEditor({ projectId, onSaved }: { projectId: string; onSaved: () => void }) {
+export function MediaEditor({
+  projectId,
+  onSaved,
+  roles,
+}: {
+  projectId: string;
+  onSaved: () => void;
+  roles?: readonly MediaRoleConfig[];
+}) {
   const { data, loading, error, reload } = useAdminQuery(() => fetchProjectMedia(projectId), [projectId]);
   if (loading) return <LoadingState label="Đang tải ảnh & âm thanh..." />;
   if (error || !data) return <ErrorState message={error ?? "Không thể tải ảnh & âm thanh"} onRetry={reload} />;
-  return <MediaEditorView projectId={projectId} initialMedia={data} onSaved={onSaved} />;
+  return <MediaEditorView projectId={projectId} initialMedia={data} onSaved={onSaved} roles={roles} />;
 }

@@ -36,6 +36,9 @@ import type { StaffInvitationPreviewBody } from "../server/routes/invitation-pre
 import type { ReviewVersionPreviewBody } from "../server/routes/invitation-review";
 import type { StaffMeSuccessBody } from "../server/routes/staff-me";
 import type { TemplateCatalogEntry } from "../server/templates/templates-types";
+import type { EditorReadiness } from "../server/template-editor/editor-readiness";
+import type { PhotoLibraryItem } from "../server/template-editor/photo-library";
+import type { TemplateMediaSlotItem } from "../server/template-media/template-media-slot-types";
 import type {
   SaveWeddingDetailsInput,
   SaveWeddingDetailsResult,
@@ -545,6 +548,49 @@ export async function deleteProjectMedia(projectId: string, mediaId: string): Pr
   await requestJson<{ deleted: true }>(projectPath(projectId, `media/${encodeURIComponent(mediaId)}`), token, {
     method: "DELETE",
   });
+}
+
+// ---------------------------------------------------------------------------
+// Template-first editor (TE-05A)
+// ---------------------------------------------------------------------------
+
+/** The Project's slot-assignable photographs with short-lived preview URLs (never storage paths). */
+export async function fetchPhotoLibrary(projectId: string): Promise<PhotoLibraryItem[]> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: PhotoLibraryItem[] }>(projectPath(projectId, "photo-library"), token);
+  return body.data;
+}
+
+/** Draft slot assignments of one exact template version. */
+export async function fetchTemplateMediaSlots(projectId: string, templateVersionId: string): Promise<TemplateMediaSlotItem[]> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: TemplateMediaSlotItem[] }>(
+    projectPath(projectId, `template-media-slots?templateVersionId=${encodeURIComponent(templateVersionId)}`),
+    token,
+  );
+  return body.data;
+}
+
+/** Replaces one slot (`[]` clears it). The server derives the slot contract; only ids and order are sent. */
+export async function setTemplateMediaSlot(
+  projectId: string,
+  templateVersionId: string,
+  slotKey: string,
+  projectMediaIds: readonly string[],
+): Promise<TemplateMediaSlotItem[]> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: TemplateMediaSlotItem[] }>(projectPath(projectId, "template-media-slots"), token, {
+    method: "PUT",
+    body: { templateVersionId, slotKey, projectMediaIds: [...projectMediaIds] },
+  });
+  return body.data;
+}
+
+/** Template-aware Staff readiness guidance (never a Review gate). */
+export async function fetchEditorReadiness(projectId: string): Promise<EditorReadiness> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: EditorReadiness }>(projectPath(projectId, "editor-readiness"), token);
+  return body.data;
 }
 
 // ---------------------------------------------------------------------------

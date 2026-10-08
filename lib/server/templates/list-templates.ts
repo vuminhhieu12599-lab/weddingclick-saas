@@ -1,3 +1,4 @@
+import type { TemplateEditorManifestV1 } from "../../../templates/core/editor-manifest";
 import type { StaffContext } from "../auth/staff-context";
 import { validateTemplateDesignManifest } from "../project-design/validate-template-design-manifest";
 import type { TemplatesGateway } from "./templates-gateway";
@@ -19,10 +20,14 @@ import type { TemplateCatalogEntry } from "./templates-types";
  * request (fail-closed, never silently accepted) — the plain Error thrown
  * by validateTemplateDesignManifest propagates to the route's generic
  * INTERNAL/500 mapping.
+ *
+ * TE-05A: each version also carries `editorManifest`, from the injected
+ * exact-key production editor registry lookup (never the DB manifest).
  */
 export async function listTemplates<TClient>(
   staff: StaffContext<TClient>,
   gateway: TemplatesGateway<TClient>,
+  lookupEditorManifest: (rendererKey: string) => TemplateEditorManifestV1 | undefined,
 ): Promise<TemplateCatalogEntry[]> {
   const rawTemplates = await gateway.listTemplatesWithVersions(staff.supabase);
 
@@ -40,6 +45,7 @@ export async function listTemplates<TClient>(
       versionNumber: version.versionNumber,
       rendererKey: version.rendererKey,
       designManifest: validateTemplateDesignManifest(version.manifest),
+      editorManifest: lookupEditorManifest(version.rendererKey) ?? null,
       retiredAt: version.retiredAt,
       selectable: template.isActive === true && version.retiredAt === null,
     })),

@@ -35,6 +35,7 @@ function version(id: string, versionNumber: number, overrides: Partial<TemplateV
     versionNumber,
     rendererKey: `wedding.fixture.v${versionNumber}`,
     designManifest: SINGLE,
+    editorManifest: null,
     retiredAt: null,
     selectable: true,
     ...overrides,

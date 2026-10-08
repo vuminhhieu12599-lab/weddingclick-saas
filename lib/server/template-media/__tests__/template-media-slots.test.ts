@@ -526,7 +526,10 @@ describe("TE-03B boundaries", () => {
     }
   });
 
-  it("adds no HTTP route and no public/customer path for slot assignment", () => {
+  // TE-05A re-scope (checkpoint maintenance): the Staff route
+  // app/api/v2/internal/projects/[id]/template-media-slots is now intended;
+  // no public, customer, Portal or invitation path may touch slot data.
+  it("no public/customer/portal path touches slot assignment (Staff route only)", () => {
     const routes: string[] = [];
     const walk = (dir: string): void => {
       for (const entry of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
@@ -536,9 +539,12 @@ describe("TE-03B boundaries", () => {
       }
     };
     walk("app");
+    const staffOnly = (file: string) => file.startsWith("app/api/v2/internal/") || file.startsWith("app/admin/");
     for (const file of routes) {
-      expect(/template-media|set_project_template_media_slot|project_template_media_slot_items/.test(readFileSync(join(ROOT, file), "utf8")), file).toBe(false);
+      const touches = /template-media|set_project_template_media_slot|project_template_media_slot_items/.test(readFileSync(join(ROOT, file), "utf8"));
+      if (touches) expect(staffOnly(file), file).toBe(true);
     }
+    expect(routes).toContain("app/api/v2/internal/projects/[id]/template-media-slots/route.ts");
   });
 
   it("TE-04 reads draft slot rows only through the Snapshot input loader (never a renderer or stored-Snapshot read path)", () => {

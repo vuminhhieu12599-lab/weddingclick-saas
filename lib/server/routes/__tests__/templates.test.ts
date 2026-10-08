@@ -1,3 +1,4 @@
+import { lookupTemplateEditorManifest } from "../../../../templates/core/production-editor-manifests";
 import { describe, expect, it } from "vitest";
 
 import type { StaffAuthGateway } from "../../auth/staff-context";
@@ -72,6 +73,7 @@ describe("handleListTemplatesRequest", () => {
       "Bearer good-token",
       activeStaffAuth,
       createFakeGateway([sampleRow]),
+      lookupTemplateEditorManifest,
     );
 
     expect(result.status).toBe(200);
@@ -80,7 +82,7 @@ describe("handleListTemplatesRequest", () => {
   });
 
   it("returns 401 without an Authorization header", async () => {
-    const result = await handleListTemplatesRequest(null, activeStaffAuth, createFakeGateway([]));
+    const result = await handleListTemplatesRequest(null, activeStaffAuth, createFakeGateway([]), lookupTemplateEditorManifest);
 
     expect(result.status).toBe(401);
     expect(result.headers?.["Cache-Control"]).toBe("no-store");
@@ -91,6 +93,7 @@ describe("handleListTemplatesRequest", () => {
       "Bearer token",
       nonStaffAuth,
       createFakeGateway([]),
+      lookupTemplateEditorManifest,
     );
 
     expect(result.status).toBe(403);
@@ -104,7 +107,7 @@ describe("handleListTemplatesRequest", () => {
       },
     };
 
-    const result = await handleListTemplatesRequest("Bearer good-token", activeStaffAuth, gateway);
+    const result = await handleListTemplatesRequest("Bearer good-token", activeStaffAuth, gateway, lookupTemplateEditorManifest);
 
     expect(result.status).toBe(500);
     expect(result.body).toEqual({ error: "Internal server error" });

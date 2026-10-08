@@ -5,6 +5,7 @@ import { ApiError } from "../errors/api-error";
 import { listTemplates } from "../templates/list-templates";
 import type { TemplatesGateway } from "../templates/templates-gateway";
 import type { TemplateCatalogEntry } from "../templates/templates-types";
+import type { TemplateEditorManifestV1 } from "../../../templates/core/editor-manifest";
 
 /**
  * Pure, framework-agnostic handler backing the Template Catalog HTTP
@@ -51,6 +52,7 @@ export async function handleListTemplatesRequest<TClient>(
   authorizationHeader: string | null,
   authGateway: StaffAuthGateway<TClient>,
   templatesGateway: TemplatesGateway<TClient>,
+  lookupEditorManifest: (rendererKey: string) => TemplateEditorManifestV1 | undefined,
 ): Promise<ApiResult<{ data: TemplateCatalogEntry[] }>> {
   const token = parseBearerToken(authorizationHeader);
   if (!token) {
@@ -62,7 +64,7 @@ export async function handleListTemplatesRequest<TClient>(
 
   try {
     const staff = await requireStaff(token, authGateway);
-    const data = await listTemplates(staff, templatesGateway);
+    const data = await listTemplates(staff, templatesGateway, lookupEditorManifest);
     return withNoStore({ status: 200, body: { data } });
   } catch (error) {
     return withNoStore(toErrorResult(error, "[handleListTemplatesRequest] Unexpected error"));

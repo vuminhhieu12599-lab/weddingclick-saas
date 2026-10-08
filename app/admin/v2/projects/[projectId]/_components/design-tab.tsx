@@ -18,6 +18,7 @@ import type { ProjectDesignRecord } from "../../../../../../lib/server/project-d
 import type { ProjectSummary } from "../../../../../../lib/server/projects/project-types";
 import type { TemplateCatalogEntry } from "../../../../../../lib/server/templates/templates-types";
 import { EmptyState, ErrorState, LoadingState } from "../../../_components/page-states";
+import type { TabKey } from "./workspace-tabs";
 
 export type SaveStatus =
   | { kind: "IDLE" }
@@ -35,6 +36,8 @@ export interface DesignAssignmentViewProps {
   onSelect: (templateVersionId: string) => void;
   onSave: () => void;
   saveStatus: SaveStatus;
+  /** TE-05A: after a successful save, continue to the template's content (Data tab). */
+  onContinue?: () => void;
 }
 
 export function versionLabel(template: TemplateCatalogEntry, versionNumber: number): string {
@@ -51,6 +54,7 @@ export function DesignAssignmentView({
   onSelect,
   onSave,
   saveStatus,
+  onContinue,
 }: DesignAssignmentViewProps) {
   const currentTemplateVersionId = design?.templateVersionId ?? null;
   const current = currentTemplateVersionId ? findTemplateVersionOption(catalog, currentTemplateVersionId) : null;
@@ -62,7 +66,10 @@ export function DesignAssignmentView({
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-      <h2 className="text-base font-semibold text-slate-900">Thiết kế thiệp</h2>
+      <h2 className="text-base font-semibold text-slate-900">Bước 1 — Chọn mẫu thiệp</h2>
+      <p className="mt-1 text-sm text-slate-500">
+        Mẫu thiệp quyết định những nội dung và ảnh cần nhập. Chọn mẫu trước, sau đó nhập nội dung cho đúng mẫu.
+      </p>
 
       <div className="mt-3 text-sm">
         <span className="text-slate-500">Mẫu hiện tại: </span>
@@ -142,14 +149,27 @@ export function DesignAssignmentView({
       </div>
 
       {saveStatus.kind === "SAVED" && (
-        <p className="mt-3 text-sm text-emerald-700">Đã lưu mẫu thiệp. Bản nháp thiết kế đã cập nhật — chưa xuất bản.</p>
+        <div className="mt-3 rounded-lg bg-emerald-50 p-3" data-design-saved>
+          <p className="text-sm text-emerald-700">Đã lưu mẫu thiệp. Bản nháp thiết kế đã cập nhật — chưa xuất bản.</p>
+          <a
+            href="?tab=DATA"
+            onClick={(event) => {
+              if (!onContinue) return;
+              event.preventDefault();
+              onContinue();
+            }}
+            className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 sm:w-auto"
+          >
+            Tiếp tục nhập nội dung
+          </a>
+        </div>
       )}
       {saveStatus.kind === "ERROR" && <p className="mt-3 text-sm text-red-600">{saveStatus.message}</p>}
     </div>
   );
 }
 
-export function DesignTab({ project }: { project: ProjectSummary }) {
+export function DesignTab({ project, onNavigate }: { project: ProjectSummary; onNavigate?: (tab: TabKey) => void }) {
   const { data, loading, error, reload } = useAdminQuery(
     async () => {
       const [catalog, design] = await Promise.all([fetchTemplateCatalog(), fetchProjectDesign(project.id)]);
@@ -204,6 +224,7 @@ export function DesignTab({ project }: { project: ProjectSummary }) {
       }}
       onSave={() => void handleSave()}
       saveStatus={saveStatus}
+      onContinue={onNavigate ? () => onNavigate("DATA") : undefined}
     />
   );
 }

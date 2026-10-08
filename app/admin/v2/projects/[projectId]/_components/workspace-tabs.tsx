@@ -78,8 +78,8 @@ export function WorkspaceTabs({
       </div>
 
       <div className="mt-5">
-        {active === "DATA" && <DataTab project={project} />}
-        {active === "DESIGN" && <DesignTab project={project} />}
+        {active === "DATA" && <DataTab project={project} onNavigate={setActive} />}
+        {active === "DESIGN" && <DesignTab project={project} onNavigate={setActive} />}
         {active === "REVIEW" && <ReviewTab project={project} />}
         {active === "PUBLISH" && <PublishTab project={project} onProjectChanged={onProjectChanged} />}
         {active === "TASKS" && <TasksTab project={project} />}

@@ -1,3 +1,4 @@
+import { lookupTemplateEditorManifest } from "../../../../templates/core/production-editor-manifests";
 import { describe, expect, it } from "vitest";
 
 import { listTemplates } from "../list-templates";
@@ -77,7 +78,7 @@ describe("listTemplates", () => {
       },
     ];
 
-    const result = await listTemplates(staff, createFakeGateway(rows));
+    const result = await listTemplates(staff, createFakeGateway(rows), lookupTemplateEditorManifest);
 
     expect(result).toHaveLength(2);
     expect(result[0].isActive).toBe(true);
@@ -122,7 +123,7 @@ describe("listTemplates", () => {
       },
     ];
 
-    const result = await listTemplates(staff, createFakeGateway(rows));
+    const result = await listTemplates(staff, createFakeGateway(rows), lookupTemplateEditorManifest);
 
     expect(result[0].versions[0].selectable).toBe(true);
     expect(result[0].versions[1].selectable).toBe(false);
@@ -146,7 +147,7 @@ describe("listTemplates", () => {
       },
     ];
 
-    const result = await listTemplates(staff, createFakeGateway(rows));
+    const result = await listTemplates(staff, createFakeGateway(rows), lookupTemplateEditorManifest);
 
     expect(result[0].versions[0].designManifest).toEqual({
       schemaVersion: 1,
@@ -182,6 +183,6 @@ describe("listTemplates", () => {
       },
     ];
 
-    await expect(listTemplates(staff, createFakeGateway(rows))).rejects.toThrow();
+    await expect(listTemplates(staff, createFakeGateway(rows), lookupTemplateEditorManifest)).rejects.toThrow();
   });
 });
