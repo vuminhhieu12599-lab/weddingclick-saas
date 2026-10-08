@@ -225,14 +225,15 @@ Task 028 validates every `project_design` write against this subset, and `GET /a
 
 `template_versions` themselves remain immutable once created (`docs/PHYSICAL_DATABASE_PLAN.md` §2.11) — renderer/manifest changes still happen only through a new `template_version` row, never an in-place edit, unchanged by Task 028.
 
-### 6a. `TemplateEditorManifestV1` (TE-01, proposed; implemented by TE-02)
+### 6a. `TemplateEditorManifestV1` (TE-01 contract; implemented and frozen by TE-02)
 
 A third, separate, **code-owned** manifest per production renderer version, describing what Staff are asked to configure for that template. It does not change `RendererCompatibilityManifestV1`, `TemplateDesignManifestV1` or `RendererProductionManifestV1`, and it is not stored in `template_versions.manifest` (that column is immutable and the Elegant Editorial v1 row is already seeded). Full contract and rationale: `docs/DECISIONS.md` "TE-01" T1.
 
-- Lives in the renderer version directory (`editor-manifest.ts`) and is collected in an explicit server-safe list whose key set must equal the production renderer manifests' key set; validated at module load, fail-closed.
+- Lives **outside** the immutable renderer-version directories: type/validator `templates/core/editor-manifest.ts`, per-template manifests `templates/editor/wedding/<templateCode>-v<n>.ts`, explicit ordered list and `lookupTemplateEditorManifest(rendererKey)` in `templates/core/production-editor-manifests.ts`. The editor key list must equal the production renderer key list exactly and in order; validated at module load, fail-closed, no fallback (`docs/DECISIONS.md` "TE-02").
 - Declares `mediaModel`: `LEGACY_ROLES` (Elegant Editorial v1: the legacy semantic media roles it already renders) or `TEMPLATE_SLOTS` (Vietnamese Heritage v1 onward: template media slots, §11a).
-- Lists ordered **content items** (`COUPLE`, `FAMILIES`, `EVENTS`, `INVITATION_MESSAGE`, `LOVE_STORY`, `TIMELINE`, `DRESS_CODE`, `GIFT`, `MUSIC`) with `REQUIRED`/`RECOMMENDED`/`OPTIONAL`, Staff label and hint; section-backed items must be capable in the compatibility manifest.
-- Lists ordered **media slots**: key, label, hint, `SINGLE`/`ORDERED_MULTI`, `minCount`/`recommendedCount`/`maxCount`, requirement (`RECOMMENDED`/`OPTIONAL` in v1), orientation, aspect-ratio hint, optional `sectionKey`.
+- Lists ordered **content items** (`COUPLE`, `FAMILIES`, `EVENTS`, `INVITATION_MESSAGE`, `LOVE_STORY`, `TIMELINE`, `DRESS_CODE`, `GIFT`, `MUSIC`) with `REQUIRED` (only `COUPLE`/`EVENTS`)/`RECOMMENDED`/`OPTIONAL`, Staff label, hint and the one fixed section key per item; section-backed items must be capable in the compatibility manifest.
+- Lists ordered **media slots**: lower-camelCase position key (never groom/bride/couple), label, hint, `SINGLE`/`ORDERED_MULTI`, `minCount` (0)/`recommendedCount`/`maxCount` (SINGLE = 1, `null` = unbounded), requirement (`RECOMMENDED`/`OPTIONAL` in v1), orientation, advisory `W:H` aspect-ratio hint, optional capable `sectionKey`.
+- Current manifests: Elegant Editorial v1 `LEGACY_ROLES` (no slots); Vietnamese Heritage v1 `TEMPLATE_SLOTS` with `heroPhoto`, `portraitCluster` (positions 1–3, max 3), `loveStoryPhoto`, `gallery`. Not variant-specific.
 - Frozen with the renderer once released (slot keys, cardinality, `maxCount`); a slot-contract change needs a new renderer version.
 - Never read by a renderer at runtime and never holds customer content. It drives the Staff editor, the template-aware readiness evaluator (Staff guidance only, `BLOCKING`/`WARNING`/`READY`; TE-01 T10) and the server-side Snapshot builder input.
 

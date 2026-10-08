@@ -2355,7 +2355,7 @@ Immutable REVIEW/PUBLISHED Snapshots; `invitation_version_media` `ON DELETE REST
 
 ### T1 — TemplateEditorManifestV1: code-owned registry keyed by `rendererKey` (Option A)
 
-Decision: a new, separate, **code-owned** contract `TemplateEditorManifestV1`, one per production renderer version, in that version's immutable directory (`templates/wedding/<code>/v<n>/editor-manifest.ts`), collected into an explicit ordered server-safe list (`templates/core/production-editor-manifests.ts`). Rejected alternatives:
+Decision: a new, separate, **code-owned** contract `TemplateEditorManifestV1`, one per production renderer version, collected into an explicit ordered server-safe list (`templates/core/production-editor-manifests.ts`). *Location corrected by TE-02: editor manifests live **outside** the immutable renderer-version directories, in `templates/editor/<eventSegment>/<templateCode>-v<n>.ts`, because a released renderer directory (Elegant Editorial v1) must never be edited. The final implemented shape is recorded in "TE-02" below.* Rejected alternatives:
 
 - **B (persist in `template_versions.manifest`)** — rejected. `manifest` is frozen at row creation (0010 immutability trigger), and the Elegant Editorial v1 row is already seeded in DEV and Production (0033), so adding editor metadata would need a new template version (a visual-version bump for a non-visual reason) or weakening the trigger. It would also split one renderer's truth between code (slots the renderer actually reads) and data.
 - **Folding it into `RendererProductionManifestV1`** — rejected. RF-06 freezes that shape at exactly three members (P15) with strict exact-key validation; changing it would touch a released, frozen contract.
@@ -2593,3 +2593,43 @@ Cleanup checkpoint on branch `template-02-vietnamese-heritage-v1` from `979c1a69
    - **STAFF approval row:** `actor_type = 'STAFF'`, `feedback_type = 'APPROVAL'`, `access_link_id` NULL, `staff_profile_id` NOT NULL, `approval_channel` NOT NULL, `message` NULL, `staff_note` optional (≤ 2000).
    - The customer REVIEW read never exposes `staff_profile_id`, `approval_channel` or `staff_note`. The `p_note` parameter of the proposed `staff_confirm_review_approval` writes `staff_note`, never `message`; activity metadata still never copies the note.
 6. **Vietnamese Heritage design unchanged.** The approved three-image cluster still exists visually; only its future data source is the `portraitCluster` slot, positions 1–3. The uncommitted VH-02A renderer work is untouched and is rewired to `templateSlots` when it resumes after TE-04.
+
+## TE-02 — TemplateEditorManifestV1 and Fail-closed Production Editor Registry (2026-10-08)
+
+Implementation checkpoint on branch `template-02-vietnamese-heritage-v1` from `b1062b5c9aa4c341550bc802d89d771754853372`. Code-owned metadata only: no schema, migration, API route, Snapshot, ViewModel, Staff UI, readiness evaluator or renderer change; DEV and Production untouched. **Status: implemented / frozen.** The frozen `RendererCompatibilityManifestV1`, `TemplateDesignManifestV1` and `RendererProductionManifestV1` are unchanged.
+
+1. **Location (correction of TE-01 T1).** Editor manifests live outside every renderer-version directory: `templates/core/editor-manifest.ts` (type + validator), `templates/core/production-editor-manifests.ts` (explicit list, cross-validation, lookup), `templates/editor/wedding/elegant-editorial-v1.ts`, `templates/editor/wedding/vietnamese-heritage-v1.ts`. No file under `templates/wedding/elegant-editorial/v1/` or `templates/wedding/vietnamese-heritage/v1/` changed; the Elegant Editorial v1 renderer directory stays untouched and the Vietnamese Heritage design is unchanged. This changes metadata location only.
+2. **Exact V1 shape (closed, exact own data keys at every level).**
+
+```text
+TemplateEditorManifestV1 { schemaVersion: 1; rendererKey: string;
+  mediaModel: "LEGACY_ROLES" | "TEMPLATE_SLOTS";
+  contentItems: TemplateEditorContentItemV1[]; mediaSlots: TemplateEditorMediaSlotV1[] }
+TemplateEditorContentItemV1 { key: COUPLE | FAMILIES | EVENTS | INVITATION_MESSAGE | LOVE_STORY
+  | TIMELINE | DRESS_CODE | GIFT | MUSIC; label; hint;
+  requirement: REQUIRED | RECOMMENDED | OPTIONAL; sectionKey: RendererSectionKey | null }
+TemplateEditorMediaSlotV1 { key; label; hint; cardinality: SINGLE | ORDERED_MULTI;
+  requirement: RECOMMENDED | OPTIONAL; minCount: 0; recommendedCount; maxCount: number | null;
+  orientation: ANY | PORTRAIT | LANDSCAPE | SQUARE; aspectRatioHint: string | null;
+  sectionKey: RendererSectionKey | null }
+```
+
+3. **Validator rules (`validateTemplateEditorManifest`, fail-fast, fixed content-free messages, `TemplateEditorManifestInvariantError`).** Plain object (`Object.prototype` or null prototype); exact own data keys (no extra, symbol, non-enumerable or accessor key) for the manifest, every item and every slot; `contentItems`/`mediaSlots` are exact data arrays (no holes, accessors or extra properties); `schemaVersion === 1`; `rendererKey` non-empty and already trimmed (never normalized); closed enums. Content items: known key, unique, trimmed non-empty label/hint, REQUIRED only for `COUPLE`/`EVENTS` (the existing builder/resolver blockers; no new review blocker), and `sectionKey` must equal the one fixed mapping (`COUPLE`/`FAMILIES`/`EVENTS` → `null`; `INVITATION_MESSAGE` → `invitationMessage`; `LOVE_STORY` → `loveStory`; `TIMELINE` → `timeline`; `DRESS_CODE` → `dressCode`; `GIFT` → `gift`; `MUSIC` → `music`). Media slots: key `^[a-z][A-Za-z0-9]{0,47}$` and never containing `groom`/`bride`/`couple` (positions, not people), unique; trimmed label/hint; no REQUIRED slot; `minCount === 0`; `recommendedCount` non-negative safe integer; `maxCount` positive safe integer or `null`; `recommendedCount <= maxCount` when finite; SINGLE ⇒ `maxCount === 1`; `aspectRatioHint` `null` or `W:H` (`^[1-9][0-9]{0,2}:[1-9][0-9]{0,2}$`, advisory only, never crop logic); `sectionKey` `null` or a canonical `RENDERER_SECTION_KEYS` member. `LEGACY_ROLES` ⇒ zero slots; `TEMPLATE_SLOTS` ⇒ at least one. The result is a fresh deeply frozen copy sharing no object with the input.
+4. **Production registry (`production-editor-manifests.ts`).** Explicit list `[ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST]`, validated at module load against `PRODUCTION_RENDERER_MANIFESTS`: array; every manifest valid; no duplicate `rendererKey`; no orphan (editor key without a production renderer manifest); no missing editor manifest; the same order as the production renderer manifests; exact string equality only (no normalization, alias, default or "latest"). `lookupTemplateEditorManifest(rendererKey)` / `PRODUCTION_EDITOR_REGISTRY.lookupEditorManifest` return the frozen validated manifest or `undefined` (the RF-06 `lookupManifest` convention); there is no fallback.
+5. **Cross-manifest validation.** Every non-null content-item `sectionKey` and slot `sectionKey` requires `compatibility.sectionCapabilities[sectionKey] === true` in that renderer's production manifest. `RendererProductionManifestV1` is read, never modified.
+6. **Elegant Editorial v1 (`wedding.elegant-editorial.v1`).** `LEGACY_ROLES`, `mediaSlots: []` (TE-05A keeps using `MEDIA_EDITOR_ROLES`; no legacy-role metadata is duplicated). Content: COUPLE REQUIRED "Cô dâu & chú rể"; EVENTS REQUIRED "Sự kiện"; FAMILIES RECOMMENDED "Gia đình hai bên"; LOVE_STORY / TIMELINE / DRESS_CODE / GIFT / MUSIC OPTIONAL with their fixed section keys. No INVITATION_MESSAGE (capability false).
+7. **Vietnamese Heritage v1 (`wedding.vietnamese-heritage.v1`).** `TEMPLATE_SLOTS`; the same eight content items and requirements (no INVITATION_MESSAGE, capability false). Slots:
+
+| key | label | cardinality | requirement | min / recommended / max | orientation | aspectRatioHint | sectionKey |
+|---|---|---|---|---|---|---|---|
+| `heroPhoto` | Ảnh chính | SINGLE | RECOMMENDED | 0 / 1 / 1 | PORTRAIT | null | null |
+| `portraitCluster` | Cụm ảnh ba khung | ORDERED_MULTI | RECOMMENDED | 0 / 3 / 3 | PORTRAIT | null | null |
+| `loveStoryPhoto` | Ảnh chuyện tình yêu | SINGLE | OPTIONAL | 0 / 0 / 1 | ANY | null | loveStory |
+| `gallery` | Album ảnh | ORDERED_MULTI | OPTIONAL | 0 / 0 / null | ANY | null | gallery |
+
+`portraitCluster` is positions 1 / 2 / 3, never groom / couple / bride; all three may be couple photos. One assignment set per Project + exact template version serves COMMON, GROOM and BRIDE (TE-03A item 4); the manifest has no variant field.
+
+8. **Orientation / aspect hints (audited from the approved direction `app/internal/prototypes/invitation/_directions/vietnamese-heritage/`, read-only).** Hero: a viewport-filling cover-cropped frame (max 400 px wide, up to 1.6× width tall, min 220 px) → PORTRAIT, no fixed ratio. Portrait cluster: side cards `3 / 4.2`, centre card `3 / 4.3` → clearly portrait, but no single honest ratio → PORTRAIT, `null`. Love Story: a cover-cropped, shaded section backdrop → ANY, `null`. Album: tiles mix `4 / 5`, `3 / 2`, `3 / 4` chosen by layout → ANY, `null`. Hints are Staff guidance only, never validation or cropping.
+9. **Slot `sectionKey` semantics for TE-04.** A slot `sectionKey` means "this slot belongs to that section, which must be capable". Only the `gallery` slot is a section's media content and may drive `sections.gallery` (TE-01 T7.4); `loveStoryPhoto` must **not** drive `sections.loveStory`, which stays derived from the Love Story text.
+10. **Boundary.** The four modules import only the RF-04 compatibility-manifest module, the RF-06 production/renderer manifest modules and each other; no React, client, CSS, font, asset, prototype, renderer component, binding, host, capability, ViewModel/Snapshot, Supabase, environment, browser or `app/**` code. No renderer, client or `app/**` module imports them (static test). The P39 tree assertion in `renderer-static-boundary.test.ts` gains an explicit TE-02 file list; no existing assertion was removed or weakened.
+11. **Next:** TE-03B (Project media library `PHOTO` type + `project_template_media_slot_items` + staff-only slot RPC; migration 0046 or later). TE-03B validates slot keys and `maxCount` against `lookupTemplateEditorManifest` server-side before calling the RPC.

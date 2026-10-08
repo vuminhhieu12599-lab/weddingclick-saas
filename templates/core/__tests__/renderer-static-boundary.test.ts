@@ -297,9 +297,10 @@ describe("templates/** production tree (P39)", () => {
   // RF-06C extension: plus exactly the RF-06C client-runtime files.
   // RF-06D extension: plus exactly the RF-06D islands and pure models.
   // VH-01 extension: plus exactly the Vietnamese Heritage v1 files (rules at the end of this file).
-  it("templates/** contains exactly the RF-06A, RF-06B, RF-06C, RF-06D and VH-01 files", () => {
+  // TE-02 extension: plus exactly the editor-manifest files (rules in editor-manifest-static-boundary.test.ts).
+  it("templates/** contains exactly the RF-06A, RF-06B, RF-06C, RF-06D, VH-01 and TE-02 files", () => {
     expect([...sources].sort()).toStrictEqual(
-      [...RF06A_FILES, ...RF06B_TEMPLATE_FILES, ...RF06C_FILES, ...RF06D_FILES, ...VH01_FILES].sort(),
+      [...RF06A_FILES, ...RF06B_TEMPLATE_FILES, ...RF06C_FILES, ...RF06D_FILES, ...VH01_FILES, ...TE02_FILES].sort(),
     );
   });
 
@@ -1936,3 +1937,17 @@ describe("VH-01 renderer CSS", () => {
     }
   });
 });
+
+// ===========================================================================
+// TE-02 extension (docs/DECISIONS.md "TE-02"): the server-safe Template
+// Editor Manifest files, outside every renderer-version directory. Their
+// boundary rules live in editor-manifest-static-boundary.test.ts; only the
+// exact tree membership is declared here.
+// ===========================================================================
+
+const TE02_FILES = [
+  "templates/core/editor-manifest.ts",
+  "templates/core/production-editor-manifests.ts",
+  "templates/editor/wedding/elegant-editorial-v1.ts",
+  "templates/editor/wedding/vietnamese-heritage-v1.ts",
+] as const;
