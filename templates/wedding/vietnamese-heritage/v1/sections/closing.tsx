@@ -3,31 +3,40 @@ import type { InvitationViewModel } from "../../../../../lib/invitation-renderin
 import { VIETNAMESE_HERITAGE_V1_COPY } from "../copy";
 import styles from "../vietnamese-heritage-v1.module.css";
 import { formatDottedDate } from "./date-text";
-import { SongHy } from "./song-hy";
+import { LotusMark } from "./decor";
+import { SongHySeal } from "./song-hy";
 
-const COPY = VIETNAMESE_HERITAGE_V1_COPY.closing;
+const COPY = VIETNAMESE_HERITAGE_V1_COPY;
 
 /**
- * Task 029 closing: Song Hỷ accent, the fixed thank-you wording, the
- * canonical names and the RF-05C date. The prototype's closing photo has no
- * canonical media role, so VH-01 is typographic (VH-02 question).
+ * Task 029 closing, text-only (VH-02A ruling D5): the gold rule + lotus
+ * divider, the vector Song Hỷ seal, then a lacquer panel with the exact
+ * approved three-line thank-you, the canonical names and the RF-05C date.
+ * No photo: COVER, GALLERY and every other media role are never reused here.
  */
 export function Closing({ people, ceremonyDate }: { people: InvitationViewModel["people"]; ceremonyDate: EventDateTimePresentationV1 }) {
   return (
-    <footer className={styles.closing} aria-label={COPY.heading}>
-      <SongHy />
-      <p className={styles.closingMessage}>
-        {COPY.message.map((line) => (
-          <span key={line} className={styles.closingLine}>
-            {line}
-          </span>
-        ))}
-      </p>
-      <p className={styles.closingNames}>
-        {people.primary.name} <span aria-hidden="true">&amp;</span>
-        <span className={styles.srOnly}>{VIETNAMESE_HERITAGE_V1_COPY.a11y.and}</span> {people.secondary.name}
-      </p>
-      <p className={styles.closingDate}>{formatDottedDate(ceremonyDate)}</p>
+    <footer className={styles.closing} aria-label={COPY.closing.heading}>
+      <div className={styles.closingDivider} aria-hidden="true">
+        <span className={styles.closingDividerRule} />
+        <LotusMark className={styles.closingLotus} />
+        <span className={styles.closingDividerRule} />
+      </div>
+      <SongHySeal />
+      <div className={styles.closingPanel}>
+        <p className={styles.closingMessage}>
+          {COPY.closing.message.map((line) => (
+            <span key={line} className={styles.closingLine}>
+              {line}
+            </span>
+          ))}
+        </p>
+        <p className={styles.closingNames}>
+          {people.primary.name} <span aria-hidden="true">&amp;</span>
+          <span className={styles.srOnly}>{COPY.a11y.and}</span> {people.secondary.name}
+        </p>
+        <p className={styles.closingDate}>{formatDottedDate(ceremonyDate)}</p>
+      </div>
     </footer>
   );
 }

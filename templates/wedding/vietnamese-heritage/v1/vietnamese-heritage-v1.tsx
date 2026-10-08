@@ -4,6 +4,7 @@ import { VIETNAMESE_HERITAGE_V1_FONT_VARIABLES_CLASS_NAME } from "./fonts";
 import { VIETNAMESE_HERITAGE_V1_PALETTE_STYLE } from "./palette";
 import { Ceremonial } from "./sections/ceremonial";
 import { Closing } from "./sections/closing";
+import { VIETNAMESE_HERITAGE_V1_TEXTURE_STYLE } from "./sections/decor";
 import { DressCode } from "./sections/dress-code";
 import { Events } from "./sections/events";
 import { Gallery } from "./sections/gallery";
@@ -14,13 +15,16 @@ import { OpeningCover } from "./sections/opening-cover";
 import { Timeline } from "./sections/timeline";
 import styles from "./vietnamese-heritage-v1.module.css";
 
+/** Palette tokens plus the two paper textures, as renderer-scoped custom properties. */
+const ROOT_STYLE = Object.freeze({ ...VIETNAMESE_HERITAGE_V1_PALETTE_STYLE, ...VIETNAMESE_HERITAGE_V1_TEXTURE_STYLE });
+
 /**
  * Vietnamese Heritage v1 — the second production invitation renderer
  * (`wedding.vietnamese-heritage.v1`; docs/DECISIONS.md "VH-01 — Vietnamese
  * Heritage v1 Production Contract").
  *
- * VH-01 static skeleton. It reads only the frozen RF-05 K6 props:
- * `viewModel` (canonical data with runtime media URLs), `sections` (the only
+ * Static renderer (VH-01 skeleton, VH-02A visuals). It reads only the
+ * frozen RF-05 K6 props: `viewModel` (canonical data with runtime media URLs), `sections` (the only
  * visibility authority for optional sections, K7) and `capabilities`. It
  * never receives a manifest, Snapshot or token, never touches a database,
  * storage, environment, browser global or current time, and computes no
@@ -31,15 +35,29 @@ import styles from "./vietnamese-heritage-v1.module.css";
  * Static only: no hooks, state or effects, and `capabilities` is not read.
  * Absent capability UI is never success: RSVP, countdown, music, the gift
  * dialog with copy, the album lightbox and the split-door opening are the
- * VH-02 interactive islands.
+ * VH-02B interactive islands (`data-island` marks their static entry points).
+ *
+ * Layout media come only from `viewModel.media.templateSlots` (`heroPhoto`,
+ * `portraitCluster`, `loveStoryPhoto`, `gallery`); `media.qr` is the only
+ * other media read (VH-02A).
  *
  * Root order follows the approved direction: Opening → Hero → Ceremonial
- * page (Song Hỷ, families, portraits, invitation, rite) → Events → Timeline →
- * Love Story → Gift → Dress Code → Gallery → Closing.
+ * page (Song Hỷ, families, portraits, invitation, rite, then the venue cards
+ * and timeline on the same sheet) → Love Story → Gift → Dress Code →
+ * Gallery → Closing. Decor comes only from the immutable v1 renderer path.
  */
 export function VietnameseHeritageV1({ viewModel, sections }: InvitationRendererPropsV1) {
   const { people, families, ceremony, content, gift, media, operationalSides } = viewModel;
   const ceremonyDate = deriveEventDateTimePresentationV1(ceremony);
+
+  // TEMPLATE_SLOTS (TE-02/TE-04): the four frozen visual positions are the
+  // only layout media. An absent or empty slot is empty: never a legacy
+  // COVER / PORTRAIT / LOVE_STORY_PHOTO / GALLERY substitute.
+  const slots = media.templateSlots;
+  const heroPhoto = (slots?.heroPhoto ?? [])[0];
+  const portraitCluster = slots?.portraitCluster ?? [];
+  const loveStoryPhoto = (slots?.loveStoryPhoto ?? [])[0];
+  const gallery = slots?.gallery ?? [];
 
   // `sections.*` alone decides visibility. The null checks only narrow the
   // type: RF-04 R9 makes a visible section with null content impossible.
@@ -49,27 +67,27 @@ export function VietnameseHeritageV1({ viewModel, sections }: InvitationRenderer
   return (
     <div
       className={`${VIETNAMESE_HERITAGE_V1_FONT_VARIABLES_CLASS_NAME} ${styles.root}`}
-      style={VIETNAMESE_HERITAGE_V1_PALETTE_STYLE}
+      style={ROOT_STYLE}
       data-renderer="vietnamese-heritage-v1"
       data-variant={viewModel.variant}
     >
       <main className={styles.column}>
         <OpeningCover people={people} ceremonyDate={ceremonyDate} />
-        <Hero people={people} ceremony={ceremony} cover={media.cover} ceremonyDate={ceremonyDate} />
+        <Hero people={people} ceremony={ceremony} photo={heroPhoto} ceremonyDate={ceremonyDate} />
         <Ceremonial
-          people={people}
           families={families}
-          portrait={media.portrait}
+          portraitCluster={portraitCluster}
           ceremony={ceremony}
           ceremonyDate={ceremonyDate}
           guestDisplayName={viewModel.guest?.displayName}
-        />
-        <Events cards={viewModel.ceremonyCards} />
-        {sections.timeline ? <Timeline items={content.timeline} /> : null}
-        {loveStory !== null ? <LoveStory story={loveStory} photo={media.loveStoryPhoto} /> : null}
+        >
+          <Events cards={viewModel.ceremonyCards} />
+          {sections.timeline ? <Timeline items={content.timeline} /> : null}
+        </Ceremonial>
+        {loveStory !== null ? <LoveStory story={loveStory} photo={loveStoryPhoto} /> : null}
         {sections.gift ? <Gift operationalSides={operationalSides} gift={gift} qr={media.qr} /> : null}
         {dressCode !== null ? <DressCode dressCode={dressCode} /> : null}
-        {sections.gallery ? <Gallery gallery={media.gallery} /> : null}
+        {sections.gallery ? <Gallery gallery={gallery} /> : null}
         <Closing people={people} ceremonyDate={ceremonyDate} />
       </main>
     </div>

@@ -3,9 +3,38 @@ import type { InvitationViewModel } from "../../../../../lib/invitation-renderin
 import { VIETNAMESE_HERITAGE_V1_COPY } from "../copy";
 import styles from "../vietnamese-heritage-v1.module.css";
 import { formatDottedDate } from "./date-text";
-import { SongHy } from "./song-hy";
+import { DecorImage } from "./decor";
 
-const COPY = VIETNAMESE_HERITAGE_V1_COPY.opening;
+const COPY = VIETNAMESE_HERITAGE_V1_COPY;
+
+/** One red door: the full cover face, clipped to its half (Task 029 split-door construction). */
+function Door({ side }: { side: "left" | "right" }) {
+  return (
+    <div className={styles.door} data-door={side}>
+      <div className={styles.doorFace}>
+        <span className={styles.doorFrame} />
+        {(["Top", "Bottom"] as const).map((end) => (
+          <DecorImage
+            key={`left-${end}`}
+            decor="borderLeft"
+            className={`${styles.coverBorder} ${styles.coverBorderLeft} ${end === "Top" ? styles.coverBorderTop : styles.coverBorderBottom}`}
+            eager
+          />
+        ))}
+        {(["Top", "Bottom"] as const).map((end) => (
+          <DecorImage
+            key={`right-${end}`}
+            decor="borderRight"
+            className={`${styles.coverBorder} ${styles.coverBorderRight} ${end === "Top" ? styles.coverBorderTop : styles.coverBorderBottom}`}
+            eager
+          />
+        ))}
+        <DecorImage decor="floralTopLeft" className={`${styles.coverFloral} ${styles.coverFloralTopLeft}`} eager />
+        <DecorImage decor="floralBottomRight" className={`${styles.coverFloral} ${styles.coverFloralBottomRight}`} eager />
+      </div>
+    </div>
+  );
+}
 
 interface OpeningCoverProps {
   people: InvitationViewModel["people"];
@@ -13,30 +42,42 @@ interface OpeningCoverProps {
 }
 
 /**
- * Task 029 ceremonial red cover: title, Song Hỷ, the primary/secondary
- * canonical names (explicit side order from the ViewModel) and the RF-05C
- * ceremony weekday/date.
+ * Task 029 ceremonial red double-door cover, CLOSED state (VH-02A static
+ * visual): lacquer paper, gold frame, ceremonial borders, florals, the cover
+ * title, the canonical primary/secondary names (explicit side order), the
+ * RF-05C weekday and date, the Song Hỷ medallion artwork and the hint.
  *
- * VH-01 renders it as a static, non-blocking first panel. The tap-to-open
- * split doors (left/right) with a reduced-motion fallback are a VH-02
- * interactive island; nothing here hides the invitation behind it.
+ * Structure for VH-02B: two decorative door layers (`data-door`) that the
+ * opening island will part left/right, and one content layer above them.
+ * The cover is an in-flow first panel sized with `svh` (fixed-height
+ * fallback first), so nothing hides the invitation until that island
+ * exists; there is no tap target yet.
  */
 export function OpeningCover({ people, ceremonyDate }: OpeningCoverProps) {
   return (
-    <header className={styles.opening} data-opening="static">
-      <p className={styles.openingLabel}>{COPY.label}</p>
-      <SongHy rules={false} />
-      <p className={styles.openingNames}>
-        <span>{people.primary.name}</span>
-        <span className={styles.amp} aria-hidden="true">
-          &amp;
-        </span>
-        <span>{people.secondary.name}</span>
-      </p>
-      <p className={styles.openingDate}>
-        <span className={styles.openingWeekday}>{ceremonyDate.weekday}</span>
-        <span>{formatDottedDate(ceremonyDate)}</span>
-      </p>
+    <header className={styles.opening} data-opening="closed" data-island="opening">
+      <div className={styles.doors} aria-hidden="true">
+        <Door side="left" />
+        <Door side="right" />
+      </div>
+      <div className={styles.coverContent}>
+        <p className={styles.coverTitle}>{COPY.opening.label}</p>
+        <DecorImage decor="divider" className={styles.coverDivider} eager />
+        <p className={styles.coverNames}>
+          <span>{people.primary.name}</span>
+          <span className={styles.coverAmp} aria-hidden="true">
+            &amp;
+          </span>
+          <span className={styles.srOnly}>{COPY.a11y.and}</span>
+          <span>{people.secondary.name}</span>
+        </p>
+        <p className={styles.coverDate}>
+          <span className={styles.coverWeekday}>{ceremonyDate.weekday}</span>
+          <span>{formatDottedDate(ceremonyDate)}</span>
+        </p>
+        <DecorImage decor="medallion" className={styles.coverMedallion} alt={COPY.a11y.songHy} eager />
+        <p className={styles.coverHint}>{COPY.opening.hint}</p>
+      </div>
     </header>
   );
 }

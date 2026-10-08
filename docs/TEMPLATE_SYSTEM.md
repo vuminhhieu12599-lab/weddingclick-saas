@@ -376,6 +376,8 @@ Semantic media stay global: `AUDIO`, `QR_GROOM`, `QR_BRIDE`, `SOCIAL_SHARE_COVER
 
 Switching templates keeps the library and keeps each template version's assignments (switching back restores them). **Implemented by TE-04:** Review/Published Snapshots freeze slot assignments as the additive payload v1 field `media.templateSlots` (exactly every declared slot, ids only, `[]` when empty; legacy layout fields absent and `galleryMediaIds` `[]`), every slot id is pinned in `invitation_version_media`, and the ViewModel exposes `media.templateSlots` (`RESOLVED`/`UNAVAILABLE` per position, in order). `sections.gallery` follows the manifest gallery-linked slot; Love Story visibility stays text-only. Every persisted read validates the stored slots against the pinned editor manifest, fail-closed. Renderers read only that frozen, resolved structure, never assignment rows. Elegant Editorial v1 payloads, media refs and ViewModels are byte-identical (pinned by pre-TE-04 hashes).
 
+**First consumer — Vietnamese Heritage v1 (VH-02A, `docs/DECISIONS.md` "VH-02A").** Slot mapping: `heroPhoto[0]` → framed hero photo (else typographic hero); `portraitCluster` → the approved three-photo cluster by `RESOLVED` count (3 → positions 1 | 2 | 3 with 2 dominant, 2 → balanced pair, 1 → centred, 0 → omitted; `UNAVAILABLE` skipped, never substituted; positional only, identical for every variant, generic alt text); `loveStoryPhoto[0]` → Love Story photo when `RESOLVED`, else text only; `gallery` → album in frozen order with `UNAVAILABLE` as neutral tiles. The renderer never reads a legacy layout role and has no fallback from an empty slot.
+
 ---
 
 ## 12. Editor Constraints
@@ -642,6 +644,8 @@ Initial launch targets:
 - refined red/cream/gold or other curated Vietnamese palettes;
 - avoid dated/saturated “traditional template” clichés;
 - culturally appropriate decorative language.
+
+Status: `wedding.vietnamese-heritage.v1` static production visuals complete (VH-02A): Task 029 heritage-vermilion direction, eight Product Owner-authorized WebP decor derivatives (renderer-specific, ≈ 0.56 MiB), WeddingClick-owned vector Song Hỷ, `TEMPLATE_SLOTS` media (§11a). Not production-ready: interactions (VH-02B), DEV catalog seed + visual QA, RS-01 and certification (§25) remain.
 
 ### Romantic Minimal
 

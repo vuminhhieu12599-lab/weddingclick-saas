@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
@@ -901,7 +902,8 @@ describe("RF-06B decor and provenance (P4–P6)", () => {
 
   it("the production asset path holds exactly the recorded decor set", () => {
     expect(readdirSync(join(REPO_ROOT, "public", "renderers"))).toEqual(["wedding"]);
-    expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding"))).toEqual(["elegant-editorial"]);
+    // VH-02A: the Vietnamese Heritage v1 sibling directory is verified in the VH section below.
+    expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding"))).toEqual(["elegant-editorial", "vietnamese-heritage"]);
     expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding", "elegant-editorial"))).toEqual(["v1"]);
     expect(decorFiles()).toEqual([...DECOR_SVG_FILES, ...DECOR_RASTER_MAX_PIXELS.keys()].sort());
   });
@@ -1692,7 +1694,10 @@ describe("RF-06D interactive files", () => {
 // Production Contract"). The second production renderer gets its own
 // explicit lists and the same strictness as the RF-06A/RF-06B rules above;
 // nothing above is weakened. VH-01 is static: no island, hook, capability
-// read, decor file or motion yet.
+// read, decor file or motion yet. VH-02A (docs/DECISIONS.md "VH-02A …") adds
+// exactly `sections/decor.tsx` (the only module naming decor files and the
+// only inline SVG) and the pure `sections/gallery-layout.ts`, plus the eight
+// authorized WebP derivatives; still static (no hook, island or motion).
 // ===========================================================================
 
 const VH = "templates/wedding/vietnamese-heritage/v1";
@@ -1703,6 +1708,7 @@ const VH01_MEDIA_IMAGE = `${VH}/sections/media-image.tsx`;
 const VH01_SECTIONS = [
   "ceremonial",
   "closing",
+  "decor",
   "dress-code",
   "events",
   "gallery",
@@ -1721,6 +1727,7 @@ const VH01_RENDERER_FILES = [
 const VH01_CODE_FILES = [
   ...VH01_RENDERER_FILES,
   `${VH}/sections/date-text.ts`,
+  `${VH}/sections/gallery-layout.ts`,
   `${VH}/copy.ts`,
   `${VH}/palette.ts`,
   VH01_FONTS,
@@ -1734,7 +1741,23 @@ const VH_SECTION_COMMON = [`${VH}/copy`, VH_CSS];
 const VH_TYPES = `${LIB}/invitation-view-model-types`;
 const VH_DATE = `${LIB}/event-date-time-presentation`;
 
-/** Exact import allowlist per VH-01 code file (repository-relative, no extension; CSS keeps its extension). */
+const VH_DECOR = `${VH}/sections/decor`;
+const VH_DECOR_FILE = `${VH_DECOR}.tsx`;
+/** VH-02A: the eight Product Owner-authorized WebP derivatives (on disk and as public URLs). */
+const VH_DECOR_DIR = "public/renderers/wedding/vietnamese-heritage/v1";
+const VH_DECOR_URL = "/renderers/wedding/vietnamese-heritage/v1/";
+const VH_DECOR_FILES = [
+  "border-left.webp",
+  "border-right.webp",
+  "floral-bottom-right.webp",
+  "floral-top-left.webp",
+  "gold-divider.webp",
+  "medallion-double-happiness.webp",
+  "paper-ivory.webp",
+  "paper-red.webp",
+] as const;
+
+/** Exact import allowlist per VH code file (repository-relative, no extension; CSS keeps its extension). */
 const VH01_ALLOWED_IMPORTS: Readonly<Record<string, readonly string[]>> = {
   [VH01_ROOT]: [
     VH_DATE,
@@ -1742,6 +1765,7 @@ const VH01_ALLOWED_IMPORTS: Readonly<Record<string, readonly string[]>> = {
     `${VH}/fonts`,
     `${VH}/palette`,
     VH_CSS,
+    VH_DECOR,
     ...["ceremonial", "closing", "dress-code", "events", "gallery", "gift", "hero", "love-story", "opening-cover", "timeline"].map(
       (section) => `${VH}/sections/${section}`,
     ),
@@ -1750,32 +1774,28 @@ const VH01_ALLOWED_IMPORTS: Readonly<Record<string, readonly string[]>> = {
   [`${VH}/palette.ts`]: ["react"],
   [VH01_FONTS]: ["next/font/google"],
   [`${VH}/sections/date-text.ts`]: [VH_DATE],
+  [`${VH}/sections/gallery-layout.ts`]: [],
   [VH01_MEDIA_IMAGE]: [VH_TYPES],
-  [`${VH}/sections/song-hy.tsx`]: VH_SECTION_COMMON,
-  [`${VH}/sections/opening-cover.tsx`]: [VH_DATE, VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/date-text`, `${VH}/sections/song-hy`],
-  [`${VH}/sections/hero.tsx`]: [
-    VH_DATE,
-    VH_TYPES,
-    ...VH_SECTION_COMMON,
-    `${VH}/sections/date-text`,
-    `${VH}/sections/media-image`,
-    `${VH}/sections/song-hy`,
-  ],
+  [VH_DECOR_FILE]: [VH_CSS],
+  [`${VH}/sections/song-hy.tsx`]: [...VH_SECTION_COMMON, VH_DECOR],
+  [`${VH}/sections/opening-cover.tsx`]: [VH_DATE, VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/date-text`, VH_DECOR],
+  [`${VH}/sections/hero.tsx`]: [VH_DATE, VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/date-text`, VH_DECOR, `${VH}/sections/media-image`],
   [`${VH}/sections/ceremonial.tsx`]: [
+    "react",
     VH_DATE,
     VH_TYPES,
-    `${LIB}/wedding-domain-types`,
     ...VH_SECTION_COMMON,
+    VH_DECOR,
     `${VH}/sections/media-image`,
     `${VH}/sections/song-hy`,
   ],
   [`${VH}/sections/events.tsx`]: [VH_DATE, VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/date-text`],
   [`${VH}/sections/timeline.tsx`]: [VH_TYPES, ...VH_SECTION_COMMON],
   [`${VH}/sections/love-story.tsx`]: [VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/media-image`],
-  [`${VH}/sections/gift.tsx`]: [VH_TYPES, `${LIB}/wedding-domain-types`, ...VH_SECTION_COMMON, `${VH}/sections/media-image`],
+  [`${VH}/sections/gift.tsx`]: [VH_TYPES, `${LIB}/wedding-domain-types`, ...VH_SECTION_COMMON, VH_DECOR, `${VH}/sections/media-image`],
   [`${VH}/sections/dress-code.tsx`]: [VH_TYPES, ...VH_SECTION_COMMON],
-  [`${VH}/sections/gallery.tsx`]: [VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/media-image`],
-  [`${VH}/sections/closing.tsx`]: [VH_DATE, VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/date-text`, `${VH}/sections/song-hy`],
+  [`${VH}/sections/gallery.tsx`]: [VH_TYPES, ...VH_SECTION_COMMON, VH_DECOR, `${VH}/sections/gallery-layout`, `${VH}/sections/media-image`],
+  [`${VH}/sections/closing.tsx`]: [VH_DATE, VH_TYPES, ...VH_SECTION_COMMON, `${VH}/sections/date-text`, VH_DECOR, `${VH}/sections/song-hy`],
 };
 
 /** VH-01 additions to the RF-06B forbidden list: static renderer, own graph only. */
@@ -1787,7 +1807,9 @@ const VH01_EXTRA_FORBIDDEN: readonly [string, RegExp][] = [
   ["RSVP contract", /rsvp-capability|RsvpCapability/],
   ["raw Snapshot / payload", /snapshot-payload|SnapshotPayload|\bsnapshot\b/],
   ["design key branching", /paletteKey|fontPresetKey|effectPresetKey/],
-  ["decor or prototype asset path", /\/renderers\/|\/prototypes\/|\.png["'`]|\.webp["'`]|\.svg["'`]/],
+  // VH-02A: decor paths are allowed only in sections/decor.tsx (exact rule below); prototype paths nowhere.
+  ["prototype asset path or PNG/SVG file", /\/prototypes\/|\.png["'`]|\.svg["'`]/],
+  ["Unicode Song Hỷ glyph (vector geometry only)", /囍/],
   ["demo/prototype content", /demo|DEMO_|PrototypeWeddingData|wedding-data|Sơn Trà|sông Hàn|A Thousand Years/],
   ["next/image", /next\/image/],
   ["IntersectionObserver / matchMedia / animation", /IntersectionObserver|matchMedia|framer|animate/],
@@ -1865,22 +1887,58 @@ describe("VH-01 Vietnamese Heritage v1 files", () => {
     }
   });
 
-  it("<img> only in the shared media element; no literal src/href and no file-backed decor", () => {
+  it("<img> only in the media element and decor module; <svg> only in decor; no literal src/href", () => {
     for (const file of VH01_CODE_FILES) {
       const code = codeOf(file);
-      expect(/<img\b/.test(code), file).toBe(file === VH01_MEDIA_IMAGE);
-      expect(/<image\b|<svg\b/.test(code), file).toBe(false);
+      expect(/<img\b/.test(code), file).toBe(file === VH01_MEDIA_IMAGE || file === VH_DECOR_FILE);
+      expect(/<svg\b/.test(code), file).toBe(file === VH_DECOR_FILE);
+      expect(/<image\b|<text\b|<use\b|xlink:href/.test(code), file).toBe(false);
       expect(code, file).not.toMatch(/\s(?:src|href)="[^"]*"/);
     }
     expect(codeOf(VH01_MEDIA_IMAGE)).toMatch(/src=\{media\.url\}/);
-    expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding"))).not.toContain("vietnamese-heritage");
+    expect(codeOf(VH_DECOR_FILE)).toMatch(/src=\{DECOR_SRC\[decor\]\}/);
   });
 
-  it("the provenance note records the asset audit, the VH-02 blocker and no shipped decor", () => {
+  it("decor paths appear only in decor.tsx, each an exact literal under the immutable v1 renderer path", () => {
+    for (const file of VH01_CODE_FILES) {
+      const code = codeOf(file);
+      expect(/\/renderers\/|\.webp\b/.test(code), file).toBe(file === VH_DECOR_FILE);
+    }
+    const decor = codeOf(VH_DECOR_FILE);
+    const paths = [...decor.matchAll(/["'(]((?:\/[\w.-]+)+\.webp)["')]/g)].map((match) => match[1]);
+    expect([...decor.matchAll(/\/renderers\//g)]).toHaveLength(paths.length);
+    for (const path of paths) expect(path.startsWith(VH_DECOR_URL), path).toBe(true);
+    expect(paths.map((path) => path.slice(VH_DECOR_URL.length)).sort()).toStrictEqual([...VH_DECOR_FILES].sort());
+    // Built from literals only: no template literal or concatenation produces a path.
+    expect(decor).not.toMatch(/`[^`]*\/renderers|\/renderers[^"]*"\s*\+/);
+  });
+
+  it("VH-02A media model: layout media only from viewModel.media.templateSlots; never a legacy layout role", () => {
+    const LEGACY = /media\.(cover|gallery|portrait|loveStoryPhoto|photoStory)\b|\bportrait\.(groom|bride)\b|\bmedia\.cover\b/;
+    for (const file of VH01_CODE_FILES) {
+      expect(LEGACY.test(codeOf(file)), file).toBe(false);
+    }
+    const root = codeOf(VH01_ROOT);
+    expect(root).toMatch(/const slots = media\.templateSlots;/);
+    for (const slot of ["heroPhoto", "portraitCluster", "loveStoryPhoto", "gallery"]) {
+      expect(root, slot).toMatch(new RegExp(`slots\\?\\.${slot} \\?\\? \\[\\]`));
+    }
+    // The only other media read is the semantic QR.
+    expect([...root.matchAll(/\bmedia\.(\w+)/g)].map((match) => match[1]).sort()).toStrictEqual(["qr", "templateSlots"]);
+    // No slot falls back to another role or slot.
+    expect(root).not.toMatch(/\?\?\s*media\./);
+    // Portrait positions carry no person or side semantics.
+    const ceremonial = codeOf(`${VH}/sections/ceremonial.tsx`);
+    expect(ceremonial).not.toMatch(/portraitOf|person\.side|ViewModelPerson|CoupleSide|data-side=\{person/);
+    expect(ceremonial).toMatch(/data-position=\{position\}/);
+  });
+
+  it("the provenance note records the Product Owner authorization, sources, derivatives and hashes", () => {
     const note = readRepoFile(VH01_PROVENANCE_FILE);
-    for (const required of ["Source:", "Author / owner:", "Rights basis:", "Task 029", "VH-01", "VH-02", "BLOCKER"]) {
+    for (const required of ["Source:", "Author / owner:", "Rights basis:", "Task 029", "VH-02A", "Allowed production use:** `wedding.vietnamese-heritage.v1`"]) {
       expect(note, required).toContain(required);
     }
+    expect(note).not.toMatch(/BLOCKER for VH-02|not shipped; VH-02 blocker|are \*\*not\*\* copied into\s+production/);
     for (const file of [
       "heritage-border-left.png",
       "heritage-border-right.png",
@@ -1895,6 +1953,77 @@ describe("VH-01 Vietnamese Heritage v1 files", () => {
     ]) {
       expect(note, file).toMatch(new RegExp(`^\\| \`${file.replace(/[.]/g, "\\.")}\` \\|`, "m"));
     }
+    for (const file of VH_DECOR_FILES) {
+      const bytes = readFileSync(join(REPO_ROOT, VH_DECOR_DIR, file));
+      const sha = createHash("sha256").update(bytes).digest("hex");
+      const row = note.match(new RegExp(`^\\| \`${file.replace(/[.]/g, "\\.")}\` \\|.*$`, "m"))?.[0];
+      expect(row, file).toBeDefined();
+      expect(row, file).toContain(`| ${String(bytes.length)} |`);
+      expect(row, file).toContain(sha);
+    }
+  });
+});
+
+describe("VH-02A decor files", () => {
+  /** RIFF/WebP chunk ids and canvas size (VP8X, else the VP8/VP8L bitstream header). */
+  function webpInfo(bytes: Buffer): { ids: string[]; width: number; height: number } {
+    expect(bytes.subarray(0, 4).toString("latin1")).toBe("RIFF");
+    expect(bytes.subarray(8, 12).toString("latin1")).toBe("WEBP");
+    expect(bytes.readUInt32LE(4) + 8).toBe(bytes.length);
+    const ids: string[] = [];
+    let width = 0;
+    let height = 0;
+    for (let offset = 12; offset < bytes.length; ) {
+      const id = bytes.subarray(offset, offset + 4).toString("latin1");
+      const size = bytes.readUInt32LE(offset + 4);
+      const data = offset + 8;
+      ids.push(id);
+      if (id === "VP8X") {
+        width = bytes.readUIntLE(data + 4, 3) + 1;
+        height = bytes.readUIntLE(data + 7, 3) + 1;
+      } else if (id === "VP8 " && width === 0) {
+        width = bytes.readUInt16LE(data + 6) & 0x3fff;
+        height = bytes.readUInt16LE(data + 8) & 0x3fff;
+      } else if (id === "VP8L" && width === 0) {
+        const bits = bytes.readUInt32LE(data + 1);
+        width = (bits & 0x3fff) + 1;
+        height = ((bits >>> 14) & 0x3fff) + 1;
+      }
+      offset = data + size + (size % 2);
+    }
+    return { ids, width, height };
+  }
+
+  const read = (file: string): Buffer => readFileSync(join(REPO_ROOT, VH_DECOR_DIR, file));
+
+  it("the v1 directory holds exactly the eight authorized derivatives (no lantern, no corner ornament)", () => {
+    expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding", "vietnamese-heritage"))).toStrictEqual(["v1"]);
+    expect(readdirSync(join(REPO_ROOT, VH_DECOR_DIR)).sort()).toStrictEqual([...VH_DECOR_FILES]);
+  });
+
+  it("every file is a metadata-free WebP whose canvas matches the size reserved in decor.tsx", () => {
+    const decor = codeOf(VH_DECOR_FILE);
+    const urlByKey = new Map([...decor.matchAll(/(\w+): "\/renderers\/wedding\/vietnamese-heritage\/v1\/([\w-]+\.webp)"/g)].map((match) => [match[1], match[2]]));
+    const sizeByFile = new Map(
+      [...decor.matchAll(/(\w+): \[(\d+), (\d+)\]/g)].map((match) => [urlByKey.get(match[1] as string), [Number(match[2]), Number(match[3])]]),
+    );
+    for (const file of VH_DECOR_FILES) {
+      const { ids, width, height } = webpInfo(read(file));
+      expect(ids.filter((id) => !["VP8X", "ALPH", "VP8 ", "VP8L"].includes(id)), file).toStrictEqual([]);
+      expect(ids.some((id) => id === "VP8 " || id === "VP8L"), file).toBe(true);
+      if (file.startsWith("paper-")) {
+        // Textures are painted via CSS custom properties, not <img>.
+        expect([width, height], file).toStrictEqual([1240, 1240]);
+      } else {
+        expect([width, height], file).toStrictEqual(sizeByFile.get(file));
+      }
+    }
+  });
+
+  it("total decor weight stays the recorded ~0.56 MiB, well under the ~1 MiB P6 budget", () => {
+    const total = VH_DECOR_FILES.reduce((sum, file) => sum + read(file).length, 0);
+    expect(total).toBe(592382);
+    expect(total).toBeLessThan(1024 * 1024);
   });
 });
 
@@ -1917,13 +2046,23 @@ describe("VH-01 renderer CSS", () => {
     expect(pattern.test(cssCode)).toBe(false);
   });
 
-  it("uses only palette variables declared in palette.ts and the three renderer font variables", () => {
+  it("uses only palette variables, the three font variables, the two decor textures and its own local properties", () => {
     const palette = codeOf(`${VH}/palette.ts`);
     const declared = new Set([...palette.matchAll(/"(--vh-[a-z-]+)": "#[0-9a-f]{6}"/g)].map((match) => match[1]));
     expect(declared.size).toBeGreaterThan(5);
     const fontVariables = ["--vh-font-serif", "--vh-font-display", "--vh-font-script"];
+    // VH-02A: the paper textures are set only by sections/decor.tsx.
+    const textures = [...codeOf(VH_DECOR_FILE).matchAll(/"(--vh-texture-[a-z]+)": 'url\("\/renderers\/wedding\/vietnamese-heritage\/v1\/[\w-]+\.webp"\)'/g)].map(
+      (match) => match[1] as string,
+    );
+    expect(textures.sort()).toStrictEqual(["--vh-texture-ivory", "--vh-texture-red"]);
+    // Layout helpers declared inside this CSS module (never colours).
+    const local = new Set([...cssCode.matchAll(/(?:^|[;{\s])(--[\w-]+)\s*:/g)].map((match) => match[1]));
+    for (const variable of local) expect(declared.has(variable) || textures.includes(variable as string), variable).toBe(false);
     for (const [, variable] of cssCode.matchAll(/var\((--[\w-]+)\)/g)) {
-      expect(declared.has(variable) || fontVariables.includes(variable as string), variable).toBe(true);
+      expect(declared.has(variable) || fontVariables.includes(variable as string) || textures.includes(variable as string) || local.has(variable), variable).toBe(
+        true,
+      );
     }
   });
 

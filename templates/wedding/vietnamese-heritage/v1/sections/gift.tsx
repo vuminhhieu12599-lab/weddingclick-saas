@@ -6,6 +6,7 @@ import type {
 import type { CoupleSide } from "../../../../../lib/invitation-rendering/wedding-domain-types";
 import { VIETNAMESE_HERITAGE_V1_COPY } from "../copy";
 import styles from "../vietnamese-heritage-v1.module.css";
+import { LotusMark } from "./decor";
 import { MediaImage } from "./media-image";
 
 const COPY = VIETNAMESE_HERITAGE_V1_COPY;
@@ -45,12 +46,14 @@ interface GiftProps {
 }
 
 /**
- * Task 029 Wedding Gift, VH-01 static form: the fixed intro note, then one
- * panel per operational side (given order) with that side's canonical bank
- * name, holder and account number and its own `media.qr.<side>` only when
- * `RESOLVED`. Null lines are omitted; a side without content is not shown.
- * There is no common QR (RF13). The tap-to-open dialog and the copy control
- * (`capabilities.clipboard`) are the VH-02 interactive island.
+ * Task 029 Wedding Gift, VH-02A static entry/preview composition: the lotus,
+ * the gift title and the fixed intro note on ivory paper, then one panel per
+ * operational side (given order) styled as the approved gift card: that
+ * side's own `media.qr.<side>` in a white QR plate only when `RESOLVED`, and
+ * its canonical bank, holder and account-number lines (null lines omitted;
+ * a side without content is not shown; no common QR, RF13). The tap-to-open
+ * dialog, Nhà Trai / Nhà Gái tabs and the copy control
+ * (`capabilities.clipboard`) are the VH-02B island.
  */
 export function Gift({ operationalSides, gift, qr }: GiftProps) {
   const panels = operationalSides
@@ -58,26 +61,29 @@ export function Gift({ operationalSides, gift, qr }: GiftProps) {
     .filter((panel) => panel.qr?.status === "RESOLVED" || giftLines(panel.gift).length > 0);
 
   return (
-    <section className={styles.gift} aria-labelledby="vh-gift-heading">
-      <h2 id="vh-gift-heading" className={styles.sectionTitle}>
+    <section className={styles.gift} aria-labelledby="vh-gift-heading" data-island="gift">
+      <LotusMark className={styles.giftLotus} />
+      <h2 id="vh-gift-heading" className={styles.giftTitle}>
         {COPY.gift.heading}
       </h2>
       <p className={styles.giftIntro}>{COPY.gift.intro}</p>
       {panels.map((panel) => (
         <div key={panel.side} className={styles.giftPanel} data-side={panel.side}>
-          {panels.length > 1 ? <h3 className={styles.giftSide}>{COPY.ceremonial.labelBySide[panel.side]}</h3> : null}
+          <h3 className={styles.giftSide}>{COPY.ceremonial.labelBySide[panel.side]}</h3>
           {panel.qr?.status === "RESOLVED" ? (
-            <MediaImage
-              media={panel.qr}
-              alt={`${COPY.gift.qrAlt} ${COPY.ceremonial.labelBySide[panel.side]}`}
-              className={styles.giftQr}
-            />
+            <div className={styles.giftQr}>
+              <MediaImage
+                media={panel.qr}
+                alt={`${COPY.gift.qrAlt} ${COPY.ceremonial.labelBySide[panel.side]}`}
+                className={styles.giftQrImage}
+              />
+            </div>
           ) : null}
           <dl className={styles.giftLines}>
             {giftLines(panel.gift).map((line) => (
               <div key={line.key} className={styles.giftLine} data-line={line.key}>
                 <dt>{line.label}</dt>
-                <dd>{line.value}</dd>
+                <dd className={line.key === "accountNumber" ? styles.giftAccountNumber : undefined}>{line.value}</dd>
               </div>
             ))}
           </dl>

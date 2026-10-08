@@ -2,17 +2,21 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { INVITATION_VARIANTS, type InvitationVariant } from "../../../../../lib/domain";
+import { deriveEventDateTimePresentationV1 } from "../../../../../lib/invitation-rendering/event-date-time-presentation";
 import type { InvitationViewModel } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
 import type { InvitationRendererCapabilitiesV1 } from "../../../../../lib/invitation-rendering/renderer-capabilities";
 import { RendererSelectionError, RendererSelectionInvariantError } from "../../../../../lib/invitation-rendering/renderer-selection-errors";
 import type { RendererEffectiveSections } from "../../../../../lib/invitation-rendering/renderer-selection";
-import type { BuildSnapshotPayloadInput } from "../../../../../lib/invitation-rendering/snapshot-payload-types";
+import type { BuildSnapshotPayloadInput, SnapshotMediaSource } from "../../../../../lib/invitation-rendering/snapshot-payload-types";
+import { buildTemplateMediaSource } from "../../../../../lib/server/invitation-snapshot/build-template-media-source";
+import type { TemplateMediaSlotItem } from "../../../../../lib/server/template-media/template-media-slot-types";
 import { createFixtureMediaResolver, fixtureMediaUrl } from "../../../../core/fixtures/fixture-media-resolver";
 import { runRendererFixturePipeline, type RendererFixture } from "../../../../core/fixtures/renderer-fixture-pipeline";
 import {
   FIXTURE_GUESTS,
   FIXTURE_MEDIA_IDS,
   FIXTURE_PHOTO_STORY_IDS,
+  FIXTURE_PROJECT_ID,
   buildRendererFixtureSourceInput,
   type RendererFixtureSourceOptions,
 } from "../../../../core/fixtures/renderer-fixture-sources";
@@ -27,6 +31,7 @@ import {
   composeProductionRendererKey,
   validateRendererProductionManifest,
 } from "../../../../core/renderer-manifest";
+import { VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST } from "../../../../editor/wedding/vietnamese-heritage-v1";
 import { ELEGANT_EDITORIAL_V1_MANIFEST } from "../../../elegant-editorial/v1/manifest";
 import { VIETNAMESE_HERITAGE_V1_MANIFEST } from "../manifest";
 
@@ -42,11 +47,13 @@ const { InvitationRendererHost } = await import("../../../../core/invitation-ren
 const { VIETNAMESE_HERITAGE_V1_COPY: COPY } = await import("../copy");
 
 /**
- * VH-01 — Vietnamese Heritage v1 identity, compatibility, registry
- * coexistence and canonical mapping (docs/DECISIONS.md "VH-01 …"). Every
- * ViewModel comes from the real RF-02 → RF-03 → RF-04 fixture pipeline; the
- * fixture is the shared deterministic canonical one, re-bound to the VH
- * identity exactly as a staff design assignment would bind it.
+ * VH-01 / VH-02A — Vietnamese Heritage v1 identity, compatibility, registry
+ * coexistence, canonical mapping and TEMPLATE_SLOTS media (docs/DECISIONS.md
+ * "VH-01 …", "VH-02A …"). Every ViewModel comes from the real pipeline:
+ * canonical fixture records + slot rows → TE-04 `buildTemplateMediaSource`
+ * (validated against the VH editor manifest) → RF-02 Snapshot → RF-03 media
+ * resolution → InvitationViewModel → RF-04 selection. Slot data is never
+ * hand-built into a ViewModel.
  */
 
 const VH_KEY = "wedding.vietnamese-heritage.v1";
@@ -65,12 +72,56 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** The shared canonical fixture input, bound to the Vietnamese Heritage v1 identity and design keys. */
-function vhSource(options: RendererFixtureSourceOptions): BuildSnapshotPayloadInput {
+/** Staff-library PHOTO rows assignable to template slots (TE-03A). */
+const PHOTO = Object.freeze({
+  P1: "00000000-0000-4000-8000-0000000004a1",
+  P2: "00000000-0000-4000-8000-0000000004a2",
+  P3: "00000000-0000-4000-8000-0000000004a3",
+  P4: "00000000-0000-4000-8000-0000000004a4",
+  P5: "00000000-0000-4000-8000-0000000004a5",
+  P6: "00000000-0000-4000-8000-0000000004a6",
+});
+
+type SlotAssignments = Partial<Record<"heroPhoto" | "portraitCluster" | "loveStoryPhoto" | "gallery", readonly string[]>>;
+
+/**
+ * The default VH slot assignment: hero 1, cluster 3, love story 1, gallery 4.
+ * Overlap is deliberate: P1 (hero) and P3 (cluster position 2) also sit in
+ * the gallery, and GALLERY_2 is a legacy-typed row assigned explicitly.
+ */
+const VH_SLOTS: SlotAssignments = Object.freeze({
+  heroPhoto: [PHOTO.P1],
+  portraitCluster: [PHOTO.P2, PHOTO.P3, PHOTO.P4],
+  loveStoryPhoto: [PHOTO.P5],
+  gallery: [PHOTO.P6, PHOTO.P3, PHOTO.P1, FIXTURE_MEDIA_IDS.GALLERY_2],
+});
+
+function slotRows(assignments: SlotAssignments): TemplateMediaSlotItem[] {
+  return Object.entries(assignments).flatMap(([slotKey, ids]) =>
+    (ids ?? []).map((projectMediaId, position) => ({ slotKey, position, projectMediaId })),
+  );
+}
+
+/**
+ * The shared canonical fixture input, bound to the Vietnamese Heritage v1
+ * identity and design keys, with the PHOTO rows added to the Project media
+ * library. `slots` → TE-04 template media; `null` → a LEGACY_ROLES payload
+ * (no `templateMedia`), used only to prove the renderer never reads legacy
+ * layout roles.
+ */
+function vhSource(options: RendererFixtureSourceOptions, slots: SlotAssignments | null = VH_SLOTS): BuildSnapshotPayloadInput {
   const input = buildRendererFixtureSourceInput(options);
   const { design, compatibility } = VIETNAMESE_HERITAGE_V1_MANIFEST;
-  return {
+  const photos: SnapshotMediaSource[] = Object.values(PHOTO).map((id, index) => ({
+    id,
+    projectId: FIXTURE_PROJECT_ID,
+    mediaType: "PHOTO",
+    sortOrder: index,
+  }));
+  const media = [...input.media, ...photos];
+  const source: BuildSnapshotPayloadInput = {
     ...input,
+    media,
     design: {
       ...input.design,
       paletteKey: design.palettes[0] as string,
@@ -79,16 +130,21 @@ function vhSource(options: RendererFixtureSourceOptions): BuildSnapshotPayloadIn
     },
     templateVersion: { ...input.templateVersion, rendererKey: compatibility.rendererKey },
   };
+  return slots === null
+    ? source
+    : { ...source, templateMedia: buildTemplateMediaSource(VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST, slotRows(slots), media) };
 }
 
 interface VhRenderOptions extends RendererFixtureSourceOptions {
   guest?: { displayName: string };
   unavailableMediaIds?: readonly string[];
+  /** Defaults to `VH_SLOTS`; `null` builds a LEGACY_ROLES payload. */
+  slots?: SlotAssignments | null;
 }
 
 async function vhFixture(options: VhRenderOptions): Promise<RendererFixture> {
-  const { guest, unavailableMediaIds, ...sourceOptions } = options;
-  return runRendererFixturePipeline(vhSource(sourceOptions), {
+  const { guest, unavailableMediaIds, slots, ...sourceOptions } = options;
+  return runRendererFixturePipeline(vhSource(sourceOptions, slots === undefined ? VH_SLOTS : slots), {
     resolver: createFixtureMediaResolver(unavailableMediaIds === undefined ? {} : { unavailableMediaIds }),
     ...(guest === undefined ? {} : { guest }),
   });
@@ -105,6 +161,31 @@ async function renderVh(options: VhRenderOptions): Promise<{ html: string; fixtu
 
 function count(html: string, needle: string): number {
   return html.split(needle).length - 1;
+}
+
+/** `src="<fixture url>"` of a media id (React may also hoist an eager image into a preload `<link>`). */
+function src(mediaId: string): string {
+  return `src="${fixtureMediaUrl(mediaId)}"`;
+}
+
+/** Media ids of every rendered fixture `<img src>`, in document order. */
+function imageIds(html: string): string[] {
+  const prefix = fixtureMediaUrl("");
+  return [...html.matchAll(/<img [^>]*src="([^"]+)"/g)]
+    .map((match) => match[1] as string)
+    .filter((url) => url.startsWith(prefix))
+    .map((url) => decodeURIComponent(url.slice(prefix.length)));
+}
+
+/** The portrait-cluster markup (empty when the cluster is omitted). */
+function clusterOf(html: string): string {
+  const start = html.indexOf("portraitRow");
+  return start === -1 ? "" : html.slice(start, html.indexOf("inviteBlock", start));
+}
+
+/** Slot positions of the rendered portrait frames, in document order. */
+function clusterPositions(html: string): string[] {
+  return [...clusterOf(html).matchAll(/data-position="(\d)"/g)].map((match) => match[1] as string);
 }
 
 /** A deliberately mutable view of a manifest copy, for malformed-manifest cases only. */
@@ -201,9 +282,10 @@ describe("B. compatibility", () => {
     const { selection, viewModel } = await vhFixture({ variant, photoStory: "PRESENT" });
     expect(selection.rendererKey).toBe(VH_KEY);
     expect(viewModel.template.rendererKey).toBe(VH_KEY);
-    // Not capable: canonical content never becomes visible.
-    expect(viewModel.sections.photoStory).toBe(true);
+    // TEMPLATE_SLOTS never reads legacy PHOTO_STORY rows, and the section is not capable anyway.
+    expect(viewModel.sections.photoStory).toBe(false);
     expect(selection.effectiveSections.photoStory).toBe(false);
+    // Not capable: canonical content never becomes visible.
     expect(viewModel.sections.invitationMessage).toBe(true);
     expect(selection.effectiveSections.invitationMessage).toBe(false);
   });
@@ -411,6 +493,18 @@ describe("E. canonical mapping", () => {
     expect(html).toContain(COPY.ceremonial.salutation);
   });
 
+  it("VH-02A ruling D3: exact generic guest and salutation copy; a personalized display name is verbatim", async () => {
+    expect(COPY.ceremonial.defaultGuest).toBe("Bạn và Gia Đình");
+    expect(COPY.ceremonial.salutation).toBe("Trân Trọng Kính Mời");
+    const generic = await renderVh({ variant: "BRIDE" });
+    expect(generic.html).toContain(">Bạn và Gia Đình</p>");
+    expect(generic.html).toContain(">Trân Trọng Kính Mời</p>");
+    const playful = await renderVh({ variant: "GROOM", guest: { displayName: "Em và sự cô đơn" } });
+    expect(playful.html).toContain(">Em và sự cô đơn</p>");
+    expect(playful.html).not.toContain("Bạn và Gia Đình");
+    expect(playful.html).toContain(">Trân Trọng Kính Mời</p>");
+  });
+
   it("the canonical invitation message is never rendered (not capable)", async () => {
     const { html, fixture } = await renderVh({ variant: "COMMON" });
     expect(fixture.viewModel.content.invitationMessage).not.toBeNull();
@@ -433,6 +527,27 @@ describe("E. canonical mapping", () => {
     expect(groom.html).not.toMatch(/class="[^"]*venueSide/);
   });
 
+  it("VH-02A ruling D4: venue card title from the explicit side; canonical event and card titles unchanged", async () => {
+    expect(COPY.events.cardTitleBySide).toStrictEqual({ GROOM: "Tiệc mừng lễ thành hôn", BRIDE: "Tiệc mừng lễ vu quy" });
+    const titles = (html: string) => [...html.matchAll(/class="[^"]*venueTitle[^"]*">([^<]+)</g)].map((match) => match[1]);
+    const common = await renderVh({ variant: "COMMON" });
+    expect(titles(common.html)).toStrictEqual(["Tiệc mừng lễ thành hôn", "Tiệc mừng lễ vu quy"]);
+    expect(titles((await renderVh({ variant: "GROOM" })).html)).toStrictEqual(["Tiệc mừng lễ thành hôn"]);
+    const bride = await renderVh({ variant: "BRIDE" });
+    expect(titles(bride.html)).toStrictEqual(["Tiệc mừng lễ vu quy"]);
+    // Presentation only: the ViewModel and the canonical input keep their own titles.
+    const cards = common.fixture.viewModel.ceremonyCards;
+    expect(cards.map((card) => card.title)).toStrictEqual(["Lễ Thành Hôn", "Lễ Vu Quy"]);
+    expect(cards.map((card) => card.event.title)).toStrictEqual(["Lễ Thành Hôn tại tư gia nhà trai", "Lễ Vu Quy tại tư gia nhà gái"]);
+    const sourceTitles = vhSource({ variant: "COMMON" }).events.map((event) => event.title);
+    expect(sourceTitles).toContain("Lễ Thành Hôn tại tư gia nhà trai");
+    expect(sourceTitles).toContain("Lễ Vu Quy tại tư gia nhà gái");
+    expect(bride.fixture.viewModel.ceremony.title).toBe("Lễ Vu Quy");
+    // Canonical venue, address and map stay.
+    expect(common.html).toContain("Tư gia nhà trai");
+    expect(common.html).toContain('href="https://maps.example.invalid/bride-home"');
+  });
+
   it("timeline: canonical steps in order when effective; hidden by staff setting or absence", async () => {
     const { html } = await renderVh({ variant: "COMMON" });
     const welcome = html.indexOf("Đón khách");
@@ -443,59 +558,17 @@ describe("E. canonical mapping", () => {
     expect((await renderVh({ variant: "COMMON", sectionSettings: { timeline: false } })).html).not.toContain("Đón khách");
   });
 
-  it("media slots: cover, portraits (primary first), love-story photo, gallery and QR render their RESOLVED URLs only", async () => {
+  it("semantic media: both QR codes render; PHOTO_STORY and audio never become elements", async () => {
     const { html, fixture } = await renderVh(ALL_MEDIA);
-    expect(html).toContain(`src="${fixtureMediaUrl(FIXTURE_MEDIA_IDS.COVER)}"`);
-    expect(html).toContain('data-cover="photo"');
-    const groomPortrait = html.indexOf(fixtureMediaUrl(FIXTURE_MEDIA_IDS.PORTRAIT_GROOM));
-    const bridePortrait = html.indexOf(fixtureMediaUrl(FIXTURE_MEDIA_IDS.PORTRAIT_BRIDE));
-    expect(groomPortrait).toBeGreaterThan(-1);
-    expect(bridePortrait).toBeGreaterThan(groomPortrait);
-    expect(html).toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.LOVE_STORY_PHOTO));
-    for (const id of [FIXTURE_MEDIA_IDS.GALLERY_1, FIXTURE_MEDIA_IDS.GALLERY_2, FIXTURE_MEDIA_IDS.GALLERY_3]) {
-      expect(count(html, fixtureMediaUrl(id))).toBe(1);
-    }
-    expect(html).toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.QR_GROOM));
-    expect(html).toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.QR_BRIDE));
-    // PHOTO_STORY is referenced but VH v1 is not capable: never rendered, never reused.
-    expect(fixture.viewModel.media.photoStory).toHaveLength(FIXTURE_PHOTO_STORY_IDS.length);
+    expect(html).toContain(src(FIXTURE_MEDIA_IDS.QR_GROOM));
+    expect(html).toContain(src(FIXTURE_MEDIA_IDS.QR_BRIDE));
+    // TEMPLATE_SLOTS: legacy PHOTO_STORY rows are never frozen, never rendered, never reused.
+    expect(fixture.viewModel.media.photoStory).toStrictEqual([]);
     for (const id of FIXTURE_PHOTO_STORY_IDS) expect(html).not.toContain(fixtureMediaUrl(id));
-    // The audio reference never becomes an element.
+    // The audio reference never becomes an element (VH-02B owns music).
+    expect(fixture.viewModel.media.audio?.mediaId).toBe(FIXTURE_MEDIA_IDS.AUDIO);
     expect(html).not.toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.AUDIO));
-    expect(html).not.toMatch(/<audio|<button|<form/);
-  });
-
-  it("BRIDE portraits put the bride first", async () => {
-    const { html } = await renderVh({ ...ALL_MEDIA, variant: "BRIDE" });
-    expect(html.indexOf(fixtureMediaUrl(FIXTURE_MEDIA_IDS.PORTRAIT_BRIDE))).toBeLessThan(
-      html.indexOf(fixtureMediaUrl(FIXTURE_MEDIA_IDS.PORTRAIT_GROOM)),
-    );
-  });
-
-  it("missing/UNAVAILABLE optional media degrades honestly with no substitute", async () => {
-    const unavailable = [
-      FIXTURE_MEDIA_IDS.COVER,
-      FIXTURE_MEDIA_IDS.PORTRAIT_GROOM,
-      FIXTURE_MEDIA_IDS.LOVE_STORY_PHOTO,
-      FIXTURE_MEDIA_IDS.GALLERY_2,
-      FIXTURE_MEDIA_IDS.QR_BRIDE,
-    ];
-    const { html } = await renderVh({ ...ALL_MEDIA, unavailableMediaIds: unavailable });
-    for (const id of unavailable) expect(html, id).not.toContain(fixtureMediaUrl(id));
-    expect(html).toContain('data-cover="none"');
-    expect(html).toMatch(/portraitRow[^"]*" data-count="1"/);
-    expect(html).toContain('data-photo="none"');
-    // The unavailable gallery item keeps its position as a neutral tile.
-    const tiles = [...html.matchAll(/galleryItem[^"]*" data-status="(\w+)"/g)].map((match) => match[1]);
-    expect(tiles).toStrictEqual(["RESOLVED", "UNAVAILABLE", "RESOLVED"]);
-    expect(count(html, COPY.gallery.unavailable)).toBe(1);
-    // Bride bank lines stay; only her QR is gone.
-    expect(html).toContain("9001000000002");
-
-    // Unreferenced optional slots (the fixture default has no portrait or love-story photo rows).
-    const none = await renderVh({ variant: "COMMON" });
-    expect(none.html).not.toMatch(/portraitRow/);
-    expect(none.html).toContain('data-photo="none"');
+    expect(html).not.toMatch(/<audio|<button|<form|<dialog/);
   });
 
   it("gift: one panel per operational side with canonical lines; GROOM shows only the groom side", async () => {
@@ -505,7 +578,10 @@ describe("E. canonical mapping", () => {
     expect(groom.html).toContain("9001000000001");
     expect(groom.html).not.toContain("9001000000002");
     expect(groom.html).not.toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.QR_BRIDE));
-    expect(groom.html).not.toMatch(/class="[^"]*giftSide/);
+    // Task 029 labels the single side too ("giftSideLabel"), from the explicit side.
+    expect([...groom.html.matchAll(/class="[^"]*giftSide[^"]*">([^<]+)</g)].map((match) => match[1])).toStrictEqual(["Nhà Trai"]);
+    const bride = await renderVh({ variant: "BRIDE" });
+    expect([...bride.html.matchAll(/class="[^"]*giftSide[^"]*">([^<]+)</g)].map((match) => match[1])).toStrictEqual(["Nhà Gái"]);
   });
 
   it("staff section settings hide optional sections; RF-04 alone decides", async () => {
@@ -521,8 +597,9 @@ describe("E. canonical mapping", () => {
       false,
       false,
     ]);
-    expect(html).not.toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.GALLERY_1));
-    expect(html).not.toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.LOVE_STORY_PHOTO));
+    expect(html).not.toContain(fixtureMediaUrl(PHOTO.P6));
+    expect(html).not.toContain(fixtureMediaUrl(PHOTO.P5));
+    expect(html).not.toMatch(/data-island="gallery"/);
     expect(html).not.toContain("9001000000001");
     expect(html).not.toContain("#caa06a");
     expect(html).not.toContain(COPY.loveStory.heading);
@@ -539,21 +616,63 @@ describe("E. canonical mapping", () => {
     expect((await renderVh({ variant: "COMMON", dressCode: "ABSENT" })).html).not.toContain(COPY.dressCode.heading);
   });
 
-  it("no demo, prototype or capability UI appears", async () => {
+  it("no demo, prototype or capability UI appears; decor comes only from the v1 renderer path", async () => {
     const { html } = await renderVh(ALL_MEDIA);
-    for (const forbidden of [
-      "/prototypes/",
-      "/renderers/",
-      "demo",
-      "Sơn Trà",
-      "sông Hàn",
-      "A Thousand Years",
-      "Bạn và Gia Đình",
-      "Chạm để mở",
-      "Xác Nhận Tham Dự",
-      "Sao chép",
-    ]) {
+    for (const forbidden of ["/prototypes/", "demo", "Sơn Trà", "sông Hàn", "A Thousand Years", "Xác Nhận Tham Dự", "Sao chép", "囍"]) {
       expect(html, forbidden).not.toContain(forbidden);
+    }
+    const decor = [...html.matchAll(/\/renderers\/[^"')\s&]+/g)].map((match) => match[0]);
+    expect(decor.length).toBeGreaterThan(0);
+    for (const path of decor) expect(path).toMatch(/^\/renderers\/wedding\/vietnamese-heritage\/v1\/[a-z-]+\.webp$/);
+    expect(new Set(decor.map((path) => path.split("/").pop()))).toStrictEqual(
+      new Set([
+        "paper-red.webp",
+        "paper-ivory.webp",
+        "border-left.webp",
+        "border-right.webp",
+        "medallion-double-happiness.webp",
+        "floral-top-left.webp",
+        "floral-bottom-right.webp",
+        "gold-divider.webp",
+      ]),
+    );
+    expect(html).not.toMatch(/lantern|corner-ornament/);
+    // Static VH-02A: the closed door is art only; no tap target, timer or interactive island yet.
+    expect(html).toContain('data-opening="closed"');
+    expect(html).not.toMatch(/<button|<form|<dialog|onclick|tabindex/i);
+  });
+
+  it("Song Hỷ: deterministic vector marks with an accessible name, never a font glyph; medallion raster only on opening/hero", async () => {
+    const { html } = await renderVh(ALL_MEDIA);
+    expect(html).not.toContain("囍");
+    expect(html).not.toMatch(/<text\b/);
+    const marks = [...html.matchAll(/role="img" aria-label="Song Hỷ"><svg[^>]*aria-hidden="true"/g)];
+    expect(marks).toHaveLength(2);
+    // The medallion artwork: opening cover + hero seal, each named.
+    const medallions = [...html.matchAll(/<img [^>]*>/g)].map((match) => match[0]).filter((tag) => tag.includes("medallion-double-happiness.webp"));
+    expect(medallions).toHaveLength(2);
+    for (const tag of medallions) expect(tag).toContain('alt="Song Hỷ"');
+    expect(html.indexOf("medallion-double-happiness.webp", html.indexOf("<footer"))).toBe(-1);
+  });
+
+  it("VH-02A ruling D5: the closing is text only with the exact three lines, canonical names and date", async () => {
+    expect(COPY.closing.message).toStrictEqual([
+      "Sự hiện diện của bạn là niềm hạnh phúc trọn vẹn",
+      "nhất trong ngày cưới của chúng tôi.",
+      "Xin chân thành cảm ơn.",
+    ]);
+    for (const variant of INVITATION_VARIANTS) {
+      const { html, fixture } = await renderVh({ ...ALL_MEDIA, variant });
+      const footer = html.slice(html.indexOf("<footer"), html.indexOf("</footer>"));
+      const lines = [...footer.matchAll(/class="[^"]*closingLine[^"]*">([^<]+)</g)].map((match) => match[1]);
+      expect(lines, variant).toStrictEqual([...COPY.closing.message]);
+      const { primary, secondary } = fixture.viewModel.people;
+      expect(footer.indexOf(primary.name), variant).toBeGreaterThan(footer.lastIndexOf("Xin chân thành cảm ơn."));
+      expect(footer.indexOf(primary.name), variant).toBeLessThan(footer.indexOf(secondary.name));
+      const date = deriveEventDateTimePresentationV1(fixture.viewModel.ceremony);
+      expect(footer, variant).toContain(`${date.day}.${date.month}.${date.year}`);
+      // No photo of any role: no media <img>, only vector marks.
+      expect(footer, variant).not.toMatch(/<img/);
     }
   });
 });
@@ -573,5 +692,238 @@ describe("F. deterministic rendering for COMMON / GROOM / BRIDE", () => {
   it("the three variants differ only through canonical data", async () => {
     const [common, groom, bride] = await Promise.all(INVITATION_VARIANTS.map((variant) => renderVh({ variant })));
     expect(new Set([common?.html, groom?.html, bride?.html]).size).toBe(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// G. VH-02A TEMPLATE_SLOTS media (heroPhoto / portraitCluster / loveStoryPhoto / gallery)
+// ---------------------------------------------------------------------------
+
+describe("G. template slots", () => {
+  it("the pipeline freezes exactly the four declared slots and no legacy layout roles", async () => {
+    const { snapshot, viewModel } = await vhFixture(ALL_MEDIA);
+    expect(snapshot.media.templateSlots).toStrictEqual({
+      gallery: [PHOTO.P6, PHOTO.P3, PHOTO.P1, FIXTURE_MEDIA_IDS.GALLERY_2],
+      heroPhoto: [PHOTO.P1],
+      loveStoryPhoto: [PHOTO.P5],
+      portraitCluster: [PHOTO.P2, PHOTO.P3, PHOTO.P4],
+    });
+    expect(Object.keys(viewModel.media.templateSlots ?? {}).sort()).toStrictEqual(["gallery", "heroPhoto", "loveStoryPhoto", "portraitCluster"]);
+    // The Project library still holds COVER / PORTRAIT / LOVE_STORY_PHOTO / GALLERY rows; none is frozen as a role.
+    expect(viewModel.media.cover).toBeUndefined();
+    expect(viewModel.media.portrait).toStrictEqual({});
+    expect(viewModel.media.loveStoryPhoto).toBeUndefined();
+    expect(viewModel.media.gallery).toStrictEqual([]);
+  });
+
+  it("every rendered layout photo comes from its own slot, overlap included, in document order", async () => {
+    const { html } = await renderVh(ALL_MEDIA);
+    expect(imageIds(html)).toStrictEqual([
+      PHOTO.P1, // hero
+      PHOTO.P2, // cluster 1
+      PHOTO.P3, // cluster 2
+      PHOTO.P4, // cluster 3
+      PHOTO.P5, // love story
+      FIXTURE_MEDIA_IDS.QR_GROOM,
+      FIXTURE_MEDIA_IDS.QR_BRIDE,
+      PHOTO.P6, // gallery 1
+      PHOTO.P3, // gallery 2 (also cluster 2)
+      PHOTO.P1, // gallery 3 (also hero)
+      FIXTURE_MEDIA_IDS.GALLERY_2, // gallery 4
+    ]);
+    for (const id of [FIXTURE_MEDIA_IDS.COVER, FIXTURE_MEDIA_IDS.PORTRAIT_GROOM, FIXTURE_MEDIA_IDS.PORTRAIT_BRIDE, FIXTURE_MEDIA_IDS.LOVE_STORY_PHOTO]) {
+      expect(html, id).not.toContain(fixtureMediaUrl(id));
+    }
+  });
+
+  it("legacy-role media never reaches the layout: a LEGACY_ROLES payload with every legacy role renders no layout photo", async () => {
+    const { html, fixture } = await renderVh({ ...ALL_MEDIA, slots: null });
+    // The legacy roles are populated in this ViewModel…
+    expect(fixture.viewModel.media.cover?.status).toBe("RESOLVED");
+    expect(fixture.viewModel.media.portrait.groom?.status).toBe("RESOLVED");
+    expect(fixture.viewModel.media.loveStoryPhoto?.status).toBe("RESOLVED");
+    expect(fixture.viewModel.media.gallery).toHaveLength(3);
+    expect(fixture.viewModel.media.templateSlots).toBeUndefined();
+    // …and the renderer ignores every one of them; only the semantic QR codes render.
+    expect(imageIds(html)).toStrictEqual([FIXTURE_MEDIA_IDS.QR_GROOM, FIXTURE_MEDIA_IDS.QR_BRIDE]);
+    expect(html).toContain('data-hero-photo="none"');
+    expect(clusterOf(html)).toBe("");
+    expect(html).toContain('data-photo="none"');
+    // The gallery section is effective (legacy rows), but its slot is empty: an empty album, never a legacy fallback.
+    expect(html).not.toMatch(/data-status="RESOLVED"/);
+  });
+
+  describe("heroPhoto", () => {
+    it("RESOLVED renders the framed hero photo", async () => {
+      const { html } = await renderVh(ALL_MEDIA);
+      expect(html).toContain('data-hero-photo="present"');
+      const hero = html.slice(html.indexOf("data-hero-photo"), html.indexOf('id="vh-hero-names"'));
+      expect(hero).toContain(src(PHOTO.P1));
+      expect(hero).toMatch(/heroPhotoFrame/);
+    });
+
+    it("UNAVAILABLE renders no image and no substitute (never COVER, never another slot)", async () => {
+      const { html } = await renderVh({ ...ALL_MEDIA, slots: { ...VH_SLOTS, gallery: [PHOTO.P6] }, unavailableMediaIds: [PHOTO.P1] });
+      expect(html).toContain('data-hero-photo="none"');
+      expect(html).not.toContain(fixtureMediaUrl(PHOTO.P1));
+      expect(html).not.toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.COVER));
+      const hero = html.slice(html.indexOf("data-hero-photo"), html.indexOf('id="vh-hero-names"'));
+      expect(hero).not.toMatch(/heroPhotoFrame/);
+      expect(hero).toContain("medallion-double-happiness.webp");
+    });
+
+    it("an empty slot is an honest typographic hero", async () => {
+      const { html } = await renderVh({ ...ALL_MEDIA, slots: { ...VH_SLOTS, heroPhoto: [] } });
+      expect(html).toContain('data-hero-photo="none"');
+      expect(html).not.toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.COVER));
+    });
+  });
+
+  describe("portraitCluster (positions, never people)", () => {
+    it("3 RESOLVED: exactly three frames in slot order 1 / 2 / 3, position 2 the dominant centre", async () => {
+      const { html } = await renderVh(ALL_MEDIA);
+      const cluster = clusterOf(html);
+      expect(cluster).toMatch(/^portraitRow[^"]*" data-count="3"/);
+      expect(count(cluster, "<figure")).toBe(3);
+      expect(clusterPositions(html)).toStrictEqual(["1", "2", "3"]);
+      expect(imageIds(cluster)).toStrictEqual([PHOTO.P2, PHOTO.P3, PHOTO.P4]);
+      expect([...cluster.matchAll(/data-position="(\d)" data-emphasis="center"/g)].map((match) => match[1])).toStrictEqual(["2"]);
+      expect(count(cluster, "data-emphasis")).toBe(1);
+    });
+
+    it("2 RESOLVED: a balanced pair, no fake third frame, no centre emphasis", async () => {
+      const { html } = await renderVh({ ...ALL_MEDIA, slots: { ...VH_SLOTS, portraitCluster: [PHOTO.P2, PHOTO.P4] } });
+      const cluster = clusterOf(html);
+      expect(cluster).toMatch(/^portraitRow[^"]*" data-count="2"/);
+      expect(count(cluster, "<figure")).toBe(2);
+      expect(imageIds(cluster)).toStrictEqual([PHOTO.P2, PHOTO.P4]);
+      expect(cluster).not.toContain("data-emphasis");
+    });
+
+    it("1 RESOLVED: exactly one centred frame", async () => {
+      const { html } = await renderVh({ ...ALL_MEDIA, slots: { ...VH_SLOTS, portraitCluster: [PHOTO.P4] } });
+      const cluster = clusterOf(html);
+      expect(cluster).toMatch(/^portraitRow[^"]*" data-count="1"/);
+      expect(count(cluster, "<figure")).toBe(1);
+      expect(imageIds(cluster)).toStrictEqual([PHOTO.P4]);
+      expect(cluster).not.toContain("data-emphasis");
+    });
+
+    it("0 RESOLVED: no cluster (empty slot, or every item UNAVAILABLE)", async () => {
+      const empty = await renderVh({ ...ALL_MEDIA, slots: { ...VH_SLOTS, portraitCluster: [] } });
+      expect(clusterOf(empty.html)).toBe("");
+      const gone = await renderVh({
+        ...ALL_MEDIA,
+        slots: { ...VH_SLOTS, gallery: [PHOTO.P6] },
+        unavailableMediaIds: [PHOTO.P2, PHOTO.P3, PHOTO.P4],
+      });
+      expect(clusterOf(gone.html)).toBe("");
+      for (const id of [PHOTO.P2, PHOTO.P3, PHOTO.P4]) expect(gone.html).not.toContain(fixtureMediaUrl(id));
+    });
+
+    it("UNAVAILABLE centre: positions 1 and 3 render as the balanced pair, with no substitution", async () => {
+      const { html } = await renderVh({ ...ALL_MEDIA, slots: { ...VH_SLOTS, gallery: [PHOTO.P6] }, unavailableMediaIds: [PHOTO.P3] });
+      const cluster = clusterOf(html);
+      expect(cluster).toMatch(/^portraitRow[^"]*" data-count="2"/);
+      expect(clusterPositions(html)).toStrictEqual(["1", "3"]);
+      expect(imageIds(cluster)).toStrictEqual([PHOTO.P2, PHOTO.P4]);
+      expect(cluster).not.toContain("data-emphasis");
+      expect(html).not.toContain(fixtureMediaUrl(PHOTO.P3));
+      // Nothing else from the library fills the gap.
+      for (const id of [PHOTO.P1, PHOTO.P5, PHOTO.P6, FIXTURE_MEDIA_IDS.COVER, FIXTURE_MEDIA_IDS.PORTRAIT_GROOM]) {
+        expect(imageIds(cluster), id).not.toContain(id);
+      }
+    });
+
+    it("three couple photos: no frame is labelled groom / couple / bride in markup or alt text", async () => {
+      const { html } = await renderVh({ ...ALL_MEDIA, variant: "BRIDE" });
+      const cluster = clusterOf(html);
+      expect(cluster).not.toMatch(/groom|bride|couple|GROOM|BRIDE|COUPLE|data-side|chú rể|cô dâu|Chú rể|Cô dâu/);
+      const alts = [...cluster.matchAll(/alt="([^"]*)"/g)].map((match) => match[1]);
+      expect(alts).toStrictEqual(["Ảnh cưới, khung 1", "Ảnh cưới, khung 2", "Ảnh cưới, khung 3"]);
+      for (const name of ["Nguyễn Minh Khôi", "Trần Ngọc Hân"]) expect(cluster).not.toContain(name);
+    });
+
+    it("COMMON / GROOM / BRIDE share the same slot image sequence (BRIDE never reorders)", async () => {
+      const sequences = await Promise.all(
+        INVITATION_VARIANTS.map(async (variant) => imageIds(clusterOf((await renderVh({ ...ALL_MEDIA, variant })).html))),
+      );
+      for (const sequence of sequences) expect(sequence).toStrictEqual([PHOTO.P2, PHOTO.P3, PHOTO.P4]);
+      const pair = await Promise.all(
+        INVITATION_VARIANTS.map(async (variant) =>
+          clusterPositions((await renderVh({ ...ALL_MEDIA, variant, slots: { ...VH_SLOTS, gallery: [PHOTO.P6] }, unavailableMediaIds: [PHOTO.P2] })).html),
+        ),
+      );
+      for (const positions of pair) expect(positions).toStrictEqual(["2", "3"]);
+    });
+  });
+
+  describe("loveStoryPhoto", () => {
+    it("RESOLVED renders the photo in the text-driven section", async () => {
+      const { html } = await renderVh(ALL_MEDIA);
+      const story = html.slice(html.indexOf("vh-love-story-heading") - 200, html.indexOf("loveStoryText"));
+      expect(story).toContain('data-photo="present"');
+      expect(story).toContain(src(PHOTO.P5));
+      expect(html).toContain("Chúng tôi gặp nhau vào một chiều mưa.");
+    });
+
+    it("UNAVAILABLE or empty: text only, never the legacy LOVE_STORY_PHOTO", async () => {
+      for (const options of [
+        { ...ALL_MEDIA, unavailableMediaIds: [PHOTO.P5] },
+        { ...ALL_MEDIA, slots: { ...VH_SLOTS, loveStoryPhoto: [] } },
+      ]) {
+        const { html } = await renderVh(options);
+        expect(html).toContain('data-photo="none"');
+        expect(html).toContain(COPY.loveStory.heading);
+        expect(html).toContain("Chúng tôi gặp nhau vào một chiều mưa.");
+        expect(html).not.toContain(fixtureMediaUrl(PHOTO.P5));
+        expect(html).not.toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.LOVE_STORY_PHOTO));
+      }
+    });
+
+    it("a photo alone never creates the section: no canonical text → no Love Story", async () => {
+      const input = vhSource(ALL_MEDIA);
+      const details = input.weddingDetails as NonNullable<BuildSnapshotPayloadInput["weddingDetails"]>;
+      input.weddingDetails = { ...details, loveStory: null };
+      const fixture = await runRendererFixturePipeline(input, { resolver: createFixtureMediaResolver() });
+      expect(fixture.selection.effectiveSections.loveStory).toBe(false);
+      const html = render(fixture.viewModel, fixture.selection.effectiveSections);
+      expect(html).not.toContain(COPY.loveStory.heading);
+      expect(html).not.toContain(fixtureMediaUrl(PHOTO.P5));
+    });
+  });
+
+  describe("gallery", () => {
+    const tiles = (html: string) => [...html.matchAll(/albumPrint[^"]*" data-status="(\w+)" data-index="(\d+)"/g)].map((match) => `${match[2]}:${match[1]}`);
+
+    it("exact frozen slot order, never the legacy GALLERY rows", async () => {
+      const { html } = await renderVh(ALL_MEDIA);
+      expect(tiles(html)).toStrictEqual(["0:RESOLVED", "1:RESOLVED", "2:RESOLVED", "3:RESOLVED"]);
+      const album = html.slice(html.indexOf('data-island="gallery"'));
+      expect(imageIds(album)).toStrictEqual([PHOTO.P6, PHOTO.P3, PHOTO.P1, FIXTURE_MEDIA_IDS.GALLERY_2]);
+      expect(album).not.toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.GALLERY_1));
+      expect(album).not.toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.GALLERY_3));
+    });
+
+    it("UNAVAILABLE keeps its position as one neutral tile; nothing is dropped, reordered or substituted", async () => {
+      const { html } = await renderVh({ ...ALL_MEDIA, slots: { ...VH_SLOTS, heroPhoto: [], portraitCluster: [] }, unavailableMediaIds: [PHOTO.P3] });
+      expect(tiles(html)).toStrictEqual(["0:RESOLVED", "1:UNAVAILABLE", "2:RESOLVED", "3:RESOLVED"]);
+      expect(count(html, COPY.gallery.unavailable)).toBe(1);
+      expect(html).not.toContain(fixtureMediaUrl(PHOTO.P3));
+    });
+
+    it("an empty gallery slot hides the section through the effective sections contract", async () => {
+      const { html, fixture } = await renderVh({ ...ALL_MEDIA, slots: { ...VH_SLOTS, gallery: [] } });
+      expect(fixture.viewModel.sections.gallery).toBe(false);
+      expect(fixture.selection.effectiveSections.gallery).toBe(false);
+      expect(html).not.toContain('data-island="gallery"');
+      expect(html).not.toContain(fixtureMediaUrl(FIXTURE_MEDIA_IDS.GALLERY_1));
+    });
+
+    it.each([1, 2, 3, 5, 7, 12])("%i photos lay out every slot item exactly once, in order", async (n) => {
+      const ids = [PHOTO.P1, PHOTO.P2, PHOTO.P3, PHOTO.P4, PHOTO.P5, PHOTO.P6, FIXTURE_MEDIA_IDS.COVER, FIXTURE_MEDIA_IDS.GALLERY_1, FIXTURE_MEDIA_IDS.GALLERY_2, FIXTURE_MEDIA_IDS.GALLERY_3, FIXTURE_MEDIA_IDS.PORTRAIT_GROOM, FIXTURE_MEDIA_IDS.PORTRAIT_BRIDE].slice(0, n);
+      const { html } = await renderVh({ ...ALL_MEDIA, slots: { gallery: ids } });
+      expect(imageIds(html.slice(html.indexOf('data-island="gallery"')))).toStrictEqual(ids);
+    });
   });
 });

@@ -317,7 +317,7 @@ WeddingClick is **Pilot Ready** for **one closely-supported customer using Elega
 
 ## Template-first Editor Track
 
-**Recorded:** 2026-10-08 (TE-01, docs-only contract closure). Contract: `docs/DECISIONS.md` "TE-01 — Template-first Editor, Template Media Slots and Staff Approval-on-Behalf". VH-02A is **paused** until TE-04; its uncommitted work is preserved and resumes after TE-04. Nothing in this track changes an approved invitation design; any implementation that would requires a Product Owner decision first.
+**Recorded:** 2026-10-08 (TE-01, docs-only contract closure). Contract: `docs/DECISIONS.md` "TE-01 — Template-first Editor, Template Media Slots and Staff Approval-on-Behalf". VH-02A was paused until TE-04 and resumed and completed afterwards (2026-10-08). Nothing in this track changes an approved invitation design; any implementation that would requires a Product Owner decision first.
 
 | Checkpoint | Purpose | Schema / migration | Production impact | Likely files | Risk | Acceptance gate |
 |---|---|---|---|---|---|---|
@@ -329,14 +329,14 @@ WeddingClick is **Pilot Ready** for **one closely-supported customer using Elega
 | **TE-05A** — COMPLETE (2026-10-08) | Template-first editor in the current tabs: catalog `editorManifest`, slot/photo-library/readiness Staff routes, photo library + slot picker, template-filtered optional content, readiness panel | None | Staff UI + 3 Staff read/write routes | `app/admin/v2/projects/[projectId]/_components/*`, `lib/admin/*`, `lib/server/template-editor/*`, `lib/server/routes/template-editor.ts` | Medium (UX regression of the pilot editor) | EE legacy roles still editable; VH slots assignable; readiness states per T10; 360/390/430 + desktop |
 | **TE-05B** | Workspace restructure: Tổng quan + stage model (T11, T13) | None | Staff UI only | `workspace-tabs.tsx`, new overview component, presentation labels | Low–Medium | Every existing action still reachable; stage table matches T13; no backend change |
 | **TE-06** | Staff approval on behalf (T12) | **Yes**: additive `review_feedback` columns + `staff_confirm_review_approval` RPC | Production on release (may be pulled forward for the EE pilot, F11) | migration, `lib/server/invitation-review/*`, internal route, Duyệt tab, `docs/API_CONTRACT.md` | Medium (approval correctness) | Exact current REVIEW only; CAS 409; STAFF/ADMIN only; customer path unchanged; outcome recompute; activity actor STAFF |
-| **VH-02A resume** | Re-point VH media reads to `templateSlots`; finish approved visuals | None | None (VH not in Production) | VH-02A files | Medium | Visual acceptance vs approved direction; no composition change |
+| **VH-02A** — COMPLETE (2026-10-08) | VH media reads re-pointed to `templateSlots` (hero / three-photo `portraitCluster` / Love Story photo / gallery, no legacy fallback); approved static visuals finished; eight authorized WebP decor derivatives; vector Song Hỷ; rulings D1, D3–D5 (`docs/DECISIONS.md` "VH-02A") | None | None (VH not in Production; no catalog seed) | VH renderer files, decor, tests, docs | Medium | Real-pipeline slot fixtures; 3/2/1/0 portrait matrix; static asset/boundary guards; DEV visual QA still pending |
 | **VH-02B** | Interactions (doors, countdown, RSVP, gift dialog, music, lightbox) | None | None | VH renderer | Medium | RF-05 capability rules; reduced motion |
 | **RS-01** | `rendererKey`-based lazy renderer loading (T14) | None | Shared client host for all invitations | `templates/core/production-renderer-bindings.ts`, host core, tests | Medium–High | EE pages ship no VH chunk/CSS/font; fail-closed unknown key; all render paths regression-tested |
 | **VH catalog / QA** | Catalog seeding (data-only migration) + certification matrix | **Yes** (seed) | Production only after certification and RS-01 | seed migration, docs | Medium | TEMPLATE_SYSTEM §25 matrix passed |
 
 **TE-05A-H1 — COMPLETE (2026-10-08):** unsupported-renderer versions are never newly selectable (catalog, Design tab, server save). No schema change.
 
-**Approved order after TE-05A:** VH-02A resume → VH-02B → TE-05B → TE-06 → RS-01 → Vietnamese Heritage DEV catalog seed + full Preview QA.
+**Approved order after TE-05A:** VH-02A (COMPLETE) → VH-02B → TE-05B → TE-06 → RS-01 → Vietnamese Heritage DEV catalog seed + full Preview QA.
 
 Ordering rules: TE-03A precedes any DEV migration run; TE-04 needs TE-02 + TE-03B; VH-02A resumes only after TE-04; RS-01 precedes any merge of Vietnamese Heritage into the Production branch. TE-06 is independent of the template track and may be scheduled earlier by the Product Owner.
 

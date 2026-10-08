@@ -1,18 +1,20 @@
 /*
- * Vietnamese Heritage v1 — renderer-scoped styles (VH-01 static skeleton).
+ * Vietnamese Heritage v1 — renderer-scoped styles (VH-02A static visuals).
  *
- * Mobile-first (360 / 390 / 430 px); on wider screens the invitation stays a
- * centred ≈480 px column over the palette backdrop, like the existing
- * production renderer convention. Colors come only from the palette custom
- * properties set on the root; fonts only from the renderer-scoped next/font
- * variables. No url(), no @import, no global selectors, no viewport units.
- * VH-01 has no animation or transition; VH-02 adds motion with its
- * prefers-reduced-motion fallback. Structurally correct, not final polish.
+ * Mirrors the approved Task 029 Vietnamese Heritage direction. Mobile-first
+ * (360 / 390 / 430 px); at ≥ 768 px the invitation stays a centred ≈ 480 px
+ * column over the renderer-owned backdrop. Colours come only from palette
+ * custom properties (transparency through color-mix), paper textures only
+ * from the `--vh-texture-*` properties set by sections/decor.tsx, fonts only
+ * from the renderer-scoped next/font variables. No url(), no @import, no
+ * global selectors, no `vh` units (the cover uses `svh` after a fixed-height
+ * fallback). No motion in VH-02A: VH-02B adds it with its reduced-motion
+ * fallback.
  */
 
 .root {
   min-height: 100%;
-  background: var(--vh-backdrop);
+  background: var(--vh-paper);
   color: var(--vh-ink);
   font-family: var(--vh-font-serif), Georgia, "Times New Roman", serif;
   font-weight: 500;
@@ -23,6 +25,7 @@
 .column {
   max-width: 480px;
   margin: 0 auto;
+  overflow: hidden;
   background: var(--vh-paper);
 }
 
@@ -38,476 +41,1166 @@
   border: 0;
 }
 
-.amp {
-  display: block;
-  margin: 2px 0;
-  font-family: var(--vh-font-display), Georgia, serif;
-  font-style: italic;
-  font-size: 0.7em;
-  color: var(--vh-gold);
+/* Lotus line art (sections/decor.tsx) --------------------------------------- */
+
+.lotusPetalSoft {
+  fill: color-mix(in srgb, var(--vh-gold) 12%, transparent);
 }
 
-.sectionTitle {
-  margin: 0 0 12px;
-  font-weight: 600;
-  font-size: 1.5rem;
-  letter-spacing: 0.04em;
-  text-align: center;
-  color: var(--vh-vermilion);
+.lotusPetal {
+  fill: color-mix(in srgb, var(--vh-gold) 16%, transparent);
 }
 
-/* Song Hỷ ---------------------------------------------------------------- */
+.lotusHeart {
+  fill: color-mix(in srgb, var(--vh-vermilion) 16%, transparent);
+}
+
+/* Song Hỷ (vector) ------------------------------------------------------------ */
 
 .songHy {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  margin: 0 auto 18px;
+  gap: 12px;
+  margin-bottom: 22px;
 }
 
 .songHyRule {
-  flex: 0 1 72px;
-  height: 1px;
-  background: var(--vh-gold);
+  width: 30px;
+  height: 0.5px;
+  background: color-mix(in srgb, var(--vh-gold) 80%, transparent);
+}
+
+.songHyMark {
+  display: block;
+  line-height: 0;
 }
 
 .songHyGlyph {
-  font-family: "Noto Serif CJK SC", "Songti SC", "SimSun", serif;
-  font-size: 2.25rem;
-  line-height: 1;
+  display: block;
+  width: 38px;
+  height: 38px;
   color: var(--vh-vermilion);
 }
 
-/* Opening (static in VH-01) ---------------------------------------------- */
+.songHySeal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 14px;
+  border: 1px solid var(--vh-gold);
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, var(--vh-vermilion-rose), var(--vh-vermilion) 55%, var(--vh-vermilion-deep) 100%);
+  box-shadow:
+    inset 0 2px 3px color-mix(in srgb, var(--vh-white-warm) 18%, transparent),
+    0 6px 14px -8px color-mix(in srgb, var(--vh-door-shade) 60%, transparent);
+}
+
+.songHySealGlyph {
+  display: block;
+  width: 18px;
+  height: 18px;
+  color: var(--vh-silk);
+}
+
+/* Opening: ceremonial double-door cover, closed state -------------------------- */
 
 .opening {
-  padding: 56px 24px 48px;
+  --border-piece-h: calc((100cqh - 28px) * 0.64);
+  --border-reach: calc(var(--border-piece-h) * 0.105 + 12px);
+  position: relative;
+  height: 640px;
+  height: clamp(560px, 100svh, 920px);
+  overflow: hidden;
+  container-type: size;
+  background: var(--vh-door);
+}
+
+.doors {
+  position: absolute;
+  inset: 0;
+}
+
+.door {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  overflow: hidden;
+}
+
+.door[data-door="left"] {
+  left: 0;
+  width: calc(50% + 1px);
+}
+
+.door[data-door="right"] {
+  right: 0;
+}
+
+.doorFace {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100cqw;
+  background-color: var(--vh-door);
+  background-image: var(--vh-texture-red);
+  background-size: 620px auto;
+  background-position: center;
+}
+
+.door[data-door="left"] .doorFace {
+  left: 0;
+}
+
+.door[data-door="right"] .doorFace {
+  left: -50cqw;
+}
+
+.doorFace::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 75% 60% at 50% 46%, color-mix(in srgb, var(--vh-gold-pale) 10%, transparent), transparent 70%),
+    radial-gradient(ellipse 125% 95% at 50% 50%, transparent 60%, color-mix(in srgb, var(--vh-shadow) 38%, transparent) 100%),
+    linear-gradient(color-mix(in srgb, var(--vh-door-shade) 46%, transparent), color-mix(in srgb, var(--vh-door-shade) 46%, transparent));
+  pointer-events: none;
+}
+
+.doorFrame {
+  position: absolute;
+  inset: 14px;
+  border: 1px solid color-mix(in srgb, var(--vh-gold-soft) 42%, transparent);
+  pointer-events: none;
+}
+
+.doorFrame::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid color-mix(in srgb, var(--vh-gold-soft) 18%, transparent);
+}
+
+.coverBorder {
+  position: absolute;
+  width: auto;
+  height: var(--border-piece-h);
+  aspect-ratio: 724 / 2172;
+  opacity: 0.62;
+  filter: saturate(0.65) brightness(0.93);
+  pointer-events: none;
+}
+
+.coverBorderLeft {
+  left: 8px;
+}
+
+.coverBorderRight {
+  right: 8px;
+}
+
+.coverBorderTop {
+  top: 14px;
+  mask-image: linear-gradient(to bottom, black 0%, black 18%, transparent 46%);
+}
+
+.coverBorderBottom {
+  bottom: 14px;
+  mask-image: linear-gradient(to top, black 0%, black 18%, transparent 46%);
+}
+
+.coverFloral {
+  position: absolute;
+  width: 21cqw;
+  height: auto;
+  aspect-ratio: 1;
+  opacity: 0.9;
+  filter: saturate(0.8) drop-shadow(0 4px 8px color-mix(in srgb, var(--vh-shadow) 25%, transparent));
+  pointer-events: none;
+}
+
+.coverFloralTopLeft {
+  top: -1.5cqw;
+  left: -2cqw;
+}
+
+.coverFloralBottomRight {
+  bottom: -1.5cqw;
+  right: -2cqw;
+}
+
+.coverContent {
+  position: absolute;
+  inset: 0 var(--border-reach);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6cqh 0 5cqh;
   text-align: center;
-  background: var(--vh-vermilion-deep);
-  color: var(--vh-ivory);
-  border-bottom: 3px double var(--vh-gold);
+  color: var(--vh-lacquer-text);
 }
 
-.opening .songHyGlyph {
+.coverContent p {
+  margin: 0;
+}
+
+.coverTitle {
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.42em;
+  margin-right: -0.42em;
+  text-transform: uppercase;
+  white-space: nowrap;
   color: var(--vh-gold-soft);
-  font-size: 3.5rem;
+  opacity: 0.9;
 }
 
-.openingLabel {
-  margin: 0 0 20px;
+.coverDivider {
+  display: block;
+  width: min(112px, 100%);
+  height: auto;
+  aspect-ratio: 3 / 1;
+  margin: 0.6cqh 0 1.4cqh;
+  opacity: 0.75;
+  filter: saturate(0.7);
+}
+
+.coverNames {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
   font-family: var(--vh-font-display), Georgia, serif;
   font-style: italic;
-  font-size: 1.125rem;
-  letter-spacing: 0.06em;
-  color: var(--vh-gold-soft);
-}
-
-.openingNames {
-  margin: 0 0 16px;
-  font-weight: 600;
-  font-size: 1.75rem;
-  line-height: 1.2;
+  font-weight: 500;
+  font-size: clamp(31px, 9.8cqw, 41px);
+  line-height: 1.14;
+  color: var(--vh-gold-pale);
+  text-shadow: 0 1px 8px color-mix(in srgb, var(--vh-shadow) 30%, transparent);
   overflow-wrap: anywhere;
 }
 
-.openingDate {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 0;
-  font-size: 1rem;
-  letter-spacing: 0.12em;
+.coverAmp {
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-style: italic;
+  font-size: 0.5em;
+  line-height: 1.5;
+  color: var(--vh-gold-soft);
+  opacity: 0.85;
 }
 
-.openingWeekday {
-  font-size: 0.875rem;
+.coverContent .coverDate {
+  margin-top: 2.6cqh;
+  font-weight: 500;
+  font-size: 15px;
+  letter-spacing: 0.2em;
+  margin-right: -0.2em;
+  opacity: 0.9;
+}
+
+.coverWeekday {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  margin-right: -0.34em;
   text-transform: uppercase;
   color: var(--vh-gold-soft);
 }
 
-/* Hero -------------------------------------------------------------------- */
-
-.hero {
-  padding: 40px 24px 36px;
-  text-align: center;
-  background: var(--vh-paper);
+.coverMedallion {
+  display: block;
+  flex-shrink: 0;
+  width: min(39cqw, 19.5cqh);
+  height: auto;
+  aspect-ratio: 1;
+  margin-top: 3.6cqh;
+  filter: saturate(0.82) drop-shadow(0 6px 12px color-mix(in srgb, var(--vh-shadow) 32%, transparent));
 }
 
-.heroFrame {
-  margin: 0 auto 20px;
-  max-width: 320px;
-  padding: 8px;
-  border: 1px solid var(--vh-gold);
-  background: var(--vh-silk);
+.coverContent .coverHint {
+  margin-top: 5.6cqh;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  margin-right: -0.3em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0.9;
+  text-shadow: 0 1px 6px color-mix(in srgb, var(--vh-shadow) 45%, transparent);
+}
+
+/* Hero ------------------------------------------------------------------------ */
+
+.hero {
+  position: relative;
+  padding: 44px 26px 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: var(--vh-paper-warm);
+  background-image: var(--vh-texture-ivory);
+  background-size: 620px auto;
+  container-type: inline-size;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 55% at 50% 40%, color-mix(in srgb, var(--vh-white-warm) 35%, transparent), transparent 75%),
+    linear-gradient(to bottom, transparent 80%, color-mix(in srgb, var(--vh-paper) 90%, transparent));
+  pointer-events: none;
+}
+
+.hero > * {
+  position: relative;
+}
+
+.hero p {
+  margin: 0;
+}
+
+.heroPhotoWrap {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 5 / 7;
+  max-height: 620px;
+}
+
+.heroPhotoFrame {
+  height: 100%;
+  box-sizing: border-box;
+  padding: 4px;
+  border: 0.5px solid color-mix(in srgb, var(--vh-gold) 62%, transparent);
+  background: var(--vh-card);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--vh-door-shade) 5%, transparent),
+    0 12px 26px -18px color-mix(in srgb, var(--vh-door-shade) 26%, transparent);
 }
 
 .heroPhoto {
   display: block;
   width: 100%;
-  height: auto;
-  aspect-ratio: 3 / 4;
+  height: 100%;
   object-fit: cover;
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--vh-gold) 35%, transparent);
 }
 
-.heroCeremony {
-  margin: 0 0 10px;
-  font-family: var(--vh-font-script), "Brush Script MT", cursive;
-  font-weight: 400;
-  font-size: 2rem;
+.heroCorner {
+  position: absolute;
+  pointer-events: none;
+}
+
+.heroCornerTopLeft {
+  width: 19cqw;
+  aspect-ratio: 1;
+  top: -5cqw;
+  left: -5cqw;
+}
+
+.heroCornerBottomRight {
+  width: 20.5cqw;
+  aspect-ratio: 1;
+  right: -5cqw;
+  bottom: -5.5cqw;
+}
+
+.heroFloral {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.84;
+  filter: saturate(0.72) drop-shadow(0 2px 5px color-mix(in srgb, var(--vh-shadow) 12%, transparent));
+}
+
+.heroLotus {
+  position: absolute;
+  width: 16cqw;
+  color: var(--vh-gold-deep);
+}
+
+.heroCornerTopLeft .heroLotus {
+  right: -9cqw;
+  top: 2cqw;
+  transform: rotate(14deg);
+}
+
+.heroCornerBottomRight .heroLotus {
+  left: -9cqw;
+  bottom: 2cqw;
+  transform: rotate(-14deg);
+}
+
+.heroSeal {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 46px;
+  aspect-ratio: 1;
+  margin: -23px 0 0 -23px;
+  padding: 3px;
+  border-radius: 50%;
+  background: var(--vh-card);
+  box-shadow:
+    0 0 0 0.5px color-mix(in srgb, var(--vh-gold) 55%, transparent),
+    0 4px 10px -6px color-mix(in srgb, var(--vh-door-shade) 30%, transparent);
+}
+
+.heroSealImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: saturate(0.82);
+}
+
+.heroOrnament {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 132px;
+  height: 18px;
+  margin: 0 0 -9px -66px;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, var(--vh-paper-warm) 62%, transparent 100%);
+}
+
+.heroOrnamentImage {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  width: 104px;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  transform: translateY(-50%);
+  opacity: 0.85;
+  filter: saturate(0.75);
+}
+
+.heroMedallion {
+  display: block;
+  width: 96px;
+  height: auto;
+  aspect-ratio: 1;
+  filter: saturate(0.82) drop-shadow(0 4px 8px color-mix(in srgb, var(--vh-door-shade) 18%, transparent));
+}
+
+.hero .heroCeremony {
+  margin-top: 26px;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.38em;
+  margin-right: -0.38em;
+  text-transform: uppercase;
   color: var(--vh-vermilion);
 }
 
 .heroNames {
-  margin: 0 0 14px;
-  font-weight: 600;
-  font-size: 2rem;
-  line-height: 1.15;
-  color: var(--vh-ink);
+  margin: 14px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  font-family: var(--vh-font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(30px, 9.4cqw, 38px);
+  line-height: 1.1;
+  color: var(--vh-vermilion-deep);
   overflow-wrap: anywhere;
 }
 
-.heroDate {
-  margin: 0;
-  font-size: 1rem;
-  letter-spacing: 0.08em;
-  color: var(--vh-ink-muted);
+.heroAmp {
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-size: 0.5em;
+  line-height: 1.45;
+  color: var(--vh-gold);
 }
 
-/* Ceremonial page ----------------------------------------------------------- */
+.hero .heroDate {
+  margin-top: 18px;
+  font-weight: 500;
+  font-size: 13.5px;
+  letter-spacing: 0.18em;
+  margin-right: -0.18em;
+  text-transform: uppercase;
+  color: var(--vh-ink-date);
+}
 
-.ceremonial {
-  padding: 36px 20px 24px;
-  background: var(--vh-paper);
-  border-left: 1px solid var(--vh-gold-soft);
-  border-right: 1px solid var(--vh-gold-soft);
+.heroDateSep {
+  margin: 0 0.45em;
+  color: var(--vh-gold);
+}
+
+/* Ceremonial page -------------------------------------------------------------- */
+
+.page {
+  position: relative;
+  padding: 28px 30px 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: var(--vh-paper);
+  background-image: var(--vh-texture-ivory);
+  background-size: 620px auto;
+  container-type: inline-size;
+  overflow: hidden;
+}
+
+.page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(color-mix(in srgb, var(--vh-paper) 55%, transparent), color-mix(in srgb, var(--vh-paper) 35%, transparent));
+  pointer-events: none;
+}
+
+.page > * {
+  position: relative;
+  z-index: 1;
+}
+
+.page > .pageBorders {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.page p,
+.page h3 {
+  margin: 0;
+}
+
+.pageBorders::before,
+.pageBorders::after {
+  content: "";
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  width: 0.5px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--vh-gold) 55%, transparent) 12%,
+    color-mix(in srgb, var(--vh-gold) 55%, transparent) 88%,
+    transparent
+  );
+}
+
+.pageBorders::before {
+  left: 11px;
+}
+
+.pageBorders::after {
+  right: 11px;
+}
+
+.pageBorderCap {
+  position: absolute;
+  width: 44px;
+  height: auto;
+  aspect-ratio: 724 / 2172;
+  opacity: 0.5;
+  filter: saturate(0.65) brightness(0.95);
+}
+
+.pageBorderCapTop {
+  top: 10px;
+  mask-image: linear-gradient(to bottom, black 0%, black 22%, transparent 70%);
+}
+
+.pageBorderCapBottom {
+  bottom: 10px;
+  mask-image: linear-gradient(to top, black 0%, black 22%, transparent 70%);
+}
+
+.pageBorderLeft {
+  left: 5px;
+}
+
+.pageBorderRight {
+  right: 5px;
 }
 
 .familyColumns {
+  width: 100%;
+  max-width: 420px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 28px;
-  text-align: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: start;
 }
 
 .familyColumns[data-count="1"] {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.familyColumns[data-count="2"]::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 50%;
+  width: 0.5px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--vh-gold) 30%, transparent) 18%,
+    color-mix(in srgb, var(--vh-gold) 30%, transparent) 82%,
+    transparent
+  );
+}
+
 .familyColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   min-width: 0;
 }
 
 .familyLabel {
-  margin: 0;
   font-weight: 600;
-  font-size: 1.125rem;
-  letter-spacing: 0.1em;
+  font-size: 12.5px;
+  letter-spacing: 0.34em;
+  margin-right: -0.34em;
   text-transform: uppercase;
+  white-space: nowrap;
   color: var(--vh-vermilion);
 }
 
 .familyRule {
-  display: block;
-  width: 40px;
-  height: 1px;
-  margin: 8px auto 10px;
-  background: var(--vh-gold);
+  width: 22px;
+  height: 0.5px;
+  margin: 9px 0 10px;
+  background: color-mix(in srgb, var(--vh-gold) 85%, transparent);
 }
 
 .familyParent {
-  margin: 0 0 4px;
-  font-size: 1rem;
+  font-weight: 600;
+  font-size: clamp(13.5px, 4.2cqw, 15.5px);
+  line-height: 1.45;
+  color: var(--vh-ink);
+  text-wrap: balance;
   overflow-wrap: anywhere;
 }
 
-.familyAddress {
-  margin: 6px 0 0;
+.familyParent + .familyParent {
+  margin-top: 2px;
+}
+
+.page .familyAddress {
+  margin-top: 5px;
   font-style: italic;
-  font-size: 0.875rem;
-  color: var(--vh-ink-muted);
+  font-weight: 500;
+  font-size: clamp(12px, 3.55cqw, 12.5px);
+  line-height: 1.42;
+  color: var(--vh-ink-soft);
+  text-wrap: balance;
   overflow-wrap: anywhere;
 }
 
 .portraitRow {
+  width: 100%;
+  max-width: 340px;
+  margin-top: 24px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin: 0 auto 28px;
-  max-width: 360px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
 }
 
 .portraitRow[data-count="1"] {
-  grid-template-columns: minmax(0, 200px);
+  grid-template-columns: minmax(0, 190px);
   justify-content: center;
+}
+
+/*
+ * Task 029 three-photo composition: narrower side frames around a dominant
+ * centre frame, bleeding 12px into the 30px page padding. Positions are
+ * layout only (1 | 2 | 3), never groom / couple / bride.
+ */
+.portraitRow[data-count="3"] {
+  width: calc(100% + 24px);
+  max-width: 452px;
+  margin-right: -12px;
+  margin-left: -12px;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr) minmax(0, 0.82fr);
+  gap: 8px;
 }
 
 .portraitFrame {
   margin: 0;
-  padding: 5px;
-  border: 1px solid var(--vh-gold);
-  background: var(--vh-silk);
+  padding: 3px;
+  border: 0.5px solid color-mix(in srgb, var(--vh-gold) 62%, transparent);
+  background: var(--vh-card);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--vh-door-shade) 5%, transparent),
+    0 10px 22px -16px color-mix(in srgb, var(--vh-door-shade) 28%, transparent);
+}
+
+.portraitFrame[data-emphasis="center"] {
+  position: relative;
+  z-index: 1;
+  border-color: color-mix(in srgb, var(--vh-gold) 78%, transparent);
+  box-shadow:
+    inset 0 0 0 2.5px var(--vh-card),
+    inset 0 0 0 3px color-mix(in srgb, var(--vh-gold) 30%, transparent),
+    0 2px 4px color-mix(in srgb, var(--vh-door-shade) 6%, transparent),
+    0 16px 30px -18px color-mix(in srgb, var(--vh-door-shade) 40%, transparent);
 }
 
 .portraitPhoto {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 3 / 4.2;
   object-fit: cover;
 }
 
+.portraitFrame[data-emphasis="center"] .portraitPhoto {
+  aspect-ratio: 3 / 4.3;
+}
+
 .inviteBlock {
-  margin: 0 auto 28px;
-  padding: 18px 16px;
-  border-top: 1px solid var(--vh-gold-soft);
-  border-bottom: 1px solid var(--vh-gold-soft);
-  text-align: center;
+  position: relative;
+  max-width: 100%;
+  margin-top: 26px;
+  padding: 11px 16px 13px;
+}
+
+.inviteCorner {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: color-mix(in srgb, var(--vh-vermilion) 42%, transparent);
+  border-style: solid;
+  border-width: 0;
+}
+
+.inviteCornerTopLeft {
+  top: 0;
+  left: 0;
+  border-top-width: 1px;
+  border-left-width: 1px;
+}
+
+.inviteCornerBottomRight {
+  right: 0;
+  bottom: 0;
+  border-right-width: 1px;
+  border-bottom-width: 1px;
 }
 
 .inviteSalutation {
-  margin: 0 0 8px;
   font-family: var(--vh-font-script), "Brush Script MT", cursive;
   font-weight: 400;
-  font-size: 1.75rem;
-  color: var(--vh-vermilion);
+  font-size: clamp(24px, 7.2cqw, 32.5px);
+  line-height: 1.25;
+  white-space: nowrap;
+  color: var(--vh-vermilion-rose);
 }
 
-.inviteGuest {
-  margin: 0;
-  font-weight: 600;
-  font-size: 1.25rem;
+.page .inviteGuest {
+  display: inline-block;
+  max-width: 100%;
+  margin-top: 6px;
+  padding: 0 10px 6px;
+  border-bottom: 0.5px solid color-mix(in srgb, var(--vh-gold) 65%, transparent);
+  font-family: var(--vh-font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(19px, 5.8cqw, 23px);
+  line-height: 1.35;
+  color: var(--vh-vermilion-deep);
   overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .rite {
-  text-align: center;
+  width: 100%;
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .riteTitle {
-  margin: 0 0 6px;
   font-weight: 600;
-  font-size: 1.75rem;
-  letter-spacing: 0.06em;
+  font-size: clamp(18px, 5.6cqw, 21px);
+  letter-spacing: 0.28em;
+  margin-right: -0.28em;
   text-transform: uppercase;
+  white-space: nowrap;
   color: var(--vh-vermilion);
 }
 
-.riteWeekday {
-  margin: 0 0 8px;
-  font-size: 1rem;
-  letter-spacing: 0.14em;
+.page .riteWeekday {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: var(--vh-ink-muted);
+  white-space: nowrap;
+  color: var(--vh-vermilion);
+}
+
+.riteWeekday::before,
+.riteWeekday::after {
+  content: "";
+  width: 26px;
+  height: 0.5px;
+  background: color-mix(in srgb, var(--vh-gold) 75%, transparent);
 }
 
 .riteDateRow {
+  width: 100%;
+  max-width: 300px;
+  margin-top: 8px;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 12px;
 }
 
-.riteSide {
-  padding: 6px 0;
-  border-top: 1px solid var(--vh-gold);
-  border-bottom: 1px solid var(--vh-gold);
-  font-size: 1.125rem;
-  letter-spacing: 0.08em;
+.riteDateCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.riteDateCellStart {
+  border-right: 0.5px solid color-mix(in srgb, var(--vh-gold) 60%, transparent);
+}
+
+.riteDateCellEnd {
+  border-left: 0.5px solid color-mix(in srgb, var(--vh-gold) 60%, transparent);
+}
+
+.riteSideValue {
+  font-weight: 600;
+  font-size: 21px;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  color: var(--vh-vermilion-deep);
 }
 
 .riteDayCell {
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 0 18px;
 }
 
 .riteDay {
   font-weight: 600;
-  font-size: 3.25rem;
-  line-height: 1;
-  color: var(--vh-vermilion);
+  font-size: 72px;
+  line-height: 0.95;
+  color: var(--vh-vermilion-deep);
 }
 
 .riteMonth {
-  font-size: 0.9375rem;
-  letter-spacing: 0.08em;
+  margin-top: 4px;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.24em;
+  margin-right: -0.24em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--vh-vermilion);
 }
 
-.riteLunar {
-  margin: 10px 0 0;
+.page .riteLunar {
+  margin-top: 12px;
   font-style: italic;
-  font-size: 0.9375rem;
-  color: var(--vh-ink-muted);
+  font-size: 13.5px;
+  color: var(--vh-ink-soft);
 }
 
-/* Events / venues ------------------------------------------------------------ */
+.riteDivider {
+  display: block;
+  width: 104px;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  margin: 16px auto 0;
+  opacity: 0.8;
+  filter: saturate(0.75);
+}
 
-.events {
-  padding: 8px 20px 28px;
-  background: var(--vh-paper);
-  border-left: 1px solid var(--vh-gold-soft);
-  border-right: 1px solid var(--vh-gold-soft);
+/* Venue cards (inside the ceremonial page) ------------------------------------ */
+
+.venues {
+  width: 100%;
+  margin-top: 20px;
 }
 
 .venueList {
-  display: grid;
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .venueBlock {
-  text-align: center;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.venueSide {
-  margin: 0 0 8px;
+.page .venueSide {
+  margin-bottom: 10px;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  font-size: 12.5px;
+  letter-spacing: 0.34em;
+  margin-right: -0.34em;
   text-transform: uppercase;
   color: var(--vh-vermilion);
 }
 
 .venueCard {
-  padding: 18px 16px;
-  border: 1px solid var(--vh-gold-soft);
-  border-radius: 14px;
-  background: var(--vh-silk);
+  width: 100%;
+  max-width: 320px;
+  padding: 20px 16px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--vh-vermilion) 45%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--vh-card) 85%, transparent);
+  box-shadow: 0 12px 26px -20px color-mix(in srgb, var(--vh-door-shade) 35%, transparent);
 }
 
 .venueTitle {
-  margin: 0 0 6px;
   font-weight: 600;
-  font-size: 1.25rem;
+  font-size: 12.5px;
+  letter-spacing: 0.2em;
+  margin-right: -0.2em;
+  text-transform: uppercase;
   color: var(--vh-vermilion);
+  text-wrap: balance;
 }
 
-.venueTime,
+.page .venueTime {
+  margin-top: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vh-ink-muted);
+}
+
 .venueDate {
-  margin: 0 0 2px;
-  font-size: 1rem;
+  font-weight: 600;
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  color: var(--vh-vermilion-deep);
 }
 
 .venueRule {
-  display: block;
-  width: 48px;
-  height: 1px;
-  margin: 10px auto;
-  background: var(--vh-gold);
+  width: 36px;
+  height: 0.5px;
+  margin: 14px 0 12px;
+  background: color-mix(in srgb, var(--vh-gold) 85%, transparent);
 }
 
 .venueName {
-  margin: 0 0 4px;
+  max-width: 300px;
   font-weight: 600;
-  font-size: 1.0625rem;
+  font-size: clamp(15px, 4.5cqw, 17px);
+  line-height: 1.4;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--vh-vermilion-deep);
+  text-wrap: balance;
   overflow-wrap: anywhere;
 }
 
-.venueAddress {
-  margin: 0;
-  font-size: 0.9375rem;
+.page .venueAddress {
+  max-width: 290px;
+  margin-top: 4px;
+  font-weight: 500;
+  font-size: 14.5px;
+  line-height: 1.5;
   color: var(--vh-ink-muted);
+  text-wrap: balance;
   overflow-wrap: anywhere;
 }
 
 .venueMapLink {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 44px;
-  margin-top: 10px;
-  padding: 0 20px;
+  margin-top: 14px;
+  padding: 0 24px;
   border-radius: 999px;
   background: var(--vh-vermilion);
-  color: var(--vh-ivory);
   font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
   text-decoration: none;
+  color: var(--vh-cream);
+  box-shadow: 0 8px 18px -12px color-mix(in srgb, var(--vh-door-shade) 60%, transparent);
 }
 
-/* Timeline ----------------------------------------------------------------- */
+.venueMapLink:focus-visible {
+  outline: 1px solid var(--vh-vermilion);
+  outline-offset: 3px;
+}
+
+/* Timeline (inside the ceremonial page) ---------------------------------------- */
+
+.scheduleBlock {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
 
 .schedule {
-  padding: 8px 20px 32px;
-  background: var(--vh-paper);
-  border-left: 1px solid var(--vh-gold-soft);
-  border-right: 1px solid var(--vh-gold-soft);
+  width: 100%;
+  max-width: 320px;
+  margin: 30px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 14px;
 }
 
-.scheduleList {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px 0;
-  margin: 0;
-  padding: 14px 0 0;
-  list-style: none;
-  border-top: 1px solid var(--vh-gold);
+.schedule[data-columns="2"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.schedule[data-columns="3"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.schedule[data-columns="4"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .scheduleItem {
   display: flex;
-  flex: 0 0 33.333%;
   flex-direction: column;
   align-items: center;
+  gap: 2px;
   min-width: 0;
-  padding: 0 4px;
-  text-align: center;
+  padding: 2px 4px;
+  border-left: 0.5px solid color-mix(in srgb, var(--vh-gold) 60%, transparent);
+}
+
+.scheduleItem[data-row-start="true"] {
+  border-left: 0;
 }
 
 .scheduleTime {
   font-weight: 600;
-  font-size: 1.125rem;
-  color: var(--vh-vermilion);
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  color: var(--vh-vermilion-deep);
 }
 
 .scheduleLabel {
-  font-size: 0.875rem;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--vh-ink-muted);
+  text-wrap: balance;
   overflow-wrap: anywhere;
 }
 
-/* Love Story --------------------------------------------------------------- */
+/* Love Story --------------------------------------------------------------------- */
 
 .loveStory {
-  padding: 48px 20px 52px;
-  background: var(--vh-lacquer);
-  color: var(--vh-lacquer-text);
+  position: relative;
+  padding: 58px 22px 70px;
+  overflow: hidden;
   text-align: center;
+  background-color: var(--vh-lacquer);
+  background-image: linear-gradient(180deg, var(--vh-lacquer-top) 0%, var(--vh-lacquer) 55%, var(--vh-lacquer-bottom) 100%);
+  color: var(--vh-lacquer-text);
+  container-type: inline-size;
+}
+
+.loveStory::before,
+.loveStory::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  height: 0.5px;
+  background: color-mix(in srgb, var(--vh-gold-soft) 55%, transparent);
+}
+
+.loveStory::before {
+  top: 16px;
+}
+
+.loveStory::after {
+  bottom: 16px;
 }
 
 .loveStoryHeader {
-  margin-bottom: 20px;
+  margin-bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .loveStoryEyebrow {
-  margin: 0 0 4px;
-  font-size: 0.8125rem;
-  letter-spacing: 0.3em;
+  margin: 0;
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 0.46em;
+  margin-right: -0.46em;
   text-transform: uppercase;
   color: var(--vh-gold-soft);
 }
 
 .loveStoryHeading {
-  margin: 0;
+  margin: 4px 0 0;
   font-family: var(--vh-font-script), "Brush Script MT", cursive;
   font-weight: 400;
-  font-size: 2.25rem;
+  font-size: clamp(32px, 10cqw, 40px);
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--vh-lacquer-heading);
 }
 
 .loveStoryRule {
-  display: block;
-  width: 56px;
-  height: 1px;
-  margin: 12px auto 0;
-  background: var(--vh-gold);
+  width: 40px;
+  height: 0.5px;
+  margin-top: 10px;
+  background: color-mix(in srgb, var(--vh-gold-soft) 80%, transparent);
 }
 
 .loveStoryPhotoFrame {
-  margin: 0 auto 20px;
-  max-width: 300px;
-  padding: 6px;
-  border: 1px solid var(--vh-gold);
+  max-width: 260px;
+  margin: 0 auto 28px;
+  overflow: hidden;
+  border: 3px solid color-mix(in srgb, var(--vh-lacquer-text) 90%, transparent);
+  border-radius: 14px;
+  box-shadow: 0 16px 30px -14px color-mix(in srgb, var(--vh-shadow) 80%, transparent);
 }
 
 .loveStoryPhoto {
@@ -519,187 +1212,472 @@
 }
 
 .loveStoryText {
-  margin: 0;
-  font-size: 1.0625rem;
-  line-height: 1.6;
+  max-width: 340px;
+  margin: 0 auto;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 1.7;
+  color: color-mix(in srgb, var(--vh-lacquer-text) 90%, transparent);
   white-space: pre-line;
   overflow-wrap: anywhere;
+  text-wrap: pretty;
 }
 
-/* Gift --------------------------------------------------------------------- */
+/* Gift (static entry / preview) -------------------------------------------------- */
 
 .gift {
-  padding: 40px 20px;
-  background: var(--vh-paper);
+  position: relative;
+  padding: 44px 28px 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
+  background-color: var(--vh-paper);
+  background-image: var(--vh-texture-ivory);
+  background-size: 620px auto;
+}
+
+.gift::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(color-mix(in srgb, var(--vh-paper) 55%, transparent), color-mix(in srgb, var(--vh-paper) 35%, transparent));
+  pointer-events: none;
+}
+
+.gift > * {
+  position: relative;
+}
+
+.giftLotus {
+  display: block;
+  width: 36px;
+  margin: 0 auto 4px;
+  color: var(--vh-gold-deep);
+}
+
+.giftTitle {
+  margin: 0;
+  font-family: var(--vh-font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 25px;
+  line-height: 1.25;
+  color: var(--vh-vermilion-deep);
 }
 
 .giftIntro {
-  margin: 0 auto 20px;
-  max-width: 340px;
+  max-width: 320px;
+  margin: 12px 0 22px;
   font-style: italic;
-  font-size: 1rem;
+  font-weight: 500;
+  font-size: 16.5px;
+  line-height: 1.6;
   color: var(--vh-ink-muted);
+  text-wrap: balance;
 }
 
 .giftPanel {
-  margin: 0 auto 16px;
+  width: 100%;
   max-width: 340px;
-  padding: 16px;
-  border: 1px solid var(--vh-gold-soft);
-  border-radius: 14px;
-  background: var(--vh-silk);
+  margin-bottom: 16px;
+  padding: 22px 20px 12px;
+  border: 1px solid color-mix(in srgb, var(--vh-gold) 55%, transparent);
+  border-radius: 16px;
+  background: var(--vh-card);
+  box-shadow: 0 18px 36px -24px color-mix(in srgb, var(--vh-shadow) 50%, transparent);
+}
+
+.giftPanel::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 0.5px solid color-mix(in srgb, var(--vh-vermilion) 22%, transparent);
+  border-radius: 11px;
+  pointer-events: none;
 }
 
 .giftSide {
-  margin: 0 0 10px;
+  margin: 0 0 14px;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  font-size: 12.5px;
+  letter-spacing: 0.3em;
+  margin-right: -0.3em;
   text-transform: uppercase;
   color: var(--vh-vermilion);
 }
 
 .giftQr {
-  display: block;
-  width: 180px;
+  width: 176px;
   max-width: 100%;
-  height: auto;
-  margin: 0 auto 12px;
-  background: var(--vh-ivory);
+  aspect-ratio: 1;
+  margin: 0 auto 6px;
+  padding: 10px;
+  border: 0.5px solid color-mix(in srgb, var(--vh-gold) 70%, transparent);
+  border-radius: 10px;
+  background: var(--vh-qr-plate);
+  box-shadow: 0 8px 18px -14px color-mix(in srgb, var(--vh-shadow) 40%, transparent);
+}
+
+.giftQrImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .giftLines {
-  margin: 0;
+  margin: 12px 0 0;
+  padding: 0;
 }
 
 .giftLine {
-  margin: 0 0 8px;
+  padding: 10px 0;
+  border-top: 0.5px solid color-mix(in srgb, var(--vh-gold) 45%, transparent);
 }
 
 .giftLine dt {
-  font-size: 0.8125rem;
-  letter-spacing: 0.08em;
+  margin-bottom: 3px;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--vh-ink-muted);
+  color: var(--vh-gold-deep);
 }
 
 .giftLine dd {
   margin: 0;
   font-weight: 600;
-  font-size: 1.0625rem;
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--vh-ink);
   overflow-wrap: anywhere;
 }
 
-/* Dress Code ----------------------------------------------------------------- */
+.giftLine .giftAccountNumber {
+  font-size: 21px;
+  letter-spacing: 0.08em;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--vh-vermilion-deep);
+}
+
+/* Dress Code ---------------------------------------------------------------------- */
 
 .dressCode {
-  padding: 40px 20px;
-  background: var(--vh-paper);
+  position: relative;
+  padding: 26px 28px 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
+  background-color: var(--vh-paper);
+  background-image: var(--vh-texture-ivory);
+  background-size: 620px auto;
+}
+
+.dressCode::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(color-mix(in srgb, var(--vh-paper) 55%, transparent), color-mix(in srgb, var(--vh-paper) 35%, transparent));
+  pointer-events: none;
+}
+
+.dressCode > * {
+  position: relative;
+}
+
+.dressRule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.dressRule::before,
+.dressRule::after {
+  content: "";
+  width: 34px;
+  height: 0.5px;
+  background: color-mix(in srgb, var(--vh-gold) 75%, transparent);
+}
+
+.dressRuleDiamond {
+  width: 5px;
+  height: 5px;
+  background: var(--vh-gold);
+  opacity: 0.8;
+  transform: rotate(45deg);
+}
+
+.dressTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.34em;
+  margin-right: -0.34em;
+  text-transform: uppercase;
+  color: var(--vh-vermilion);
 }
 
 .dressCodeText {
-  margin: 0 auto 16px;
-  max-width: 360px;
-  font-size: 1rem;
+  max-width: 310px;
+  margin: 12px 0 0;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--vh-ink-muted);
   white-space: pre-line;
+  text-wrap: balance;
   overflow-wrap: anywhere;
 }
 
 .dressCodeSwatches {
+  max-width: 310px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  gap: 14px 16px;
 }
 
 .dressCodeSwatch {
-  width: 40px;
-  height: 40px;
-  border: 2px solid var(--vh-silk);
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  box-shadow: 0 0 0 1px var(--vh-gold);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--vh-ink) 8%, transparent),
+    0 0 0 3px var(--vh-card),
+    0 0 0 3.5px color-mix(in srgb, var(--vh-gold) 60%, transparent),
+    0 5px 10px -4px color-mix(in srgb, var(--vh-ink) 35%, transparent);
 }
 
-/* Gallery -------------------------------------------------------------------- */
+/* Gallery / album ---------------------------------------------------------------- */
 
-.gallery {
-  padding: 40px 16px;
-  background: var(--vh-paper);
+.album {
+  position: relative;
+  padding: 34px 18px 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: var(--vh-paper);
+  background-image: var(--vh-texture-ivory);
+  background-size: 620px auto;
+  container-type: inline-size;
 }
 
-.galleryGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+.album::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(color-mix(in srgb, var(--vh-paper) 55%, transparent), color-mix(in srgb, var(--vh-paper) 35%, transparent));
+  pointer-events: none;
+}
+
+.album > * {
+  position: relative;
+}
+
+.albumHeader {
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.albumDivider {
+  display: block;
+  width: 104px;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  margin-bottom: 10px;
+  opacity: 0.8;
+  filter: saturate(0.75);
+}
+
+.albumEyebrow {
+  margin: 0;
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 0.4em;
+  margin-right: -0.4em;
+  text-transform: uppercase;
+  color: var(--vh-gold-deep);
+}
+
+.albumHeading {
+  margin: 4px 0 0;
+  font-family: var(--vh-font-script), "Brush Script MT", cursive;
+  font-weight: 400;
+  font-size: clamp(30px, 9cqw, 38px);
+  line-height: 1.2;
+  color: var(--vh-vermilion-rose);
+  text-wrap: balance;
+}
+
+.albumRows {
+  width: 100%;
+  max-width: 460px;
   margin: 0;
   padding: 0;
   list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.galleryItem {
-  aspect-ratio: 1 / 1;
-  overflow: hidden;
-  border: 1px solid var(--vh-gold-soft);
-  background: var(--vh-silk);
+.albumRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
 }
 
-.galleryPhoto {
+.albumRowPair {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.albumRowTall {
+  grid-template-columns: minmax(0, 1.33fr) minmax(0, 1fr);
+}
+
+.albumPrint {
+  display: flex;
+  min-width: 0;
+  padding: 3px;
+  border: 0.5px solid color-mix(in srgb, var(--vh-gold) 60%, transparent);
+  border-radius: 2px;
+  background: var(--vh-card);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--vh-door-shade) 5%, transparent),
+    0 12px 24px -18px color-mix(in srgb, var(--vh-door-shade) 35%, transparent);
+}
+
+.albumPhoto,
+.albumUnavailable {
   display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
   object-fit: cover;
 }
 
-.galleryUnavailable {
+.albumRowWide .albumPhoto,
+.albumRowWide .albumUnavailable {
+  aspect-ratio: 3 / 2;
+}
+
+.albumRowTall .albumPhoto,
+.albumRowTall .albumUnavailable {
+  aspect-ratio: 3 / 4;
+}
+
+.albumRowTall .albumPrint:last-child .albumPhoto,
+.albumRowTall .albumPrint:last-child .albumUnavailable {
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+.albumUnavailable {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
   padding: 8px;
-  font-size: 0.8125rem;
+  background: var(--vh-silk);
+  font-style: italic;
+  font-size: 13px;
   text-align: center;
-  color: var(--vh-ink-muted);
+  color: var(--vh-ink-soft);
 }
 
-/* Closing -------------------------------------------------------------------- */
+/* Closing (text-only, ruling D5) -------------------------------------------------- */
 
 .closing {
-  padding: 40px 24px 56px;
-  background: var(--vh-paper);
-  border-top: 3px double var(--vh-gold);
+  padding: 30px 0 0;
   text-align: center;
+  background: var(--vh-paper);
+}
+
+.closingDivider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 auto 10px;
+  color: var(--vh-gold-deep);
+}
+
+.closingDividerRule {
+  width: 52px;
+  height: 0.5px;
+  background: color-mix(in srgb, var(--vh-gold) 75%, transparent);
+}
+
+.closingLotus {
+  display: block;
+  width: 30px;
+  opacity: 0.85;
+}
+
+.closingPanel {
+  min-height: 0;
+  aspect-ratio: 3 / 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 26px 18px 34px;
+  background:
+    radial-gradient(ellipse 90% 80% at 50% 50%, var(--vh-lacquer-top), var(--vh-lacquer-bottom)),
+    var(--vh-lacquer);
+  color: var(--vh-cream);
+  container-type: inline-size;
+}
+
+.closingPanel p {
+  margin: 0;
 }
 
 .closingMessage {
-  margin: 0 0 16px;
   font-style: italic;
-  font-size: 1.0625rem;
-  line-height: 1.6;
+  font-weight: 500;
+  font-size: clamp(13.5px, 4.6cqw, 17px);
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--vh-cream) 94%, transparent);
 }
 
 .closingLine {
   display: block;
 }
 
-.closingNames {
-  margin: 0 0 6px;
-  font-weight: 600;
-  font-size: 1.5rem;
-  color: var(--vh-vermilion);
+.closingPanel .closingNames {
+  margin-top: 12px;
+  font-family: var(--vh-font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(22px, 7cqw, 27px);
+  line-height: 1.25;
+  color: var(--vh-white-warm);
   overflow-wrap: anywhere;
 }
 
-.closingDate {
-  margin: 0;
-  letter-spacing: 0.12em;
-  color: var(--vh-ink-muted);
+.closingPanel .closingDate {
+  margin-top: 8px;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.22em;
+  color: var(--vh-gold-light);
 }
 
+/* Desktop: centred premium column over the renderer-owned backdrop --------------- */
+
 @media (min-width: 768px) {
+  .root {
+    background: var(--vh-backdrop);
+  }
+
   .column {
     margin-top: 32px;
     margin-bottom: 32px;

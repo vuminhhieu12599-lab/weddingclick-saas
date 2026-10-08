@@ -1,25 +1,32 @@
 import { VIETNAMESE_HERITAGE_V1_COPY } from "../copy";
 import styles from "../vietnamese-heritage-v1.module.css";
+import { SongHyGlyph } from "./decor";
 
-/** Chữ Hỷ (囍), the traditional double-happiness wedding mark. */
-const SONG_HY_GLYPH = "囍";
+const LABEL = VIETNAMESE_HERITAGE_V1_COPY.a11y.songHy;
 
 /**
- * The Song Hỷ mark between two gold rules (Task 029 ceremonial divider).
- * Fixed template decor (class B): one accessible name, no customer data.
- *
- * VH-01 renders the glyph as text. It depends on a system CJK font, which is
- * not deterministic across devices (the Elegant Editorial seal precedent,
- * P1-UX-03); VH-02 replaces it with WeddingClick-owned vector geometry.
+ * The Task 029 Song Hỷ mark between two fine gold rules (ceremonial page
+ * header). The 囍 is deterministic vector geometry (`SongHyGlyph`), never a
+ * font glyph, so it sits identically on every device. Fixed template decor
+ * with one accessible name.
  */
-export function SongHy({ rules = true }: { rules?: boolean }) {
+export function SongHy() {
   return (
     <div className={styles.songHy}>
-      {rules ? <span className={styles.songHyRule} aria-hidden="true" /> : null}
-      <span className={styles.songHyGlyph} role="img" aria-label={VIETNAMESE_HERITAGE_V1_COPY.a11y.songHy}>
-        <span aria-hidden="true">{SONG_HY_GLYPH}</span>
+      <span className={styles.songHyRule} aria-hidden="true" />
+      <span className={styles.songHyMark} role="img" aria-label={LABEL}>
+        <SongHyGlyph className={styles.songHyGlyph} />
       </span>
-      {rules ? <span className={styles.songHyRule} aria-hidden="true" /> : null}
+      <span className={styles.songHyRule} aria-hidden="true" />
     </div>
+  );
+}
+
+/** The Task 029 closing seal: a small lacquer disc carrying the vector 囍. */
+export function SongHySeal() {
+  return (
+    <span className={styles.songHySeal} role="img" aria-label={LABEL}>
+      <SongHyGlyph className={styles.songHySealGlyph} />
+    </span>
   );
 }

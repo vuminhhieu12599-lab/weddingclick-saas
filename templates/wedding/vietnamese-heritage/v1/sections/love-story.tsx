@@ -8,15 +8,19 @@ const COPY = VIETNAMESE_HERITAGE_V1_COPY.loveStory;
 interface LoveStoryProps {
   /** `viewModel.content.loveStory`, shown only when `sections.loveStory` (gated by the root). */
   story: string;
+  /** `templateSlots.loveStoryPhoto[0]`. */
   photo: MediaResolution | undefined;
 }
 
 /**
- * Task 029 Love Story on the deep oxblood / lacquer-red band. The canonical
- * story is one plain text (line breaks preserved, never HTML); the
- * prototype's structured milestones have no canonical source and are not
- * rendered. The `media.loveStoryPhoto` slot renders only when `RESOLVED`;
- * otherwise the band is text-only. Never COVER/GALLERY, never demo media.
+ * Task 029 Love Story on the deep oxblood / lacquer-red band with fine gold
+ * rules. The canonical story is one plain text (line breaks preserved, never
+ * HTML); the prototype's structured milestones have no canonical source and
+ * are not rendered. The `templateSlots.loveStoryPhoto[0]` item renders as
+ * one framed print only when `RESOLVED`; otherwise the band is text-only.
+ * The photo never creates the section (visibility is `sections.loveStory`
+ * plus the canonical text) and is never a legacy LOVE_STORY_PHOTO, COVER or
+ * GALLERY item.
  */
 export function LoveStory({ story, photo }: LoveStoryProps) {
   return (
