@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+
+import { renderToStaticMarkupAsync } from "../../../../core/__tests__/support/render-static-markup";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { INVITATION_VARIANTS, RSVP_ATTENDANCE_STATUSES } from "../../../../../lib/domain";
@@ -411,9 +413,11 @@ describe("renderer gate (K19, P30)", () => {
 
   it("production host (no RSVP before Task 033) → no RSVP block", async () => {
     const { viewModel, selection } = await buildRendererFixture({ variant: "COMMON", guest: FIXTURE_GUESTS.NORMAL });
-    const html = renderToStaticMarkup(
+    // RS-01: the production host loads the renderer lazily; render with the Suspense-aware helper.
+    const html = await renderToStaticMarkupAsync(
       <InvitationRendererHost rendererKey={selection.rendererKey} viewModel={viewModel} sections={selection.effectiveSections} />,
     );
+    expect(html).toContain('data-renderer="elegant-editorial-v1"');
     expect(html).not.toMatch(/ee-rsvp-heading|<form/);
   });
 

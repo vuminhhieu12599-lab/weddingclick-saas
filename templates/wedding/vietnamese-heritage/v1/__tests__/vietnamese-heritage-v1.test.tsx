@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+
+import { renderToStaticMarkupAsync } from "../../../../core/__tests__/support/render-static-markup";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { INVITATION_VARIANTS, type InvitationVariant } from "../../../../../lib/domain";
@@ -386,7 +388,7 @@ describe("C. registry coexistence", () => {
 
   it("the production client host resolves each key to its own renderer", async () => {
     const vh = await vhFixture({ variant: "BRIDE" });
-    const vhHtml = renderToStaticMarkup(
+    const vhHtml = await renderToStaticMarkupAsync(
       <InvitationRendererHost rendererKey={VH_KEY} viewModel={vh.viewModel} sections={vh.selection.effectiveSections} />,
     );
     expect(vhHtml).toContain('data-renderer="vietnamese-heritage-v1"');
@@ -396,7 +398,7 @@ describe("C. registry coexistence", () => {
       resolver: createFixtureMediaResolver(),
     });
     expect(ee.selection.rendererKey).toBe(EE_KEY);
-    const eeHtml = renderToStaticMarkup(
+    const eeHtml = await renderToStaticMarkupAsync(
       <InvitationRendererHost rendererKey={EE_KEY} viewModel={ee.viewModel} sections={ee.selection.effectiveSections} />,
     );
     expect(eeHtml).toContain('data-renderer="elegant-editorial-v1"');

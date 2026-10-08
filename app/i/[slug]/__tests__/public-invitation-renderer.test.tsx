@@ -1,4 +1,4 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkupAsync } from "../../../../templates/core/__tests__/support/render-static-markup";
 import { describe, expect, it, vi } from "vitest";
 
 // next/font loaders only run under the Next compiler (same mock as the renderer tests).
@@ -31,7 +31,7 @@ function fetchReturning(status: number, body: unknown) {
 describe("A: the public RSVP section renders with the real capability", () => {
   it("shows the form with three canonical choices and a blank name input", async () => {
     const data = await buildHarnessRenderData("lunar-null");
-    const html = renderToStaticMarkup(
+    const html = await renderToStaticMarkupAsync(
       <PublicInvitationRenderer publicSlug={SLUG} rendererKey={data.rendererKey} viewModel={data.viewModel} sections={data.sections} />,
     );
     const start = html.indexOf("Xác nhận tham dự");

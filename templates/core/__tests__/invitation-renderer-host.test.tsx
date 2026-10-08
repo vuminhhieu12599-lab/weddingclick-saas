@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { renderToStaticMarkupAsync } from "./support/render-static-markup";
 import { join } from "node:path";
 
 import { renderToStaticMarkup } from "react-dom/server";
@@ -57,7 +58,7 @@ afterEach(() => {
 describe("InvitationRendererHost", () => {
   it.each(INVITATION_VARIANTS)("%s: renders exactly the renderer markup for its server-render capabilities", async (variant) => {
     const { viewModel, selection } = await buildRendererFixture({ variant, guest: FIXTURE_GUESTS.NORMAL });
-    const viaHost = renderToStaticMarkup(
+    const viaHost = await renderToStaticMarkupAsync(
       <InvitationRendererHost
         rendererKey={selection.rendererKey}
         viewModel={viewModel}

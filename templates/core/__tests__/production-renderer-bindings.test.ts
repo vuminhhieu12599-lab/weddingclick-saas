@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { RendererBindingInvariantError } from "../../../lib/invitation-rendering/renderer-binding-errors";
@@ -15,6 +17,8 @@ import {
   PRODUCTION_RENDERER_MANIFESTS,
 } from "../production-renderer-manifests";
 import { RendererProductionManifestInvariantError, type RendererProductionManifestV1 } from "../renderer-manifest";
+import { buildRendererFixture } from "../fixtures/renderer-fixture-pipeline";
+import { renderToStaticMarkupAsync } from "./support/render-static-markup";
 
 // VH-01: the production binding registry also binds Vietnamese Heritage v1, whose
 // next/font loaders only run under the Next compiler.
@@ -55,6 +59,39 @@ function productionComponents(): Map<string, InvitationRendererComponentV1> {
   ]);
 }
 
+/**
+ * RS-01: a production binding is a `next/dynamic` loadable component (a function
+ * component the frozen RF-05 registry accepts unchanged), never the renderer root itself.
+ */
+function isDeferred(value: unknown): boolean {
+  return (
+    typeof value === "function" &&
+    (value as { displayName?: unknown }).displayName === "LoadableComponent" &&
+    value !== ElegantEditorialV1 &&
+    value !== VietnameseHeritageV1
+  );
+}
+
+const FIXTURES = new Map<string, Awaited<ReturnType<typeof buildRendererFixture>>>();
+
+async function fixtureFor(variant: "COMMON" | "BRIDE") {
+  const cached = FIXTURES.get(variant) ?? (await buildRendererFixture({ variant }));
+  FIXTURES.set(variant, cached);
+  return cached;
+}
+
+/** The lazy binding's markup once its chunk has loaded, with no capabilities. */
+async function lazyMarkup(component: InvitationRendererComponentV1, variant: "COMMON" | "BRIDE"): Promise<string> {
+  const { viewModel, selection } = await fixtureFor(variant);
+  return renderToStaticMarkupAsync(createElement(component, { viewModel, sections: selection.effectiveSections, capabilities: {} }));
+}
+
+/** The renderer root rendered directly (cached fixture from `lazyMarkup`). */
+function directMarkup(component: InvitationRendererComponentV1, variant: "COMMON" | "BRIDE"): string {
+  const { viewModel, selection } = FIXTURES.get(variant)!;
+  return renderToStaticMarkup(createElement(component, { viewModel, sections: selection.effectiveSections, capabilities: {} }));
+}
+
 function withKey(key: string): RendererProductionManifestV1 {
   const base = PRODUCTION_RENDERER_MANIFESTS[0] as RendererProductionManifestV1;
   return { ...base, compatibility: { ...base.compatibility, rendererKey: key } };
@@ -72,8 +109,9 @@ describe("key-set equality (P27)", () => {
   it("every PRODUCTION_RENDERER_KEYS entry resolves to a component in the client binding registry (B)", () => {
     for (const key of PRODUCTION_RENDERER_KEYS) {
       expect(PRODUCTION_RENDERER_BINDING_REGISTRY.compatibilityRegistry.lookup(key)?.rendererKey, key).toBe(key);
-      expect(PRODUCTION_RENDERER_BINDING_REGISTRY.lookupComponent(key), key).toBeTypeOf("function");
-      expect(resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, key), key).toBeTypeOf("function");
+      // RS-01: every production binding is a deferred next/dynamic component (one renderer chunk set per key).
+      expect(isDeferred(PRODUCTION_RENDERER_BINDING_REGISTRY.lookupComponent(key)), key).toBe(true);
+      expect(isDeferred(resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, key)), key).toBe(true);
     }
   });
 
@@ -97,12 +135,12 @@ describe("key-set equality (P27)", () => {
 });
 
 describe("Elegant Editorial binding", () => {
-  it("wedding.elegant-editorial.v1 resolves to ElegantEditorialV1", () => {
+  it("wedding.elegant-editorial.v1 resolves to a deferred binding of exactly ElegantEditorialV1", async () => {
     // VH-01 generalization: the production key list is now exactly EE then VH (was EE only).
     expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([EE_KEY, VH_KEY]);
-    expect(resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, "wedding.elegant-editorial.v1")).toBe(
-      ElegantEditorialV1,
-    );
+    const bound = resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, "wedding.elegant-editorial.v1");
+    expect(isDeferred(bound)).toBe(true);
+    expect(await lazyMarkup(bound, "COMMON")).toBe(directMarkup(ElegantEditorialV1, "COMMON"));
   });
 
   it("the bound manifest is the validated projection, not the raw source constant", () => {
@@ -122,10 +160,15 @@ describe("Elegant Editorial binding", () => {
 });
 
 describe("Vietnamese Heritage binding (VH-01)", () => {
-  it("wedding.vietnamese-heritage.v1 resolves to VietnameseHeritageV1, distinct from Elegant Editorial", () => {
-    expect(resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, VH_KEY)).toBe(VietnameseHeritageV1);
-    expect(VietnameseHeritageV1).not.toBe(ElegantEditorialV1);
-    expect(resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, EE_KEY)).toBe(ElegantEditorialV1);
+  it("wedding.vietnamese-heritage.v1 resolves to a deferred binding of exactly VietnameseHeritageV1, distinct from Elegant Editorial", async () => {
+    const vh = resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, VH_KEY);
+    const ee = resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, EE_KEY);
+    expect(isDeferred(vh)).toBe(true);
+    expect(vh).not.toBe(ee);
+    const vhMarkup = await lazyMarkup(vh, "BRIDE");
+    expect(vhMarkup).toBe(directMarkup(VietnameseHeritageV1, "BRIDE"));
+    expect(vhMarkup).toContain('data-renderer="vietnamese-heritage-v1"');
+    expect(vhMarkup).not.toContain("elegant-editorial-v1");
   });
 
   it("the bound manifest is the validated projection, not the raw source constant", () => {

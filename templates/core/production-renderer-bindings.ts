@@ -1,3 +1,5 @@
+import dynamic from "next/dynamic";
+
 import { projectCompatibilityManifest } from "../../lib/invitation-rendering/renderer-compatibility-manifest";
 import {
   createInvitationRendererBindingRegistry,
@@ -5,8 +7,6 @@ import {
   type RendererBindingEntryV1,
 } from "../../lib/invitation-rendering/renderer-binding-registry";
 import type { InvitationRendererComponentV1 } from "../../lib/invitation-rendering/renderer-component";
-import { ElegantEditorialV1 } from "../wedding/elegant-editorial/v1/elegant-editorial-v1";
-import { VietnameseHeritageV1 } from "../wedding/vietnamese-heritage/v1/vietnamese-heritage-v1";
 import { PRODUCTION_RENDERER_MANIFESTS } from "./production-renderer-manifests";
 import { RendererProductionManifestInvariantError, type RendererProductionManifestV1 } from "./renderer-manifest";
 
@@ -25,10 +25,31 @@ import { RendererProductionManifestInvariantError, type RendererProductionManife
  * paired with its component. It must bind exactly the validated key set:
  * an unbound production manifest or an orphan component binding fails closed
  * at module load with a `RendererProductionManifestInvariantError`.
+ *
+ * RS-01 (docs/DECISIONS.md "RS-01"): each component is a `next/dynamic`
+ * component over exactly one literal `import()` of its renderer root, so a
+ * renderer's implementation, CSS and font declarations are a separate chunk
+ * set that loads only when its key is the selected one; the root modules are
+ * never statically imported here. `next/dynamic` (SSR on, no `loading`) is
+ * React.lazy without a Suspense boundary plus Next's server-side preload of
+ * exactly the selected chunk set: the server HTML still contains the
+ * invitation inline, its stylesheet is linked in that HTML (no unstyled first
+ * paint) and its scripts are preloaded. The frozen RF-05 registry accepts
+ * these function components unchanged. A failed chunk load rejects into the
+ * normal React error path: nothing is caught and no other renderer is ever
+ * substituted.
  */
 
-/** P27 B: explicit, closed rendererKey → component table. */
-const PRODUCTION_RENDERER_COMPONENTS: ReadonlyMap<string, InvitationRendererComponentV1> = new Map([
+const ElegantEditorialV1 = dynamic(() =>
+  import("../wedding/elegant-editorial/v1/elegant-editorial-v1").then((module) => module.ElegantEditorialV1),
+);
+
+const VietnameseHeritageV1 = dynamic(() =>
+  import("../wedding/vietnamese-heritage/v1/vietnamese-heritage-v1").then((module) => module.VietnameseHeritageV1),
+);
+
+/** P27 B: explicit, closed rendererKey → component table (RS-01: one literal dynamic import per key). */
+const PRODUCTION_RENDERER_COMPONENTS: ReadonlyMap<string, InvitationRendererComponentV1> = new Map<string, InvitationRendererComponentV1>([
   ["wedding.elegant-editorial.v1", ElegantEditorialV1],
   ["wedding.vietnamese-heritage.v1", VietnameseHeritageV1],
 ]);

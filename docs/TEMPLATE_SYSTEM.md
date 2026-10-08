@@ -590,7 +590,7 @@ Only load:
 - media needed for the page;
 - motion capabilities actually used.
 
-Today every production renderer is statically bound into one client graph (VH-01 item 6 debt). Checkpoint RS-01 adds `rendererKey`-based lazy loading, fail-closed, before Vietnamese Heritage reaches the Production branch (`docs/DECISIONS.md` "TE-01" T14).
+**RS-01 COMPLETE** (`docs/DECISIONS.md` "RS-01"): the production binding table pairs each exact `rendererKey` with a `next/dynamic` component over one literal `import()` of its renderer root (SSR on, no loading state, no Suspense boundary), so only the selected renderer's implementation, CSS module and font declarations load; Next links that renderer's stylesheet during SSR and preloads its scripts. The key set stays explicit, closed and fail-closed; production and editor manifests stay static and server-safe; renderer visuals and behaviour are unchanged. Build-artifact evidence: no eager invitation-route file carries renderer code; each renderer is a disjoint chunk set.
 
 Optimize large images appropriately.
 

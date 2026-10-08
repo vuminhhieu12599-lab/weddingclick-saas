@@ -99,6 +99,23 @@ function importsOf(source: string): ImportStatement[] {
   return statements;
 }
 
+/**
+ * RS-01: the literal `import("…")` specifiers of a source (comments stripped),
+ * and the count of every `import(` expression, literal or not.
+ */
+function dynamicImportsOf(source: string): { specifiers: string[]; total: number } {
+  const code = stripComments(source);
+  const specifiers = [...code.matchAll(/\bimport\(\s*["']([^"'`]+)["']\s*\)/g)].map((match) => match[1] as string);
+  const total = code.match(/\bimport\s*\(/g)?.length ?? 0;
+  return { specifiers, total };
+}
+
+/** RS-01: the one module that owns lazy renderer loading, and its exact lazy roots. */
+const RS01_LAZY_ROOTS = [
+  "templates/wedding/elegant-editorial/v1/elegant-editorial-v1",
+  "templates/wedding/vietnamese-heritage/v1/vietnamese-heritage-v1",
+] as const;
+
 /** Resolves a relative specifier from `file` to a repository-relative module path. */
 function resolveSpecifier(file: string, specifier: string): string {
   if (!specifier.startsWith(".")) return specifier;
@@ -407,13 +424,12 @@ const SECTION_COMMON = [`${V1}/copy`, CSS_MODULE];
 
 /** Exact import allowlist per RF-06B code file (repository-relative, no extension; CSS keeps its extension). */
 const RF06B_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06B_CODE_FILES)[number], readonly string[]>> = {
+  // RS-01: renderer roots are no longer static imports; `next/dynamic` loads each via one literal import().
   "templates/core/production-renderer-bindings.ts": [
+    "next/dynamic",
     `${LIB}/renderer-compatibility-manifest`,
     `${LIB}/renderer-binding-registry`,
     `${LIB}/renderer-component`,
-    `${V1}/elegant-editorial-v1`,
-    // VH-01: the second explicit component binding.
-    "templates/wedding/vietnamese-heritage/v1/vietnamese-heritage-v1",
     "templates/core/production-renderer-manifests",
     "templates/core/renderer-manifest",
   ],
@@ -612,6 +628,8 @@ describe("RF-06B template files", () => {
   it.each(RF06B_CODE_FILES)("%s contains no forbidden runtime, data, browser, prototype or interaction code", (file) => {
     const code = codeOf(file);
     for (const [label, pattern] of RF06B_FORBIDDEN) {
+      // RS-01: the binding module alone owns lazy renderer import() (exact rules below).
+      if (file === BINDINGS_MODULE && label === "dynamic import") continue;
       expect(pattern.test(code), `${file}: ${label}`).toBe(false);
     }
   });
@@ -638,11 +656,13 @@ describe("RF-06B template files", () => {
     expect(readRepoFile(HOST_MODULE).startsWith('"use client";\n')).toBe(true);
   });
 
-  it("only the binding module imports a renderer component; renderer files never see manifests, registries, fixtures or the host", () => {
+  it("only the binding module loads a renderer component (RS-01: lazily); renderer files never see manifests, registries, fixtures or the host", () => {
     for (const file of RF06B_CODE_FILES) {
       const imports = importsOf(readRepoFile(file)).map((statement) => resolveSpecifier(file, statement.specifier));
-      const importsRenderer = imports.includes(`${V1}/elegant-editorial-v1`);
-      expect(importsRenderer, file).toBe(file === BINDINGS_MODULE);
+      // RS-01: no module statically imports a renderer root any more.
+      expect(imports.includes(`${V1}/elegant-editorial-v1`), file).toBe(false);
+      const lazy = dynamicImportsOf(readRepoFile(file)).specifiers.map((specifier) => resolveSpecifier(file, specifier));
+      expect(lazy.includes(`${V1}/elegant-editorial-v1`), file).toBe(file === BINDINGS_MODULE);
     }
     for (const file of RF06B_RENDERER_FILES) {
       const imports = importsOf(readRepoFile(file)).map((statement) => resolveSpecifier(file, statement.specifier));
@@ -1213,7 +1233,12 @@ function resolveModuleFile(modulePath: string): string | undefined {
 }
 
 /** Transitive value-import closure (type-only imports are erased and not followed). */
-function clientGraph(entry: string): { files: string[]; external: string[] } {
+/**
+ * The client import graph from `entry`. Static value imports always; RS-01
+ * lazy `import()` edges only when `followLazy` (the full client graph) — the
+ * eager graph (`followLazy: false`) is what loads before any renderer chunk.
+ */
+function clientGraph(entry: string, options: { followLazy: boolean } = { followLazy: true }): { files: string[]; external: string[] } {
   const files = new Set<string>();
   const external = new Set<string>();
   const queue = [entry];
@@ -1222,6 +1247,13 @@ function clientGraph(entry: string): { files: string[]; external: string[] } {
     if (files.has(file)) continue;
     files.add(file);
     if (!/\.(ts|tsx)$/.test(file)) continue;
+    if (options.followLazy) {
+      for (const specifier of dynamicImportsOf(readRepoFile(file)).specifiers) {
+        const resolved = resolveModuleFile(resolveSpecifier(file, specifier));
+        expect(resolved, `${file} → import(${specifier})`).toBeDefined();
+        queue.push(resolved as string);
+      }
+    }
     for (const statement of importsOf(readRepoFile(file))) {
       if (statement.typeOnly) continue;
       if (!statement.specifier.startsWith(".")) {
@@ -1237,13 +1269,15 @@ function clientGraph(entry: string): { files: string[]; external: string[] } {
 }
 
 describe("client import graph from the host (P26, P45)", () => {
+  // RS-01: the full client graph (eager + lazy renderer chunks); the eager graph is checked below.
   const graph = clientGraph(HOST_MODULE);
 
   // RF-06C: the capability hooks bring `react` into the value graph, so the
   // description (which previously named react while asserting only
   // next/font/google) is now exact.
-  it("reaches only react, next/font/google and repository modules", () => {
-    expect(graph.external).toStrictEqual(["next/font/google", "react"]);
+  // RS-01: plus `next/dynamic`, the lazy renderer loader in the binding module.
+  it("reaches only react, next/dynamic, next/font/google and repository modules", () => {
+    expect(graph.external).toStrictEqual(["next/dynamic", "next/font/google", "react"]);
   });
 
   it("reaches exactly the RF-06C client-runtime modules, and adapters only through them", () => {
@@ -1289,6 +1323,68 @@ describe("client import graph from the host (P26, P45)", () => {
       }
     },
   );
+});
+
+describe("RS-01 renderer-key lazy loading", () => {
+  const eager = clientGraph(HOST_MODULE, { followLazy: false });
+
+  it("the binding module owns exactly one literal import() per production renderer root, nothing else", () => {
+    const { specifiers, total } = dynamicImportsOf(readRepoFile(BINDINGS_MODULE));
+    expect(total).toBe(2);
+    expect(specifiers.map((specifier) => resolveSpecifier(BINDINGS_MODULE, specifier))).toStrictEqual([...RS01_LAZY_ROOTS]);
+    const code = codeOf(BINDINGS_MODULE);
+    // No template literal, concatenation, variable or discovery in a specifier.
+    expect(code).not.toMatch(/import\(\s*[^"'\s]|import\(`|import\([^)]*\+|readdir|glob|require\(/);
+    // next/dynamic with no options: SSR on, no `loading` (no Suspense boundary, no placeholder content).
+    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(2);
+    expect(code).not.toMatch(/ssr:|loading:|suspense/i);
+    // Each lazy root binds its own export only.
+    expect(code).toMatch(/import\("\.\.\/wedding\/elegant-editorial\/v1\/elegant-editorial-v1"\)\.then\(\(module\) => module\.ElegantEditorialV1\)/);
+    expect(code).toMatch(/import\("\.\.\/wedding\/vietnamese-heritage\/v1\/vietnamese-heritage-v1"\)\.then\(\(module\) => module\.VietnameseHeritageV1\)/);
+    expect(code).not.toMatch(/\bcatch\b|\.catch\(/);
+  });
+
+  it("no other production source under templates/, app/ or lib/ contains a dynamic import()", () => {
+    const sources = [...nonTestSources("templates"), ...nonTestSources("app"), ...nonTestSources("lib")];
+    const withDynamic = sources.filter((file) => dynamicImportsOf(readRepoFile(file)).total > 0);
+    expect(withDynamic).toStrictEqual([BINDINGS_MODULE]);
+  });
+
+  it("the eager host graph reaches no renderer implementation, CSS module or font loader", () => {
+    // Only the two data-only production manifests (static by design) — never a renderer implementation.
+    expect(eager.files.filter((file) => file.startsWith("templates/wedding/"))).toStrictEqual([
+      "templates/wedding/elegant-editorial/v1/manifest.ts",
+      "templates/wedding/vietnamese-heritage/v1/manifest.ts",
+    ]);
+    expect(eager.files.filter((file) => file.endsWith(".css"))).toStrictEqual([]);
+    expect(eager.external).not.toContain("next/font/google");
+    expect(eager.external).toContain("next/dynamic");
+    expect(eager.files).toContain(BINDINGS_MODULE);
+    expect(eager.files).toContain("templates/core/production-renderer-manifests.ts");
+  });
+
+  it("each lazy renderer subgraph never reaches the other renderer's implementation, CSS or fonts", () => {
+    const [eeRoot, vhRoot] = RS01_LAZY_ROOTS.map((root) => resolveModuleFile(root) as string);
+    const ee = clientGraph(eeRoot as string, { followLazy: true }).files;
+    const vh = clientGraph(vhRoot as string, { followLazy: true }).files;
+    expect(ee.some((file) => file.includes("templates/wedding/vietnamese-heritage/"))).toBe(false);
+    expect(vh.some((file) => file.includes("templates/wedding/elegant-editorial/"))).toBe(false);
+    expect(ee).toContain("templates/wedding/elegant-editorial/v1/fonts.ts");
+    expect(vh).toContain("templates/wedding/vietnamese-heritage/v1/fonts.ts");
+    expect(ee.filter((file) => file.endsWith(".css"))).toStrictEqual(["templates/wedding/elegant-editorial/v1/elegant-editorial-v1.module.css"]);
+    expect(vh.filter((file) => file.endsWith(".css"))).toStrictEqual(["templates/wedding/vietnamese-heritage/v1/vietnamese-heritage-v1.module.css"]);
+  });
+
+  it("production and editor manifest registries stay static, server-safe and free of renderer implementations", () => {
+    for (const file of ["templates/core/production-renderer-manifests.ts", "templates/core/production-editor-manifests.ts"]) {
+      expect(dynamicImportsOf(readRepoFile(file)).total, file).toBe(0);
+      for (const modulePath of resolvedImportsOf(file)) {
+        expect(modulePath, `${file} → ${modulePath}`).not.toMatch(
+          /^templates\/wedding\/[\w-]+\/v\d+\/(?!manifest$)|\/sections\/|\/interactive\/|fonts$|\.css$|^react$/,
+        );
+      }
+    }
+  });
 });
 
 // ===========================================================================
@@ -1457,6 +1553,8 @@ describe("RF-06C client-runtime files", () => {
     expect(code).toMatch(/readonly rsvp\?: RsvpCapabilityV1;/);
     expect(code).toMatch(/<Renderer viewModel=\{viewModel\} sections=\{sections\} capabilities=\{capabilities\} \/>/);
     expect(code).not.toMatch(/\btry\b|\bcatch\b|ErrorBoundary|fallback/);
+    // RS-01: the host core is unchanged — no Suspense boundary, no lazy wrapper, no loading content of its own.
+    expect(code).not.toMatch(/Suspense|\blazy\b|import\(|next\/dynamic/);
   });
 });
 
@@ -1980,7 +2078,10 @@ describe("VH-01 Vietnamese Heritage v1 files", () => {
 
   it("only the binding module imports the VH renderer component, and no VH file imports a template outside its own tree", () => {
     for (const file of [...RF06A_FILES, ...RF06B_CODE_FILES, ...RF06C_FILES, ...RF06D_FILES, ...VH01_CODE_FILES]) {
-      expect(resolvedImportsOf(file).includes(`${VH}/vietnamese-heritage-v1`), file).toBe(file === BINDINGS_MODULE);
+      // RS-01: nothing imports the VH root statically; only the binding module loads it lazily.
+      expect(resolvedImportsOf(file).includes(`${VH}/vietnamese-heritage-v1`), file).toBe(false);
+      const lazy = dynamicImportsOf(readRepoFile(file)).specifiers.map((specifier) => resolveSpecifier(file, specifier));
+      expect(lazy.includes(`${VH}/vietnamese-heritage-v1`), file).toBe(file === BINDINGS_MODULE);
     }
     for (const file of [...VH01_CODE_FILES, ...VH02B_ISLAND_FILES]) {
       for (const modulePath of resolvedImportsOf(file)) {

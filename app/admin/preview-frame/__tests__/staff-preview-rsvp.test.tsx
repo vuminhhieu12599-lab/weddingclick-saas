@@ -1,4 +1,4 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkupAsync } from "../../../../templates/core/__tests__/support/render-static-markup";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // next/font loaders only run under the Next compiler (same mock as the renderer tests).
@@ -17,7 +17,7 @@ const { StaffPreviewRenderer } = await import("../staff-preview-renderer");
 /** Staff Preview RSVP (P30 amendment): visible for review, submission honestly UNAVAILABLE, nothing written. A no-guest scenario mirrors the staff preview ViewModel (no guest context). */
 
 const data = await buildHarnessRenderData("lunar-null");
-const html = renderToStaticMarkup(
+const html = await renderToStaticMarkupAsync(
   <StaffPreviewRenderer rendererKey={data.rendererKey} viewModel={data.viewModel} sections={data.sections} />,
 );
 
@@ -67,7 +67,7 @@ describe("Staff Preview RSVP capability", () => {
     }));
     vi.resetModules();
     const { StaffPreviewRenderer: Wrapper } = await import("../staff-preview-renderer");
-    renderToStaticMarkup(<Wrapper rendererKey={data.rendererKey} viewModel={data.viewModel} sections={data.sections} />);
+    await renderToStaticMarkupAsync(<Wrapper rendererKey={data.rendererKey} viewModel={data.viewModel} sections={data.sections} />);
     expect(captured).toBeDefined();
     const result = await captured?.submit({ attendance: "ATTENDING", partySize: 2, message: null, guestName: "Anh Hiếu" });
     expect(result).toEqual({ status: "UNAVAILABLE" });

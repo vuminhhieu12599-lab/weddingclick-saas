@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
+import { renderToStaticMarkupAsync } from "../../../../templates/core/__tests__/support/render-static-markup";
 import { join } from "node:path";
 
-import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { InvitationRendererPropsV1 } from "../../../../lib/invitation-rendering/renderer-component";
@@ -55,7 +55,7 @@ const VALID_INPUTS: RsvpSubmitInputV1[] = [
 async function harnessCapabilities(id: (typeof HARNESS_SCENARIO_IDS)[number]) {
   const data = await buildHarnessRenderData(id);
   received.length = 0;
-  renderToStaticMarkup(<RendererHarnessClient rendererKey={data.rendererKey} viewModel={data.viewModel} sections={data.sections} />);
+  await renderToStaticMarkupAsync(<RendererHarnessClient rendererKey={data.rendererKey} viewModel={data.viewModel} sections={data.sections} />);
   expect(received).toHaveLength(1);
   return (received[0] as InvitationRendererPropsV1).capabilities;
 }

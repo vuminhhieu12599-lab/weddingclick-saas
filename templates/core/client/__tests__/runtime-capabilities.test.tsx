@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkupAsync } from "../../__tests__/support/render-static-markup";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { InvitationRendererPropsV1 } from "../../../../lib/invitation-rendering/renderer-component";
@@ -119,7 +120,7 @@ describe("InvitationRendererHostCore: server render / first client render", () =
     const now = vi.spyOn(Date, "now");
     const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
 
-    const markup = renderToStaticMarkup(
+    const markup = await renderToStaticMarkupAsync(
       <InvitationRendererHostCore rendererKey={selection.rendererKey} viewModel={viewModel} sections={selection.effectiveSections} />,
     );
 
@@ -138,7 +139,7 @@ describe("InvitationRendererHostCore: server render / first client render", () =
 
   it("a play() issued before mount creates no audio instance and stays PAUSED", async () => {
     const { viewModel, selection } = await buildRendererFixture({ variant: "GROOM" });
-    renderToStaticMarkup(
+    await renderToStaticMarkupAsync(
       <InvitationRendererHostCore rendererKey={selection.rendererKey} viewModel={viewModel} sections={selection.effectiveSections} />,
     );
     const music = lastCapabilities().music as MusicCapabilityV1;
@@ -153,7 +154,7 @@ describe("InvitationRendererHostCore: server render / first client render", () =
       unavailableMediaIds: [FIXTURE_MEDIA_IDS.AUDIO],
     });
     expect(viewModel.media.audio?.status).toBe("UNAVAILABLE");
-    renderToStaticMarkup(
+    await renderToStaticMarkupAsync(
       <InvitationRendererHostCore rendererKey={selection.rendererKey} viewModel={viewModel} sections={selection.effectiveSections} />,
     );
     expect(Reflect.ownKeys(lastCapabilities())).toStrictEqual([]);
@@ -162,7 +163,7 @@ describe("InvitationRendererHostCore: server render / first client render", () =
   it("absent audio → no music capability", async () => {
     const { viewModel, selection } = await buildRendererFixture({ variant: "COMMON" });
     const withoutAudio = { ...viewModel, media: { ...viewModel.media, audio: undefined } };
-    renderToStaticMarkup(
+    await renderToStaticMarkupAsync(
       <InvitationRendererHostCore rendererKey={selection.rendererKey} viewModel={withoutAudio} sections={selection.effectiveSections} />,
     );
     expect(Reflect.ownKeys(lastCapabilities())).toStrictEqual([]);
@@ -172,7 +173,7 @@ describe("InvitationRendererHostCore: server render / first client render", () =
     const { viewModel, selection } = await buildRendererFixture({ variant: "COMMON", sectionSettings: { music: false } });
     expect(viewModel.media.audio?.status).toBe("RESOLVED");
     expect(selection.effectiveSections.music).toBe(false);
-    renderToStaticMarkup(
+    await renderToStaticMarkupAsync(
       <InvitationRendererHostCore rendererKey={selection.rendererKey} viewModel={viewModel} sections={selection.effectiveSections} />,
     );
     expect(Reflect.ownKeys(lastCapabilities())).toStrictEqual([]);
@@ -180,7 +181,7 @@ describe("InvitationRendererHostCore: server render / first client render", () =
 
   it("a client-graph RSVP capability passes through by identity", async () => {
     const { viewModel, selection } = await buildRendererFixture({ variant: "COMMON", sectionSettings: { music: false } });
-    renderToStaticMarkup(
+    await renderToStaticMarkupAsync(
       <InvitationRendererHostCore
         rendererKey={selection.rendererKey}
         viewModel={viewModel}
@@ -210,7 +211,7 @@ describe("InvitationRendererHostCore: server render / first client render", () =
 
     for (const props of [withClipboard, withMusic, withClock, withBag, withOverrides]) {
       received.length = 0;
-      renderToStaticMarkup(<InvitationRendererHostCore {...props} />);
+      await renderToStaticMarkupAsync(<InvitationRendererHostCore {...props} />);
       expect(Reflect.ownKeys(lastCapabilities())).toStrictEqual([]);
     }
   });
@@ -228,7 +229,7 @@ describe("InvitationRendererHostCore: server render / first client render", () =
 
   it("passes viewModel and sections through by identity with exactly the K6 props", async () => {
     const { viewModel, selection } = await buildRendererFixture({ variant: "COMMON" });
-    renderToStaticMarkup(
+    await renderToStaticMarkupAsync(
       <InvitationRendererHostCore rendererKey={selection.rendererKey} viewModel={viewModel} sections={selection.effectiveSections} rsvp={RSVP} />,
     );
     const props = received.at(-1) as InvitationRendererPropsV1;
@@ -241,7 +242,7 @@ describe("InvitationRendererHostCore: server render / first client render", () =
 describe("production InvitationRendererHost capability composition", () => {
   it("builds no RSVP capability: only music for the full fixture during server render", async () => {
     const { viewModel, selection } = await buildRendererFixture({ variant: "COMMON" });
-    renderToStaticMarkup(
+    await renderToStaticMarkupAsync(
       <InvitationRendererHost rendererKey={selection.rendererKey} viewModel={viewModel} sections={selection.effectiveSections} />,
     );
     const capabilities = lastCapabilities();
@@ -259,7 +260,7 @@ describe("production InvitationRendererHost capability composition", () => {
       capabilities: { clipboard: CLIPBOARD },
       capabilityOverrides: { clock: CLOCK },
     } as unknown as Parameters<typeof InvitationRendererHost>[0];
-    renderToStaticMarkup(<InvitationRendererHost {...smuggled} />);
+    await renderToStaticMarkupAsync(<InvitationRendererHost {...smuggled} />);
     expect(Reflect.ownKeys(lastCapabilities())).toStrictEqual([]);
   });
 });

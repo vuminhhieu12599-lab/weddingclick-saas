@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
+import { renderToStaticMarkupAsync } from "../../../../templates/core/__tests__/support/render-static-markup";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 // next/font loaders only run under the Next compiler (same mock as the renderer tests).
@@ -279,7 +279,7 @@ describe("E–L: /i/[slug]/g/[token]", () => {
     const generic = await loadPublicInvitation(SLUG_A, deps);
     expect(view!.rendererKey).toBe(generic!.rendererKey);
     expect({ ...view!.viewModel, guest: undefined }).toEqual({ ...generic!.viewModel, guest: undefined });
-    const html = renderToStaticMarkup(
+    const html = await renderToStaticMarkupAsync(
       <PublicInvitationRenderer publicSlug={SLUG_A} guestToken={token} rendererKey={view!.rendererKey} viewModel={view!.viewModel} sections={view!.sections} />,
     );
     expect(html).toContain(DISPLAY_NAME);
