@@ -25,6 +25,10 @@ import { renderToStaticMarkupAsync } from "./support/render-static-markup";
 vi.mock("../../wedding/vietnamese-heritage/v1/fonts", () => ({
   VIETNAMESE_HERITAGE_V1_FONT_VARIABLES_CLASS_NAME: "vh-test-font-variables",
 }));
+// RM-02: and Romantic Minimal v1, whose next/font loaders also run only under the Next compiler.
+vi.mock("../../wedding/romantic-minimal/v1/fonts", () => ({
+  ROMANTIC_MINIMAL_V1_FONT_VARIABLES_CLASS_NAME: "rm-test-font-variables",
+}));
 vi.mock("../../wedding/elegant-editorial/v1/fonts", () => ({
   ELEGANT_EDITORIAL_V1_FONT_VARIABLES_CLASS_NAME: "ee-test-font-variables",
 }));
@@ -36,6 +40,7 @@ const {
 } = await import("../production-renderer-bindings");
 const { ElegantEditorialV1 } = await import("../../wedding/elegant-editorial/v1/elegant-editorial-v1");
 const { VietnameseHeritageV1 } = await import("../../wedding/vietnamese-heritage/v1/vietnamese-heritage-v1");
+const { RomanticMinimalV1 } = await import("../../wedding/romantic-minimal/v1/romantic-minimal-v1");
 
 /**
  * RF-06B production binding registry (docs/DECISIONS.md "RF-06-0 …" P27 B,
@@ -50,12 +55,14 @@ const OtherComponent: InvitationRendererComponentV1 = () => null;
 
 const EE_KEY = "wedding.elegant-editorial.v1";
 const VH_KEY = "wedding.vietnamese-heritage.v1";
+const RM_KEY = "wedding.romantic-minimal.v1";
 
-/** The real production key → component pairs (VH-01: two renderers). */
+/** The real production key → component pairs (VH-01: two renderers; RM-02: three). */
 function productionComponents(): Map<string, InvitationRendererComponentV1> {
   return new Map<string, InvitationRendererComponentV1>([
     [EE_KEY, ElegantEditorialV1],
     [VH_KEY, VietnameseHeritageV1],
+    [RM_KEY, RomanticMinimalV1],
   ]);
 }
 
@@ -68,7 +75,8 @@ function isDeferred(value: unknown): boolean {
     typeof value === "function" &&
     (value as { displayName?: unknown }).displayName === "LoadableComponent" &&
     value !== ElegantEditorialV1 &&
-    value !== VietnameseHeritageV1
+    value !== VietnameseHeritageV1 &&
+    value !== RomanticMinimalV1
   );
 }
 
@@ -137,7 +145,7 @@ describe("key-set equality (P27)", () => {
 describe("Elegant Editorial binding", () => {
   it("wedding.elegant-editorial.v1 resolves to a deferred binding of exactly ElegantEditorialV1", async () => {
     // VH-01 generalization: the production key list is now exactly EE then VH (was EE only).
-    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([EE_KEY, VH_KEY]);
+    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([EE_KEY, VH_KEY, RM_KEY]);
     const bound = resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, "wedding.elegant-editorial.v1");
     expect(isDeferred(bound)).toBe(true);
     expect(await lazyMarkup(bound, "COMMON")).toBe(directMarkup(ElegantEditorialV1, "COMMON"));
@@ -197,6 +205,44 @@ describe("Vietnamese Heritage binding (VH-01)", () => {
   });
 });
 
+describe("Romantic Minimal binding (RM-02)", () => {
+  it("wedding.romantic-minimal.v1 resolves to a deferred binding of exactly RomanticMinimalV1, distinct from the other renderers", async () => {
+    const rm = resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, RM_KEY);
+    expect(isDeferred(rm)).toBe(true);
+    expect(rm).not.toBe(resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, EE_KEY));
+    expect(rm).not.toBe(resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, VH_KEY));
+    const rmMarkup = await lazyMarkup(rm, "BRIDE");
+    expect(rmMarkup).toBe(directMarkup(RomanticMinimalV1, "BRIDE"));
+    expect(rmMarkup).toContain('data-renderer="romantic-minimal-v1"');
+    expect(rmMarkup).not.toMatch(/elegant-editorial-v1|vietnamese-heritage-v1/);
+  });
+
+  it("the bound manifest is the validated projection, not the raw source constant", () => {
+    const bound = PRODUCTION_RENDERER_BINDING_REGISTRY.compatibilityRegistry.lookup(RM_KEY);
+    expect(bound).toStrictEqual(projectCompatibilityManifest(PRODUCTION_RENDERER_MANIFESTS[2]?.compatibility));
+    expect(bound).toStrictEqual(PRODUCTION_COMPATIBILITY_REGISTRY.compatibility.lookup(RM_KEY));
+    expect(bound).not.toBe(PRODUCTION_RENDERER_MANIFESTS[2]?.compatibility);
+  });
+
+  it.each([
+    "wedding.romantic-minimal.v2",
+    "wedding.romantic-minimal",
+    "wedding.romantic-minimal.latest",
+    "wedding.romantic-minimal.V1",
+    "Wedding.romantic-minimal.v1",
+    " wedding.romantic-minimal.v1",
+    "wedding.romantic-minimal.v1 ",
+    "romantic-minimal",
+    "Romantic Minimal",
+    "wedding.romantic-blush.v1",
+  ])("unknown key %j throws RendererBindingInvariantError", (key) => {
+    expect(PRODUCTION_RENDERER_BINDING_REGISTRY.lookupComponent(key)).toBeUndefined();
+    expect(() => resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, key)).toThrow(
+      RendererBindingInvariantError,
+    );
+  });
+});
+
 describe("fail closed: no default, fallback, latest or alias", () => {
   it.each([
     "wedding.elegant-editorial.v2",
@@ -230,7 +276,7 @@ describe("createProductionRendererBindingRegistry invariants", () => {
   });
 
   it("an orphan component binding fails closed with a fixed RF-06 message", () => {
-    // VH-01: both real bindings plus one orphan (with EE only, VH would fail first as unbound).
+    // VH-01/RM-02: every real binding plus one orphan (with fewer, a real manifest would fail first as unbound).
     const components = productionComponents();
     components.set("wedding.orphan-template.v1", OtherComponent);
     expect(() => createProductionRendererBindingRegistry(PRODUCTION_RENDERER_MANIFESTS, components)).toThrow(
@@ -246,7 +292,7 @@ describe("createProductionRendererBindingRegistry invariants", () => {
 
   it("a duplicate manifest key propagates the RF-05 binding error unchanged", () => {
     const manifests = [...PRODUCTION_RENDERER_MANIFESTS, ...PRODUCTION_RENDERER_MANIFESTS];
-    // VH-01: both real bindings, so the duplicate key (not an unbound manifest) is what fails.
+    // VH-01/RM-02: every real binding, so the duplicate key (not an unbound manifest) is what fails.
     const components = productionComponents();
     expect(() => createProductionRendererBindingRegistry(manifests, components)).toThrow(RendererBindingInvariantError);
   });

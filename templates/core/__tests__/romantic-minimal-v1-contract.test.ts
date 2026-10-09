@@ -14,8 +14,8 @@ import { ROMANTIC_MINIMAL_V1_MANIFEST } from "../../wedding/romantic-minimal/v1/
 /**
  * RM-01 — Romantic Minimal v1 production contract (docs/DECISIONS.md
  * "RM-01"): the renderer and editor manifests validate on their own and
- * against each other, and neither is registered yet (RM-02 registers them
- * together with the renderer binding).
+ * against each other. RM-02 registers both, together with the renderer
+ * binding, as the third production entry (key lookups exact, fail closed).
  */
 
 const RM_KEY = "wedding.romantic-minimal.v1";
@@ -52,17 +52,21 @@ describe("RM-01 Romantic Minimal v1 renderer manifest", () => {
     expect(manifest.design.designSettingsSchema).toStrictEqual({});
   });
 
-  it("forms a valid production list with the registered manifests (no duplicate key)", () => {
+  it("forms a valid production list with the other registered manifests (no duplicate key)", () => {
     const list = validateProductionRendererManifests([
-      ...PRODUCTION_RENDERER_KEYS.map((key) => PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(key)),
+      ...PRODUCTION_RENDERER_KEYS.filter((key) => key !== RM_KEY).map((key) => PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(key)),
       ROMANTIC_MINIMAL_V1_MANIFEST,
     ]);
-    expect(list.map((manifest) => manifest.compatibility.rendererKey)).toStrictEqual([...PRODUCTION_RENDERER_KEYS, RM_KEY]);
+    expect(list.map((manifest) => manifest.compatibility.rendererKey)).toStrictEqual([...PRODUCTION_RENDERER_KEYS]);
   });
 
-  it("is not registered: the production registry is unchanged and fails closed for the RM key", () => {
-    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual(["wedding.elegant-editorial.v1", "wedding.vietnamese-heritage.v1"]);
-    expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(RM_KEY)).toBeUndefined();
+  it("RM-02: registered third, as the validated projection; near-miss keys still fail closed", () => {
+    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual(["wedding.elegant-editorial.v1", "wedding.vietnamese-heritage.v1", RM_KEY]);
+    expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(RM_KEY)).toStrictEqual(ROMANTIC_MINIMAL_V1_MANIFEST);
+    expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(RM_KEY)).not.toBe(ROMANTIC_MINIMAL_V1_MANIFEST);
+    for (const key of ["wedding.romantic-minimal", "wedding.romantic-minimal.v2", ` ${RM_KEY}`, RM_KEY.toUpperCase()]) {
+      expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(key), key).toBeUndefined();
+    }
   });
 });
 
@@ -120,8 +124,11 @@ describe("RM-01 Romantic Minimal v1 editor manifest", () => {
     expect(validated).toStrictEqual(editor);
   });
 
-  it("is not registered: the production editor list is unchanged and lookup fails closed", () => {
+  it("RM-02: registered third in the production editor list; lookup is exact and fails closed otherwise", () => {
     expect(PRODUCTION_EDITOR_MANIFESTS.map((manifest) => manifest.rendererKey)).toStrictEqual([...PRODUCTION_RENDERER_KEYS]);
-    expect(lookupTemplateEditorManifest(RM_KEY)).toBeUndefined();
+    expect(lookupTemplateEditorManifest(RM_KEY)).toStrictEqual(editor);
+    for (const key of ["wedding.romantic-minimal", "wedding.romantic-minimal.v2", `${RM_KEY} `]) {
+      expect(lookupTemplateEditorManifest(key), key).toBeUndefined();
+    }
   });
 });

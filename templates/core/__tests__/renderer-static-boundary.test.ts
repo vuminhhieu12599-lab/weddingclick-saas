@@ -45,6 +45,8 @@ const ALLOWED_IMPORTS: Readonly<Record<(typeof RF06A_FILES)[number], readonly st
     "templates/wedding/elegant-editorial/v1/manifest",
     // VH-01: the second explicit production manifest.
     "templates/wedding/vietnamese-heritage/v1/manifest",
+    // RM-02: the third explicit production manifest.
+    "templates/wedding/romantic-minimal/v1/manifest",
     "templates/core/renderer-manifest",
   ],
   "templates/wedding/elegant-editorial/v1/manifest.ts": ["templates/core/renderer-manifest"],
@@ -114,6 +116,8 @@ function dynamicImportsOf(source: string): { specifiers: string[]; total: number
 const RS01_LAZY_ROOTS = [
   "templates/wedding/elegant-editorial/v1/elegant-editorial-v1",
   "templates/wedding/vietnamese-heritage/v1/vietnamese-heritage-v1",
+  // RM-02: the third production renderer root.
+  "templates/wedding/romantic-minimal/v1/romantic-minimal-v1",
 ] as const;
 
 /** Resolves a relative specifier from `file` to a repository-relative module path. */
@@ -232,9 +236,9 @@ describe("RF-06A files", () => {
 
   it("the production manifest list is explicit (no discovery) and keys are not hand-typed there", () => {
     const code = stripComments(readRepoFile("templates/core/production-renderer-manifests.ts"));
-    // VH-01: still one explicit, ordered literal list, now with the second manifest.
-    expect(code).toContain(
-      "validateProductionRendererManifests([ELEGANT_EDITORIAL_V1_MANIFEST, VIETNAMESE_HERITAGE_V1_MANIFEST])",
+    // VH-01: still one explicit, ordered literal list, now with the second manifest; RM-02: and the third.
+    expect(code).toMatch(
+      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*\]\)/,
     );
     expect(/["'`]wedding\.[\w-]+\.v\d+/.test(code)).toBe(false);
   });
@@ -316,8 +320,9 @@ describe("templates/** production tree (P39)", () => {
   // RF-06D extension: plus exactly the RF-06D islands and pure models.
   // VH-01 extension: plus exactly the Vietnamese Heritage v1 files (rules at the end of this file).
   // TE-02 extension: plus exactly the editor-manifest files (rules in editor-manifest-static-boundary.test.ts).
-  // RM-01 extension: plus exactly the two unregistered Romantic Minimal v1 manifests (rules at the end of this file).
-  it("templates/** contains exactly the RF-06A, RF-06B, RF-06C, RF-06D, VH-01, TE-02 and RM-01 files", () => {
+  // RM-01 extension: plus exactly the two Romantic Minimal v1 manifests.
+  // RM-02 extension: plus exactly the Romantic Minimal v1 renderer files (rules at the end of this file).
+  it("templates/** contains exactly the RF-06A, RF-06B, RF-06C, RF-06D, VH-01, TE-02, RM-01 and RM-02 files", () => {
     expect([...sources].sort()).toStrictEqual(
       [
         ...RF06A_FILES,
@@ -329,6 +334,7 @@ describe("templates/** production tree (P39)", () => {
         ...VH02B_MODEL_FILES,
         ...TE02_FILES,
         ...RM01_FILES,
+        ...RM02_FILES,
       ].sort(),
     );
   });
@@ -620,11 +626,14 @@ describe("RF-06B template files", () => {
           VH01_CSS_FILE,
           ...VH01_RENDERER_FILES,
           ...VH02B_ISLAND_FILES,
+          RM02_CSS_FILE,
+          ...RM02_RENDERER_FILES,
+          ...RM02_ISLAND_FILES,
         ],
         file,
       ).toContain(file);
     }
-    expect(sources.filter((source) => source.endsWith(".css")).sort()).toStrictEqual([RF06B_CSS_FILE, VH01_CSS_FILE].sort());
+    expect(sources.filter((source) => source.endsWith(".css")).sort()).toStrictEqual([RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE].sort());
   });
 
   it.each(RF06B_CODE_FILES)("%s contains no forbidden runtime, data, browser, prototype or interaction code", (file) => {
@@ -942,8 +951,8 @@ describe("RF-06B decor and provenance (P4–P6)", () => {
 
   it("the production asset path holds exactly the recorded decor set", () => {
     expect(readdirSync(join(REPO_ROOT, "public", "renderers"))).toEqual(["wedding"]);
-    // VH-02A: the Vietnamese Heritage v1 sibling directory is verified in the VH section below.
-    expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding"))).toEqual(["elegant-editorial", "vietnamese-heritage"]);
+    // VH-02A: the Vietnamese Heritage v1 sibling directory is verified in the VH section below (RM-02: Romantic Minimal likewise).
+    expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding")).sort()).toEqual(["elegant-editorial", "romantic-minimal", "vietnamese-heritage"]);
     expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding", "elegant-editorial"))).toEqual(["v1"]);
     expect(decorFiles()).toEqual([...DECOR_SVG_FILES, ...DECOR_RASTER_MAX_PIXELS.keys()].sort());
   });
@@ -1332,17 +1341,18 @@ describe("RS-01 renderer-key lazy loading", () => {
 
   it("the binding module owns exactly one literal import() per production renderer root, nothing else", () => {
     const { specifiers, total } = dynamicImportsOf(readRepoFile(BINDINGS_MODULE));
-    expect(total).toBe(2);
+    expect(total).toBe(3);
     expect(specifiers.map((specifier) => resolveSpecifier(BINDINGS_MODULE, specifier))).toStrictEqual([...RS01_LAZY_ROOTS]);
     const code = codeOf(BINDINGS_MODULE);
     // No template literal, concatenation, variable or discovery in a specifier.
     expect(code).not.toMatch(/import\(\s*[^"'\s]|import\(`|import\([^)]*\+|readdir|glob|require\(/);
     // next/dynamic with no options: SSR on, no `loading` (no Suspense boundary, no placeholder content).
-    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(2);
+    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(3);
     expect(code).not.toMatch(/ssr:|loading:|suspense/i);
     // Each lazy root binds its own export only.
     expect(code).toMatch(/import\("\.\.\/wedding\/elegant-editorial\/v1\/elegant-editorial-v1"\)\.then\(\(module\) => module\.ElegantEditorialV1\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/vietnamese-heritage\/v1\/vietnamese-heritage-v1"\)\.then\(\(module\) => module\.VietnameseHeritageV1\)/);
+    expect(code).toMatch(/import\("\.\.\/wedding\/romantic-minimal\/v1\/romantic-minimal-v1"\)\.then\(\(module\) => module\.RomanticMinimalV1\)/);
     expect(code).not.toMatch(/\bcatch\b|\.catch\(/);
   });
 
@@ -1353,9 +1363,10 @@ describe("RS-01 renderer-key lazy loading", () => {
   });
 
   it("the eager host graph reaches no renderer implementation, CSS module or font loader", () => {
-    // Only the two data-only production manifests (static by design) — never a renderer implementation.
-    expect(eager.files.filter((file) => file.startsWith("templates/wedding/"))).toStrictEqual([
+    // Only the data-only production manifests (static by design) — never a renderer implementation.
+    expect(eager.files.filter((file) => file.startsWith("templates/wedding/")).sort()).toStrictEqual([
       "templates/wedding/elegant-editorial/v1/manifest.ts",
+      "templates/wedding/romantic-minimal/v1/manifest.ts",
       "templates/wedding/vietnamese-heritage/v1/manifest.ts",
     ]);
     expect(eager.files.filter((file) => file.endsWith(".css"))).toStrictEqual([]);
@@ -1366,11 +1377,16 @@ describe("RS-01 renderer-key lazy loading", () => {
   });
 
   it("each lazy renderer subgraph never reaches the other renderer's implementation, CSS or fonts", () => {
-    const [eeRoot, vhRoot] = RS01_LAZY_ROOTS.map((root) => resolveModuleFile(root) as string);
+    const [eeRoot, vhRoot, rmRoot] = RS01_LAZY_ROOTS.map((root) => resolveModuleFile(root) as string);
     const ee = clientGraph(eeRoot as string, { followLazy: true }).files;
     const vh = clientGraph(vhRoot as string, { followLazy: true }).files;
-    expect(ee.some((file) => file.includes("templates/wedding/vietnamese-heritage/"))).toBe(false);
-    expect(vh.some((file) => file.includes("templates/wedding/elegant-editorial/"))).toBe(false);
+    const rm = clientGraph(rmRoot as string, { followLazy: true }).files;
+    expect(ee.some((file) => /templates\/wedding\/(vietnamese-heritage|romantic-minimal)\//.test(file))).toBe(false);
+    expect(vh.some((file) => /templates\/wedding\/(elegant-editorial|romantic-minimal)\//.test(file))).toBe(false);
+    // RM-02: the Romantic Minimal subgraph is confined to its own tree, fonts and one CSS module.
+    expect(rm.some((file) => /templates\/wedding\/(elegant-editorial|vietnamese-heritage)\//.test(file))).toBe(false);
+    expect(rm).toContain("templates/wedding/romantic-minimal/v1/fonts.ts");
+    expect(rm.filter((file) => file.endsWith(".css"))).toStrictEqual(["templates/wedding/romantic-minimal/v1/romantic-minimal-v1.module.css"]);
     expect(ee).toContain("templates/wedding/elegant-editorial/v1/fonts.ts");
     expect(vh).toContain("templates/wedding/vietnamese-heritage/v1/fonts.ts");
     expect(ee.filter((file) => file.endsWith(".css"))).toStrictEqual(["templates/wedding/elegant-editorial/v1/elegant-editorial-v1.module.css"]);
@@ -2468,16 +2484,96 @@ const TE02_FILES = [
 
 // ===========================================================================
 // RM-01 extension (docs/DECISIONS.md "RM-01 — Romantic Minimal v1 Production
-// Contract"): the data-only renderer manifest and the editor manifest. Both
-// stay out of the production manifest lists, the binding table and every
-// client graph until RM-02 registers the renderer.
+// Contract"): the data-only renderer manifest and the editor manifest.
+// RM-02 extension (docs/DECISIONS.md "RM-02"): the Romantic Minimal v1
+// renderer, registered third in both production lists and bound lazily.
 // ===========================================================================
 
-const RM01_MANIFEST_FILE = "templates/wedding/romantic-minimal/v1/manifest.ts";
+const RM = "templates/wedding/romantic-minimal/v1";
+const RM01_MANIFEST_FILE = `${RM}/manifest.ts`;
 const RM01_EDITOR_FILE = "templates/editor/wedding/romantic-minimal-v1.ts";
 const RM01_FILES = [RM01_MANIFEST_FILE, RM01_EDITOR_FILE] as const;
 
-describe("RM-01 Romantic Minimal v1 manifests", () => {
+const RM02_ROOT = `${RM}/romantic-minimal-v1.tsx`;
+const RM02_FONTS = `${RM}/fonts.ts`;
+const RM02_MEDIA_IMAGE = `${RM}/sections/media-image.tsx`;
+const RM02_DECOR_FILE = `${RM}/sections/decor.tsx`;
+const RM02_SECTIONS = [
+  "album",
+  "calendar",
+  "ceremony",
+  "decor",
+  "gift",
+  "identity",
+  "invite",
+  "just-married",
+  "media-image",
+  "opening-cover",
+  "our-love",
+  "save-the-date",
+  "thank-you",
+  "timeline",
+] as const;
+const RM02_RENDERER_FILES = [RM02_ROOT, ...RM02_SECTIONS.map((section) => `${RM}/sections/${section}.tsx`)] as const;
+const RM02_CODE_FILES = [
+  ...RM02_RENDERER_FILES,
+  `${RM}/sections/calendar-cells.ts`,
+  `${RM}/sections/date-text.ts`,
+  `${RM}/copy.ts`,
+  RM02_FONTS,
+] as const;
+const RM02_ISLAND_FILES = [
+  `${RM}/interactive/album-viewer.tsx`,
+  `${RM}/interactive/copy-account-button.tsx`,
+  `${RM}/interactive/countdown.tsx`,
+  `${RM}/interactive/gift-dialog.tsx`,
+  `${RM}/interactive/music-control.tsx`,
+  `${RM}/interactive/opening-stage.tsx`,
+  `${RM}/interactive/photo-lightbox.tsx`,
+  `${RM}/interactive/rsvp.tsx`,
+  `${RM}/interactive/section-reveal.tsx`,
+] as const;
+const RM02_OPENING_STATE = `${RM}/interactive/opening-state.ts`;
+const RM02_CSS_FILE = `${RM}/romantic-minimal-v1.module.css`;
+const RM02_PROVENANCE_FILE = `${RM}/PROVENANCE.md`;
+/** RM-02 additions to the templates/** tree (the RM-01 manifests are listed separately). */
+const RM02_FILES = [...RM02_CODE_FILES, ...RM02_ISLAND_FILES, RM02_OPENING_STATE, RM02_CSS_FILE, RM02_PROVENANCE_FILE] as const;
+
+/** The nine Product Owner-authorized decor files (on disk and as public URLs). */
+const RM_DECOR_DIR = "public/renderers/wedding/romantic-minimal/v1";
+const RM_DECOR_URL = "/renderers/wedding/romantic-minimal/v1/";
+const RM_DECOR_FILES = [
+  "architecture-sketch.svg",
+  "divider.webp",
+  "envelope-back.webp",
+  "envelope-pocket.webp",
+  "envelope-seal.webp",
+  "floral-bottom-right.webp",
+  "floral-top-left.webp",
+  "heart-burst.webp",
+  "paper-blush.webp",
+] as const;
+
+/** RM-02 rules shared by static files and islands (RF-06B / RF-06D lists apply on top). */
+const RM02_EXTRA_FORBIDDEN: readonly [string, RegExp][] = [
+  ["other template coupling", /elegant-editorial|vietnamese-heritage|ElegantEditorial|VietnameseHeritage/],
+  ["templates/core import", /templates\/core|\.\.\/core\//],
+  ["raw Snapshot / payload", /snapshot-payload|SnapshotPayload|\bsnapshot\b/],
+  ["design key branching", /paletteKey|fontPresetKey|effectPresetKey/],
+  ["prototype asset path", /\/prototypes\//],
+  ["next/image", /next\/image/],
+  ["animation library / matchMedia", /framer|matchMedia/],
+  ["timers", /setTimeout|setInterval|requestAnimationFrame/],
+];
+
+describe("RM-01/RM-02 Romantic Minimal v1 files", () => {
+  const productionSources = () =>
+    [...listSources(TEMPLATES_ROOT), ...nonTestSources("app"), ...nonTestSources("lib")].filter((file) => /\.(ts|tsx)$/.test(file));
+
+  it("every listed file exists", () => {
+    for (const file of [...RM01_FILES, ...RM02_FILES]) expect(() => readRepoFile(file), file).not.toThrow();
+  });
+
   it("the renderer manifest is data only: one type-only import and no RF-06A forbidden code", () => {
     expect(importsOf(readRepoFile(RM01_MANIFEST_FILE))).toStrictEqual([
       { specifier: "../../../core/renderer-manifest", typeOnly: true },
@@ -2488,23 +2584,173 @@ describe("RM-01 Romantic Minimal v1 manifests", () => {
     }
   });
 
-  it("the RM key literal appears only in the two RM-01 manifests (not registered, not bound)", () => {
-    const sources = [...listSources(TEMPLATES_ROOT), ...nonTestSources("app"), ...nonTestSources("lib")].filter((file) =>
-      /\.(ts|tsx)$/.test(file),
-    );
-    const withLiteral = sources.filter((file) => /["'`]wedding\.romantic-minimal\.v1["'`]/.test(stripComments(readRepoFile(file))));
-    expect(withLiteral.sort()).toStrictEqual([...RM01_FILES].sort());
+  it("RM-02: the RM key literal appears only in the two manifests and the binding table", () => {
+    const withLiteral = productionSources().filter((file) => /["'`]wedding\.romantic-minimal\.v1["'`]/.test(codeOf(file)));
+    expect(withLiteral.sort()).toStrictEqual([...RM01_FILES, BINDINGS_MODULE].sort());
   });
 
-  it("no production source imports the RM-01 manifests yet", () => {
-    const sources = [...listSources(TEMPLATES_ROOT), ...nonTestSources("app"), ...nonTestSources("lib")].filter((file) =>
-      /\.(ts|tsx)$/.test(file),
+  it("RM-02: only the two production lists import the manifests, and only the binding module loads the root (lazily)", () => {
+    const importersOf = (target: string) =>
+      productionSources().filter((file) => importsOf(readRepoFile(file)).some((statement) => resolveSpecifier(file, statement.specifier) === target));
+    expect(importersOf(`${RM}/manifest`)).toStrictEqual(["templates/core/production-renderer-manifests.ts"]);
+    expect(importersOf("templates/editor/wedding/romantic-minimal-v1")).toStrictEqual(["templates/core/production-editor-manifests.ts"]);
+    expect(importersOf(`${RM}/romantic-minimal-v1`)).toStrictEqual([]);
+    const lazyLoaders = productionSources().filter((file) =>
+      dynamicImportsOf(readRepoFile(file)).specifiers.some((specifier) => resolveSpecifier(file, specifier) === `${RM}/romantic-minimal-v1`),
     );
-    const importers = sources.filter((file) =>
-      importsOf(readRepoFile(file)).some((statement) =>
-        /^templates\/(wedding\/romantic-minimal\/|editor\/wedding\/romantic-minimal)/.test(resolveSpecifier(file, statement.specifier)),
-      ),
+    expect(lazyLoaders).toStrictEqual([BINDINGS_MODULE]);
+  });
+
+  it("RM-02 files import only their own tree, the shared lib/ contracts, react and (fonts only) next/font/google", () => {
+    for (const file of [...RM02_CODE_FILES, ...RM02_ISLAND_FILES, RM02_OPENING_STATE]) {
+      for (const modulePath of resolvedImportsOf(file)) {
+        const allowed =
+          modulePath.startsWith(`${RM}/`) ||
+          modulePath.startsWith(`${LIB}/`) ||
+          modulePath === "lib/domain" ||
+          modulePath === "react" ||
+          (file === RM02_FONTS && modulePath === "next/font/google");
+        expect(allowed, `${file} → ${modulePath}`).toBe(true);
+      }
+    }
+    expect(resolvedImportsOf(RM02_OPENING_STATE)).toStrictEqual([]);
+  });
+
+  it.each(RM02_CODE_FILES)("%s (static) has no forbidden runtime, data, browser, prototype or hook code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of [...RF06B_FORBIDDEN, ...RM02_EXTRA_FORBIDDEN]) {
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+    expect(ALL_HOOKS.test(code), `${file}: hooks`).toBe(false);
+    expect(/IntersectionObserver|<button\b|\bonClick\b|<form\b|<dialog\b/.test(code), `${file}: interaction`).toBe(false);
+  });
+
+  it.each([...RM02_ISLAND_FILES, RM02_OPENING_STATE])("%s (island/model) has no data, network, persistence, browser-global, time or prototype code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of [...RF06D_FORBIDDEN, ...RM02_EXTRA_FORBIDDEN]) {
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+    expect(/<img\b|<svg\b/.test(code), file).toBe(false);
+    expect(/IntersectionObserver/.test(code), file).toBe(file === `${RM}/interactive/section-reveal.tsx`);
+    expect(/nowEpochMs|deriveCeremonyCountdownV1/.test(code), file).toBe(file === `${RM}/interactive/countdown.tsx`);
+    expect(/gate\.run\(|createRsvpSubmissionGate/.test(code), file).toBe(file === `${RM}/interactive/rsvp.tsx`);
+    expect(/copyWithFeedback/.test(code), file).toBe(file === `${RM}/interactive/copy-account-button.tsx`);
+    expect(/runMusicToggle/.test(code), file).toBe(file === `${RM}/interactive/music-control.tsx`);
+  });
+
+  it("no RM file declares a client or server boundary", () => {
+    for (const file of [RM01_MANIFEST_FILE, ...RM02_CODE_FILES, ...RM02_ISLAND_FILES, RM02_OPENING_STATE]) {
+      expect(/["']use (client|server)["']/.test(codeOf(file)), file).toBe(false);
+    }
+  });
+
+  it("only the RM fonts module touches next/font: three approved families, Vietnamese subsets, swap, never preloaded", () => {
+    for (const file of [...RM02_CODE_FILES, ...RM02_ISLAND_FILES]) expect(/next\/font/.test(codeOf(file)), file).toBe(file === RM02_FONTS);
+    const fonts = codeOf(RM02_FONTS);
+    expect([...fonts.matchAll(/\b(\w+)\(\{/g)].map((match) => match[1]).sort()).toStrictEqual(["Allura", "Cormorant_Garamond", "Great_Vibes"]);
+    expect(fonts.match(/subsets: \["latin", "vietnamese"\]/g)).toHaveLength(3);
+    expect(fonts.match(/display: "swap"/g)).toHaveLength(3);
+    expect(fonts.match(/preload: false/g)).toHaveLength(3);
+    expect(fonts).not.toMatch(/preload: true|next\/font\/local/);
+  });
+
+  it("the root reads only the K6 props, and capabilities only as presence gates and passthroughs", () => {
+    const code = codeOf(RM02_ROOT);
+    expect(code).toMatch(/export function RomanticMinimalV1\(\{ viewModel, sections, capabilities \}: InvitationRendererPropsV1\)/);
+    expect(code).not.toMatch(/manifest|rendererKey/);
+    expect([...code.matchAll(/\bcapabilities\.(\w+)/g)].map((match) => match[1]).sort()).toStrictEqual([
+      "clipboard",
+      "clock",
+      "clock",
+      "clock",
+      "music",
+      "rsvp",
+      "rsvp",
+    ]);
+    for (const file of [...RM02_CODE_FILES, ...RM02_ISLAND_FILES]) {
+      if (file !== RM02_ROOT) expect(/(?<![-/])\bcapabilities\b/.test(codeOf(file)), file).toBe(false);
+    }
+    expect(code).toMatch(/const music = sections\.music \? capabilities\.music : undefined;/);
+    expect(code).toMatch(/\{capabilities\.rsvp === undefined \? null : <Rsvp rsvp=\{capabilities\.rsvp\} \/>\}/);
+    expect(code).toMatch(/\{sections\.gift \? <Gift [^>]*clipboard=\{capabilities\.clipboard\} \/> : null\}/);
+    expect(code).toMatch(/<SectionReveal hasCountdown=\{capabilities\.clock !== undefined\} \/>/);
+  });
+
+  it("media: layout media only from templateSlots (never a legacy role, never another slot), plus the semantic QR", () => {
+    const LEGACY = /media\.(cover|gallery|portrait|loveStoryPhoto|photoStory)\b/;
+    for (const file of [...RM02_CODE_FILES, ...RM02_ISLAND_FILES]) expect(LEGACY.test(codeOf(file)), file).toBe(false);
+    const root = codeOf(RM02_ROOT);
+    expect(root).toMatch(/const slots = media\.templateSlots;/);
+    for (const slot of ["saveTheDatePhoto", "justMarriedPhoto", "thankYouPhoto"]) {
+      expect(root, slot).toMatch(new RegExp(`singleResolved\\(slots\\?\\.${slot}\\)`));
+    }
+    for (const slot of ["ourLovePhotos", "gallery"]) expect(root, slot).toMatch(new RegExp(`slots\\?\\.${slot} \\?\\? \\[\\]`));
+    expect([...root.matchAll(/\bmedia\.(\w+)/g)].map((match) => match[1]).sort()).toStrictEqual(["qr", "templateSlots"]);
+    expect(root).not.toMatch(/\?\?\s*(media\.|slots\?\.)/);
+  });
+
+  it("<img> only in the media element and decor; inline <svg> only for the two prototype motifs; no literal src/href", () => {
+    for (const file of RM02_CODE_FILES) {
+      const code = codeOf(file);
+      expect(/<img\b/.test(code), file).toBe(file === RM02_MEDIA_IMAGE || file === RM02_DECOR_FILE);
+      expect(/<svg\b/.test(code), file).toBe(file === `${RM}/sections/calendar.tsx` || file === `${RM}/sections/identity.tsx`);
+      expect(/<image\b|<text\b|<use\b|xlink:href/.test(code), file).toBe(false);
+      expect(code, file).not.toMatch(/\s(?:src|href)="[^"]*"/);
+    }
+    expect(codeOf(RM02_MEDIA_IMAGE)).toMatch(/src=\{media\.url\}/);
+  });
+
+  it("decor paths appear only in decor.tsx, each an exact literal under the immutable v1 renderer path, all on disk", () => {
+    for (const file of [...RM02_CODE_FILES, ...RM02_ISLAND_FILES]) {
+      expect(/\/renderers\/|\.webp\b/.test(codeOf(file)), file).toBe(file === RM02_DECOR_FILE);
+    }
+    const decor = codeOf(RM02_DECOR_FILE);
+    const paths = [...decor.matchAll(/["'(]((?:\/[\w.-]+)+\.(?:webp|svg))["')]/g)].map((match) => match[1] as string);
+    expect([...decor.matchAll(/\/renderers\//g)]).toHaveLength(paths.length);
+    for (const path of paths) expect(path.startsWith(RM_DECOR_URL), path).toBe(true);
+    expect(paths.map((path) => path.slice(RM_DECOR_URL.length)).sort()).toStrictEqual([...RM_DECOR_FILES]);
+    expect(decor).not.toMatch(/`[^`]*\/renderers|\/renderers[^"]*"\s*\+/);
+  });
+
+  it("the v1 decor directory holds exactly the nine authorized files", () => {
+    expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding", "romantic-minimal"))).toStrictEqual(["v1"]);
+    expect(readdirSync(join(REPO_ROOT, RM_DECOR_DIR)).sort()).toStrictEqual([...RM_DECOR_FILES]);
+  });
+
+  it("the provenance note records the Product Owner authorization, sources and every shipped file's size and hash", () => {
+    const note = readRepoFile(RM02_PROVENANCE_FILE);
+    for (const required of ["Source:", "Product Owner decision", "Task 029", "RM-02", "Allowed production use:** `wedding.romantic-minimal.v1`"]) {
+      expect(note, required).toContain(required);
+    }
+    for (const file of RM_DECOR_FILES) {
+      const bytes = readFileSync(join(REPO_ROOT, RM_DECOR_DIR, file));
+      const sha = createHash("sha256").update(bytes).digest("hex");
+      const row = note.match(new RegExp(`^\\| \`${file.replace(/[.]/g, "\\.")}\` \\|.*$`, "m"))?.[0];
+      expect(row, file).toBeDefined();
+      expect(row, file).toContain(`| ${String(bytes.length)} |`);
+      expect(row, file).toContain(sha);
+    }
+  });
+});
+
+describe("RM-02 renderer CSS", () => {
+  const cssCode = readRepoFile(RM02_CSS_FILE).replace(/\/\*[\s\S]*?\*\//g, "");
+
+  it.each([
+    ["runtime @import", /@import/],
+    ["external resource (only inline data: URIs)", /url\((?!["']?data:)|https?:\/\/(?!www\.w3\.org\/2000\/svg)/],
+    ["Tailwind directive", /@(tailwind|apply|layer|theme)\b/],
+    ["global selector", /:global|(^|[\s,}])(html|body|:root)\b/m],
+    ["other template tokens", /--ee-|--vh-/],
+  ])("has no %s", (_label, pattern) => {
+    expect(pattern.test(cssCode)).toBe(false);
+  });
+
+  // Per-selector neutralisation is asserted by the focused RM-02 renderer test.
+  it("one reduced-motion block that stops the opening and makes every transition instant", () => {
+    expect(cssCode.match(/@media \(prefers-reduced-motion: reduce\)/g)).toHaveLength(1);
+    expect(cssCode).toMatch(
+      /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*animation: rm-opening-finish 1ms linear both;[\s\S]*\.column \* \{\s*transition-duration: 0\.001ms !important;/,
     );
-    expect(importers).toStrictEqual([]);
   });
 });

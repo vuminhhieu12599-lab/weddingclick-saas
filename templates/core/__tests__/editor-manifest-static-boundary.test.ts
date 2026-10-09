@@ -17,7 +17,7 @@ const EDITOR_MANIFEST = "templates/core/editor-manifest.ts";
 const PRODUCTION_EDITOR_MANIFESTS = "templates/core/production-editor-manifests.ts";
 const EE_EDITOR = "templates/editor/wedding/elegant-editorial-v1.ts";
 const VH_EDITOR = "templates/editor/wedding/vietnamese-heritage-v1.ts";
-// RM-01: the Romantic Minimal v1 editor manifest, not yet in the production list.
+// RM-01: the Romantic Minimal v1 editor manifest; RM-02 adds it to the production list.
 const RM_EDITOR = "templates/editor/wedding/romantic-minimal-v1.ts";
 const TE02_FILES = [EDITOR_MANIFEST, PRODUCTION_EDITOR_MANIFESTS, EE_EDITOR, VH_EDITOR, RM_EDITOR] as const;
 
@@ -27,6 +27,7 @@ const ALLOWED_IMPORTS: Readonly<Record<(typeof TE02_FILES)[number], readonly str
   [PRODUCTION_EDITOR_MANIFESTS]: [
     "templates/editor/wedding/elegant-editorial-v1",
     "templates/editor/wedding/vietnamese-heritage-v1",
+    "templates/editor/wedding/romantic-minimal-v1",
     "templates/core/editor-manifest",
     "templates/core/production-renderer-manifests",
     "templates/core/renderer-manifest",
@@ -144,7 +145,7 @@ describe("TE-02 editor-manifest static boundary", () => {
 
   it("the production editor list is explicit and in production renderer order", () => {
     const code = stripComments(readRepoFile(PRODUCTION_EDITOR_MANIFESTS));
-    expect(code).toMatch(/\[ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST\]/);
+    expect(code).toMatch(/\[ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST\]/);
     expect(/["'`]wedding\.[\w-]+\.v\d+/.test(code)).toBe(false);
   });
 

@@ -2796,3 +2796,28 @@ Checkpoint RM-01 of Template 03, on branch `template-03-romantic-minimal-v1` fro
 The direction draws Our Love from the album with a portrait-first picker; production gives that position its own ordered slot, so Staff choose the three photos explicitly (no automatic re-use of `gallery`). Only `gallery` drives `sections.gallery` (TE-02 item 9); `ourLovePhotos` never drives `sections.loveStory`. Content items: COUPLE, EVENTS REQUIRED; FAMILIES RECOMMENDED; LOVE_STORY, TIMELINE, GIFT, MUSIC OPTIONAL.
 
 **Open questions for the Product Owner before RM-02:** (1) production rights for the eight Task 029 Romantic Minimal decor files (the 2026-10-01 ruling is recorded per template); (2) Our Love when the slot has fewer than three photos, or Love Story text is empty while photos exist; (3) fallbacks for empty Save The Date / Just Married / Thank You slots (envelope without photo? omit Just Married? the solid `#6b4a50` band?); (4) the direction marks the Timeline section "pending its own polish" — ship it as-is or hide it in v1 (`timeline: false`); (5) Our Love story text: the prototype prefers a short variant (`loveStoryShort`), which has no canonical field — full `content.loveStory` proposed.
+
+## RM-02 — Romantic Minimal v1 Production Renderer (2026-10-09)
+
+Checkpoint RM-02 of Template 03, on branch `template-03-romantic-minimal-v1` from RM-01 `525e996`. It adds the renderer, its explicit registration and its tests. **No migration, no catalog row, no activation, no deploy.** A key is selectable only through an active catalog TemplateVersion row, and none is seeded for Romantic Minimal.
+
+**Product Owner rulings on the RM-01 open questions (approved):**
+
+1. **Our Love.** Show the 1–2 available `ourLovePhotos` in slot order, at the same tile size. Photos are never duplicated or borrowed from `gallery`. An empty Love Story hides the whole section, photos included. If the story has text but no photos are assigned, the text renders without an empty image grid.
+2. **Missing single-slot photos.** Save The Date keeps its envelope, names and date without a fake image. Just Married is hidden when `justMarriedPhoto` is absent. Thank You shows its text on the existing `#6b4a50` band when `thankYouPhoto` is absent. An `UNAVAILABLE` item counts as absent, and no slot is ever filled from another slot or a legacy role.
+3. **Timeline.** Keep the exact approved prototype presentation. It shows only when `sections.timeline` is on and canonical `content.timeline` has at least one step.
+4. **Love Story text.** Use the existing canonical `content.loveStory`. No `loveStoryShort` and no new database field.
+5. **Assets.** Commercial production use of **all nine** Task 029 Romantic Minimal decor files is approved. The original eight files were approved first. `romantic-paper-blush.png` and its optimized `paper-blush.webp` derivative (the page texture) were confirmed separately on 2026-10-09. `romantic-envelope-closed.png` and `romantic-envelope-flap.png` are not shipped because the approved design does not reference them. The record lives in `templates/wedding/romantic-minimal/v1/PROVENANCE.md`.
+
+6. **RSVP behaviour (approved after visual QA).** Keep the shared RSVP contract's party-size field ("Số người tham dự"), even though the Task 029 prototype has none. Keep the submit button enabled, with validation when it is tapped (the prototype disables it while the form is empty).
+7. **Visual approval.** The Product Owner approved Romantic Minimal v1 visual fidelity against the frozen Task 029 prototype at 360/390/430 px (RM-02 visual QA, 2026-10-09).
+
+**Implementation contract:**
+
+- **Registration.** The manifest is third in `PRODUCTION_RENDERER_MANIFESTS` and the editor manifest is third in `PRODUCTION_EDITOR_MANIFESTS`. The binding table holds one literal `next/dynamic` import (RS-01). Near-miss keys fail closed.
+- **Props.** The root reads only the K6 props. `capabilities` is used only for presence gates and passthroughs (rsvp, music, clock, clipboard). Layout media comes only from `media.templateSlots`, plus the semantic `media.qr`.
+- **Dates.** All date and time text, the calendar and the countdown derive from the shared RF-05C presentation, month grid and countdown derivations.
+- **RSVP.** RSVP uses the shared submission gate, so success is shown only after the server-confirmed outcome.
+- **Fonts.** Cormorant Garamond, Great Vibes and Allura load via `next/font/google` with the `vietnamese` subset, `display: swap` and `preload: false`.
+- **Motion.** Motion is CSS-only. It runs under `prefers-reduced-motion: no-preference`, and the single reduced-motion block neutralises the opening and every transition.
+- **QA route.** `app/internal/rm-qa/` is a temporary local visual-QA route (404 in production). It is **never committed**.

@@ -11,12 +11,14 @@ import {
 import { PRODUCTION_RENDERER_KEYS, PRODUCTION_RENDERER_MANIFESTS } from "../production-renderer-manifests";
 import type { RendererProductionManifestV1 } from "../renderer-manifest";
 import { ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST } from "../../editor/wedding/elegant-editorial-v1";
+import { ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST } from "../../editor/wedding/romantic-minimal-v1";
 import { VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST } from "../../editor/wedding/vietnamese-heritage-v1";
 
-/** TE-02 — production editor registry and the two production editor manifests (docs/DECISIONS.md "TE-02"). */
+/** TE-02 — production editor registry and the production editor manifests (docs/DECISIONS.md "TE-02"; RM-02 adds the third). */
 
 const EE_KEY = "wedding.elegant-editorial.v1";
 const VH_KEY = "wedding.vietnamese-heritage.v1";
+const RM_KEY = "wedding.romantic-minimal.v1";
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -45,12 +47,12 @@ function withCapability(rendererKey: string, section: string, value: boolean): R
   });
 }
 
-const EDITORS = [ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST];
+const EDITORS = [ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST];
 
 describe("E. production editor registry / cross-manifest validation", () => {
   it("editor key list equals the production renderer key list, in order", () => {
     expect(PRODUCTION_EDITOR_MANIFESTS.map((manifest) => manifest.rendererKey)).toStrictEqual([...PRODUCTION_RENDERER_KEYS]);
-    expect([...PRODUCTION_RENDERER_KEYS]).toStrictEqual([EE_KEY, VH_KEY]);
+    expect([...PRODUCTION_RENDERER_KEYS]).toStrictEqual([EE_KEY, VH_KEY, RM_KEY]);
   });
 
   it("the production list is frozen and holds fresh validated copies", () => {
@@ -58,6 +60,8 @@ describe("E. production editor registry / cross-manifest validation", () => {
     expect(PRODUCTION_EDITOR_MANIFESTS[0]).not.toBe(ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST);
     expect(PRODUCTION_EDITOR_MANIFESTS[0]).toStrictEqual(ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST);
     expect(PRODUCTION_EDITOR_MANIFESTS[1]).toStrictEqual(VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST);
+    expect(PRODUCTION_EDITOR_MANIFESTS[2]).not.toBe(ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST);
+    expect(PRODUCTION_EDITOR_MANIFESTS[2]).toStrictEqual(ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST);
     for (const manifest of PRODUCTION_EDITOR_MANIFESTS) {
       expect(Object.isFrozen(manifest)).toBe(true);
       expect(Object.isFrozen(manifest.mediaSlots)).toBe(true);
@@ -80,7 +84,7 @@ describe("E. production editor registry / cross-manifest validation", () => {
   });
 
   it("rejects an orphan editor manifest (exact key; no normalization or alias)", () => {
-    for (const rendererKey of ["wedding.romantic-minimal.v1", "wedding.elegant-editorial.v2", "Wedding.elegant-editorial.v1", "wedding.elegant-editorial"]) {
+    for (const rendererKey of ["wedding.romantic-minimal.v2", "wedding.elegant-editorial.v2", "Wedding.elegant-editorial.v1", "wedding.elegant-editorial"]) {
       const orphan = { ...clone(ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST), rendererKey };
       expectFail(() => validateProductionEditorManifests([...EDITORS, orphan], PRODUCTION_RENDERER_MANIFESTS), M.ORPHAN_EDITOR_MANIFEST);
     }
@@ -92,7 +96,7 @@ describe("E. production editor registry / cross-manifest validation", () => {
 
   it("rejects a malformed editor manifest with the validator's own error", () => {
     const broken = { ...clone(VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST), mediaSlots: [] };
-    expect(() => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, broken], PRODUCTION_RENDERER_MANIFESTS)).toThrow(
+    expect(() => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, broken, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST], PRODUCTION_RENDERER_MANIFESTS)).toThrow(
       TemplateEditorManifestInvariantError,
     );
   });
@@ -103,7 +107,7 @@ describe("E. production editor registry / cross-manifest validation", () => {
     const withMessage = clone(VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST) as unknown as { contentItems: unknown[] };
     withMessage.contentItems.push({ key: "INVITATION_MESSAGE", label: "Lời mời", hint: "Lời mời.", requirement: "OPTIONAL", sectionKey: "invitationMessage" });
     expectFail(
-      () => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, withMessage], PRODUCTION_RENDERER_MANIFESTS),
+      () => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, withMessage, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST], PRODUCTION_RENDERER_MANIFESTS),
       M.CONTENT_SECTION_NOT_CAPABLE,
     );
   });
@@ -113,7 +117,7 @@ describe("E. production editor registry / cross-manifest validation", () => {
     const photoStorySlot = clone(VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST) as unknown as { mediaSlots: Record<string, unknown>[] };
     photoStorySlot.mediaSlots.push({ ...photoStorySlot.mediaSlots[3], key: "storyStrip", sectionKey: "photoStory" });
     expectFail(
-      () => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, photoStorySlot], PRODUCTION_RENDERER_MANIFESTS),
+      () => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, photoStorySlot, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST], PRODUCTION_RENDERER_MANIFESTS),
       M.SLOT_SECTION_NOT_CAPABLE,
     );
   });
@@ -121,9 +125,10 @@ describe("E. production editor registry / cross-manifest validation", () => {
   it("lookup is exact-key, registry-owned and has no fallback", () => {
     expect(lookupTemplateEditorManifest(EE_KEY)).toStrictEqual(PRODUCTION_EDITOR_MANIFESTS[0]);
     expect(lookupTemplateEditorManifest(VH_KEY)).toStrictEqual(PRODUCTION_EDITOR_MANIFESTS[1]);
+    expect(lookupTemplateEditorManifest(RM_KEY)).toStrictEqual(PRODUCTION_EDITOR_MANIFESTS[2]);
     expect(Object.isFrozen(lookupTemplateEditorManifest(VH_KEY)?.mediaSlots[0])).toBe(true);
     expect(lookupTemplateEditorManifest(VH_KEY)).toBe(lookupTemplateEditorManifest(VH_KEY));
-    for (const key of ["", "wedding.vietnamese-heritage", "wedding.vietnamese-heritage.v2", ` ${VH_KEY}`, VH_KEY.toUpperCase(), "latest"]) {
+    for (const key of ["", "wedding.vietnamese-heritage", "wedding.vietnamese-heritage.v2", ` ${VH_KEY}`, VH_KEY.toUpperCase(), "wedding.romantic-minimal", `${RM_KEY} `, "latest"]) {
       expect(lookupTemplateEditorManifest(key)).toBeUndefined();
     }
   });
