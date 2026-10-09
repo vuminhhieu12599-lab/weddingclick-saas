@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="700" viewBox="0 0 700 700">
+  <!-- WeddingClick self-generated prototype placeholder (no photography, no third-party content). -->
+  <defs>
+    <linearGradient id="wash" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f3e8da"/>
+      <stop offset="100%" stop-color="#b9906a"/>
+    </linearGradient>
+    <radialGradient id="light" cx="30%" cy="28%" r="60%">
+      <stop offset="0%" stop-color="#fffaf2" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#fffaf2" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="50%" cy="45%" r="78%">
+      <stop offset="62%" stop-color="#2b1f15" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#2b1f15" stop-opacity="0.28"/>
+    </radialGradient>
+  </defs>
+  <rect width="700" height="700" fill="url(#wash)"/>
+  <rect width="700" height="700" fill="url(#light)"/>
+  <g fill="none" stroke="#fffaf2" stroke-opacity="0.22" stroke-width="1.2">
+    <ellipse cx="350" cy="434" rx="154" ry="210"/>
+    <ellipse cx="350" cy="210" rx="63" ry="70"/>
+  </g>
+  <rect width="700" height="700" fill="url(#vignette)"/>
+  <text x="676" y="678" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="13" letter-spacing="3" fill="#fffaf2" fill-opacity="0.55">DEMO · 07</text>
+</svg>

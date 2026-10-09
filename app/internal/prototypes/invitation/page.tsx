@@ -11,6 +11,9 @@ import { RomanticMinimalPrototype } from "./_directions/romantic-minimal/romanti
 // still lives at ./_directions/elegant-editorial, intentionally unimported,
 // kept only for comparison/recovery until explicitly approved for removal.
 import { GreenIvoryEditorialPrototype } from "./_directions/green-ivory-editorial/green-ivory-editorial";
+import { OurWeddingStoryPrototype } from "./_directions/our-wedding-story/our-wedding-story";
+import { OWS_MEDIA_SCENARIOS } from "./_directions/our-wedding-story/demo-media";
+import type { OwsMediaScenario } from "./_directions/our-wedding-story/demo-media";
 import { DEFAULT_SECTION_VISIBILITY, SECTION_KEYS, SECTION_LABELS } from "./_shared/sections";
 import type { SectionVisibility } from "./_shared/sections";
 import type { InvitationVariant } from "./_shared/types";
@@ -20,6 +23,7 @@ const DIRECTIONS = [
   { key: "elegant-editorial", label: "Elegant Editorial" },
   { key: "vietnamese-heritage", label: "Vietnamese Heritage" },
   { key: "romantic-minimal", label: "Romantic Minimal" },
+  { key: "our-wedding-story", label: "Our Wedding Story" },
 ] as const;
 
 type DirectionKey = (typeof DIRECTIONS)[number]["key"];
@@ -50,6 +54,8 @@ export default function InvitationPrototypeReviewPage() {
   const [newGuestName, setNewGuestName] = useState("");
   const [sections, setSections] = useState<SectionVisibility>(DEFAULT_SECTION_VISIBILITY);
   const [replayKey, setReplayKey] = useState(0);
+  // Our Wedding Story only: demo media scenario for reviewing missing-photo states.
+  const [owsMediaScenario, setOwsMediaScenario] = useState<OwsMediaScenario>("full");
   const phoneScreenRef = useRef<HTMLDivElement>(null);
 
   // Switching template/variant/replay remounts the invitation below, but the
@@ -59,7 +65,7 @@ export default function InvitationPrototypeReviewPage() {
   // every switch so the opening is always what's shown first.
   useEffect(() => {
     phoneScreenRef.current?.scrollTo({ top: 0 });
-  }, [direction, variant, replayKey]);
+  }, [direction, variant, replayKey, owsMediaScenario]);
 
   const toggleSection = (key: keyof SectionVisibility) => {
     setSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -231,6 +237,25 @@ export default function InvitationPrototypeReviewPage() {
         </div>
       </details>
 
+      {direction === "our-wedding-story" && (
+        <div className={styles.controlsRow}>
+          <div className={styles.group}>
+            {OWS_MEDIA_SCENARIOS.map((scenario) => (
+              <button
+                key={scenario.key}
+                type="button"
+                className={`${styles.groupButton} ${
+                  owsMediaScenario === scenario.key ? styles.groupButtonActive : ""
+                }`}
+                onClick={() => setOwsMediaScenario(scenario.key)}
+              >
+                {scenario.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <p className={styles.shareCoverNote}>
         📌 Concept (not built here): social share cover — <strong>{PROTOTYPE_WEDDING_DATA.shareCover.imageLabel}</strong>.{" "}
         {PROTOTYPE_WEDDING_DATA.shareCover.note}
@@ -246,6 +271,7 @@ export default function InvitationPrototypeReviewPage() {
               guestDisplayName={guestDisplayName}
               sections={sections}
               replayKey={replayKey}
+              owsMediaScenario={owsMediaScenario}
             />
           </div>
         </div>
@@ -267,6 +293,7 @@ function PrototypeSurface({
   guestDisplayName,
   sections,
   replayKey,
+  owsMediaScenario,
 }: {
   direction: DirectionKey;
   variant: InvitationVariant;
@@ -274,6 +301,7 @@ function PrototypeSurface({
   guestDisplayName: string;
   sections: SectionVisibility;
   replayKey: number;
+  owsMediaScenario: OwsMediaScenario;
 }) {
   const key = `${direction}-${variant}-${replayKey}`;
   const props = { data: PROTOTYPE_WEDDING_DATA, variant, personalization, guestDisplayName, sections };
@@ -283,6 +311,9 @@ function PrototypeSurface({
   }
   if (direction === "romantic-minimal") {
     return <RomanticMinimalPrototype key={key} {...props} />;
+  }
+  if (direction === "our-wedding-story") {
+    return <OurWeddingStoryPrototype key={`${key}-${owsMediaScenario}`} {...props} mediaScenario={owsMediaScenario} />;
   }
   return <GreenIvoryEditorialPrototype key={key} {...props} />;
 }
