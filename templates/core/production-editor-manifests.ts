@@ -1,4 +1,5 @@
 import { ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST } from "../editor/wedding/elegant-editorial-v1";
+import { ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST } from "../editor/wedding/romantic-minimal-v1";
 import { VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST } from "../editor/wedding/vietnamese-heritage-v1";
 import {
   TemplateEditorManifestInvariantError,
@@ -129,12 +130,12 @@ export function createProductionEditorRegistry(
 
 /**
  * The one ordered, explicit production editor manifest list: Elegant
- * Editorial v1, then Vietnamese Heritage v1, matching
+ * Editorial v1, Vietnamese Heritage v1, then Romantic Minimal v1, matching
  * `PRODUCTION_RENDERER_MANIFESTS`. Validated at module load, so a malformed,
  * missing, orphan or incapable editor manifest fails closed on import.
  */
 export const PRODUCTION_EDITOR_MANIFESTS: readonly TemplateEditorManifestV1[] = validateProductionEditorManifests(
-  [ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST],
+  [ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST],
   PRODUCTION_RENDERER_MANIFESTS,
 );
 
