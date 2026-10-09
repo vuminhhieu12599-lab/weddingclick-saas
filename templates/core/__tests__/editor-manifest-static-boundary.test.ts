@@ -17,7 +17,9 @@ const EDITOR_MANIFEST = "templates/core/editor-manifest.ts";
 const PRODUCTION_EDITOR_MANIFESTS = "templates/core/production-editor-manifests.ts";
 const EE_EDITOR = "templates/editor/wedding/elegant-editorial-v1.ts";
 const VH_EDITOR = "templates/editor/wedding/vietnamese-heritage-v1.ts";
-const TE02_FILES = [EDITOR_MANIFEST, PRODUCTION_EDITOR_MANIFESTS, EE_EDITOR, VH_EDITOR] as const;
+// RM-01: the Romantic Minimal v1 editor manifest, not yet in the production list.
+const RM_EDITOR = "templates/editor/wedding/romantic-minimal-v1.ts";
+const TE02_FILES = [EDITOR_MANIFEST, PRODUCTION_EDITOR_MANIFESTS, EE_EDITOR, VH_EDITOR, RM_EDITOR] as const;
 
 /** Exact import allowlist per file, as repository-relative module paths (no extension). */
 const ALLOWED_IMPORTS: Readonly<Record<(typeof TE02_FILES)[number], readonly string[]>> = {
@@ -31,6 +33,7 @@ const ALLOWED_IMPORTS: Readonly<Record<(typeof TE02_FILES)[number], readonly str
   ],
   [EE_EDITOR]: ["templates/core/editor-manifest"],
   [VH_EDITOR]: ["templates/core/editor-manifest"],
+  [RM_EDITOR]: ["templates/core/editor-manifest"],
 };
 
 const FORBIDDEN: readonly [string, RegExp][] = [
@@ -97,16 +100,20 @@ describe("TE-02 editor-manifest static boundary", () => {
     }
   });
 
-  it("templates/editor/** contains exactly the two production editor manifests", () => {
+  it("templates/editor/** contains exactly the two production editor manifests and the unregistered RM-01 manifest", () => {
     const files = readdirSync(join(REPO_ROOT, "templates", "editor"), { recursive: true, withFileTypes: true })
       .filter((entry) => entry.isFile())
       .map((entry) => toPosix(relative(REPO_ROOT, join(entry.parentPath, entry.name))))
       .sort();
-    expect(files).toStrictEqual([EE_EDITOR, VH_EDITOR]);
+    expect(files).toStrictEqual([EE_EDITOR, RM_EDITOR, VH_EDITOR]);
   });
 
   it("no editor manifest lives inside a renderer-version directory", () => {
-    for (const dir of ["templates/wedding/elegant-editorial/v1", "templates/wedding/vietnamese-heritage/v1"]) {
+    for (const dir of [
+      "templates/wedding/elegant-editorial/v1",
+      "templates/wedding/vietnamese-heritage/v1",
+      "templates/wedding/romantic-minimal/v1",
+    ]) {
       const names = readdirSync(join(REPO_ROOT, dir), { recursive: true }).map(String);
       expect(names.some((name) => /editor-manifest/.test(name)), dir).toBe(false);
     }
@@ -128,7 +135,7 @@ describe("TE-02 editor-manifest static boundary", () => {
   });
 
   it("the per-template editor manifests import types only", () => {
-    for (const file of [EE_EDITOR, VH_EDITOR]) {
+    for (const file of [EE_EDITOR, VH_EDITOR, RM_EDITOR]) {
       const statements = stripComments(readRepoFile(file)).match(/^\s*import\s.*$/gm) ?? [];
       expect(statements.length).toBeGreaterThan(0);
       for (const statement of statements) expect(statement, file).toMatch(/^\s*import\s+type\s/);

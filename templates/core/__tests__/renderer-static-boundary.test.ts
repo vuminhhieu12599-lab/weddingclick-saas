@@ -316,7 +316,8 @@ describe("templates/** production tree (P39)", () => {
   // RF-06D extension: plus exactly the RF-06D islands and pure models.
   // VH-01 extension: plus exactly the Vietnamese Heritage v1 files (rules at the end of this file).
   // TE-02 extension: plus exactly the editor-manifest files (rules in editor-manifest-static-boundary.test.ts).
-  it("templates/** contains exactly the RF-06A, RF-06B, RF-06C, RF-06D, VH-01 and TE-02 files", () => {
+  // RM-01 extension: plus exactly the two unregistered Romantic Minimal v1 manifests (rules at the end of this file).
+  it("templates/** contains exactly the RF-06A, RF-06B, RF-06C, RF-06D, VH-01, TE-02 and RM-01 files", () => {
     expect([...sources].sort()).toStrictEqual(
       [
         ...RF06A_FILES,
@@ -327,6 +328,7 @@ describe("templates/** production tree (P39)", () => {
         ...VH02B_ISLAND_FILES,
         ...VH02B_MODEL_FILES,
         ...TE02_FILES,
+        ...RM01_FILES,
       ].sort(),
     );
   });
@@ -2463,3 +2465,46 @@ const TE02_FILES = [
   "templates/editor/wedding/elegant-editorial-v1.ts",
   "templates/editor/wedding/vietnamese-heritage-v1.ts",
 ] as const;
+
+// ===========================================================================
+// RM-01 extension (docs/DECISIONS.md "RM-01 — Romantic Minimal v1 Production
+// Contract"): the data-only renderer manifest and the editor manifest. Both
+// stay out of the production manifest lists, the binding table and every
+// client graph until RM-02 registers the renderer.
+// ===========================================================================
+
+const RM01_MANIFEST_FILE = "templates/wedding/romantic-minimal/v1/manifest.ts";
+const RM01_EDITOR_FILE = "templates/editor/wedding/romantic-minimal-v1.ts";
+const RM01_FILES = [RM01_MANIFEST_FILE, RM01_EDITOR_FILE] as const;
+
+describe("RM-01 Romantic Minimal v1 manifests", () => {
+  it("the renderer manifest is data only: one type-only import and no RF-06A forbidden code", () => {
+    expect(importsOf(readRepoFile(RM01_MANIFEST_FILE))).toStrictEqual([
+      { specifier: "../../../core/renderer-manifest", typeOnly: true },
+    ]);
+    const code = stripComments(readRepoFile(RM01_MANIFEST_FILE));
+    for (const [label, pattern] of RF06A_FORBIDDEN) {
+      expect(pattern.test(code), `${RM01_MANIFEST_FILE}: ${label}`).toBe(false);
+    }
+  });
+
+  it("the RM key literal appears only in the two RM-01 manifests (not registered, not bound)", () => {
+    const sources = [...listSources(TEMPLATES_ROOT), ...nonTestSources("app"), ...nonTestSources("lib")].filter((file) =>
+      /\.(ts|tsx)$/.test(file),
+    );
+    const withLiteral = sources.filter((file) => /["'`]wedding\.romantic-minimal\.v1["'`]/.test(stripComments(readRepoFile(file))));
+    expect(withLiteral.sort()).toStrictEqual([...RM01_FILES].sort());
+  });
+
+  it("no production source imports the RM-01 manifests yet", () => {
+    const sources = [...listSources(TEMPLATES_ROOT), ...nonTestSources("app"), ...nonTestSources("lib")].filter((file) =>
+      /\.(ts|tsx)$/.test(file),
+    );
+    const importers = sources.filter((file) =>
+      importsOf(readRepoFile(file)).some((statement) =>
+        /^templates\/(wedding\/romantic-minimal\/|editor\/wedding\/romantic-minimal)/.test(resolveSpecifier(file, statement.specifier)),
+      ),
+    );
+    expect(importers).toStrictEqual([]);
+  });
+});
