@@ -156,7 +156,6 @@ export function OurWeddingStoryPrototype({
       {music.element}
 
       <CoverSection
-        data={data}
         resolved={resolved}
         media={media}
         ceremonyDate={ceremony}
@@ -179,6 +178,12 @@ export function OurWeddingStoryPrototype({
               >
                 <MusicGlyph playing={music.playing} />
               </button>
+              {/* Only after an explicit tap fails — a blocked start on "Mở thiệp" just stays paused. */}
+              {music.failed && (
+                <p className={styles.musicError} role="status">
+                  Không phát được nhạc
+                </p>
+              )}
             </div>
           )}
 
@@ -187,8 +192,6 @@ export function OurWeddingStoryPrototype({
               <FamiliesSection
                 number={pageNumber("families")}
                 resolved={resolved}
-                music={music}
-                trackLabel={data.music.trackLabel}
               />
             )}
 
@@ -260,7 +263,7 @@ export function OurWeddingStoryPrototype({
 
             <footer className={styles.footer}>
               <span className={styles.footerRule} aria-hidden="true" />
-              <span className={styles.footerDate}>Our Wedding Story · The Wedding Issue</span>
+              <span className={styles.footerDate}>Our Wedding Story</span>
             </footer>
           </div>
         </>
@@ -389,8 +392,6 @@ function useAudioControl(src: string | undefined) {
   return { available: Boolean(src), playing, failed, play, toggle, element };
 }
 
-type AudioControl = ReturnType<typeof useAudioControl>;
-
 function MusicGlyph({ playing }: { playing: boolean }) {
   return playing ? (
     <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
@@ -409,7 +410,6 @@ function MusicGlyph({ playing }: { playing: boolean }) {
 /* ------------------------------------------------------------------ */
 
 function CoverSection({
-  data,
   resolved,
   media,
   ceremonyDate,
@@ -418,7 +418,6 @@ function CoverSection({
   onOpen,
   reducedMotion,
 }: {
-  data: PrototypeWeddingData;
   resolved: ResolvedInvitation;
   media: OwsMedia;
   ceremonyDate: ReturnType<typeof deriveCeremonyDisplay>;
@@ -440,7 +439,7 @@ function CoverSection({
     <section className={`${styles.cover} ${media.coverUrl ? "" : styles.coverTextOnly}`} aria-label="Bìa thiệp">
       <motion.header className={styles.masthead} {...enter(0.05, -8)}>
         <div className={styles.mastheadMeta}>
-          <span>The Wedding Issue</span>
+          <span>A Love Story</span>
           <span>{ceremonyDate.fullDateLabel}</span>
         </div>
         <div className={styles.mastheadTitle}>
@@ -503,10 +502,6 @@ function CoverSection({
           )}
         </motion.div>
       </div>
-
-      {data.music.trackLabel && media.audioUrl && !opened && (
-        <p className={styles.coverMusicHint}>Thiệp có nhạc nền · bấm “Mở thiệp” để nghe</p>
-      )}
     </section>
   );
 }
@@ -515,17 +510,7 @@ function CoverSection({
 /* 02 Our Families                                                     */
 /* ------------------------------------------------------------------ */
 
-function FamiliesSection({
-  number,
-  resolved,
-  music,
-  trackLabel,
-}: {
-  number: string;
-  resolved: ResolvedInvitation;
-  music: AudioControl;
-  trackLabel: string;
-}) {
+function FamiliesSection({ number, resolved }: { number: string; resolved: ResolvedInvitation }) {
   // Primary family first (GROOM: nhà trai; BRIDE: nhà gái; COMMON: both,
   // groom's side first per the shared resolver).
   const families = [resolved.primary, resolved.secondary];
@@ -543,27 +528,6 @@ function FamiliesSection({
           </Reveal>
         ))}
       </div>
-
-      {music.available && (
-        <Reveal y={6} delay={0.2}>
-          <button
-            type="button"
-            className={styles.musicPill}
-            onClick={music.toggle}
-            aria-pressed={music.playing}
-            aria-label={music.playing ? `Tạm dừng nhạc: ${trackLabel}` : `Phát nhạc: ${trackLabel}`}
-          >
-            <span className={styles.musicPillIcon}>
-              <MusicGlyph playing={music.playing} />
-            </span>
-            <span className={styles.musicPillText}>
-              <span className={styles.musicPillLabel}>{music.playing ? "Đang phát" : "Nhạc nền"}</span>
-              <span className={styles.musicPillTrack}>{trackLabel}</span>
-            </span>
-          </button>
-          {music.failed && <p className={styles.musicError}>Không phát được nhạc trên trình duyệt này.</p>}
-        </Reveal>
-      )}
     </section>
   );
 }

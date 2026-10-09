@@ -263,7 +263,6 @@
 
 .openButton:focus-visible,
 .musicFab:focus-visible,
-.musicPill:focus-visible,
 .galleryTile:focus-visible,
 .submitButton:focus-visible,
 .giftButton:focus-visible,
@@ -282,12 +281,6 @@
   color: var(--muted);
 }
 
-.coverMusicHint {
-  margin-top: 14px;
-  text-align: center;
-  font-size: 10.5px;
-  color: var(--muted);
-}
 
 /* No cover photo: the masthead + names carry the cover typographically. */
 .coverTextOnly {
@@ -346,56 +339,20 @@
   box-shadow: 0 2px 10px rgba(76, 58, 42, 0.12);
 }
 
-.musicPill {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  max-width: 100%;
-  margin: 28px auto 0;
-  padding: 7px 16px 7px 7px;
-  border: 1px solid var(--line-soft);
-  border-radius: 999px;
-  background: var(--paper);
-  cursor: pointer;
-  text-align: left;
-}
 
-.musicPillIcon {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--champagne);
-}
 
-.musicPillText {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
 
-.musicPillLabel {
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
 
-.musicPillTrack {
-  overflow: hidden;
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 14px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
 
 .musicError {
-  margin-top: 6px;
-  text-align: center;
-  font-size: 11px;
+  position: absolute;
+  top: 40px;
+  right: 8px;
+  padding: 3px 8px;
+  background: rgba(248, 243, 236, 0.95);
+  border: 1px solid var(--line-soft);
+  font-size: 10.5px;
+  white-space: nowrap;
   color: #8a4b35;
 }
 
