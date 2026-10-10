@@ -2894,3 +2894,25 @@ On branch `db-consistency-01-catalog-seeds` from `origin/weddingclick-v2` `4d6f1
 5. `lib/server/templates/__tests__/vietnamese-heritage-romantic-minimal-catalog-seed.test.ts` keeps every SQL manifest copy equal to the code manifests and the SQL data-only. The migration-head guard tests now allow exactly 0048 after 0047; 0045 stays retired and absent.
 
 **Applying to existing environments.** Run the established migration procedure only after Product Owner approval. On DEV and Production both rows already exist, so 0048 inserts nothing and only verifies them. If either environment's row differs from the frozen identity or manifest, 0048 raises and the migration aborts without changing anything. Investigate that case; do not edit the migration to make it pass. Rollback: none needed, since 0048 adds no rows on existing environments. Never delete catalog rows.
+
+## LAUNCH-P0-01 — Admin Performance + Google Maps Directions (2026-10-10)
+
+On branch `launch-p0-01-admin-perf-google-maps` from `origin/weddingclick-v2` `cde9e03`. No migration, no Production data, deployment or infrastructure change, no renderer/visual change.
+
+**Track B — Google Maps link per ceremony.** The Staff DATA "Thông tin bắt buộc cho thiệp" GROOM (Lễ Thành Hôn — Nhà trai) and BRIDE (Lễ Vu Quy — Nhà gái) cards gain an optional "Link Google Maps" field bound to the canonical `project_events.map_url` (`mapUrl`). Load shows the stored value; blank saves `null` (clears); a value must be an absolute `https://` URL, mirrored client-side from the unchanged server rule (`parseNullableHttpsUrl`, 0009 CHECK). No host allow-list was added: the server contract stays "any valid https URL", and no coordinates or URLs are ever generated. The full-resource PUT still preserves timezone, side, occasion, description, sort order and primary flag. The four production renderers already render the Directions link only when `event.mapUrl !== null`, per ceremony card, with `target="_blank" rel="noopener noreferrer"`; RM and OWS now have the same per-variant href tests as EE/VH. Published invitations change only through the existing Review → Publish/Republish lifecycle (draft `project_events` are never read by public rendering).
+
+**Track A — measured findings.**
+
+1. Production functions run in `iad1` (US East) while Production Supabase is in `ap-southeast-1` (Singapore); staff traffic from Vietnam enters at edge `hkg1` (`x-vercel-id: hkg1::iad1::…`). Read-only probe (2026-10-10, 6 samples each): `GET /api/v2/internal/me` with no token (401 without any Supabase call) TTFB 0.38–0.53 s; with an invalid bearer (exactly one `auth.getUser` call to Singapore) 0.61–0.83 s — about 0.25–0.4 s per sequential Supabase round trip.
+2. Every staff API call made at least three sequential Supabase round trips: `auth.getUser` → `profiles` lookup → the use-case query (2–5 more sequential queries for preview/readiness/review/publish state).
+3. The admin shell is client-rendered: `getSession` → `/me` → then the page's own fetches. Opening a Project's DATA tab issues about 12 API calls; `wedding-details` was requested three times concurrently (required data, family, gift editors). Tabs unmount on switch, so each switch refetches.
+4. The dashboard endpoint runs 20 parallel count/list queries (12 per-status counts + 8) after auth.
+
+**Track A — implemented (smallest safe changes).**
+
+1. `requireStaff` starts the RLS `profiles` lookup concurrently with `auth.getUser`, keyed by the token's unverified `sub` (hint only; see API_CONTRACT §1 Path A note). Removes one sequential Supabase round trip from every staff request. Outcomes are identical to the sequential path for every case (rejected token, Auth failure, missing/inactive profile, DB failure, mismatched subject); covered by `staff-context.test.ts`.
+2. `admin-api-client` shares concurrent identical GETs (same path + token) while in flight. It is not a cache: entries are dropped when the response settles, any write clears all entries, and each caller gets its own copy. Removes the duplicate `wedding-details` reads on DATA.
+
+**Track A — recommended infrastructure change (NOT applied; needs Product Owner approval).** Set the Vercel Function Region for project `weddingclick-saas` to Singapore `sin1` (AWS ap-southeast-1, same region as Production Supabase): Project Settings → Functions → Function Region, or commit `vercel.json` `{ "regions": ["sin1"] }`; it takes effect on the next deployment. Expected impact: each Supabase round trip falls from ~0.25–0.4 s to a few ms, and the hkg1→function hop shortens, so a typical staff API call should drop from ~1.2–2.5 s to ~0.1–0.3 s; public invitation, RSVP, review and portal routes (which also query Supabase) benefit the same way. Before switching, confirm the Upstash/KV rate-limit store region (an US-only store would add trans-Pacific latency to the rate-limit check instead), redeploy, and re-run the probe above plus the Staff measurements.
+
+**Not changed (reported).** Dashboard per-status count fan-out, tab refetch on switch, and sequential multi-query read models — each would be a larger refactor and is mostly neutralized by the region move.

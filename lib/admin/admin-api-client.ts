@@ -78,7 +78,38 @@ async function requireAccessToken(): Promise<string> {
   return token;
 }
 
+/**
+ * LAUNCH-P0-01: identical GETs that are already in flight share one network
+ * request (e.g. three DATA-tab editors loading wedding details at once).
+ * This is not a cache — an entry lives only until its response settles, and
+ * any write clears every entry so a GET started after a write never joins a
+ * read that began before it. Each caller receives its own copy of the body.
+ */
+const inFlightGets = new Map<string, Promise<unknown>>();
+
 async function requestJson<T>(
+  path: string,
+  accessToken: string,
+  write?: { method: "PUT" | "POST" | "PATCH" | "DELETE"; body?: unknown },
+): Promise<T> {
+  if (write) {
+    inFlightGets.clear();
+    return sendJson<T>(path, accessToken, write);
+  }
+  const key = `${accessToken}\n${path}`;
+  let shared = inFlightGets.get(key);
+  if (!shared) {
+    shared = sendJson<unknown>(path, accessToken).finally(() => {
+      if (inFlightGets.get(key) === shared) {
+        inFlightGets.delete(key);
+      }
+    });
+    inFlightGets.set(key, shared);
+  }
+  return structuredClone(await shared) as T;
+}
+
+async function sendJson<T>(
   path: string,
   accessToken: string,
   write?: { method: "PUT" | "POST" | "PATCH" | "DELETE"; body?: unknown },

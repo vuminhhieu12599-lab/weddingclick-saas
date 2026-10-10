@@ -23,7 +23,9 @@ Browser Supabase Auth access token
   → RLS (is_staff() / is_admin())
 ```
 
-Implemented exactly by `lib/server/auth/{staff-context,staff-auth-gateway,bearer-token}.ts` + `lib/server/supabase/staff-client.ts`. `service_role` is never used for ordinary staff convenience (`SECURITY.md` §5.3, `PHYSICAL_DATABASE_PLAN.md` §1.4).
+Implemented exactly by `lib/server/auth/{staff-context,staff-auth-gateway,bearer-token}.ts` + `lib/server/supabase/staff-client.ts`.
+
+LAUNCH-P0-01 latency note: the `profiles` lookup (under the caller's own JWT, so still RLS-enforced) is started concurrently with `auth.getUser(token)`, using the token's unverified `sub` claim only as the lookup key. The decision order is unchanged: the `getUser` outcome is evaluated first (rejection → 401, failure → 500), and the profile row is accepted only when its key equals the verified user id; otherwise it is discarded and re-read with the verified id. The unverified claim is never an authentication or authorization input. `service_role` is never used for ordinary staff convenience (`SECURITY.md` §5.3, `PHYSICAL_DATABASE_PLAN.md` §1.4).
 
 ### Path B — Customer / Guest Bearer Token
 

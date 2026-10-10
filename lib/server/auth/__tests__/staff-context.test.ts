@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { StaffAuthError } from "../staff-auth-error";
-import { requireAdmin, requireStaff, type StaffAuthGateway } from "../staff-context";
+import { readUnverifiedSubjectHint, requireAdmin, requireStaff, type StaffAuthGateway } from "../staff-context";
 
 interface FakeClient {
   marker: string;
@@ -203,5 +203,95 @@ describe("requireAdmin", () => {
     await requireAdmin("token", gateway).catch(spy);
 
     expect(spy).toHaveBeenCalled();
+  });
+});
+
+const VERIFIED_ID = "7b0e2c1a-3f4d-4e5a-9b6c-1d2e3f4a5b6c";
+const OTHER_ID = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
+
+function jwtLike(payload: unknown): string {
+  return `eyJhbGciOiJIUzI1NiJ9.${Buffer.from(JSON.stringify(payload)).toString("base64url")}.signature`;
+}
+
+describe("requireStaff concurrent profile lookup (LAUNCH-P0-01)", () => {
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((r) => {
+      resolve = r;
+    });
+    return { promise, resolve };
+  }
+
+  it("starts the profile lookup for the hinted subject before Auth validation settles, and uses it when ids match", async () => {
+    const auth = deferred<string | null>();
+    const profileCalls: string[] = [];
+    const gateway: StaffAuthGateway<FakeClient> = {
+      createClient: () => ({ marker: "c" }),
+      getAuthenticatedUserId: () => auth.promise,
+      async getActiveStaffProfile(_client, userId) {
+        profileCalls.push(userId);
+        return { role: "STAFF", displayName: "A" };
+      },
+    };
+
+    const pending = requireStaff(jwtLike({ sub: VERIFIED_ID }), gateway);
+    await Promise.resolve();
+    expect(profileCalls).toEqual([VERIFIED_ID]);
+    auth.resolve(VERIFIED_ID);
+
+    await expect(pending).resolves.toMatchObject({ userId: VERIFIED_ID, role: "STAFF" });
+    expect(profileCalls).toEqual([VERIFIED_ID]);
+  });
+
+  it("discards a speculative profile for a different subject and re-reads with the verified id", async () => {
+    const gateway: StaffAuthGateway<FakeClient> = {
+      createClient: () => ({ marker: "c" }),
+      getAuthenticatedUserId: async () => VERIFIED_ID,
+      getActiveStaffProfile: vi.fn(async (_client: FakeClient, userId: string) =>
+        userId === OTHER_ID ? { role: "ADMIN", displayName: "Other" } : null,
+      ),
+    };
+
+    const error = await requireStaff(jwtLike({ sub: OTHER_ID }), gateway).catch((e) => e);
+    expect((error as StaffAuthError).kind).toBe("FORBIDDEN");
+    expect(gateway.getActiveStaffProfile).toHaveBeenLastCalledWith({ marker: "c" }, VERIFIED_ID);
+  });
+
+  it("a rejected token stays UNAUTHENTICATED even if the speculative lookup returned an ADMIN row", async () => {
+    const gateway = createFakeGateway({ userId: null, profile: { role: "ADMIN", displayName: "X" } });
+    const error = await requireStaff(jwtLike({ sub: VERIFIED_ID }), gateway).catch((e) => e);
+    expect((error as StaffAuthError).kind).toBe("UNAUTHENTICATED");
+  });
+
+  it("an Auth infrastructure failure stays INTERNAL even when the speculative lookup also failed", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const gateway = createFakeGateway({ userIdError: new Error("auth down"), profileError: new Error("db down") });
+      const error = await requireStaff(jwtLike({ sub: VERIFIED_ID }), gateway).catch((e) => e);
+      expect((error as StaffAuthError).kind).toBe("INTERNAL");
+      expect(consoleSpy.mock.calls.map((call) => String(call[0]))).toEqual(["[requireStaff] Failed to validate access token"]);
+    } finally {
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("a speculative lookup failure for a verified matching id is INTERNAL (same as the sequential path)", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const gateway = createFakeGateway({ userId: VERIFIED_ID, profileError: new Error("db down") });
+      const error = await requireStaff(jwtLike({ sub: VERIFIED_ID }), gateway).catch((e) => e);
+      expect((error as StaffAuthError).kind).toBe("INTERNAL");
+    } finally {
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("readUnverifiedSubjectHint only yields a UUID sub from a three-part token", () => {
+    expect(readUnverifiedSubjectHint(jwtLike({ sub: VERIFIED_ID }))).toBe(VERIFIED_ID);
+    expect(readUnverifiedSubjectHint(jwtLike({ sub: "not-a-uuid" }))).toBeNull();
+    expect(readUnverifiedSubjectHint(jwtLike({ sub: 42 }))).toBeNull();
+    expect(readUnverifiedSubjectHint(jwtLike(null))).toBeNull();
+    expect(readUnverifiedSubjectHint("a.%%%.c")).toBeNull();
+    expect(readUnverifiedSubjectHint("opaque-token")).toBeNull();
   });
 });

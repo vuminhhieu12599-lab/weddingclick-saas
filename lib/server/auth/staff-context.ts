@@ -1,4 +1,5 @@
 import { STAFF_ROLES, type StaffRole } from "../../domain";
+import { isValidUuid } from "../validation/uuid";
 import { StaffAuthError } from "./staff-auth-error";
 
 /**
@@ -76,6 +77,43 @@ function toInternalError(error: unknown, eventLabel: string): StaffAuthError {
   return new StaffAuthError("INTERNAL", eventLabel);
 }
 
+type Settled<T> = { ok: true; value: T } | { ok: false; error: unknown };
+
+function settle<T>(promise: Promise<T>): Promise<Settled<T>> {
+  return promise.then(
+    (value) => ({ ok: true as const, value }),
+    (error: unknown) => ({ ok: false as const, error }),
+  );
+}
+
+/**
+ * LAUNCH-P0-01 latency hint ONLY — never an authentication or authorization
+ * input. Reads the `sub` claim from the token payload WITHOUT verifying it,
+ * solely so the RLS profile lookup can start concurrently with Supabase
+ * Auth's own validation instead of after it (one fewer sequential network
+ * round trip per staff request). requireStaff uses the speculative result
+ * only when the hint equals the user id that `getAuthenticatedUserId`
+ * verified; otherwise it is discarded and the lookup is redone with the
+ * verified id. Anything that is not a well-formed payload with a UUID `sub`
+ * yields null (sequential path).
+ */
+export function readUnverifiedSubjectHint(accessToken: string): string | null {
+  const parts = accessToken.split(".");
+  if (parts.length !== 3) {
+    return null;
+  }
+  try {
+    const payload: unknown = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+    if (typeof payload !== "object" || payload === null) {
+      return null;
+    }
+    const sub = (payload as Record<string, unknown>).sub;
+    return typeof sub === "string" && isValidUuid(sub) ? sub : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Validates the presented Supabase access token, then authorizes the
  * resulting identity against active WeddingClick staff state.
@@ -83,6 +121,11 @@ function toInternalError(error: unknown, eventLabel: string): StaffAuthError {
  * Rejects (throws StaffAuthError) for: missing token, invalid/expired
  * token, authenticated-but-no-active-profile, and any unexpected
  * Auth/DB failure — see StaffAuthErrorKind for the resulting HTTP mapping.
+ *
+ * The Auth validation outcome is always evaluated first, so a rejected or
+ * failed token keeps its UNAUTHENTICATED/INTERNAL result regardless of what
+ * the concurrent profile lookup returned. The profile row used for
+ * authorization is always the one looked up for the verified user id.
  */
 export async function requireStaff<TClient>(
   accessToken: string,
@@ -94,13 +137,17 @@ export async function requireStaff<TClient>(
 
   const client = gateway.createClient(accessToken);
 
-  let userId: string | null;
-  try {
-    userId = await gateway.getAuthenticatedUserId(client, accessToken);
-  } catch (error) {
-    throw toInternalError(error, "[requireStaff] Failed to validate access token");
+  const hintedUserId = readUnverifiedSubjectHint(accessToken);
+  const authenticated = settle(gateway.getAuthenticatedUserId(client, accessToken));
+  const speculativeProfile =
+    hintedUserId === null ? null : settle(gateway.getActiveStaffProfile(client, hintedUserId));
+
+  const userIdResult = await authenticated;
+  if (!userIdResult.ok) {
+    throw toInternalError(userIdResult.error, "[requireStaff] Failed to validate access token");
   }
 
+  const userId = userIdResult.value;
   if (!userId) {
     throw new StaffAuthError(
       "UNAUTHENTICATED",
@@ -108,13 +155,15 @@ export async function requireStaff<TClient>(
     );
   }
 
-  let profile: { role: string; displayName: string } | null;
-  try {
-    profile = await gateway.getActiveStaffProfile(client, userId);
-  } catch (error) {
-    throw toInternalError(error, "[requireStaff] Failed to resolve staff profile");
+  const profileResult =
+    speculativeProfile !== null && hintedUserId === userId
+      ? await speculativeProfile
+      : await settle(gateway.getActiveStaffProfile(client, userId));
+  if (!profileResult.ok) {
+    throw toInternalError(profileResult.error, "[requireStaff] Failed to resolve staff profile");
   }
 
+  const profile = profileResult.value;
   if (!profile) {
     throw new StaffAuthError(
       "FORBIDDEN",
