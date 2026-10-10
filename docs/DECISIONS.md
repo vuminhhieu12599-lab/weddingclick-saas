@@ -2851,3 +2851,32 @@ Template 04, on branch `template-04-our-wedding-story-v1` from `origin/weddingcl
 3. **RSVP kicker without Gift.** Reads "RSVP" when the gift block is hidden; the prototype always read "RSVP & Wedding Gift".
 
 **QA route.** `app/internal/ows-qa/` (with demo photos in `public/ows-qa-tmp/`) was a temporary local visual-QA route and is **never committed**.
+
+## OWS-04 — Our Wedding Story v1 Release Preparation: Catalog Seed 0047, Rollout and Rollback (2026-10-10)
+
+Prepared on `template-04-our-wedding-story-v1` after OWS-02 (DEV projects WC-2026-000052 COMMON, WC-2026-000053 SEPARATE + personalized guest) and OWS-03 (DEV review, approval, synthetic payment, publish and RSVP for both) passed. **Preparation only:** no merge, no deploy, no migration applied to DEV or Production, no Vercel setting changed.
+
+**Catalog seed — `20260911041207_0047_seed_our_wedding_story_v1_catalog.sql` (data-only, AUTHORING ONLY until applied by the Product Owner).**
+
+1. Follows the 0033 pattern (RF9; RF-06-0 P14/P16/P41): `templates` row `our-wedding-story` / `WEDDING` / "Our Wedding Story", `is_active true`, `sort_order 3`; `template_versions` row `1` / `wedding.our-wedding-story.v1` with `manifest` exactly `OUR_WEDDING_STORY_V1_MANIFEST.design`.
+2. Idempotent: both inserts use `ON CONFLICT … DO NOTHING`; no `UPDATE`, `DELETE` or DDL; existing `template_versions` rows are never modified (and the immutability trigger forbids it).
+3. Fails closed: a verification block raises (aborting the migration) when the template row is not unique, its `event_type` / `name` differ, the version row is missing, belongs to another template, has another `version_number`, a different `manifest`, or is retired. A pre-existing row's `is_active` / `sort_order` are reported by `NOTICE`, never changed.
+4. `lib/server/templates/__tests__/our-wedding-story-catalog-seed.test.ts` keeps both manifest copies equal to the code manifest and the SQL data-only. The migration-head guard tests now allow exactly 0047 after 0046 (0045 stays retired and absent).
+
+**Catalog drift (reported, not fixed here).** Vietnamese Heritage v1 and Romantic Minimal v1 catalog rows exist in Production without repository seed migrations, so a database rebuilt from migrations lacks them. The DEV catalog already contains an Our Wedding Story row (used by OWS-02/03); applying 0047 there verifies it against the frozen identity and manifest and fails closed on any difference.
+
+**Release sequence (each step needs Product Owner approval; stop on any failure).**
+
+1. Merge `template-04-our-wedding-story-v1` into `weddingclick-v2` (diff: OWS-01 renderer, editor manifest, registry entries, person-bound slot exception, tests, docs, and this release prep; no Elegant Editorial, Vietnamese Heritage or Romantic Minimal renderer file changed).
+2. Verify the Production deployment is `READY` and that existing EE/VH/RM published invitations still render (the OWS renderer is registered but unreachable without a catalog row).
+3. Read-only pre-flight on Production: no `our-wedding-story` template and no `wedding.our-wedding-story.v1` version exist; review the current `sort_order` values.
+4. Apply 0047 to Production with the established migration procedure; confirm no exception was raised.
+5. In the Staff UI, verify Our Wedding Story appears as the fourth WEDDING template.
+6. Focused Production smoke: template selection and staff preview on a Product Owner-designated internal project only (no customer data, no publish without separate approval); re-open one published EE, VH and RM invitation.
+
+**Rollback plan.**
+
+- **Before 0047 is applied:** reverting the merge is safe; no catalog row references the OWS renderer.
+- **After 0047, before any Project uses OWS:** prefer `is_active = false` on the `our-wedding-story` template (an approved operational change) to hide it from new selections; reverting code is safe only while no Project has the version assigned.
+- **After any OWS Review or Published Snapshot exists:** never deploy code lacking the `wedding.our-wedding-story.v1` renderer (pinned snapshots would fail closed — a broken public invitation is a release blocker). Deactivate for new selections and ship forward fixes; visual changes go to a `v2`, never an edit of published `v1`.
+- Never delete the `templates` / `template_versions` rows: snapshots and project assignments reference them.
