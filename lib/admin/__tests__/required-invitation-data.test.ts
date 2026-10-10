@@ -80,6 +80,7 @@ const FORM: CeremonyEventForm = {
   venueName: "",
   address: "  ",
   lunarDateDisplay: "Ngày 30 tháng 10 năm Bính Ngọ",
+  mapUrl: "",
 };
 
 describe("ceremony slots (side → rite from WEDDING_VARIANT_RULES)", () => {
@@ -139,9 +140,10 @@ describe("buildCeremonyEventBody", () => {
     });
   });
 
-  it("existing event keeps its timezone, map URL, description, sort order and primary flag", () => {
+  it("existing event keeps its timezone, description, sort order and primary flag; map URL comes from the loaded form", () => {
     const existing = event({ timezone: "Asia/Tokyo" });
-    const built = buildCeremonyEventBody(GROOM_SLOT, { ...FORM, title: "Lễ Thành Hôn" }, existing);
+    const form = { ...FORM, title: "Lễ Thành Hôn", mapUrl: ceremonyFormFrom(existing).mapUrl };
+    const built = buildCeremonyEventBody(GROOM_SLOT, form, existing);
     if (!built.ok) throw new Error(built.error);
     expect(built.body).toMatchObject({
       side: "GROOM",
@@ -165,6 +167,56 @@ describe("buildCeremonyEventBody", () => {
     expect(buildCeremonyEventBody(GROOM_SLOT, { ...FORM, ...patch }, null).ok).toBe(false);
   });
 
+  it("loads the canonical mapUrl into the form, and an empty one as blank (never invented)", () => {
+    expect(ceremonyFormFrom(event()).mapUrl).toBe("https://maps.example/x");
+    expect(ceremonyFormFrom(event({ mapUrl: null })).mapUrl).toBe("");
+  });
+
+  it("saves a trimmed Google Maps link per side, accepted by the server validator", () => {
+    const groomLink = "https://maps.app.goo.gl/GroomHome123";
+    const brideLink = "https://www.google.com/maps/place/Nh%C3%A0+g%C3%A1i/@10.77,106.70,17z";
+    const groom = buildCeremonyEventBody(GROOM_SLOT, { ...FORM, title: "Lễ Thành Hôn", mapUrl: `  ${groomLink} ` }, null);
+    const bride = buildCeremonyEventBody(BRIDE_SLOT, { ...FORM, mapUrl: brideLink }, null);
+    if (!groom.ok || !bride.ok) throw new Error("expected ok");
+    expect(groom.body.mapUrl).toBe(groomLink);
+    expect(bride.body.mapUrl).toBe(brideLink);
+    expect(validateProjectEventInput(groom.body).mapUrl).toBe(groomLink);
+    expect(validateProjectEventInput(bride.body).mapUrl).toBe(brideLink);
+  });
+
+  it("edits and clears an existing map URL while preserving timezone, side and other fields", () => {
+    const existing = event({ timezone: "Asia/Tokyo" });
+    const loaded = ceremonyFormFrom(existing);
+    const edited = buildCeremonyEventBody(GROOM_SLOT, { ...loaded, mapUrl: "https://maps.app.goo.gl/New" }, existing);
+    const cleared = buildCeremonyEventBody(GROOM_SLOT, { ...loaded, mapUrl: "   " }, existing);
+    if (!edited.ok || !cleared.ok) throw new Error("expected ok");
+    expect(edited.body.mapUrl).toBe("https://maps.app.goo.gl/New");
+    expect(cleared.body.mapUrl).toBeNull();
+    for (const body of [edited.body, cleared.body]) {
+      expect(body).toMatchObject({
+        side: "GROOM",
+        occasionType: "THANH_HON",
+        timezone: "Asia/Tokyo",
+        startsAt: existing.startsAt,
+        title: existing.title,
+        venueName: existing.venueName,
+        description: existing.description,
+        sortOrder: existing.sortOrder,
+        isPrimary: existing.isPrimary,
+      });
+      expect(validateProjectEventInput(body).mapUrl).toBe(body.mapUrl);
+    }
+  });
+
+  it.each([["http://maps.google.com/x"], ["maps.app.goo.gl/x"], ["javascript:alert(1)"], ["https://"]])(
+    "rejects a non-https or malformed map URL %j (as the server would)",
+    (mapUrl) => {
+      const built = buildCeremonyEventBody(GROOM_SLOT, { ...FORM, mapUrl }, null);
+      expect(built.ok).toBe(false);
+      expect(() => validateProjectEventInput({ ...buildBodyWithoutMap(), mapUrl })).toThrow();
+    },
+  );
+
   it("round-trips the canonical instant back to the same civil form", () => {
     const existing = event();
     const form = ceremonyFormFrom(existing);
@@ -178,6 +230,12 @@ describe("buildCeremonyEventBody", () => {
     expect(civilToInstantIso("2026-03-08", "03:30", "America/New_York")).toBe("2026-03-08T07:30:00.000Z");
   });
 });
+
+function buildBodyWithoutMap() {
+  const built = buildCeremonyEventBody(GROOM_SLOT, { ...FORM, title: "Lễ Thành Hôn" }, null);
+  if (!built.ok) throw new Error(built.error);
+  return built.body;
+}
 
 describe("buildWeddingDetailsSaveBody", () => {
   it("load empty: blank form; first save sends only the names with every other field null", () => {
