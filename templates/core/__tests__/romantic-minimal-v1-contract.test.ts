@@ -57,11 +57,20 @@ describe("RM-01 Romantic Minimal v1 renderer manifest", () => {
       ...PRODUCTION_RENDERER_KEYS.filter((key) => key !== RM_KEY).map((key) => PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(key)),
       ROMANTIC_MINIMAL_V1_MANIFEST,
     ]);
-    expect(list.map((manifest) => manifest.compatibility.rendererKey)).toStrictEqual([...PRODUCTION_RENDERER_KEYS]);
+    expect(list.map((manifest) => manifest.compatibility.rendererKey)).toStrictEqual([
+      ...PRODUCTION_RENDERER_KEYS.filter((key) => key !== RM_KEY),
+      RM_KEY,
+    ]);
   });
 
   it("RM-02: registered third, as the validated projection; near-miss keys still fail closed", () => {
-    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual(["wedding.elegant-editorial.v1", "wedding.vietnamese-heritage.v1", RM_KEY]);
+    // OWS-01: Our Wedding Story v1 is appended fourth; Romantic Minimal keeps its third position.
+    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([
+      "wedding.elegant-editorial.v1",
+      "wedding.vietnamese-heritage.v1",
+      RM_KEY,
+      "wedding.our-wedding-story.v1",
+    ]);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(RM_KEY)).toStrictEqual(ROMANTIC_MINIMAL_V1_MANIFEST);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(RM_KEY)).not.toBe(ROMANTIC_MINIMAL_V1_MANIFEST);
     for (const key of ["wedding.romantic-minimal", "wedding.romantic-minimal.v2", ` ${RM_KEY}`, RM_KEY.toUpperCase()]) {

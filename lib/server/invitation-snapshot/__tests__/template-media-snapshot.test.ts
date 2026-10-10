@@ -517,7 +517,8 @@ describe("draft loading, immutable Review and template switching", () => {
 describe("TE-04 scope", () => {
   it("adds no migration (0046 stays the last; 0045 absent)", () => {
     const names = readdirSync(join(ROOT, "supabase/migrations")).sort();
-    expect(names.at(-1)).toBe("20260911041206_0046_project_template_media_slots.sql");
+    // OWS-04 (checkpoint maintenance): exactly the data-only catalog seed 0047 may follow 0046.
+    expect(names.slice(-2)).toEqual(["20260911041206_0046_project_template_media_slots.sql", "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql"]);
     expect(names.some((name) => /_0045_/.test(name))).toBe(false);
   });
 

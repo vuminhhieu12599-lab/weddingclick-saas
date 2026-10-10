@@ -4,6 +4,7 @@ import { RENDERER_SECTION_KEYS } from "../../../lib/invitation-rendering/rendere
 import { createRendererCompatibilityRegistry } from "../../../lib/invitation-rendering/renderer-registry";
 import { RendererSelectionInvariantError } from "../../../lib/invitation-rendering/renderer-selection-errors";
 import { ELEGANT_EDITORIAL_V1_MANIFEST } from "../../wedding/elegant-editorial/v1/manifest";
+import { OUR_WEDDING_STORY_V1_MANIFEST } from "../../wedding/our-wedding-story/v1/manifest";
 import { ROMANTIC_MINIMAL_V1_MANIFEST } from "../../wedding/romantic-minimal/v1/manifest";
 import { VIETNAMESE_HERITAGE_V1_MANIFEST } from "../../wedding/vietnamese-heritage/v1/manifest";
 import {
@@ -36,6 +37,7 @@ vi.mock("../../../lib/invitation-rendering/renderer-registry", async (importOrig
 const EE_KEY = "wedding.elegant-editorial.v1";
 const VH_KEY = "wedding.vietnamese-heritage.v1";
 const RM_KEY = "wedding.romantic-minimal.v1";
+const OWS_KEY = "wedding.our-wedding-story.v1";
 
 function isDeepFrozen(value: unknown): boolean {
   if (typeof value !== "object" || value === null) return true;
@@ -160,14 +162,17 @@ describe("P27 — production manifest list and derived keys", () => {
   // then Vietnamese Heritage v1 (was "exactly Elegant Editorial v1"). EE stays
   // first and unchanged; the list is still explicit, validated and frozen.
   // RM-02 generalization: Romantic Minimal v1 is appended third; EE and VH keep their positions.
-  it("contains exactly Elegant Editorial v1, Vietnamese Heritage v1 then Romantic Minimal v1, validated and deeply frozen", () => {
-    expect(PRODUCTION_RENDERER_MANIFESTS).toHaveLength(3);
+  // OWS-01 generalization: Our Wedding Story v1 is appended fourth; the first three keep their positions.
+  it("contains exactly Elegant Editorial v1, Vietnamese Heritage v1, Romantic Minimal v1 then Our Wedding Story v1, validated and deeply frozen", () => {
+    expect(PRODUCTION_RENDERER_MANIFESTS).toHaveLength(4);
     expect(PRODUCTION_RENDERER_MANIFESTS[0]).toStrictEqual(ELEGANT_EDITORIAL_V1_MANIFEST);
     expect(PRODUCTION_RENDERER_MANIFESTS[0]).not.toBe(ELEGANT_EDITORIAL_V1_MANIFEST);
     expect(PRODUCTION_RENDERER_MANIFESTS[1]).toStrictEqual(VIETNAMESE_HERITAGE_V1_MANIFEST);
     expect(PRODUCTION_RENDERER_MANIFESTS[1]).not.toBe(VIETNAMESE_HERITAGE_V1_MANIFEST);
     expect(PRODUCTION_RENDERER_MANIFESTS[2]).toStrictEqual(ROMANTIC_MINIMAL_V1_MANIFEST);
     expect(PRODUCTION_RENDERER_MANIFESTS[2]).not.toBe(ROMANTIC_MINIMAL_V1_MANIFEST);
+    expect(PRODUCTION_RENDERER_MANIFESTS[3]).toStrictEqual(OUR_WEDDING_STORY_V1_MANIFEST);
+    expect(PRODUCTION_RENDERER_MANIFESTS[3]).not.toBe(OUR_WEDDING_STORY_V1_MANIFEST);
     expect(isDeepFrozen(PRODUCTION_RENDERER_MANIFESTS)).toBe(true);
   });
 
@@ -175,7 +180,7 @@ describe("P27 — production manifest list and derived keys", () => {
     expect(PRODUCTION_RENDERER_KEYS).toStrictEqual(
       PRODUCTION_RENDERER_MANIFESTS.map((manifest) => manifest.compatibility.rendererKey),
     );
-    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([EE_KEY, VH_KEY, RM_KEY]);
+    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([EE_KEY, VH_KEY, RM_KEY, OWS_KEY]);
     expect(Object.isFrozen(PRODUCTION_RENDERER_KEYS)).toBe(true);
   });
 

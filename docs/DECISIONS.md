@@ -2821,3 +2821,62 @@ Checkpoint RM-02 of Template 03, on branch `template-03-romantic-minimal-v1` fro
 - **Fonts.** Cormorant Garamond, Great Vibes and Allura load via `next/font/google` with the `vietnamese` subset, `display: swap` and `preload: false`.
 - **Motion.** Motion is CSS-only. It runs under `prefers-reduced-motion: no-preference`, and the single reduced-motion block neutralises the opening and every transition.
 - **QA route.** `app/internal/rm-qa/` is a temporary local visual-QA route (404 in production). It is **never committed**.
+
+## OWS-01 — Our Wedding Story v1 Production Renderer and Person-bound Portrait Slots (2026-10-10)
+
+Template 04, on branch `template-04-our-wedding-story-v1` from `origin/weddingclick-v2` `3145795`. Visual source of truth: the Product Owner-approved Visual Freeze v1 prototype at `3b5d36f` (`app/internal/prototypes/invitation/_directions/our-wedding-story/`), reference only, never imported. **No migration, no catalog row, no activation, no deploy;** DEV and Production untouched.
+
+**Product Owner / Architecture decision (2026-10-10): person-bound portrait slots — a strictly scoped exception to TE-01 T1 / TE-02 item 3.**
+
+1. The approved Couple section binds each portrait to a person (caption "The Groom / The Bride" + name; BRIDE shows the bride first). Positional slots cannot express this without encoding identity in positions, so the exception is explicit instead.
+2. For `wedding.our-wedding-story.v1` **only**, exactly `groomPortrait` and `bridePortrait` are allowed: each an OPTIONAL `SINGLE` slot, `minCount 0`, `maxCount 1`, bound to a stable person identity (explicit side), never a display position. COMMON/GROOM: groom portrait first; BRIDE: bride portrait first. Captions, names and alt text follow the same person.
+3. `templates/core/editor-manifest.ts`: `TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS` (frozen, own-property lookup, exact string equality) and the new fixed error `MEDIA_SLOT_PERSON_BOUND_SINGLE`. Every other renderer key and every other person/side key still fails with `MEDIA_SLOT_KEY_SEMANTIC`. The exception is not broadened by aliases, casing, versions or other keys.
+4. Unchanged: no migration or DB CHECK change (the slot-key CHECK is structural), TE-03B RPC and server use case, TE-04 Snapshot `templateSlots`, pinning and stored-snapshot gate (they validate against the editor manifest), one assignment set per Project + version for all variants (TE-03A), legacy `PORTRAIT_GROOM` / `PORTRAIT_BRIDE` roles (still Elegant Editorial v1 only), and the three released/registered renderers.
+
+**Implementation contract.**
+
+- **Identity.** `WEDDING` / `our-wedding-story` / `1` / "Our Wedding Story", key `wedding.our-wedding-story.v1`, payload schema `[1]`, COMMON/GROOM/BRIDE; capabilities `loveStory`, `gallery`, `music`, `gift` true; `invitationMessage`, `timeline`, `dressCode`, `photoStory` false. Design set: palette `warm-champagne`, font preset `champagne-editorial`, effect `STANDARD`. Registered fourth in `PRODUCTION_RENDERER_MANIFESTS`, `PRODUCTION_EDITOR_MANIFESTS` and the RS-01 binding table (one literal `next/dynamic` import).
+- **Slots (page order).** `coverPhoto` SINGLE RECOMMENDED 0/1/1 PORTRAIT 3:4; `groomPortrait` / `bridePortrait` SINGLE OPTIONAL 0/0/1 PORTRAIT 3:4; `storyPhoto` SINGLE OPTIONAL 0/0/1 LANDSCAPE 4:3 (`sectionKey` loveStory, never drives the section); `gallery` ORDERED_MULTI OPTIONAL 0/0/∞ ANY (`sectionKey` gallery); `thankYouPhoto` SINGLE RECOMMENDED 0/1/1 PORTRAIT 4:5. Content items: COUPLE, EVENTS REQUIRED; FAMILIES RECOMMENDED; LOVE_STORY, GIFT, MUSIC OPTIONAL.
+- **Missing media (no cross-slot or legacy fallback; `UNAVAILABLE` = absent).** No cover photo → framed typographic cover; one portrait → that photo beside a name block for the other person; none → two name blocks; no story photo → ruled text-only story; story photo shown only with a Love Story; gallery `UNAVAILABLE` item → neutral non-interactive tile; no Thank You photo → framed champagne text panel.
+- **Sections and numbering.** Cover (01) → Our Families (only when a family has content) → The Couple → The Invitation → The Date → Our Gallery (`sections.gallery` and a non-empty slot) → RSVP & Wedding Gift (with `capabilities.rsvp` or honest gift content under `sections.gift`) → Thank You; page numbers count only the sections shown.
+- **Data.** Families, names, ceremony title and reception cards (`ceremonyCards`, one per operational side) from the ViewModel; guest line = overlay `displayName` verbatim else "Bạn và Gia Đình"; all dates, the Sunday-first calendar (re-indexed from the shared RF-05C grid) and the countdown from the shared derivations; RSVP through the shared form model and submission gate; gift per operational side with its own QR, copy only with `capabilities.clipboard`; music only with `sections.music` + `capabilities.music`. Template copy is fixed and owned by the v1 renderer.
+- **Fonts.** Cormorant Garamond, Inter, Allura via `next/font/google` (`latin` + `vietnamese`, `swap`, `preload: false`); all SIL OFL. Inter is new to production renderers; Vietnamese rendering verified visually at 360/390/430 px.
+- **Motion.** CSS-only under `prefers-reduced-motion: no-preference` (cover entrances, body fade on opening, shared section-reveal controller, dialog fades); one reduced-motion block stops every animation.
+- **Production adaptations of the prototype (QA, 2026-10-10).** Portrait photos in wider crops use `object-position: 50% 25%` from real dimensions (no per-photo focal point exists); a long lead-portrait name wraps within the width not covered by the follow portrait; the gift sheet focuses ✕ on open.
+
+**Recorded deviations from Visual Freeze v1 (await Product Owner review; no further visual change without approval).**
+
+1. **Opening transition.** After "Mở thiệp" the body appears with a CSS fade and the page jumps to it, instead of the prototype's smooth JS scroll (reduced motion cannot be honoured without `matchMedia`, which renderer islands may not use).
+2. **Lunar date.** Not displayed, matching the prototype; canonical `ceremony.lunarDateDisplay` is available if the Product Owner wants it.
+3. **RSVP kicker without Gift.** Reads "RSVP" when the gift block is hidden; the prototype always read "RSVP & Wedding Gift".
+
+**QA route.** `app/internal/ows-qa/` (with demo photos in `public/ows-qa-tmp/`) was a temporary local visual-QA route and is **never committed**.
+
+## OWS-04 — Our Wedding Story v1 Release Preparation: Catalog Seed 0047, Rollout and Rollback (2026-10-10)
+
+Prepared on `template-04-our-wedding-story-v1` after OWS-02 (DEV projects WC-2026-000052 COMMON, WC-2026-000053 SEPARATE + personalized guest) and OWS-03 (DEV review, approval, synthetic payment, publish and RSVP for both) passed. **Preparation only:** no merge, no deploy, no migration applied to DEV or Production, no Vercel setting changed.
+
+**Catalog seed — `20260911041207_0047_seed_our_wedding_story_v1_catalog.sql` (data-only, AUTHORING ONLY until applied by the Product Owner).**
+
+1. Follows the 0033 pattern (RF9; RF-06-0 P14/P16/P41): `templates` row `our-wedding-story` / `WEDDING` / "Our Wedding Story", `is_active true`, `sort_order 3`; `template_versions` row `1` / `wedding.our-wedding-story.v1` with `manifest` exactly `OUR_WEDDING_STORY_V1_MANIFEST.design`.
+2. Idempotent: both inserts use `ON CONFLICT … DO NOTHING`; no `UPDATE`, `DELETE` or DDL; existing `template_versions` rows are never modified (and the immutability trigger forbids it).
+3. Fails closed: a verification block raises (aborting the migration) when the template row is not unique, its `event_type` / `name` differ, the version row is missing, belongs to another template, has another `version_number`, a different `manifest`, or is retired. A pre-existing row's `is_active` / `sort_order` are reported by `NOTICE`, never changed.
+4. `lib/server/templates/__tests__/our-wedding-story-catalog-seed.test.ts` keeps both manifest copies equal to the code manifest and the SQL data-only. The migration-head guard tests now allow exactly 0047 after 0046 (0045 stays retired and absent).
+
+**Catalog drift (reported, not fixed here).** Vietnamese Heritage v1 and Romantic Minimal v1 catalog rows exist in Production without repository seed migrations, so a database rebuilt from migrations lacks them. The DEV catalog already contains an Our Wedding Story row (used by OWS-02/03); applying 0047 there verifies it against the frozen identity and manifest and fails closed on any difference.
+
+**Release sequence (each step needs Product Owner approval; stop on any failure).**
+
+1. Merge `template-04-our-wedding-story-v1` into `weddingclick-v2` (diff: OWS-01 renderer, editor manifest, registry entries, person-bound slot exception, tests, docs, and this release prep; no Elegant Editorial, Vietnamese Heritage or Romantic Minimal renderer file changed).
+2. Verify the Production deployment is `READY` and that existing EE/VH/RM published invitations still render (the OWS renderer is registered but unreachable without a catalog row).
+3. Read-only pre-flight on Production: no `our-wedding-story` template and no `wedding.our-wedding-story.v1` version exist; review the current `sort_order` values.
+4. Apply 0047 to Production with the established migration procedure; confirm no exception was raised.
+5. In the Staff UI, verify Our Wedding Story appears as the fourth WEDDING template.
+6. Focused Production smoke: template selection and staff preview on a Product Owner-designated internal project only (no customer data, no publish without separate approval); re-open one published EE, VH and RM invitation.
+
+**Rollback plan.**
+
+- **Before 0047 is applied:** reverting the merge is safe; no catalog row references the OWS renderer.
+- **After 0047, before any Project uses OWS:** prefer `is_active = false` on the `our-wedding-story` template (an approved operational change) to hide it from new selections; reverting code is safe only while no Project has the version assigned.
+- **After any OWS Review or Published Snapshot exists:** never deploy code lacking the `wedding.our-wedding-story.v1` renderer (pinned snapshots would fail closed — a broken public invitation is a release blocker). Deactivate for new selections and ship forward fixes; visual changes go to a `v2`, never an edit of published `v1`.
+- Never delete the `templates` / `template_versions` rows: snapshots and project assignments reference them.

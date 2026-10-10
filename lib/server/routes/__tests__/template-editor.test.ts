@@ -266,6 +266,7 @@ describe("TE-05A boundaries", () => {
   });
 
   it("adds no migration and no Snapshot/ViewModel change", () => {
-    expect(readdirSync(join(ROOT, "supabase/migrations")).sort().at(-1)).toBe("20260911041206_0046_project_template_media_slots.sql");
+    // OWS-04 (checkpoint maintenance): exactly the data-only catalog seed 0047 may follow 0046.
+    expect(readdirSync(join(ROOT, "supabase/migrations")).sort().slice(-2)).toEqual(["20260911041206_0046_project_template_media_slots.sql", "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql"]);
   });
 });

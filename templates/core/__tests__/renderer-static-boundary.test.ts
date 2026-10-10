@@ -47,6 +47,8 @@ const ALLOWED_IMPORTS: Readonly<Record<(typeof RF06A_FILES)[number], readonly st
     "templates/wedding/vietnamese-heritage/v1/manifest",
     // RM-02: the third explicit production manifest.
     "templates/wedding/romantic-minimal/v1/manifest",
+    // OWS-01: the fourth explicit production manifest.
+    "templates/wedding/our-wedding-story/v1/manifest",
     "templates/core/renderer-manifest",
   ],
   "templates/wedding/elegant-editorial/v1/manifest.ts": ["templates/core/renderer-manifest"],
@@ -118,6 +120,8 @@ const RS01_LAZY_ROOTS = [
   "templates/wedding/vietnamese-heritage/v1/vietnamese-heritage-v1",
   // RM-02: the third production renderer root.
   "templates/wedding/romantic-minimal/v1/romantic-minimal-v1",
+  // OWS-01: the fourth production renderer root.
+  "templates/wedding/our-wedding-story/v1/our-wedding-story-v1",
 ] as const;
 
 /** Resolves a relative specifier from `file` to a repository-relative module path. */
@@ -236,9 +240,9 @@ describe("RF-06A files", () => {
 
   it("the production manifest list is explicit (no discovery) and keys are not hand-typed there", () => {
     const code = stripComments(readRepoFile("templates/core/production-renderer-manifests.ts"));
-    // VH-01: still one explicit, ordered literal list, now with the second manifest; RM-02: and the third.
+    // VH-01: still one explicit, ordered literal list, now with the second manifest; RM-02: and the third; OWS-01: and the fourth.
     expect(code).toMatch(
-      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*\]\)/,
+      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*OUR_WEDDING_STORY_V1_MANIFEST,\s*\]\)/,
     );
     expect(/["'`]wedding\.[\w-]+\.v\d+/.test(code)).toBe(false);
   });
@@ -322,7 +326,8 @@ describe("templates/** production tree (P39)", () => {
   // TE-02 extension: plus exactly the editor-manifest files (rules in editor-manifest-static-boundary.test.ts).
   // RM-01 extension: plus exactly the two Romantic Minimal v1 manifests.
   // RM-02 extension: plus exactly the Romantic Minimal v1 renderer files (rules at the end of this file).
-  it("templates/** contains exactly the RF-06A, RF-06B, RF-06C, RF-06D, VH-01, TE-02, RM-01 and RM-02 files", () => {
+  // OWS-01 extension: plus exactly the Our Wedding Story v1 manifests and renderer files (rules at the end of this file).
+  it("templates/** contains exactly the RF-06A, RF-06B, RF-06C, RF-06D, VH-01, TE-02, RM-01, RM-02 and OWS-01 files", () => {
     expect([...sources].sort()).toStrictEqual(
       [
         ...RF06A_FILES,
@@ -335,6 +340,7 @@ describe("templates/** production tree (P39)", () => {
         ...TE02_FILES,
         ...RM01_FILES,
         ...RM02_FILES,
+        ...OWS01_FILES,
       ].sort(),
     );
   });
@@ -629,11 +635,16 @@ describe("RF-06B template files", () => {
           RM02_CSS_FILE,
           ...RM02_RENDERER_FILES,
           ...RM02_ISLAND_FILES,
+          OWS01_CSS_FILE,
+          ...OWS01_RENDERER_FILES,
+          ...OWS01_ISLAND_FILES,
         ],
         file,
       ).toContain(file);
     }
-    expect(sources.filter((source) => source.endsWith(".css")).sort()).toStrictEqual([RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE].sort());
+    expect(sources.filter((source) => source.endsWith(".css")).sort()).toStrictEqual(
+      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE].sort(),
+    );
   });
 
   it.each(RF06B_CODE_FILES)("%s contains no forbidden runtime, data, browser, prototype or interaction code", (file) => {
@@ -1341,18 +1352,19 @@ describe("RS-01 renderer-key lazy loading", () => {
 
   it("the binding module owns exactly one literal import() per production renderer root, nothing else", () => {
     const { specifiers, total } = dynamicImportsOf(readRepoFile(BINDINGS_MODULE));
-    expect(total).toBe(3);
+    expect(total).toBe(4);
     expect(specifiers.map((specifier) => resolveSpecifier(BINDINGS_MODULE, specifier))).toStrictEqual([...RS01_LAZY_ROOTS]);
     const code = codeOf(BINDINGS_MODULE);
     // No template literal, concatenation, variable or discovery in a specifier.
     expect(code).not.toMatch(/import\(\s*[^"'\s]|import\(`|import\([^)]*\+|readdir|glob|require\(/);
     // next/dynamic with no options: SSR on, no `loading` (no Suspense boundary, no placeholder content).
-    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(3);
+    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(4);
     expect(code).not.toMatch(/ssr:|loading:|suspense/i);
     // Each lazy root binds its own export only.
     expect(code).toMatch(/import\("\.\.\/wedding\/elegant-editorial\/v1\/elegant-editorial-v1"\)\.then\(\(module\) => module\.ElegantEditorialV1\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/vietnamese-heritage\/v1\/vietnamese-heritage-v1"\)\.then\(\(module\) => module\.VietnameseHeritageV1\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/romantic-minimal\/v1\/romantic-minimal-v1"\)\.then\(\(module\) => module\.RomanticMinimalV1\)/);
+    expect(code).toMatch(/import\("\.\.\/wedding\/our-wedding-story\/v1\/our-wedding-story-v1"\)\.then\(\(module\) => module\.OurWeddingStoryV1\)/);
     expect(code).not.toMatch(/\bcatch\b|\.catch\(/);
   });
 
@@ -1366,6 +1378,7 @@ describe("RS-01 renderer-key lazy loading", () => {
     // Only the data-only production manifests (static by design) — never a renderer implementation.
     expect(eager.files.filter((file) => file.startsWith("templates/wedding/")).sort()).toStrictEqual([
       "templates/wedding/elegant-editorial/v1/manifest.ts",
+      "templates/wedding/our-wedding-story/v1/manifest.ts",
       "templates/wedding/romantic-minimal/v1/manifest.ts",
       "templates/wedding/vietnamese-heritage/v1/manifest.ts",
     ]);
@@ -1377,14 +1390,19 @@ describe("RS-01 renderer-key lazy loading", () => {
   });
 
   it("each lazy renderer subgraph never reaches the other renderer's implementation, CSS or fonts", () => {
-    const [eeRoot, vhRoot, rmRoot] = RS01_LAZY_ROOTS.map((root) => resolveModuleFile(root) as string);
+    const [eeRoot, vhRoot, rmRoot, owsRoot] = RS01_LAZY_ROOTS.map((root) => resolveModuleFile(root) as string);
     const ee = clientGraph(eeRoot as string, { followLazy: true }).files;
     const vh = clientGraph(vhRoot as string, { followLazy: true }).files;
     const rm = clientGraph(rmRoot as string, { followLazy: true }).files;
-    expect(ee.some((file) => /templates\/wedding\/(vietnamese-heritage|romantic-minimal)\//.test(file))).toBe(false);
-    expect(vh.some((file) => /templates\/wedding\/(elegant-editorial|romantic-minimal)\//.test(file))).toBe(false);
+    const ows = clientGraph(owsRoot as string, { followLazy: true }).files;
+    expect(ee.some((file) => /templates\/wedding\/(vietnamese-heritage|romantic-minimal|our-wedding-story)\//.test(file))).toBe(false);
+    expect(vh.some((file) => /templates\/wedding\/(elegant-editorial|romantic-minimal|our-wedding-story)\//.test(file))).toBe(false);
     // RM-02: the Romantic Minimal subgraph is confined to its own tree, fonts and one CSS module.
-    expect(rm.some((file) => /templates\/wedding\/(elegant-editorial|vietnamese-heritage)\//.test(file))).toBe(false);
+    expect(rm.some((file) => /templates\/wedding\/(elegant-editorial|vietnamese-heritage|our-wedding-story)\//.test(file))).toBe(false);
+    // OWS-01: the Our Wedding Story subgraph likewise.
+    expect(ows.some((file) => /templates\/wedding\/(elegant-editorial|vietnamese-heritage|romantic-minimal)\//.test(file))).toBe(false);
+    expect(ows).toContain("templates/wedding/our-wedding-story/v1/fonts.ts");
+    expect(ows.filter((file) => file.endsWith(".css"))).toStrictEqual(["templates/wedding/our-wedding-story/v1/our-wedding-story-v1.module.css"]);
     expect(rm).toContain("templates/wedding/romantic-minimal/v1/fonts.ts");
     expect(rm.filter((file) => file.endsWith(".css"))).toStrictEqual(["templates/wedding/romantic-minimal/v1/romantic-minimal-v1.module.css"]);
     expect(ee).toContain("templates/wedding/elegant-editorial/v1/fonts.ts");
@@ -2752,5 +2770,241 @@ describe("RM-02 renderer CSS", () => {
     expect(cssCode).toMatch(
       /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*animation: rm-opening-finish 1ms linear both;[\s\S]*\.column \* \{\s*transition-duration: 0\.001ms !important;/,
     );
+  });
+});
+
+// ===========================================================================
+// OWS-01 extension (docs/DECISIONS.md "OWS-01 — Our Wedding Story v1
+// Production Renderer"): the data-only renderer manifest, the editor
+// manifest, and the renderer, registered fourth in both production lists and
+// bound lazily. No decor assets: the approved design is typographic.
+// ===========================================================================
+
+const OWS = "templates/wedding/our-wedding-story/v1";
+const OWS01_MANIFEST_FILE = `${OWS}/manifest.ts`;
+const OWS01_EDITOR_FILE = "templates/editor/wedding/our-wedding-story-v1.ts";
+const OWS01_ROOT = `${OWS}/our-wedding-story-v1.tsx`;
+const OWS01_FONTS = `${OWS}/fonts.ts`;
+const OWS01_MEDIA_IMAGE = `${OWS}/sections/media-image.tsx`;
+const OWS01_SECTIONS = [
+  "couple",
+  "cover",
+  "date",
+  "families",
+  "gallery",
+  "gift",
+  "invitation",
+  "media-image",
+  "rsvp-gift",
+  "section-head",
+  "thank-you",
+] as const;
+const OWS01_RENDERER_FILES = [OWS01_ROOT, ...OWS01_SECTIONS.map((section) => `${OWS}/sections/${section}.tsx`)] as const;
+const OWS01_MODEL_FILES = [
+  `${OWS}/sections/calendar-cells.ts`,
+  `${OWS}/sections/couple-people.ts`,
+  `${OWS}/sections/date-text.ts`,
+  `${OWS}/sections/gallery-rows.ts`,
+  `${OWS}/sections/gift-panels.ts`,
+  `${OWS}/sections/page-plan.ts`,
+] as const;
+const OWS01_CODE_FILES = [...OWS01_RENDERER_FILES, ...OWS01_MODEL_FILES, `${OWS}/copy.ts`, OWS01_FONTS] as const;
+const OWS01_ISLAND_FILES = [
+  `${OWS}/interactive/copy-account-button.tsx`,
+  `${OWS}/interactive/countdown.tsx`,
+  `${OWS}/interactive/gallery-viewer.tsx`,
+  `${OWS}/interactive/gift-sheet.tsx`,
+  `${OWS}/interactive/music-control.tsx`,
+  `${OWS}/interactive/opening-stage.tsx`,
+  `${OWS}/interactive/rsvp.tsx`,
+  `${OWS}/interactive/section-reveal.tsx`,
+] as const;
+const OWS01_OPENING_STATE = `${OWS}/interactive/opening-state.ts`;
+const OWS01_CSS_FILE = `${OWS}/our-wedding-story-v1.module.css`;
+const OWS01_FILES = [
+  OWS01_MANIFEST_FILE,
+  OWS01_EDITOR_FILE,
+  ...OWS01_CODE_FILES,
+  ...OWS01_ISLAND_FILES,
+  OWS01_OPENING_STATE,
+  OWS01_CSS_FILE,
+] as const;
+
+/** OWS-01 rules shared by static files and islands (RF-06B / RF-06D lists apply on top). */
+const OWS01_EXTRA_FORBIDDEN: readonly [string, RegExp][] = [
+  ["other template coupling", /elegant-editorial|vietnamese-heritage|romantic-minimal|ElegantEditorial|VietnameseHeritage|RomanticMinimal/],
+  ["templates/core import", /templates\/core|\.\.\/core\//],
+  ["raw Snapshot / payload", /snapshot-payload|SnapshotPayload|\bsnapshot\b/],
+  ["design key branching", /paletteKey|fontPresetKey|effectPresetKey/],
+  ["prototype asset path", /\/prototypes\/|\/demo\//],
+  ["decor / renderer asset path", /\/renderers\//],
+  ["next/image", /next\/image/],
+  ["animation library / matchMedia", /framer|matchMedia/],
+  ["timers", /setTimeout|setInterval|requestAnimationFrame/],
+  ["demo couple or date", /Hoàng Nam|Minh Anh|18\.10\.2026/],
+  ["legacy layout media role", /media\.(cover|gallery|portrait|loveStoryPhoto|photoStory)\b|\bportrait\.(groom|bride)\b/],
+];
+
+describe("OWS-01 Our Wedding Story v1 files", () => {
+  const productionSources = () =>
+    [...listSources(TEMPLATES_ROOT), ...nonTestSources("app"), ...nonTestSources("lib")].filter((file) => /\.(ts|tsx)$/.test(file));
+
+  it("every listed file exists", () => {
+    for (const file of OWS01_FILES) expect(() => readRepoFile(file), file).not.toThrow();
+  });
+
+  it("the renderer manifest is data only: one type-only import and no RF-06A forbidden code", () => {
+    expect(importsOf(readRepoFile(OWS01_MANIFEST_FILE))).toStrictEqual([{ specifier: "../../../core/renderer-manifest", typeOnly: true }]);
+    expect(/["']use (client|server)["']|\bReact\b|next\/|\.css["']/.test(codeOf(OWS01_MANIFEST_FILE))).toBe(false);
+  });
+
+  it("the OWS key literal appears only in the two manifests, the binding table and the validator's one person-bound exception", () => {
+    const withLiteral = productionSources().filter((file) => /["'`]wedding\.our-wedding-story\.v1["'`]/.test(codeOf(file)));
+    expect(withLiteral.sort()).toStrictEqual(
+      [OWS01_MANIFEST_FILE, OWS01_EDITOR_FILE, BINDINGS_MODULE, "templates/core/editor-manifest.ts"].sort(),
+    );
+  });
+
+  it("only the two production lists import the manifests, and only the binding module loads the root (lazily)", () => {
+    const importersOf = (target: string) =>
+      productionSources().filter((file) => importsOf(readRepoFile(file)).some((statement) => resolveSpecifier(file, statement.specifier) === target));
+    expect(importersOf(`${OWS}/manifest`)).toStrictEqual(["templates/core/production-renderer-manifests.ts"]);
+    expect(importersOf("templates/editor/wedding/our-wedding-story-v1")).toStrictEqual(["templates/core/production-editor-manifests.ts"]);
+    expect(importersOf(`${OWS}/our-wedding-story-v1`)).toStrictEqual([]);
+    const lazyLoaders = productionSources().filter((file) =>
+      dynamicImportsOf(readRepoFile(file)).specifiers.some((specifier) => resolveSpecifier(file, specifier) === `${OWS}/our-wedding-story-v1`),
+    );
+    expect(lazyLoaders).toStrictEqual([BINDINGS_MODULE]);
+  });
+
+  it("OWS files import only their own tree, the shared lib/ contracts, react and (fonts only) next/font/google", () => {
+    for (const file of [...OWS01_CODE_FILES, ...OWS01_ISLAND_FILES, OWS01_OPENING_STATE]) {
+      for (const modulePath of resolvedImportsOf(file)) {
+        const allowed =
+          modulePath.startsWith(`${OWS}/`) ||
+          modulePath.startsWith(`${LIB}/`) ||
+          modulePath === "lib/domain" ||
+          modulePath === "react" ||
+          (file === OWS01_FONTS && modulePath === "next/font/google");
+        expect(allowed, `${file} → ${modulePath}`).toBe(true);
+      }
+    }
+    expect(resolvedImportsOf(OWS01_OPENING_STATE)).toStrictEqual([]);
+  });
+
+  it.each(OWS01_CODE_FILES)("%s (static) has no forbidden runtime, data, browser, prototype or hook code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of [...RF06B_FORBIDDEN, ...OWS01_EXTRA_FORBIDDEN]) {
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+    expect(ALL_HOOKS.test(code), `${file}: hooks`).toBe(false);
+    expect(/IntersectionObserver|<button\b|\bonClick\b|<form\b|<dialog\b/.test(code), `${file}: interaction`).toBe(false);
+  });
+
+  it.each([...OWS01_ISLAND_FILES, OWS01_OPENING_STATE])("%s (island/model) has no data, network, persistence, browser-global, time or prototype code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of [...RF06D_FORBIDDEN, ...OWS01_EXTRA_FORBIDDEN]) {
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+    expect(/<img\b/.test(code), file).toBe(false);
+    expect(/<svg\b/.test(code), file).toBe(file === `${OWS}/interactive/music-control.tsx` || file === `${OWS}/interactive/gift-sheet.tsx`);
+    expect(/IntersectionObserver/.test(code), file).toBe(file === `${OWS}/interactive/section-reveal.tsx`);
+    expect(/nowEpochMs|deriveCeremonyCountdownV1/.test(code), file).toBe(file === `${OWS}/interactive/countdown.tsx`);
+    expect(/gate\.run\(|createRsvpSubmissionGate/.test(code), file).toBe(file === `${OWS}/interactive/rsvp.tsx`);
+    expect(/copyWithFeedback/.test(code), file).toBe(file === `${OWS}/interactive/copy-account-button.tsx`);
+    expect(/runMusicToggle/.test(code), file).toBe(file === `${OWS}/interactive/music-control.tsx`);
+    expect(/showModal|<dialog\b/.test(code), file).toBe(file === `${OWS}/interactive/gallery-viewer.tsx` || file === `${OWS}/interactive/gift-sheet.tsx`);
+    expect(/scrollIntoView|\btabIndex\b/.test(code), file).toBe(file === `${OWS}/interactive/opening-stage.tsx`);
+  });
+
+  it("no OWS file declares a client or server boundary", () => {
+    for (const file of [OWS01_MANIFEST_FILE, ...OWS01_CODE_FILES, ...OWS01_ISLAND_FILES, OWS01_OPENING_STATE]) {
+      expect(/["']use (client|server)["']/.test(codeOf(file)), file).toBe(false);
+    }
+  });
+
+  it("only the OWS fonts module touches next/font: three approved families, Vietnamese subsets, swap, never preloaded", () => {
+    for (const file of [...OWS01_CODE_FILES, ...OWS01_ISLAND_FILES]) expect(/next\/font/.test(codeOf(file)), file).toBe(file === OWS01_FONTS);
+    const fonts = codeOf(OWS01_FONTS);
+    expect([...fonts.matchAll(/\b(\w+)\(\{/g)].map((match) => match[1]).sort()).toStrictEqual(["Allura", "Cormorant_Garamond", "Inter"]);
+    expect(fonts.match(/subsets: \["latin", "vietnamese"\]/g)).toHaveLength(3);
+    expect(fonts.match(/display: "swap"/g)).toHaveLength(3);
+    expect(fonts.match(/preload: false/g)).toHaveLength(3);
+    expect(fonts).not.toMatch(/preload: true|next\/font\/local/);
+  });
+
+  it("the root reads only the K6 props, and capabilities only as presence gates and passthroughs", () => {
+    const code = codeOf(OWS01_ROOT);
+    expect(code).toMatch(/export function OurWeddingStoryV1\(\{ viewModel, sections, capabilities \}: InvitationRendererPropsV1\)/);
+    expect(code).not.toMatch(/manifest|rendererKey/);
+    expect([...code.matchAll(/\bcapabilities\.(\w+)/g)].map((match) => match[1]).sort()).toStrictEqual([
+      "clipboard",
+      "clock",
+      "clock",
+      "clock",
+      "music",
+      "rsvp",
+      "rsvp",
+      "rsvp",
+    ]);
+    for (const file of [...OWS01_CODE_FILES, ...OWS01_ISLAND_FILES]) {
+      if (file !== OWS01_ROOT) expect(/(?<![-/])\bcapabilities\b/.test(codeOf(file)), file).toBe(false);
+    }
+    expect(code).toMatch(/const music = sections\.music \? capabilities\.music : undefined;/);
+    expect(code).toMatch(/rsvp=\{capabilities\.rsvp === undefined \? null : <Rsvp rsvp=\{capabilities\.rsvp\} \/>\}/);
+    expect(code).toMatch(/const panels = sections\.gift \? giftPanels\(operationalSides, gift, media\.qr\) : \[\];/);
+    expect(code).toMatch(/<SectionReveal hasCountdown=\{capabilities\.clock !== undefined\} \/>/);
+  });
+
+  it("media: layout media only from templateSlots (never a legacy role, never another slot), plus the semantic QR", () => {
+    const root = codeOf(OWS01_ROOT);
+    expect(root).toMatch(/const slots = media\.templateSlots;/);
+    for (const slot of ["coverPhoto", "groomPortrait", "bridePortrait", "storyPhoto", "thankYouPhoto"]) {
+      expect(root, slot).toMatch(new RegExp(`singleResolved\\(slots\\?\\.${slot}\\)`));
+      expect(root.match(new RegExp(`\\b${slot}\\b`, "g")), slot).not.toBeNull();
+    }
+    expect(root).toMatch(/slots\?\.gallery \?\? \[\]/);
+    expect([...root.matchAll(/\bmedia\.(\w+)/g)].map((match) => match[1]).sort()).toStrictEqual(["qr", "templateSlots"]);
+    expect(root).not.toMatch(/\?\?\s*(media\.|slots\?\.|singleResolved)/);
+    // OWS-01 person-bound portraits: each slot read once, into its own person.
+    expect(root).toMatch(/groom: singleResolved\(slots\?\.groomPortrait\),\s*bride: singleResolved\(slots\?\.bridePortrait\),/);
+    for (const file of [...OWS01_CODE_FILES, ...OWS01_ISLAND_FILES]) {
+      if (file !== OWS01_ROOT) expect(/groomPortrait|bridePortrait|templateSlots/.test(codeOf(file)), file).toBe(false);
+    }
+    expect(codeOf(`${OWS}/sections/couple-people.ts`)).toMatch(/portrait: entry\.side === "GROOM" \? portraits\.groom : portraits\.bride/);
+  });
+
+  it("<img> only in the media element; inline <svg> only for the approved pin icon; no literal src/href", () => {
+    for (const file of OWS01_CODE_FILES) {
+      const code = codeOf(file);
+      expect(/<img\b/.test(code), file).toBe(file === OWS01_MEDIA_IMAGE);
+      expect(/<svg\b/.test(code), file).toBe(file === `${OWS}/sections/invitation.tsx`);
+      expect(/<image\b|<text\b|<use\b|xlink:href/.test(code), file).toBe(false);
+      expect(code, file).not.toMatch(/\s(?:src|href)="[^"]*"/);
+    }
+    expect(codeOf(OWS01_MEDIA_IMAGE)).toMatch(/src=\{media\.url\}/);
+  });
+});
+
+describe("OWS-01 renderer CSS", () => {
+  const cssCode = readRepoFile(OWS01_CSS_FILE).replace(/\/\*[\s\S]*?\*\//g, "");
+
+  it.each([
+    ["runtime @import", /@import/],
+    ["external resource", /url\(|https?:\/\//],
+    ["Tailwind directive", /@(tailwind|apply|layer|theme)\b/],
+    ["global selector", /:global|(^|[\s,}])(html|body|:root)\b/m],
+    ["other template tokens", /--ee-|--vh-|--rm-/],
+    ["infinite loop", /\binfinite\b/],
+  ])("has no %s", (_label, pattern) => {
+    expect(pattern.test(cssCode)).toBe(false);
+  });
+
+  it("one reduced-motion block that stops every animation and makes every transition instant", () => {
+    expect(cssCode.match(/@media \(prefers-reduced-motion: reduce\)/g)).toHaveLength(1);
+    expect(cssCode).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*animation: none;[\s\S]*\.column \* \{\s*transition-duration: 0\.001ms !important;/);
+    // Animations are declared only inside the no-preference block.
+    const outsideNoPreference = cssCode.replace(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}\n/, "");
+    expect(/animation:\s*ows-/.test(outsideNoPreference)).toBe(false);
   });
 });
