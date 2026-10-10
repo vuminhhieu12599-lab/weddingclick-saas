@@ -133,6 +133,8 @@ export interface CeremonyEventForm {
   venueName: string;
   address: string;
   lunarDateDisplay: string;
+  /** Optional directions link, bound to the canonical event `mapUrl`; blank clears it. */
+  mapUrl: string;
 }
 
 export const EMPTY_CEREMONY_FORM: CeremonyEventForm = {
@@ -142,6 +144,7 @@ export const EMPTY_CEREMONY_FORM: CeremonyEventForm = {
   venueName: "",
   address: "",
   lunarDateDisplay: "",
+  mapUrl: "",
 };
 
 function pad(value: number, width = 2): string {
@@ -158,6 +161,7 @@ export function ceremonyFormFrom(event: ProjectEventRecord): CeremonyEventForm {
     venueName: event.venueName ?? "",
     address: event.address ?? "",
     lunarDateDisplay: event.lunarDateDisplay ?? "",
+    mapUrl: event.mapUrl ?? "",
   };
 }
 
@@ -204,10 +208,32 @@ function nullable(value: string): string | null {
 }
 
 /**
+ * Client-side mirror of the server's map URL rule (validate-project-event-input
+ * `parseNullableHttpsUrl`, the 0009 `map_url` CHECK): blank → null, otherwise
+ * an absolute https:// URL. Usability only — the server stays authoritative.
+ */
+function parseMapUrl(value: string): { ok: true; value: string | null } | { ok: false } {
+  const trimmed = value.trim();
+  if (trimmed === "") {
+    return { ok: true, value: null };
+  }
+  if (!trimmed.startsWith("https://")) {
+    return { ok: false };
+  }
+  try {
+    new URL(trimmed);
+  } catch {
+    return { ok: false };
+  }
+  return { ok: true, value: trimmed };
+}
+
+/**
  * Full-resource event body for one ceremony slot. side/occasionType always
- * come from the slot (never from the form). An existing event keeps its
- * timezone, map URL, description, sort order and primary flag; a new one
- * uses the migration 0009 column defaults.
+ * come from the slot (never from the form). The map URL comes from the
+ * form (blank clears it). An existing event keeps its timezone, description,
+ * sort order and primary flag; a new one uses the migration 0009 column
+ * defaults.
  */
 export function buildCeremonyEventBody(
   slot: CeremonySlot,
@@ -222,6 +248,10 @@ export function buildCeremonyEventBody(
   if (startsAt === null) {
     return { ok: false, error: "Ngày hoặc giờ không hợp lệ." };
   }
+  const mapUrl = parseMapUrl(form.mapUrl);
+  if (!mapUrl.ok) {
+    return { ok: false, error: "Link Google Maps phải là đường dẫn https:// hợp lệ." };
+  }
   return {
     ok: true,
     body: {
@@ -232,7 +262,7 @@ export function buildCeremonyEventBody(
       timezone,
       venueName: nullable(form.venueName),
       address: nullable(form.address),
-      mapUrl: existing?.mapUrl ?? null,
+      mapUrl: mapUrl.value,
       description: existing?.description ?? null,
       sortOrder: existing?.sortOrder ?? 0,
       isPrimary: existing?.isPrimary ?? false,

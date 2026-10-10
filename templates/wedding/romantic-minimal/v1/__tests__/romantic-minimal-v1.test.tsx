@@ -389,3 +389,30 @@ describe("RM-02 boundaries", () => {
     expect(css).not.toMatch(/@import|url\((?!["']?data:)/);
   });
 });
+
+describe("RM directions CTA (LAUNCH-P0-01)", () => {
+  /** Every new-tab anchor's href, in document order. */
+  const directionHrefs = (html: string) =>
+    [...html.matchAll(/<a [^>]*href="([^"]+)" target="_blank" rel="noopener noreferrer"/g)].map((match) => match[1]);
+
+  it("COMMON links each ceremony card's own canonical mapUrl, safely in a new tab", async () => {
+    expect(directionHrefs((await renderRm({ variant: "COMMON" })).html)).toStrictEqual([
+      "https://maps.example.invalid/groom-home",
+      "https://maps.example.invalid/bride-home",
+    ]);
+  });
+
+  it("GROOM / BRIDE link only their own ceremony card's mapUrl", async () => {
+    expect(directionHrefs((await renderRm({ variant: "GROOM" })).html)).toStrictEqual(["https://maps.example.invalid/groom-home"]);
+    expect(directionHrefs((await renderRm({ variant: "BRIDE" })).html)).toStrictEqual(["https://maps.example.invalid/bride-home"]);
+  });
+
+  it("a null mapUrl renders no link and nothing is fabricated", async () => {
+    const input = rmSource({ variant: "COMMON" }, FULL_SLOTS, undefined);
+    input.events = input.events.map((event) => ({ ...event, mapUrl: null }));
+    const fixture = await runRendererFixturePipeline(input, { resolver: createFixtureMediaResolver() });
+    const html = render(fixture.viewModel, fixture.selection.effectiveSections);
+    expect(directionHrefs(html)).toStrictEqual([]);
+    expect(html).not.toMatch(/google\.[a-z.]+\/maps|maps\.google|maps\.app\.goo\.gl|maps\.apple|geo:/);
+  });
+});

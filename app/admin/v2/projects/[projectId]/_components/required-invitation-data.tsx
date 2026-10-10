@@ -46,7 +46,7 @@ function Field({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  type?: "text" | "date" | "time";
+  type?: "text" | "date" | "time" | "url";
   required?: boolean;
   placeholder?: string;
   hint?: string;
@@ -233,6 +233,16 @@ export function RequiredInvitationDataEditor({ projectId, initialDetails, initia
                     onChange={(lunarDateDisplay) => update({ lunarDateDisplay })}
                     hint="Không bắt buộc. Hiển thị đúng như nhập, không tự tính."
                   />
+                  <div className="sm:col-span-2">
+                    <Field
+                      label="Link Google Maps"
+                      type="url"
+                      value={form.mapUrl}
+                      onChange={(mapUrl) => update({ mapUrl })}
+                      placeholder="https://maps.app.goo.gl/..."
+                      hint="Không bắt buộc. Dán link chia sẻ từ Google Maps (https://). Thiệp hiển thị nút Chỉ đường cho sự kiện này; để trống để xóa. Thiệp đã xuất bản chỉ đổi sau khi xuất bản lại."
+                    />
+                  </div>
                 </div>
                 <CardFooter status={slotStatus[slot.side] ?? IDLE} onSave={() => void saveSlot(slot)} />
               </>

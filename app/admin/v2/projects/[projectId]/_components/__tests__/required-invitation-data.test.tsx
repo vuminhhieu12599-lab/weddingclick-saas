@@ -72,6 +72,24 @@ describe("RequiredInvitationDataEditor", () => {
     expect(groom).not.toContain("Lễ Vu Quy nhà gái");
   });
 
+  it("each ceremony card shows its own Google Maps link field bound to that event's mapUrl", () => {
+    const groom = brideEvent({
+      id: "55555555-5555-4555-8555-555555555555",
+      side: "GROOM",
+      occasionType: "THANH_HON",
+      title: "Lễ Thành Hôn",
+      mapUrl: "https://maps.app.goo.gl/GroomHome",
+    });
+    const html = render([groom, brideEvent()]);
+    const groomCard = html.slice(html.indexOf('data-slot="GROOM"'), html.indexOf('data-slot="BRIDE"'));
+    const brideCard = html.slice(html.indexOf('data-slot="BRIDE"'));
+    expect(groomCard).toContain("Link Google Maps");
+    expect(brideCard).toContain("Link Google Maps");
+    expect(groomCard).toMatch(/<input type="url"[^>]*value="https:\/\/maps\.app\.goo\.gl\/GroomHome"/);
+    expect(brideCard).not.toContain("GroomHome");
+    expect(brideCard).toMatch(/<input type="url"[^>]*value=""/);
+  });
+
   it("several non-primary same-side ceremonies are not silently picked", () => {
     const html = render([brideEvent({ id: "a" }), brideEvent({ id: "b" })]);
     expect(html).toContain("chưa có sự kiện chính");
