@@ -53,9 +53,10 @@ describe("migration 0046 (static)", () => {
   it("exists as the next migration after 0044; 0045 stays retired and absent", () => {
     const names = readdirSync(join(ROOT, MIGRATIONS)).sort();
     // OWS-04 (checkpoint maintenance): exactly the data-only catalog seed 0047 may follow 0046.
-    expect(names.at(-1)).toBe("20260911041207_0047_seed_our_wedding_story_v1_catalog.sql");
+    // DB-CONSISTENCY-01 (checkpoint maintenance): exactly the data-only VH/RM catalog seed 0048 may follow 0047.
+    expect(names.at(-1)).toBe("20260911041208_0048_seed_vietnamese_heritage_romantic_minimal_v1_catalog.sql");
     expect(names.some((name) => /_0045_/.test(name))).toBe(false);
-    expect(names.slice(-3)).toEqual(["20260911041204_0044_republish_after_published.sql", M0046, "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql"]);
+    expect(names.slice(-4)).toEqual(["20260911041204_0044_republish_after_published.sql", M0046, "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql", "20260911041208_0048_seed_vietnamese_heritage_romantic_minimal_v1_catalog.sql"]);
     expect(sql).toContain("AUTHORING ONLY — not applied.");
   });
 

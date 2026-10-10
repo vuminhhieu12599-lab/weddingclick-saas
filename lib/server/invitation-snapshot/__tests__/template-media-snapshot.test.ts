@@ -518,7 +518,8 @@ describe("TE-04 scope", () => {
   it("adds no migration (0046 stays the last; 0045 absent)", () => {
     const names = readdirSync(join(ROOT, "supabase/migrations")).sort();
     // OWS-04 (checkpoint maintenance): exactly the data-only catalog seed 0047 may follow 0046.
-    expect(names.slice(-2)).toEqual(["20260911041206_0046_project_template_media_slots.sql", "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql"]);
+    // DB-CONSISTENCY-01 (checkpoint maintenance): exactly the data-only VH/RM catalog seed 0048 may follow 0047.
+    expect(names.slice(-3)).toEqual(["20260911041206_0046_project_template_media_slots.sql", "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql", "20260911041208_0048_seed_vietnamese_heritage_romantic_minimal_v1_catalog.sql"]);
     expect(names.some((name) => /_0045_/.test(name))).toBe(false);
   });
 
