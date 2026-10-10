@@ -142,19 +142,6 @@
   pointer-events: none;
 }
 
-.coverLine {
-  position: absolute;
-  left: 22px;
-  top: 22px;
-  padding: 4px 9px;
-  background: rgba(248, 243, 236, 0.9);
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--brown);
-}
-
 .coverText {
   position: relative;
   margin-top: -34px;

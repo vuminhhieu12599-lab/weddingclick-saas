@@ -468,7 +468,6 @@ function CoverSection({
             className={styles.coverPhoto}
           />
           <span className={styles.coverFrame} aria-hidden="true" />
-          <span className={styles.coverLine}>Cover story</span>
         </motion.div>
       )}
 

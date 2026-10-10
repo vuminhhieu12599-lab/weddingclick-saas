@@ -47,16 +47,16 @@ const DEMO_AUDIO_URL = "/internal/renderer-harness/audio-tone.wav";
  * (09, 10) have no faces and stay centred.
  */
 const DEMO_ALBUM_PHOTOS: Pick<AlbumPhoto, "width" | "height" | "focalPoint">[] = [
-  { width: 1122, height: 1402, focalPoint: { x: 0.5, y: 0.2 } },
-  { width: 1122, height: 1402, focalPoint: { x: 0.5, y: 0.17 } },
-  { width: 1500, height: 1000, focalPoint: { x: 0.5, y: 0.25 } },
-  { width: 1086, height: 1448, focalPoint: { x: 0.5, y: 0.12 } },
-  { width: 1086, height: 1448, focalPoint: { x: 0.5, y: 0.15 } },
-  { width: 1086, height: 1448, focalPoint: { x: 0.5, y: 0.12 } },
-  { width: 1122, height: 1402, focalPoint: { x: 0.5, y: 0.15 } },
-  { width: 1500, height: 1000, focalPoint: { x: 0.5, y: 0.18 } },
-  { width: 1013, height: 522 },
-  { width: 718, height: 574 },
+  { width: 1122, height: 1402, focalPoint: { x: 0.5, y: 0.22 } },
+  { width: 1122, height: 1402, focalPoint: { x: 0.5, y: 0.24 } },
+  { width: 1122, height: 1402, focalPoint: { x: 0.52, y: 0.22 } },
+  { width: 1086, height: 1448, focalPoint: { x: 0.56, y: 0.06 } },
+  { width: 1500, height: 1000, focalPoint: { x: 0.57, y: 0.28 } },
+  { width: 1122, height: 1402, focalPoint: { x: 0.57, y: 0.21 } },
+  { width: 1122, height: 1402, focalPoint: { x: 0.52, y: 0.22 } },
+  { width: 1500, height: 1000, focalPoint: { x: 0.52, y: 0.26 } },
+  { width: 819, height: 673 },
+  { width: 887, height: 631 },
 ];
 
 export function resolveOwsMedia(scenario: OwsMediaScenario, sharedAlbum: AlbumPhoto[]): OwsMedia {
