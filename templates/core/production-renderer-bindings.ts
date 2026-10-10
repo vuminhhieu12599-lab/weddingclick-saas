@@ -52,11 +52,16 @@ const RomanticMinimalV1 = dynamic(() =>
   import("../wedding/romantic-minimal/v1/romantic-minimal-v1").then((module) => module.RomanticMinimalV1),
 );
 
+const OurWeddingStoryV1 = dynamic(() =>
+  import("../wedding/our-wedding-story/v1/our-wedding-story-v1").then((module) => module.OurWeddingStoryV1),
+);
+
 /** P27 B: explicit, closed rendererKey → component table (RS-01: one literal dynamic import per key). */
 const PRODUCTION_RENDERER_COMPONENTS: ReadonlyMap<string, InvitationRendererComponentV1> = new Map<string, InvitationRendererComponentV1>([
   ["wedding.elegant-editorial.v1", ElegantEditorialV1],
   ["wedding.vietnamese-heritage.v1", VietnameseHeritageV1],
   ["wedding.romantic-minimal.v1", RomanticMinimalV1],
+  ["wedding.our-wedding-story.v1", OurWeddingStoryV1],
 ]);
 
 /** Fixed messages (docs/SECURITY.md): never a key or other manifest content. */

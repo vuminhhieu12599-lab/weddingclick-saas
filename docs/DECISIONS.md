@@ -2821,3 +2821,33 @@ Checkpoint RM-02 of Template 03, on branch `template-03-romantic-minimal-v1` fro
 - **Fonts.** Cormorant Garamond, Great Vibes and Allura load via `next/font/google` with the `vietnamese` subset, `display: swap` and `preload: false`.
 - **Motion.** Motion is CSS-only. It runs under `prefers-reduced-motion: no-preference`, and the single reduced-motion block neutralises the opening and every transition.
 - **QA route.** `app/internal/rm-qa/` is a temporary local visual-QA route (404 in production). It is **never committed**.
+
+## OWS-01 — Our Wedding Story v1 Production Renderer and Person-bound Portrait Slots (2026-10-10)
+
+Template 04, on branch `template-04-our-wedding-story-v1` from `origin/weddingclick-v2` `3145795`. Visual source of truth: the Product Owner-approved Visual Freeze v1 prototype at `3b5d36f` (`app/internal/prototypes/invitation/_directions/our-wedding-story/`), reference only, never imported. **No migration, no catalog row, no activation, no deploy;** DEV and Production untouched.
+
+**Product Owner / Architecture decision (2026-10-10): person-bound portrait slots — a strictly scoped exception to TE-01 T1 / TE-02 item 3.**
+
+1. The approved Couple section binds each portrait to a person (caption "The Groom / The Bride" + name; BRIDE shows the bride first). Positional slots cannot express this without encoding identity in positions, so the exception is explicit instead.
+2. For `wedding.our-wedding-story.v1` **only**, exactly `groomPortrait` and `bridePortrait` are allowed: each an OPTIONAL `SINGLE` slot, `minCount 0`, `maxCount 1`, bound to a stable person identity (explicit side), never a display position. COMMON/GROOM: groom portrait first; BRIDE: bride portrait first. Captions, names and alt text follow the same person.
+3. `templates/core/editor-manifest.ts`: `TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS` (frozen, own-property lookup, exact string equality) and the new fixed error `MEDIA_SLOT_PERSON_BOUND_SINGLE`. Every other renderer key and every other person/side key still fails with `MEDIA_SLOT_KEY_SEMANTIC`. The exception is not broadened by aliases, casing, versions or other keys.
+4. Unchanged: no migration or DB CHECK change (the slot-key CHECK is structural), TE-03B RPC and server use case, TE-04 Snapshot `templateSlots`, pinning and stored-snapshot gate (they validate against the editor manifest), one assignment set per Project + version for all variants (TE-03A), legacy `PORTRAIT_GROOM` / `PORTRAIT_BRIDE` roles (still Elegant Editorial v1 only), and the three released/registered renderers.
+
+**Implementation contract.**
+
+- **Identity.** `WEDDING` / `our-wedding-story` / `1` / "Our Wedding Story", key `wedding.our-wedding-story.v1`, payload schema `[1]`, COMMON/GROOM/BRIDE; capabilities `loveStory`, `gallery`, `music`, `gift` true; `invitationMessage`, `timeline`, `dressCode`, `photoStory` false. Design set: palette `warm-champagne`, font preset `champagne-editorial`, effect `STANDARD`. Registered fourth in `PRODUCTION_RENDERER_MANIFESTS`, `PRODUCTION_EDITOR_MANIFESTS` and the RS-01 binding table (one literal `next/dynamic` import).
+- **Slots (page order).** `coverPhoto` SINGLE RECOMMENDED 0/1/1 PORTRAIT 3:4; `groomPortrait` / `bridePortrait` SINGLE OPTIONAL 0/0/1 PORTRAIT 3:4; `storyPhoto` SINGLE OPTIONAL 0/0/1 LANDSCAPE 4:3 (`sectionKey` loveStory, never drives the section); `gallery` ORDERED_MULTI OPTIONAL 0/0/∞ ANY (`sectionKey` gallery); `thankYouPhoto` SINGLE RECOMMENDED 0/1/1 PORTRAIT 4:5. Content items: COUPLE, EVENTS REQUIRED; FAMILIES RECOMMENDED; LOVE_STORY, GIFT, MUSIC OPTIONAL.
+- **Missing media (no cross-slot or legacy fallback; `UNAVAILABLE` = absent).** No cover photo → framed typographic cover; one portrait → that photo beside a name block for the other person; none → two name blocks; no story photo → ruled text-only story; story photo shown only with a Love Story; gallery `UNAVAILABLE` item → neutral non-interactive tile; no Thank You photo → framed champagne text panel.
+- **Sections and numbering.** Cover (01) → Our Families (only when a family has content) → The Couple → The Invitation → The Date → Our Gallery (`sections.gallery` and a non-empty slot) → RSVP & Wedding Gift (with `capabilities.rsvp` or honest gift content under `sections.gift`) → Thank You; page numbers count only the sections shown.
+- **Data.** Families, names, ceremony title and reception cards (`ceremonyCards`, one per operational side) from the ViewModel; guest line = overlay `displayName` verbatim else "Bạn và Gia Đình"; all dates, the Sunday-first calendar (re-indexed from the shared RF-05C grid) and the countdown from the shared derivations; RSVP through the shared form model and submission gate; gift per operational side with its own QR, copy only with `capabilities.clipboard`; music only with `sections.music` + `capabilities.music`. Template copy is fixed and owned by the v1 renderer.
+- **Fonts.** Cormorant Garamond, Inter, Allura via `next/font/google` (`latin` + `vietnamese`, `swap`, `preload: false`); all SIL OFL. Inter is new to production renderers; Vietnamese rendering verified visually at 360/390/430 px.
+- **Motion.** CSS-only under `prefers-reduced-motion: no-preference` (cover entrances, body fade on opening, shared section-reveal controller, dialog fades); one reduced-motion block stops every animation.
+- **Production adaptations of the prototype (QA, 2026-10-10).** Portrait photos in wider crops use `object-position: 50% 25%` from real dimensions (no per-photo focal point exists); a long lead-portrait name wraps within the width not covered by the follow portrait; the gift sheet focuses ✕ on open.
+
+**Recorded deviations from Visual Freeze v1 (await Product Owner review; no further visual change without approval).**
+
+1. **Opening transition.** After "Mở thiệp" the body appears with a CSS fade and the page jumps to it, instead of the prototype's smooth JS scroll (reduced motion cannot be honoured without `matchMedia`, which renderer islands may not use).
+2. **Lunar date.** Not displayed, matching the prototype; canonical `ceremony.lunarDateDisplay` is available if the Product Owner wants it.
+3. **RSVP kicker without Gift.** Reads "RSVP" when the gift block is hidden; the prototype always read "RSVP & Wedding Gift".
+
+**QA route.** `app/internal/ows-qa/` (with demo photos in `public/ows-qa-tmp/`) was a temporary local visual-QA route and is **never committed**.

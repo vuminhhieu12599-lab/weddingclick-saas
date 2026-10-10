@@ -84,6 +84,23 @@ export const TEMPLATE_EDITOR_SLOT_KEY_PATTERN = /^[a-z][A-Za-z0-9]{0,47}$/;
  */
 export const TEMPLATE_EDITOR_SLOT_KEY_FORBIDDEN_WORDS = /groom|bride|couple/i;
 
+/**
+ * The one approved exception to the position-only rule (docs/DECISIONS.md
+ * "OWS-01", Product Owner 2026-10-10): exactly `groomPortrait` and
+ * `bridePortrait`, only for exactly `wedding.our-wedding-story.v1`, each a
+ * SINGLE slot bound to a stable person identity (never a display position).
+ * Exact string equality only; every other renderer key and every other
+ * person/side slot key still fails with `MEDIA_SLOT_KEY_SEMANTIC`.
+ */
+export const TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  "wedding.our-wedding-story.v1": Object.freeze(["groomPortrait", "bridePortrait"]),
+});
+
+function isPersonBoundSlotException(rendererKey: string, slotKey: string): boolean {
+  if (!Object.hasOwn(TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS, rendererKey)) return false;
+  return TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS[rendererKey]?.includes(slotKey) === true;
+}
+
 /** Advisory `W:H` hint, positive integers without leading zeros, e.g. "4:5", "3:2". */
 export const TEMPLATE_EDITOR_ASPECT_RATIO_HINT_PATTERN = /^[1-9][0-9]{0,2}:[1-9][0-9]{0,2}$/;
 
@@ -158,6 +175,7 @@ export const TEMPLATE_EDITOR_MANIFEST_ERROR_MESSAGES = Object.freeze({
     "Template editor manifest media slot must have exactly the keys key, label, hint, cardinality, requirement, minCount, recommendedCount, maxCount, orientation, aspectRatioHint, sectionKey",
   MEDIA_SLOT_KEY: "Template editor manifest media slot key must be lower camelCase (1-48 characters)",
   MEDIA_SLOT_KEY_SEMANTIC: "Template editor manifest media slot key must name a position, not a person or side",
+  MEDIA_SLOT_PERSON_BOUND_SINGLE: "Template editor manifest person-bound media slot must be SINGLE",
   MEDIA_SLOT_DUPLICATE: "Template editor manifest media slot keys must be unique",
   MEDIA_SLOT_LABEL: "Template editor manifest media slot label must be a non-empty trimmed string",
   MEDIA_SLOT_HINT: "Template editor manifest media slot hint must be a non-empty trimmed string",
@@ -294,7 +312,7 @@ function validateContentItem(value: unknown): TemplateEditorContentItemV1 {
   return { key, label, hint, requirement, sectionKey: TEMPLATE_EDITOR_CONTENT_SECTION_KEYS[key] };
 }
 
-function validateMediaSlot(value: unknown): TemplateEditorMediaSlotV1 {
+function validateMediaSlot(value: unknown, rendererKey: string): TemplateEditorMediaSlotV1 {
   if (!isPlainObject(value)) {
     fail(MESSAGES.MEDIA_SLOT_NOT_PLAIN_OBJECT);
   }
@@ -306,7 +324,8 @@ function validateMediaSlot(value: unknown): TemplateEditorMediaSlotV1 {
   if (typeof key !== "string" || !TEMPLATE_EDITOR_SLOT_KEY_PATTERN.test(key)) {
     fail(MESSAGES.MEDIA_SLOT_KEY);
   }
-  if (TEMPLATE_EDITOR_SLOT_KEY_FORBIDDEN_WORDS.test(key)) {
+  const personBound = isPersonBoundSlotException(rendererKey, key);
+  if (TEMPLATE_EDITOR_SLOT_KEY_FORBIDDEN_WORDS.test(key) && !personBound) {
     fail(MESSAGES.MEDIA_SLOT_KEY_SEMANTIC);
   }
   if (!isTrimmedNonEmptyString(label)) {
@@ -335,6 +354,9 @@ function validateMediaSlot(value: unknown): TemplateEditorMediaSlotV1 {
   }
   if (cardinality === "SINGLE" && maxCount !== 1) {
     fail(MESSAGES.MEDIA_SLOT_SINGLE_MAX);
+  }
+  if (personBound && cardinality !== "SINGLE") {
+    fail(MESSAGES.MEDIA_SLOT_PERSON_BOUND_SINGLE);
   }
   if (!isMember(TEMPLATE_EDITOR_SLOT_ORIENTATIONS, orientation)) {
     fail(MESSAGES.MEDIA_SLOT_ORIENTATION);
@@ -410,7 +432,7 @@ export function validateTemplateEditorManifest(value: unknown): TemplateEditorMa
   if (!isExactDataArray(mediaSlots)) {
     fail(MESSAGES.MEDIA_SLOTS_NOT_ARRAY);
   }
-  const validatedSlots = mediaSlots.map((slot) => validateMediaSlot(slot));
+  const validatedSlots = mediaSlots.map((slot) => validateMediaSlot(slot, rendererKey));
   if (new Set(validatedSlots.map((slot) => slot.key)).size !== validatedSlots.length) {
     fail(MESSAGES.MEDIA_SLOT_DUPLICATE);
   }

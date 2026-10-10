@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   TEMPLATE_EDITOR_MANIFEST_ERROR_MESSAGES as M,
+  TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS,
   TemplateEditorManifestInvariantError,
   validateTemplateEditorManifest,
 } from "../editor-manifest";
@@ -210,6 +211,61 @@ describe("C. media slots", () => {
 
   it.each(["groomPortrait", "couplePhoto", "portraitBride", "brideAndGroom"])("rejects person/side slot key %p", (key) => {
     expectFail(withSlots(slot({ key })), M.MEDIA_SLOT_KEY_SEMANTIC);
+  });
+
+  // OWS-01 (docs/DECISIONS.md "OWS-01"): the one Product Owner-approved exception.
+  describe("OWS-01 person-bound portrait exception", () => {
+    const OWS_KEY = "wedding.our-wedding-story.v1";
+    const portraits = (rendererKey: string, overrides: Rec = {}) =>
+      manifest({
+        rendererKey,
+        mediaSlots: [
+          slot({ key: "groomPortrait", requirement: "OPTIONAL", recommendedCount: 0, ...overrides }),
+          slot({ key: "bridePortrait", requirement: "OPTIONAL", recommendedCount: 0, ...overrides }),
+        ],
+      });
+
+    it("accepts exactly groomPortrait and bridePortrait as SINGLE slots for exactly wedding.our-wedding-story.v1", () => {
+      const result = validateTemplateEditorManifest(portraits(OWS_KEY));
+      expect(result.mediaSlots.map((entry) => [entry.key, entry.cardinality, entry.maxCount])).toStrictEqual([
+        ["groomPortrait", "SINGLE", 1],
+        ["bridePortrait", "SINGLE", 1],
+      ]);
+    });
+
+    it.each([
+      "wedding.romantic-minimal.v1",
+      "wedding.vietnamese-heritage.v1",
+      "wedding.elegant-editorial.v1",
+      "wedding.our-wedding-story.v2",
+      "wedding.our-wedding-story",
+      "Wedding.our-wedding-story.v1",
+      "wedding.test.v1",
+    ])("rejects the same two keys for any other renderer key %p", (rendererKey) => {
+      expectFail(portraits(rendererKey), M.MEDIA_SLOT_KEY_SEMANTIC);
+    });
+
+    it.each(["groomPhoto", "brideImage", "couplePhoto", "groomBridePortrait", "portraitGroom", "groomportrait", "GroomPortrait", "coupleGallery"])(
+      "still rejects other person/side key %p for wedding.our-wedding-story.v1",
+      (key) => {
+        expect(() =>
+          validateTemplateEditorManifest(manifest({ rendererKey: OWS_KEY, mediaSlots: [slot({ key })] })),
+        ).toThrow(TemplateEditorManifestInvariantError);
+      },
+    );
+
+    it("rejects a person-bound slot that is not SINGLE", () => {
+      expectFail(portraits(OWS_KEY, { cardinality: "ORDERED_MULTI", maxCount: 2 }), M.MEDIA_SLOT_PERSON_BOUND_SINGLE);
+      expectFail(portraits(OWS_KEY, { cardinality: "ORDERED_MULTI", maxCount: 1 }), M.MEDIA_SLOT_PERSON_BOUND_SINGLE);
+    });
+
+    it("the exception table is frozen and holds exactly one renderer key with two slot keys", () => {
+      expect(Object.isFrozen(TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS)).toBe(true);
+      expect(Object.entries(TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS)).toStrictEqual([[OWS_KEY, ["groomPortrait", "bridePortrait"]]]);
+      expect(Object.isFrozen(TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS[OWS_KEY])).toBe(true);
+      // Inherited Object.prototype names are never exception keys.
+      expectFail(portraits("constructor"), M.MEDIA_SLOT_KEY_SEMANTIC);
+    });
   });
 
   it("accepts lower camelCase keys up to 48 characters", () => {

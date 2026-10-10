@@ -29,6 +29,10 @@ vi.mock("../../wedding/vietnamese-heritage/v1/fonts", () => ({
 vi.mock("../../wedding/romantic-minimal/v1/fonts", () => ({
   ROMANTIC_MINIMAL_V1_FONT_VARIABLES_CLASS_NAME: "rm-test-font-variables",
 }));
+// OWS-01: and Our Wedding Story v1, likewise.
+vi.mock("../../wedding/our-wedding-story/v1/fonts", () => ({
+  OUR_WEDDING_STORY_V1_FONT_VARIABLES_CLASS_NAME: "ows-test-font-variables",
+}));
 vi.mock("../../wedding/elegant-editorial/v1/fonts", () => ({
   ELEGANT_EDITORIAL_V1_FONT_VARIABLES_CLASS_NAME: "ee-test-font-variables",
 }));
@@ -41,6 +45,7 @@ const {
 const { ElegantEditorialV1 } = await import("../../wedding/elegant-editorial/v1/elegant-editorial-v1");
 const { VietnameseHeritageV1 } = await import("../../wedding/vietnamese-heritage/v1/vietnamese-heritage-v1");
 const { RomanticMinimalV1 } = await import("../../wedding/romantic-minimal/v1/romantic-minimal-v1");
+const { OurWeddingStoryV1 } = await import("../../wedding/our-wedding-story/v1/our-wedding-story-v1");
 
 /**
  * RF-06B production binding registry (docs/DECISIONS.md "RF-06-0 …" P27 B,
@@ -56,13 +61,15 @@ const OtherComponent: InvitationRendererComponentV1 = () => null;
 const EE_KEY = "wedding.elegant-editorial.v1";
 const VH_KEY = "wedding.vietnamese-heritage.v1";
 const RM_KEY = "wedding.romantic-minimal.v1";
+const OWS_KEY = "wedding.our-wedding-story.v1";
 
-/** The real production key → component pairs (VH-01: two renderers; RM-02: three). */
+/** The real production key → component pairs (VH-01: two renderers; RM-02: three; OWS-01: four). */
 function productionComponents(): Map<string, InvitationRendererComponentV1> {
   return new Map<string, InvitationRendererComponentV1>([
     [EE_KEY, ElegantEditorialV1],
     [VH_KEY, VietnameseHeritageV1],
     [RM_KEY, RomanticMinimalV1],
+    [OWS_KEY, OurWeddingStoryV1],
   ]);
 }
 
@@ -76,7 +83,8 @@ function isDeferred(value: unknown): boolean {
     (value as { displayName?: unknown }).displayName === "LoadableComponent" &&
     value !== ElegantEditorialV1 &&
     value !== VietnameseHeritageV1 &&
-    value !== RomanticMinimalV1
+    value !== RomanticMinimalV1 &&
+    value !== OurWeddingStoryV1
   );
 }
 
@@ -145,7 +153,7 @@ describe("key-set equality (P27)", () => {
 describe("Elegant Editorial binding", () => {
   it("wedding.elegant-editorial.v1 resolves to a deferred binding of exactly ElegantEditorialV1", async () => {
     // VH-01 generalization: the production key list is now exactly EE then VH (was EE only).
-    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([EE_KEY, VH_KEY, RM_KEY]);
+    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([EE_KEY, VH_KEY, RM_KEY, OWS_KEY]);
     const bound = resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, "wedding.elegant-editorial.v1");
     expect(isDeferred(bound)).toBe(true);
     expect(await lazyMarkup(bound, "COMMON")).toBe(directMarkup(ElegantEditorialV1, "COMMON"));
@@ -262,6 +270,45 @@ describe("fail closed: no default, fallback, latest or alias", () => {
 
   it("the registry object is frozen", () => {
     expect(Object.isFrozen(PRODUCTION_RENDERER_BINDING_REGISTRY)).toBe(true);
+  });
+});
+
+describe("Our Wedding Story binding (OWS-01)", () => {
+  it("wedding.our-wedding-story.v1 resolves to a deferred binding of exactly OurWeddingStoryV1, distinct from the other renderers", async () => {
+    const ows = resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, OWS_KEY);
+    expect(isDeferred(ows)).toBe(true);
+    for (const key of [EE_KEY, VH_KEY, RM_KEY]) {
+      expect(ows).not.toBe(resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, key));
+    }
+    const owsMarkup = await lazyMarkup(ows, "BRIDE");
+    expect(owsMarkup).toBe(directMarkup(OurWeddingStoryV1, "BRIDE"));
+    expect(owsMarkup).toContain('data-renderer="our-wedding-story-v1"');
+    expect(owsMarkup).not.toMatch(/elegant-editorial-v1|vietnamese-heritage-v1|romantic-minimal-v1/);
+  });
+
+  it("the bound manifest is the validated projection, not the raw source constant", () => {
+    const bound = PRODUCTION_RENDERER_BINDING_REGISTRY.compatibilityRegistry.lookup(OWS_KEY);
+    expect(bound).toStrictEqual(projectCompatibilityManifest(PRODUCTION_RENDERER_MANIFESTS[3]?.compatibility));
+    expect(bound).toStrictEqual(PRODUCTION_COMPATIBILITY_REGISTRY.compatibility.lookup(OWS_KEY));
+    expect(bound).not.toBe(PRODUCTION_RENDERER_MANIFESTS[3]?.compatibility);
+  });
+
+  it.each([
+    "wedding.our-wedding-story.v2",
+    "wedding.our-wedding-story",
+    "wedding.our-wedding-story.latest",
+    "wedding.our-wedding-story.V1",
+    "Wedding.our-wedding-story.v1",
+    " wedding.our-wedding-story.v1",
+    "wedding.our-wedding-story.v1 ",
+    "our-wedding-story",
+    "Our Wedding Story",
+    "wedding.warm-champagne.v1",
+  ])("unknown key %j throws RendererBindingInvariantError", (key) => {
+    expect(PRODUCTION_RENDERER_BINDING_REGISTRY.lookupComponent(key)).toBeUndefined();
+    expect(() => resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, key)).toThrow(
+      RendererBindingInvariantError,
+    );
   });
 });
 
