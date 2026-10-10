@@ -693,12 +693,14 @@ describe("033E-B AG–AI: staff path, resolver and RSVP preserved", () => {
     // Launch Hardening 04 (owner-approved checkpoint maintenance): exactly the approved 0044 may follow 0043.
     // TE-03B (checkpoint maintenance): exactly 0046 may follow 0044; 0045 is retired and must stay absent.
     // OWS-04 (checkpoint maintenance): exactly the data-only catalog seed 0047 may follow 0046.
-    expect(readdirMigrations().slice(-5).map((name) => name.split("/").at(-1))).toEqual([
+    // DB-CONSISTENCY-01 (checkpoint maintenance): exactly the data-only VH/RM catalog seed 0048 may follow 0047.
+    expect(readdirMigrations().slice(-6).map((name) => name.split("/").at(-1))).toEqual([
       "20260911041202_0042_personalized_guest_link.sql",
       "20260911041203_0043_legacy_v1_lockdown.sql",
       "20260911041204_0044_republish_after_published.sql",
       "20260911041206_0046_project_template_media_slots.sql",
       "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql",
+      "20260911041208_0048_seed_vietnamese_heritage_romantic_minimal_v1_catalog.sql",
     ]);
   });
 });

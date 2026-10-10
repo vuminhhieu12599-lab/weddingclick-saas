@@ -2880,3 +2880,17 @@ Prepared on `template-04-our-wedding-story-v1` after OWS-02 (DEV projects WC-202
 - **After 0047, before any Project uses OWS:** prefer `is_active = false` on the `our-wedding-story` template (an approved operational change) to hide it from new selections; reverting code is safe only while no Project has the version assigned.
 - **After any OWS Review or Published Snapshot exists:** never deploy code lacking the `wedding.our-wedding-story.v1` renderer (pinned snapshots would fail closed — a broken public invitation is a release blocker). Deactivate for new selections and ship forward fixes; visual changes go to a `v2`, never an edit of published `v1`.
 - Never delete the `templates` / `template_versions` rows: snapshots and project assignments reference them.
+
+## DB-CONSISTENCY-01 — Reproducible Template Catalog Seeds: Migration 0048 (2026-10-10)
+
+On branch `db-consistency-01-catalog-seeds` from `origin/weddingclick-v2` `4d6f16a`. Closes the OWS-04 "Catalog drift" item. **Authoring only:** no migration applied to DEV or Production, no deploy, no renderer, visual, Project or published-invitation change.
+
+**Catalog seed — `20260911041208_0048_seed_vietnamese_heritage_romantic_minimal_v1_catalog.sql` (data-only, AUTHORING ONLY until applied by the Product Owner).**
+
+1. Follows the 0033/0047 pattern (RF9; RF-06-0 P14/P16/P41) for the two catalog entries that existed on DEV and Production without a repository migration: `vietnamese-heritage` / `WEDDING` / "Vietnamese Heritage", `is_active true`, `sort_order 1`, version `1` / `wedding.vietnamese-heritage.v1`; and `romantic-minimal` / `WEDDING` / "Romantic Minimal", `is_active true`, `sort_order 2`, version `1` / `wedding.romantic-minimal.v1`. Each `manifest` is exactly the code-owned `VIETNAMESE_HERITAGE_V1_MANIFEST.design` / `ROMANTIC_MINIMAL_V1_MANIFEST.design`.
+2. Idempotent: all four inserts use `ON CONFLICT … DO NOTHING`; no `UPDATE`, `DELETE` or DDL. The existing DEV/Production rows are never overwritten (and the immutability trigger forbids changing a version).
+3. Fails closed for each template: the migration aborts when the template row is not unique, its `event_type` / `name` differ, the version row is missing, belongs to another template, has another `version_number`, a different `manifest`, or is retired. A pre-existing row's `is_active` / `sort_order` are reported by `NOTICE`, never changed.
+4. A clean replay now yields all four released WEDDING templates in catalog order: Elegant Editorial (0033, default `sort_order 0`), Vietnamese Heritage (1), Romantic Minimal (2), Our Wedding Story (0047, 3).
+5. `lib/server/templates/__tests__/vietnamese-heritage-romantic-minimal-catalog-seed.test.ts` keeps every SQL manifest copy equal to the code manifests and the SQL data-only. The migration-head guard tests now allow exactly 0048 after 0047; 0045 stays retired and absent.
+
+**Applying to existing environments.** Run the established migration procedure only after Product Owner approval. On DEV and Production both rows already exist, so 0048 inserts nothing and only verifies them. If either environment's row differs from the frozen identity or manifest, 0048 raises and the migration aborts without changing anything. Investigate that case; do not edit the migration to make it pass. Rollback: none needed, since 0048 adds no rows on existing environments. Never delete catalog rows.
