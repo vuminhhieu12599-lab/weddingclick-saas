@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { fetchCustomerById, fetchProjectDesign, fetchTemplateCatalog } from "../../../../../../lib/admin/admin-api-client";
+import { prefetchAdminQuery } from "../../../../../../lib/admin/admin-data-cache";
+import { adminQueries } from "../../../../../../lib/admin/admin-queries";
 import { findCatalogVersion } from "../../../../../../lib/admin/template-editor-presentation";
 import { useAdminQuery } from "../../../../../../lib/admin/use-admin-query";
 import { formatDateVi } from "../../../../../../lib/presentation/format-date";
@@ -38,6 +39,33 @@ export function NoTemplateCard({ onChooseTemplate, title, message }: { onChooseT
 }
 
 /**
+ * LAUNCH-P0-03: starts the DATA tab's own first reads while the Project
+ * summary is still loading, instead of only after the tab mounts (and the
+ * readiness panel only after the design read). The tab then joins these
+ * loads or reuses their results under the same keys. The customer read
+ * needs the summary's customer id and is not started here.
+ */
+export function prefetchDataTab(projectId: string): void {
+  const required = adminQueries.requiredInvitationData(projectId);
+  const design = adminQueries.designAndCatalog(projectId);
+  const readiness = adminQueries.editorReadiness(projectId);
+  const details = adminQueries.weddingDetails(projectId);
+  prefetchAdminQuery(required.key, required.fetch);
+  prefetchAdminQuery(design.key, design.fetch);
+  prefetchAdminQuery(readiness.key, readiness.fetch);
+  // Same GET as the required data's details read, so it shares that request.
+  prefetchAdminQuery(details.key, details.fetch);
+}
+
+/** Renders nothing; starts prefetchDataTab once per projectId. */
+export function DataTabPrefetch({ projectId }: { projectId: string }) {
+  useEffect(() => {
+    prefetchDataTab(projectId);
+  }, [projectId]);
+  return null;
+}
+
+/**
  * The selected template's readiness and template-specific content. Canonical
  * required data stays editable before a template exists; everything here is
  * driven by the exact pinned version's server-provided editor manifest.
@@ -45,10 +73,8 @@ export function NoTemplateCard({ onChooseTemplate, title, message }: { onChooseT
 function TemplateContent({ projectId, onNavigate }: { projectId: string; onNavigate?: (tab: TabKey) => void }) {
   const [revision, setRevision] = useState(0);
   const bump = useCallback(() => setRevision((current) => current + 1), []);
-  const { data, loading, error, reload } = useAdminQuery(async () => {
-    const [catalog, design] = await Promise.all([fetchTemplateCatalog(), fetchProjectDesign(projectId)]);
-    return { catalog, design };
-  }, [projectId]);
+  const designQuery = adminQueries.designAndCatalog(projectId);
+  const { data, loading, error, reload } = useAdminQuery(designQuery.fetch, [projectId], { cacheKey: designQuery.key });
   if (loading) return <LoadingState label="Đang tải mẫu thiệp..." />;
   if (error || !data) return <ErrorState message={error ?? "Không thể tải mẫu thiệp"} onRetry={reload} />;
 
@@ -95,12 +121,13 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 }
 
 export function DataTab({ project, onNavigate }: { project: ProjectSummary; onNavigate?: (tab: TabKey) => void }) {
+  const customerQuery = adminQueries.customer(project.customer.id);
   const {
     data: customer,
     loading,
     error,
     reload,
-  } = useAdminQuery(() => fetchCustomerById(project.customer.id), [project.customer.id]);
+  } = useAdminQuery(customerQuery.fetch, [project.customer.id], { cacheKey: customerQuery.key });
 
   return (
     <div className="space-y-6">

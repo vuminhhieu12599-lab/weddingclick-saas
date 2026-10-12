@@ -5,7 +5,6 @@ import { useState } from "react";
 import {
   createDressCodeSwatch,
   deleteDressCodeSwatch,
-  fetchProjectDressCode,
   saveProjectDressCode,
   updateDressCodeSwatch,
 } from "../../../../../../lib/admin/admin-api-client";
@@ -16,6 +15,7 @@ import {
   parseSwatchColor,
   reorderPlan,
 } from "../../../../../../lib/admin/optional-content-editor";
+import { adminQueries } from "../../../../../../lib/admin/admin-queries";
 import { useAdminQuery } from "../../../../../../lib/admin/use-admin-query";
 import type { ProjectDressCodeWithSwatches } from "../../../../../../lib/server/project-dress-code/project-dress-code-gateway";
 import type {
@@ -181,7 +181,8 @@ export function DressCodeEditorView({
 }
 
 export function DressCodeEditor({ projectId, onSaved }: { projectId: string; onSaved: () => void }) {
-  const { data, loading, error, reload } = useAdminQuery(() => fetchProjectDressCode(projectId), [projectId]);
+  const query = adminQueries.dressCode(projectId);
+  const { data, loading, error, reload } = useAdminQuery(query.fetch, [projectId], { cacheKey: query.key });
   if (loading) return <LoadingState label="Đang tải Dress Code..." />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
   return <DressCodeEditorView projectId={projectId} initial={data} onSaved={onSaved} />;

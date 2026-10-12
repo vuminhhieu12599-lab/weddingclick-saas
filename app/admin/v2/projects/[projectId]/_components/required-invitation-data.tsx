@@ -5,7 +5,6 @@ import { useState } from "react";
 
 import {
   createProjectEvent,
-  fetchProjectEvents,
   fetchWeddingDetails,
   saveWeddingDetails,
   updateProjectEvent,
@@ -22,6 +21,7 @@ import {
   type CeremonySlot,
   type CoupleNamesForm,
 } from "../../../../../../lib/admin/required-invitation-data";
+import { adminQueries } from "../../../../../../lib/admin/admin-queries";
 import { useAdminQuery } from "../../../../../../lib/admin/use-admin-query";
 import type { ProjectEventRecord } from "../../../../../../lib/server/project-events/project-events-types";
 import type { WeddingDetailsRecord } from "../../../../../../lib/server/wedding-details/wedding-details-types";
@@ -255,10 +255,8 @@ export function RequiredInvitationDataEditor({ projectId, initialDetails, initia
 }
 
 export function RequiredInvitationData({ projectId }: { projectId: string }) {
-  const { data, loading, error, reload } = useAdminQuery(async () => {
-    const [details, events] = await Promise.all([fetchWeddingDetails(projectId), fetchProjectEvents(projectId)]);
-    return { details, events };
-  }, [projectId]);
+  const query = adminQueries.requiredInvitationData(projectId);
+  const { data, loading, error, reload } = useAdminQuery(query.fetch, [projectId], { cacheKey: query.key });
 
   if (loading) {
     return <LoadingState label="Đang tải thông tin cưới..." />;

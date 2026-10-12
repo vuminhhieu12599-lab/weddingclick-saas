@@ -5,8 +5,6 @@ import { useState } from "react";
 import {
   createProjectTask,
   deleteProjectTask,
-  fetchProjectTasks,
-  fetchTaskAssignees,
   updateProjectTask,
 } from "../../../../../../lib/admin/admin-api-client";
 import {
@@ -16,6 +14,7 @@ import {
   type TaskForm,
   taskFormFrom,
 } from "../../../../../../lib/admin/project-task-form";
+import { adminQueries } from "../../../../../../lib/admin/admin-queries";
 import { useAdminQuery } from "../../../../../../lib/admin/use-admin-query";
 import type { ProjectTaskStatus } from "../../../../../../lib/domain";
 import { formatDateTimeVi } from "../../../../../../lib/presentation/format-date";
@@ -338,13 +337,8 @@ export function TasksTabView({
 }
 
 export function TasksTab({ project }: { project: ProjectSummary }) {
-  const { data, loading, error, reload } = useAdminQuery(
-    async () => {
-      const [tasks, assignees] = await Promise.all([fetchProjectTasks(project.id), fetchTaskAssignees(project.id)]);
-      return { tasks, assignees };
-    },
-    [project.id],
-  );
+  const query = adminQueries.tasks(project.id);
+  const { data, loading, error, reload } = useAdminQuery(query.fetch, [project.id], { cacheKey: query.key });
   if (!data && loading) return <LoadingState label="Đang tải công việc..." />;
   if (!data) return <ErrorState message={error ?? "Không thể tải công việc"} onRetry={reload} />;
   return (

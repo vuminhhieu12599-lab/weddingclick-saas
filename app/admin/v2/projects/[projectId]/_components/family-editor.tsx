@@ -9,6 +9,7 @@ import {
   type FamilyField,
   type FamilyForm,
 } from "../../../../../../lib/admin/optional-content-editor";
+import { adminQueries } from "../../../../../../lib/admin/admin-queries";
 import { useAdminQuery } from "../../../../../../lib/admin/use-admin-query";
 import type { WeddingDetailsRecord } from "../../../../../../lib/server/wedding-details/wedding-details-types";
 import { ErrorState, LoadingState } from "../../../_components/page-states";
@@ -99,7 +100,8 @@ export function FamilyEditorView({
 }
 
 export function FamilyEditor({ projectId, onSaved }: { projectId: string; onSaved: () => void }) {
-  const { data, loading, error, reload } = useAdminQuery(() => fetchWeddingDetails(projectId), [projectId]);
+  const query = adminQueries.weddingDetails(projectId);
+  const { data, loading, error, reload } = useAdminQuery(query.fetch, [projectId], { cacheKey: query.key });
   if (loading) return <LoadingState label="Đang tải thông tin gia đình..." />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
   return <FamilyEditorView projectId={projectId} initialDetails={data} onSaved={onSaved} />;

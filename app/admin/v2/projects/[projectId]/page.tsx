@@ -3,9 +3,10 @@
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
-import { fetchProjectById } from "../../../../../lib/admin/admin-api-client";
+import { adminQueries } from "../../../../../lib/admin/admin-queries";
 import { useAdminQuery } from "../../../../../lib/admin/use-admin-query";
 import { ErrorState, LoadingState } from "../../_components/page-states";
+import { DataTabPrefetch } from "./_components/data-tab";
 import { Lifecycle } from "./_components/lifecycle";
 import { ProjectHeader } from "./_components/project-header";
 import { parseWorkspaceTab, WorkspaceTabs } from "./_components/workspace-tabs";
@@ -15,12 +16,13 @@ function ProjectDetail() {
   const projectId = params.projectId;
   const initialTab = parseWorkspaceTab(useSearchParams().get("tab"));
 
+  const summaryQuery = adminQueries.projectSummary(projectId);
   const {
     data: project,
     loading,
     error,
     reload,
-  } = useAdminQuery(() => fetchProjectById(projectId), [projectId]);
+  } = useAdminQuery(summaryQuery.fetch, [projectId], { cacheKey: summaryQuery.key });
 
   // Only a summary for the CURRENT route projectId may be rendered. Without
   // one (first load, or a stale summary from a different projectId) loading
@@ -32,7 +34,13 @@ function ProjectDetail() {
 
   if (!hasCurrentProject) {
     if (loading) {
-      return <LoadingState label="Đang tải dự án..." />;
+      // The DATA tab (the default) starts its reads alongside the summary; other tabs stay lazy.
+      return (
+        <>
+          {initialTab === "DATA" && <DataTabPrefetch projectId={projectId} />}
+          <LoadingState label="Đang tải dự án..." />
+        </>
+      );
     }
     if (error) {
       return <ErrorState message={error} onRetry={reload} />;

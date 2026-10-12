@@ -2,14 +2,18 @@
 
 import Link from "next/link";
 
-import { fetchProjects, PROJECT_LIST_LIMIT } from "../../../../lib/admin/admin-api-client";
+import { PROJECT_LIST_LIMIT } from "../../../../lib/admin/admin-api-client";
+import { adminQueries } from "../../../../lib/admin/admin-queries";
 import { useAdminQuery } from "../../../../lib/admin/use-admin-query";
 import { EmptyState, ErrorState, LoadingState } from "../_components/page-states";
 import { PageHeader } from "../_components/page-header";
 import { ProjectsTable } from "./_components/projects-table";
 
 export default function ProjectsListPage() {
-  const { data: projects, loading, error, reload } = useAdminQuery(() => fetchProjects(), []);
+  const projectsQuery = adminQueries.projects();
+  const { data: projects, loading, error, reload } = useAdminQuery(projectsQuery.fetch, [], {
+    cacheKey: projectsQuery.key,
+  });
 
   return (
     <div>

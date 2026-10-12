@@ -46,6 +46,7 @@ import type {
   WeddingDetailsRecord,
 } from "../server/wedding-details/wedding-details-types";
 import { AdminApiError } from "./admin-api-error";
+import { beginAdminWrite, endAdminWrite, shareInFlightGet } from "./admin-data-cache";
 import type { DesignAssignmentBody } from "./design-assignment";
 import { readImageDimensions } from "./image-dimensions";
 import { optimizeImageForUpload } from "./image-upload-optimizer";
@@ -71,18 +72,82 @@ import { getStaffAccessToken } from "./staff-session-client";
  */
 export const PROJECT_LIST_LIMIT = 100;
 
+/**
+ * LAUNCH-P0-03 bounded waits. A read (GET) is aborted after
+ * READ_TIMEOUT_MS so a stalled connection can never leave a screen loading
+ * forever; the error tells Staff to use "Thử lại". Writes are never aborted
+ * by the client (the server may already have applied them) and are never
+ * retried automatically. Reading the local Auth session is bounded too —
+ * if it times out, no request (read or write) is sent at all.
+ */
+export const READ_TIMEOUT_MS = 20_000;
+export const SESSION_TIMEOUT_MS = 10_000;
+export const READ_TIMEOUT_MESSAGE = "Máy chủ phản hồi quá lâu. Vui lòng kiểm tra kết nối mạng rồi bấm “Thử lại”.";
+const SESSION_TIMEOUT_MESSAGE = "Không đọc được phiên đăng nhập. Vui lòng bấm “Thử lại” hoặc tải lại trang.";
+
+function withTimeout<T>(promise: Promise<T>, ms: number, onTimeout: () => Error): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(onTimeout()), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 async function requireAccessToken(): Promise<string> {
-  const token = await getStaffAccessToken();
+  const token = await withTimeout(getStaffAccessToken(), SESSION_TIMEOUT_MS, () => new AdminApiError(0, SESSION_TIMEOUT_MESSAGE));
   if (!token) {
     throw new AdminApiError(401, "Không tìm thấy phiên đăng nhập nhân sự");
   }
   return token;
 }
 
+/**
+ * Writes are sent as-is (never shared, never stored, never retried) and
+ * invalidate every shared/stored read before and after they run. Identical
+ * concurrent GETs with the same access token share one request
+ * (lib/admin/admin-data-cache.ts); each caller gets its own copy.
+ */
 async function requestJson<T>(
   path: string,
   accessToken: string,
   write?: { method: "PUT" | "POST" | "PATCH" | "DELETE"; body?: unknown },
+): Promise<T> {
+  if (write) {
+    beginAdminWrite();
+    try {
+      return await sendJson<T>(path, accessToken, write);
+    } finally {
+      endAdminWrite();
+    }
+  }
+  return shareInFlightGet(`${accessToken}\n${path}`, () => sendJson<T>(path, accessToken));
+}
+
+async function sendJson<T>(
+  path: string,
+  accessToken: string,
+  write?: { method: "PUT" | "POST" | "PATCH" | "DELETE"; body?: unknown },
+): Promise<T> {
+  // Reads only: bounded by an abort timer that also covers reading the body.
+  const controller = write ? null : new AbortController();
+  const timer = controller ? setTimeout(() => controller.abort(), READ_TIMEOUT_MS) : undefined;
+  try {
+    return await sendJsonOnce<T>(path, accessToken, write, controller?.signal);
+  } catch (error) {
+    if (controller?.signal.aborted) {
+      throw new AdminApiError(0, READ_TIMEOUT_MESSAGE);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function sendJsonOnce<T>(
+  path: string,
+  accessToken: string,
+  write: { method: "PUT" | "POST" | "PATCH" | "DELETE"; body?: unknown } | undefined,
+  signal: AbortSignal | undefined,
 ): Promise<T> {
   let response: Response;
   try {
@@ -96,7 +161,7 @@ async function requestJson<T>(
               headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
               body: JSON.stringify(write.body),
             }
-        : { headers: { authorization: `Bearer ${accessToken}` } },
+        : { headers: { authorization: `Bearer ${accessToken}` }, signal },
     );
   } catch {
     throw new AdminApiError(0, "Không thể kết nối tới máy chủ");
