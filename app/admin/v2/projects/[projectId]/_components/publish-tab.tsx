@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 import {
-  assignInvitationPublicAlias,
   fetchProjectPublishState,
   issuePortalAccessLink,
   markProjectPaid,
@@ -25,7 +24,7 @@ import type { ProjectSummary } from "../../../../../../lib/server/projects/proje
 import { ErrorState, LoadingState } from "../../../_components/page-states";
 import { PREVIEW_VARIANT_LABELS } from "../preview/_components/preview-state";
 import { AccessLinkInventory } from "./access-link-inventory";
-import { friendlyLinkFailure, PublicLinkPanel, type FriendlyLinkFailure } from "./public-link-panel";
+import { PublicLinkPanel } from "./public-link-panel";
 
 const BLOCKER_MESSAGES: Readonly<Record<NonNullable<RequiredVariantPublishState["blocker"]>, string>> = {
   LIFECYCLE_NOT_READY: "Dự án chưa ở trạng thái “Sẵn sàng xuất bản”.",
@@ -93,7 +92,6 @@ function VariantPublishCard({
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
   const [feedback, setFeedback] = useState<PublishFeedback | null>(null);
-  const [aliasFailure, setAliasFailure] = useState<FriendlyLinkFailure | null>(null);
   const review = row.currentReview;
   const published = row.publishedVersion;
 
@@ -107,16 +105,7 @@ function VariantPublishCard({
       const created = await publishInvitationVariant(projectId, row.variant, review.id, published?.id ?? null);
       setFeedback({ kind: "PUBLISHED", versionNumber: created.versionNumber });
       setConfirming(false);
-      // LAUNCH-P0-02: post-publish friendly link (GROOM/BRIDE, first time only).
-      // Its own request: a failure here never turns the publish into a failure.
-      if ((row.variant === "GROOM" || row.variant === "BRIDE") && (link === null || link.canCreateFriendlyLink)) {
-        try {
-          await assignInvitationPublicAlias(projectId, row.variant);
-          setAliasFailure(null);
-        } catch (aliasError) {
-          setAliasFailure(friendlyLinkFailure(aliasError));
-        }
-      }
+      // LAUNCH-P0-02: never auto-assigns a friendly link; Staff reviews and confirms it in the link panel.
       onChanged();
     } catch (error) {
       setFeedback(publishErrorFeedback(error));
@@ -207,13 +196,7 @@ function VariantPublishCard({
       )}
 
       {link !== null && (
-        <PublicLinkPanel
-          key={`${link.friendlyPath ?? ""}|${aliasFailure?.message ?? ""}`}
-          projectId={projectId}
-          link={link}
-          initialFailure={aliasFailure}
-          onChanged={onChanged}
-        />
+        <PublicLinkPanel key={`${link.friendlyPath ?? ""}|${link.suggestedAlias ?? ""}`} projectId={projectId} link={link} onChanged={onChanged} />
       )}
 
       {feedback?.kind === "PUBLISHED" && (
@@ -460,7 +443,8 @@ function PortalLinkIssuer({ projectId }: { projectId: string }) {
  * publication, the first blocker, and a confirmed publish action. No
  * QR, sharing, analytics, guest or rollback controls here. LAUNCH-P0-02
  * adds, per published variant only, its public link (friendly alias for
- * GROOM/BRIDE when assigned) with open/copy and the one-time "Tạo link đẹp".
+ * GROOM/BRIDE when assigned) with open/copy and the one-time, Staff-confirmed
+ * "Tạo link đẹp" (never assigned automatically on publish).
  * Task 033C adds only the customer PORTAL link issuer, shown once at
  * least one variant has a current publication. Launch Hardening 02 adds the
  * staff access-link inventory (list + revoke of every INTAKE/REVIEW/PORTAL

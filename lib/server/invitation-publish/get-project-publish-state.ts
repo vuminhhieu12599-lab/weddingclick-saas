@@ -3,6 +3,7 @@ import type { StaffContext } from "../auth/staff-context";
 import { ApiError } from "../errors/api-error";
 import { evaluateProjectReviewState, type ProjectReviewStateDependencies } from "../invitation-review/get-project-review-state";
 import type { ProjectInvitationRecord, ProjectReviewState, ReviewVersionSummary } from "../invitation-review/invitation-review-types";
+import { deriveAliasFromPublishedSnapshot } from "../invitation-alias/assign-invitation-public-alias";
 import type { InvitationAliasGateway, InvitationPublicLinkRecord } from "../invitation-alias/invitation-alias-types";
 import { isValidUuid } from "../validation/uuid";
 import type { InvitationPublishGateway } from "./invitation-publish-gateway";
@@ -16,7 +17,7 @@ import type {
 export interface ProjectPublishStateDependencies<TClient> extends ProjectReviewStateDependencies<TClient> {
   publications: Pick<InvitationPublishGateway<TClient>, "listPublishedVersionsByIds">;
   /** LAUNCH-P0-02: canonical slugs + friendly aliases (direct RLS). */
-  links: Pick<InvitationAliasGateway<TClient>, "listPublicLinks">;
+  links: Pick<InvitationAliasGateway<TClient>, "listPublicLinks" | "getPublishedSnapshot">;
 }
 
 /**
@@ -42,6 +43,7 @@ export function evaluatePublicLinks(
         canonicalPath: `/i/${link.publicSlug}`,
         friendlyPath: alias === null ? null : invitationPublicAliasPath(alias),
         canCreateFriendlyLink: eligible && alias === null,
+        suggestedAlias: null,
       },
     ];
   });
@@ -187,7 +189,7 @@ export async function getProjectPublishState<TClient>(
     feedback,
   });
 
-  return evaluateProjectPublishState({
+  const state = evaluateProjectPublishState({
     review,
     paymentStatus: project.paymentStatus,
     invitations,
@@ -195,4 +197,15 @@ export async function getProjectPublishState<TClient>(
     sourceReviews: reviewVersions,
     publicLinks,
   });
+
+  // LAUNCH-P0-02 review-before-write: propose (never assign) an alias from
+  // the PUBLISHED names for each published GROOM/BRIDE still without one.
+  const withSuggestions = await Promise.all(
+    state.publicLinks.map(async (link) => {
+      if (!link.canCreateFriendlyLink || (link.variant !== "GROOM" && link.variant !== "BRIDE")) return link;
+      const published = await deps.links.getPublishedSnapshot(client, rawProjectId, link.variant);
+      return { ...link, suggestedAlias: published === null ? null : deriveAliasFromPublishedSnapshot(link.variant, published) };
+    }),
+  );
+  return { ...state, publicLinks: withSuggestions };
 }

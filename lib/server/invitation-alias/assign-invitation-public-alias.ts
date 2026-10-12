@@ -9,7 +9,12 @@ import { ApiError } from "../errors/api-error";
 import { assertStoredReviewSnapshot } from "../invitation-review/assert-stored-review-snapshot";
 import { isValidUuid } from "../validation/uuid";
 import { InvitationAliasConflictError, InvitationAliasUnderivableError } from "./invitation-alias-rpc-error-codes";
-import type { AssignInvitationAliasCommand, AssignedInvitationAlias, InvitationAliasGateway } from "./invitation-alias-types";
+import type {
+  AssignInvitationAliasCommand,
+  AssignedInvitationAlias,
+  InvitationAliasGateway,
+  PublishedSnapshotRecord,
+} from "./invitation-alias-types";
 
 export interface AssignInvitationAliasDependencies<TClient> {
   aliases: Pick<InvitationAliasGateway<TClient>, "assignAlias" | "getPublishedSnapshot">;
@@ -45,10 +50,21 @@ export function parseAssignInvitationAliasCommand(raw: unknown): AssignInvitatio
 }
 
 /**
- * The default alias from the variant's CURRENT PUBLISHED Snapshot (never
- * the mutable draft): GROOM → groom&bride, BRIDE → bride&groom. The stored
- * Snapshot passes the same integrity gate as every persisted read.
+ * The default alias of a stored PUBLISHED Snapshot (never the mutable
+ * draft): GROOM → groom&bride, BRIDE → bride&groom; `null` when the names
+ * give no usable alias. The Snapshot passes the same integrity gate as
+ * every persisted read (throws on a mismatch).
  */
+export function deriveAliasFromPublishedSnapshot(variant: PublicAliasVariant, published: PublishedSnapshotRecord): string | null {
+  const snapshot = assertStoredReviewSnapshot({
+    variant,
+    templateVersionId: published.templateVersionId,
+    rendererKey: published.rendererKey,
+    payload: published.payload,
+  });
+  return deriveInvitationPublicAlias(variant, { groomName: snapshot.people.groom.name, brideName: snapshot.people.bride.name });
+}
+
 async function deriveDefaultAlias<TClient>(
   client: TClient,
   projectId: string,
@@ -60,13 +76,7 @@ async function deriveDefaultAlias<TClient>(
     // The RPC re-checks this; answering here avoids deriving from nothing.
     throw new InvitationAliasConflictError("Invitation is not published", "NOT_PUBLISHED", "");
   }
-  const snapshot = assertStoredReviewSnapshot({
-    variant,
-    templateVersionId: published.templateVersionId,
-    rendererKey: published.rendererKey,
-    payload: published.payload,
-  });
-  const alias = deriveInvitationPublicAlias(variant, { groomName: snapshot.people.groom.name, brideName: snapshot.people.bride.name });
+  const alias = deriveAliasFromPublishedSnapshot(variant, published);
   if (alias === null) {
     throw new InvitationAliasUnderivableError();
   }

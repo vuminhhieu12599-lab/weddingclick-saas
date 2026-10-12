@@ -163,8 +163,8 @@ describe("PublishTab", () => {
         { variant: "BRIDE", invitationId: "a2", currentReview: review(1), publishedVersion: publishedVersion("e2", "a2"), upToDate: true, canPublish: false, blocker: "ALREADY_PUBLISHED" },
       ],
       publicLinks: [
-        { variant: "GROOM", canonicalPath: "/i/wc-2026-000003-groom", friendlyPath: "/i/minh-anh&thu-ha", canCreateFriendlyLink: false },
-        { variant: "BRIDE", canonicalPath: "/i/wc-2026-000003-bride", friendlyPath: null, canCreateFriendlyLink: true },
+        { variant: "GROOM", canonicalPath: "/i/wc-2026-000046-groom", friendlyPath: "/i/minh-anh&thu-ha", canCreateFriendlyLink: false, suggestedAlias: null },
+        { variant: "BRIDE", canonicalPath: "/i/wc-2026-000046-bride", friendlyPath: null, canCreateFriendlyLink: true, suggestedAlias: "thu-ha&minh-anh" },
       ],
     };
     const html = renderToStaticMarkup(<PublishTab project={project} />);
@@ -177,8 +177,10 @@ describe("PublishTab", () => {
     expect(groom).toContain("Link cũ vẫn hoạt động");
     expect(groom).not.toContain("Tạo link đẹp");
     expect(bride).toContain("Link thiệp Nhà gái");
-    expect(bride).toContain('href="/i/wc-2026-000003-bride"');
+    expect(bride).toContain('href="/i/wc-2026-000046-bride"');
     expect(bride).toContain("Tạo link đẹp");
+    // Review step is closed until Staff opens it; nothing is confirmed on render.
+    expect(bride).not.toContain("Xác nhận tạo link");
 
     queryData = {
       ...queryData,
@@ -187,7 +189,7 @@ describe("PublishTab", () => {
     };
     const partial = renderToStaticMarkup(<PublishTab project={project} />);
     expect(partial).not.toContain('data-testid="public-link-BRIDE"');
-    expect(partial).not.toContain("wc-2026-000003-bride");
+    expect(partial).not.toContain("wc-2026-000046-bride");
   });
 
   it("LAUNCH-P0-02: friendly-link failures are usable and never claim the publication failed", () => {

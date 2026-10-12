@@ -186,6 +186,21 @@ describe("POST /api/v2/internal/projects/[id]/public-aliases (handler)", () => {
   });
 });
 
+describe("review before write (Staff must confirm)", () => {
+  it("publishing never assigns an alias; the panel sends only the exact reviewed alias after Xác nhận tạo link", () => {
+    const tab = read("app/admin/v2/projects/[projectId]/_components/publish-tab.tsx").replace(/\/\/.*$/gm, "");
+    expect(tab).not.toMatch(/assignInvitationPublicAlias/);
+    const panel = read("app/admin/v2/projects/[projectId]/_components/public-link-panel.tsx");
+    // Only the reviewed two-part alias is sent; the form submits only after the explicit confirm button.
+    expect(panel).toMatch(/const alias = buildInvitationPublicAlias\(primary, secondary\);\s+if \(alias === null\) return \{ status: "INVALID" \};\s+try \{\s+await assign\(projectId, variant, alias\);/);
+    expect(panel).not.toMatch(/assignInvitationPublicAlias\(projectId, link\.variant\)/);
+    expect(panel).toMatch(/Xác nhận tạo link/);
+    expect(panel).toMatch(/không thể sửa/);
+    const readModel = read("lib/server/invitation-publish/get-project-publish-state.ts");
+    expect(readModel).not.toMatch(/assignAlias|assign_invitation_public_alias/);
+  });
+});
+
 describe("publish read model: public links", () => {
   const row = (variant: InvitationVariant, invitationId: string, isPublished: boolean) =>
     ({ variant, invitationId, publishedVersion: isPublished ? { id: "p" } : null }) as unknown as RequiredVariantPublishState;
@@ -196,12 +211,12 @@ describe("publish read model: public links", () => {
       { invitationId: INV_BRIDE, variant: "BRIDE" as const, publicSlug: "wc-2026-000003-bride", alias: null },
     ];
     expect(evaluatePublicLinks([row("GROOM", INV_GROOM, true), row("BRIDE", INV_BRIDE, true)], links)).toEqual([
-      { variant: "GROOM", canonicalPath: "/i/wc-2026-000003-groom", friendlyPath: "/i/minh-anh&thu-ha", canCreateFriendlyLink: false },
-      { variant: "BRIDE", canonicalPath: "/i/wc-2026-000003-bride", friendlyPath: null, canCreateFriendlyLink: true },
+      { variant: "GROOM", canonicalPath: "/i/wc-2026-000003-groom", friendlyPath: "/i/minh-anh&thu-ha", canCreateFriendlyLink: false, suggestedAlias: null },
+      { variant: "BRIDE", canonicalPath: "/i/wc-2026-000003-bride", friendlyPath: null, canCreateFriendlyLink: true, suggestedAlias: null },
     ]);
     expect(evaluatePublicLinks([row("GROOM", INV_GROOM, true), row("BRIDE", INV_BRIDE, false)], links).map((l) => l.variant)).toEqual(["GROOM"]);
     expect(evaluatePublicLinks([row("COMMON", "x", true)], [{ invitationId: "x", variant: "COMMON", publicSlug: "wc-c-common", alias: null }])).toEqual([
-      { variant: "COMMON", canonicalPath: "/i/wc-c-common", friendlyPath: null, canCreateFriendlyLink: false },
+      { variant: "COMMON", canonicalPath: "/i/wc-c-common", friendlyPath: null, canCreateFriendlyLink: false, suggestedAlias: null },
     ]);
     expect(() => evaluatePublicLinks([row("GROOM", INV_GROOM, true)], [])).toThrow();
   });

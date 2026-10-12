@@ -39,7 +39,7 @@ export function friendlyLinkFailure(error: unknown): FriendlyLinkFailure {
       case 409:
         if (body.reason === "ALIAS_TAKEN") {
           return {
-            message: `Link “${typeof body.alias === "string" ? invitationPublicAliasPath(body.alias) : ""}” đã được dùng cho một thiệp khác. Hãy chọn tên khác bên dưới.`,
+            message: `Link “${typeof body.alias === "string" ? invitationPublicAliasPath(body.alias) : ""}” đã được dùng cho một thiệp khác. Hãy sửa tên bên trên rồi xác nhận lại.`,
             manual: true,
             suggestion: splitAlias(body.alias),
           };
@@ -50,7 +50,7 @@ export function friendlyLinkFailure(error: unknown): FriendlyLinkFailure {
         return { message: "Thiệp chưa được xuất bản nên chưa thể tạo link đẹp.", manual: false, suggestion: null };
       case 422:
         return body.reason === "ALIAS_UNDERIVABLE"
-          ? { message: "Không tạo được link từ tên cô dâu chú rể. Hãy nhập tên cho link bên dưới.", manual: true, suggestion: null }
+          ? { message: "Link chưa hợp lệ. Hãy nhập tên cho link rồi xác nhận lại.", manual: true, suggestion: null }
           : { message: "Chỉ thiệp Nhà trai / Nhà gái mới có link đẹp.", manual: false, suggestion: null };
     }
   }
@@ -81,50 +81,161 @@ function CopyButton({ url, label }: { url: string; label: string }) {
   );
 }
 
+type SubmitOutcome = { status: "CREATED" } | { status: "INVALID" } | { status: "FAILED"; failure: FriendlyLinkFailure; reload: boolean };
+
+/**
+ * Writes exactly the alias Staff reviewed (two name parts, normalized with
+ * the canonical domain rule). Invalid input never reaches the server; a
+ * collision keeps the form open (no reload) so Staff can pick another name.
+ */
+export async function submitFriendlyLink(
+  projectId: string,
+  variant: "GROOM" | "BRIDE",
+  primary: string,
+  secondary: string,
+  assign: typeof assignInvitationPublicAlias = assignInvitationPublicAlias,
+): Promise<SubmitOutcome> {
+  const alias = buildInvitationPublicAlias(primary, secondary);
+  if (alias === null) return { status: "INVALID" };
+  try {
+    await assign(projectId, variant, alias);
+    return { status: "CREATED" };
+  } catch (error) {
+    const failure = friendlyLinkFailure(error);
+    return { status: "FAILED", failure, reload: error instanceof AdminApiError && error.status === 409 && !failure.manual };
+  }
+}
+
+/** The review step (presentational): editable name parts, live final URL, permanence warning, explicit confirm. */
+export function FriendlyLinkReviewForm({
+  variant,
+  origin,
+  primary,
+  secondary,
+  pending,
+  onPrimaryChange,
+  onSecondaryChange,
+  onConfirm,
+  onCancel,
+}: {
+  variant: "GROOM" | "BRIDE";
+  origin: string;
+  primary: string;
+  secondary: string;
+  pending: boolean;
+  onPrimaryChange: (value: string) => void;
+  onSecondaryChange: (value: string) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const finalAlias = buildInvitationPublicAlias(primary, secondary);
+  return (
+    <form
+      className="mt-3 space-y-2 border-t border-slate-200 pt-3"
+      role="group"
+      aria-label="Xem lại link đẹp"
+      data-testid={`friendly-link-review-${variant}`}
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (finalAlias !== null) onConfirm();
+      }}
+    >
+      <p className="text-xs text-slate-600">
+        Đề xuất từ tên trong bản xuất bản ({variant === "GROOM" ? "chú rể trước, cô dâu sau" : "cô dâu trước, chú rể sau"}). Có thể sửa từng tên;
+        dấu tiếng Việt và khoảng trắng được chuyển tự động.
+      </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input
+          value={primary}
+          onChange={(event) => onPrimaryChange(event.target.value)}
+          placeholder={variant === "GROOM" ? "Tên chú rể" : "Tên cô dâu"}
+          className="min-h-11 rounded border border-slate-300 bg-white px-2 text-sm sm:min-h-0 sm:py-1"
+          aria-label="Tên thứ nhất trong link"
+        />
+        <span className="text-sm text-slate-500">&amp;</span>
+        <input
+          value={secondary}
+          onChange={(event) => onSecondaryChange(event.target.value)}
+          placeholder={variant === "GROOM" ? "Tên cô dâu" : "Tên chú rể"}
+          className="min-h-11 rounded border border-slate-300 bg-white px-2 text-sm sm:min-h-0 sm:py-1"
+          aria-label="Tên thứ hai trong link"
+        />
+      </div>
+      <p className="break-all text-sm text-slate-800" data-testid={`friendly-link-preview-${variant}`}>
+        Link cuối cùng: <span className="font-mono">{finalAlias === null ? "— (cần đủ hai tên hợp lệ)" : `${origin}${invitationPublicAliasPath(finalAlias)}`}</span>
+      </p>
+      <p className="text-xs font-medium text-amber-800">
+        Lưu ý: sau khi xác nhận, link này được cố định vĩnh viễn và không thể sửa hoặc đổi sang tên khác. Link cũ vẫn tiếp tục hoạt động.
+      </p>
+      <div className="flex flex-col gap-2 sm:flex-row" data-mobile-stack>
+        <button
+          type="submit"
+          disabled={pending || finalAlias === null}
+          className="min-h-11 rounded-lg bg-emerald-700 px-3 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50 sm:min-h-0 sm:py-1.5"
+        >
+          {pending ? "Đang tạo..." : "Xác nhận tạo link"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={pending}
+          className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 sm:min-h-0 sm:py-1.5"
+        >
+          Huỷ
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function splitSuggestion(alias: string | null): { primary: string; secondary: string } {
+  return splitAlias(alias) ?? { primary: "", secondary: "" };
+}
+
 /**
  * LAUNCH-P0-02 — the public link(s) of ONE published variant in Xuất bản:
  * the friendly `/i/<alias>` when assigned (else the canonical link), "Mở
- * thiệp", "Sao chép link", and for GROOM/BRIDE without an alias the
- * one-time "Tạo link đẹp" (server-derived default, or a Staff-chosen
- * alternative after a collision). The canonical link stays valid and is
- * shown beneath. Absolute URLs use the browser origin (no SITE_URL).
+ * thiệp" and "Sao chép link". For GROOM/BRIDE without an alias, "Tạo link
+ * đẹp" opens a review step: the server-proposed alias (from the PUBLISHED
+ * names) prefilled in two editable name parts, the normalized final URL in
+ * real time, a permanence warning, and an explicit "Xác nhận tạo link".
+ * Nothing is written before that confirmation, and never on publish. A
+ * collision keeps the form open for another readable alternative. The
+ * canonical link stays valid. Absolute URLs use the browser origin.
  */
 export function PublicLinkPanel({
   projectId,
   link,
-  initialFailure,
   onChanged,
 }: {
   projectId: string;
   link: PublishedVariantPublicLink;
-  initialFailure?: FriendlyLinkFailure | null;
   onChanged: () => void;
 }) {
+  const suggestion = splitSuggestion(link.suggestedAlias);
+  const [reviewing, setReviewing] = useState(false);
   const [pending, setPending] = useState(false);
-  const [failure, setFailure] = useState<FriendlyLinkFailure | null>(initialFailure ?? null);
-  const [primary, setPrimary] = useState(initialFailure?.suggestion?.primary ?? "");
-  const [secondary, setSecondary] = useState(initialFailure?.suggestion?.secondary ?? "");
+  const [failure, setFailure] = useState<FriendlyLinkFailure | null>(null);
+  const [primary, setPrimary] = useState(suggestion.primary);
+  const [secondary, setSecondary] = useState(suggestion.secondary);
   const label = PREVIEW_VARIANT_LABELS[link.variant];
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   const primaryPath = link.friendlyPath ?? link.canonicalPath;
   const url = `${origin}${primaryPath}`;
-  const manualAlias = buildInvitationPublicAlias(primary, secondary);
 
-  async function create(alias?: string) {
+  async function confirm() {
     if (pending || (link.variant !== "GROOM" && link.variant !== "BRIDE")) return;
     setPending(true);
     try {
-      await assignInvitationPublicAlias(projectId, link.variant, alias);
-      setFailure(null);
-      onChanged();
-    } catch (error) {
-      const next = friendlyLinkFailure(error);
-      setFailure(next);
-      if (next.suggestion !== null) {
-        setPrimary(next.suggestion.primary);
-        setSecondary(next.suggestion.secondary);
+      const outcome = await submitFriendlyLink(projectId, link.variant, primary, secondary);
+      if (outcome.status === "CREATED") {
+        setFailure(null);
+        setReviewing(false);
+        onChanged();
+      } else if (outcome.status === "FAILED") {
+        setFailure(outcome.failure);
+        if (outcome.reload) onChanged();
       }
-      if (error instanceof AdminApiError && error.status === 409) onChanged();
     } finally {
       setPending(false);
     }
@@ -157,60 +268,31 @@ export function PublicLinkPanel({
         </p>
       )}
 
-      {link.canCreateFriendlyLink && (
-        <div className="mt-3 border-t border-slate-200 pt-3">
-          <p className="text-xs text-slate-600">
-            Link đẹp dùng tên cô dâu chú rể ({link.variant === "GROOM" ? "chú rể trước" : "cô dâu trước"}). Chỉ tạo một lần và không đổi được sau đó; link
-            cũ vẫn hoạt động.
-          </p>
-          {!(failure?.manual ?? false) && (
-            <button
-              type="button"
-              onClick={() => void create()}
-              disabled={pending}
-              className="mt-2 min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50 sm:min-h-0 sm:py-1.5"
-            >
-              {pending ? "Đang tạo..." : "Tạo link đẹp"}
-            </button>
-          )}
-          {failure?.manual === true && (
-            <form
-              className="mt-2 space-y-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (manualAlias !== null) void create(manualAlias);
-              }}
-            >
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <input
-                  value={primary}
-                  onChange={(event) => setPrimary(event.target.value)}
-                  placeholder={link.variant === "GROOM" ? "Tên chú rể" : "Tên cô dâu"}
-                  className="min-h-11 rounded border border-slate-300 bg-white px-2 text-sm sm:min-h-0 sm:py-1"
-                  aria-label="Tên thứ nhất trong link"
-                />
-                <span className="text-sm text-slate-500">&amp;</span>
-                <input
-                  value={secondary}
-                  onChange={(event) => setSecondary(event.target.value)}
-                  placeholder={link.variant === "GROOM" ? "Tên cô dâu" : "Tên chú rể"}
-                  className="min-h-11 rounded border border-slate-300 bg-white px-2 text-sm sm:min-h-0 sm:py-1"
-                  aria-label="Tên thứ hai trong link"
-                />
-              </div>
-              <p className="break-all text-xs text-slate-600">
-                Xem trước: <span className="font-mono">{manualAlias === null ? "—" : invitationPublicAliasPath(manualAlias)}</span>
-              </p>
-              <button
-                type="submit"
-                disabled={pending || manualAlias === null}
-                className="min-h-11 rounded-lg bg-emerald-700 px-3 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50 sm:min-h-0 sm:py-1.5"
-              >
-                {pending ? "Đang tạo..." : "Tạo link đẹp"}
-              </button>
-            </form>
-          )}
-        </div>
+      {link.canCreateFriendlyLink && !reviewing && (
+        <button
+          type="button"
+          onClick={() => setReviewing(true)}
+          className="mt-3 min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 sm:min-h-0 sm:py-1.5"
+        >
+          Tạo link đẹp
+        </button>
+      )}
+
+      {link.canCreateFriendlyLink && reviewing && (link.variant === "GROOM" || link.variant === "BRIDE") && (
+        <FriendlyLinkReviewForm
+          variant={link.variant}
+          origin={origin}
+          primary={primary}
+          secondary={secondary}
+          pending={pending}
+          onPrimaryChange={setPrimary}
+          onSecondaryChange={setSecondary}
+          onConfirm={() => void confirm()}
+          onCancel={() => {
+            setReviewing(false);
+            setFailure(null);
+          }}
+        />
       )}
       {failure !== null && (
         <p className="mt-2 text-sm text-red-700" role="alert">

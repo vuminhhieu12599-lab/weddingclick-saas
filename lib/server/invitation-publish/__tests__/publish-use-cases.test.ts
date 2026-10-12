@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { buildRendererFixture } from "../../../../templates/core/fixtures/renderer-fixture-pipeline";
 
 import type { StaffContext } from "../../auth/staff-context";
 import { ApiError } from "../../errors/api-error";
@@ -337,14 +338,52 @@ describe("getProjectPublishState", () => {
         listFeedbackForVersions: async () => [approval(REVIEW_2)],
       },
       publications: { listPublishedVersionsByIds: async () => [publishedRow(PUBLISHED_1, COMMON_INV, REVIEW_1, 2)] },
-      links: { listPublicLinks: async () => [{ invitationId: COMMON_INV, variant: "COMMON", publicSlug: "wc-2026-000001-common", alias: null }] },
+      links: {
+        listPublicLinks: async () => [{ invitationId: COMMON_INV, variant: "COMMON", publicSlug: "wc-2026-000001-common", alias: null }],
+        getPublishedSnapshot: vi.fn(),
+      },
     });
     expect(listReviewVersionsByIds.mock.calls[0][2]).toEqual([REVIEW_2, REVIEW_1]);
     // LAUNCH-P0-02: COMMON keeps only its canonical link; no friendly-link action.
     expect(state.publicLinks).toEqual([
-      { variant: "COMMON", canonicalPath: "/i/wc-2026-000001-common", friendlyPath: null, canCreateFriendlyLink: false },
+      { variant: "COMMON", canonicalPath: "/i/wc-2026-000001-common", friendlyPath: null, canCreateFriendlyLink: false, suggestedAlias: null },
     ]);
     expect(state.variants[0]).toMatchObject({ canPublish: true, publishedVersion: { sourceReviewVersionNumber: 1 } });
+  });
+
+  it("LAUNCH-P0-02: proposes (never assigns) a friendly alias from the PUBLISHED names, only for a published side without one", async () => {
+    const project = { id: PROJECT_ID, status: "PUBLISHED", paymentStatus: "PAID", packageCodeSnapshot: "SEPARATE" } as ProjectSummary;
+    const groomPublished = "e0000000-0000-4000-8000-0000000000a1";
+    const bridePublished = "e0000000-0000-4000-8000-0000000000a2";
+    const fixture = async (variant: "GROOM" | "BRIDE") => {
+      const { snapshot } = await buildRendererFixture({ variant });
+      return { invitationId: variant === "GROOM" ? GROOM_INV : BRIDE_INV, templateVersionId: snapshot.template.templateVersionId, rendererKey: snapshot.template.rendererKey, payload: snapshot };
+    };
+    const getPublishedSnapshot = vi.fn(async (_c: string, _p: string, variant: "GROOM" | "BRIDE") => fixture(variant));
+    const state = await getProjectPublishState(PROJECT_ID, staff, {
+      projects: { getProjectById: async () => project },
+      reviews: {
+        listProjectInvitations: async () => [inv(GROOM_INV, "GROOM", REVIEW_1, groomPublished), inv(BRIDE_INV, "BRIDE", BRIDE_REVIEW, bridePublished)],
+        listReviewVersionsByIds: async (_c: string, _p: string, ids: readonly string[]) => ids.map((id) => reviewRow(id, id === REVIEW_1 ? GROOM_INV : BRIDE_INV, 1)),
+        listFeedbackForVersions: async () => [approval(REVIEW_1), approval(BRIDE_REVIEW)],
+      },
+      publications: {
+        listPublishedVersionsByIds: async () => [publishedRow(groomPublished, GROOM_INV, REVIEW_1, 2), publishedRow(bridePublished, BRIDE_INV, BRIDE_REVIEW, 2)],
+      },
+      links: {
+        listPublicLinks: async () => [
+          { invitationId: GROOM_INV, variant: "GROOM", publicSlug: "wc-2026-000046-groom", alias: "khoi&han" },
+          { invitationId: BRIDE_INV, variant: "BRIDE", publicSlug: "wc-2026-000046-bride", alias: null },
+        ],
+        getPublishedSnapshot,
+      },
+    });
+    expect(state.publicLinks).toEqual([
+      { variant: "GROOM", canonicalPath: "/i/wc-2026-000046-groom", friendlyPath: "/i/khoi&han", canCreateFriendlyLink: false, suggestedAlias: null },
+      // Fixture names: groom "Nguyễn Minh Khôi", bride "Trần Ngọc Hân" — bride first on BRIDE.
+      { variant: "BRIDE", canonicalPath: "/i/wc-2026-000046-bride", friendlyPath: null, canCreateFriendlyLink: true, suggestedAlias: "tran-ngoc-han&nguyen-minh-khoi" },
+    ]);
+    expect(getPublishedSnapshot.mock.calls.map((call) => call[2])).toEqual(["BRIDE"]);
   });
 
   it("missing Project is NOT_FOUND; malformed id is BAD_REQUEST", async () => {
@@ -352,7 +391,7 @@ describe("getProjectPublishState", () => {
       projects: { getProjectById: async () => null },
       reviews: { listProjectInvitations: vi.fn(), listReviewVersionsByIds: vi.fn(), listFeedbackForVersions: vi.fn() },
       publications: { listPublishedVersionsByIds: vi.fn() },
-      links: { listPublicLinks: vi.fn() },
+      links: { listPublicLinks: vi.fn(), getPublishedSnapshot: vi.fn() },
     };
     await expect(getProjectPublishState(PROJECT_ID, staff, deps)).rejects.toMatchObject({ kind: "NOT_FOUND" });
     await expect(getProjectPublishState("x", staff, deps)).rejects.toMatchObject({ kind: "BAD_REQUEST" });

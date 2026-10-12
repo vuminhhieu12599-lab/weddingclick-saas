@@ -97,4 +97,10 @@ export interface PublishedVariantPublicLink {
   friendlyPath: string | null;
   /** A friendly link may still be created once (GROOM/BRIDE without an alias). */
   canCreateFriendlyLink: boolean;
+  /**
+   * Proposed alias derived from the PUBLISHED Snapshot names, for Staff to
+   * review/edit before confirming (only while `canCreateFriendlyLink`);
+   * `null` when none can be derived. Never written without confirmation.
+   */
+  suggestedAlias: string | null;
 }
