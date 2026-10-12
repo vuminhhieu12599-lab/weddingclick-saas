@@ -1,3 +1,4 @@
+import type { AssignedInvitationAlias } from "../server/invitation-alias/invitation-alias-types";
 import type { InvitationVariant, MediaType, ProjectStatus, ServiceAddonCode, ServicePackageCode } from "../domain";
 import type {
   FinalizeMediaResult,
@@ -349,6 +350,26 @@ export async function publishInvitationVariant(
     `/api/v2/internal/projects/${encodeURIComponent(projectId)}/publish`,
     token,
     { method: "POST", body: { variant, expectedCurrentReviewVersionId, expectedPublishedVersionId } },
+  );
+  return body.data;
+}
+
+/**
+ * LAUNCH-P0-02: one-time friendly public link of a published GROOM/BRIDE
+ * invitation. Without `alias` the server derives the default from the
+ * PUBLISHED names. A 409 carries `reason` (ALIAS_TAKEN | ALIAS_ALREADY_ASSIGNED
+ * | NOT_PUBLISHED) and the attempted `alias` on `AdminApiError.body`.
+ */
+export async function assignInvitationPublicAlias(
+  projectId: string,
+  variant: "GROOM" | "BRIDE",
+  alias?: string,
+): Promise<AssignedInvitationAlias> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: AssignedInvitationAlias }>(
+    `/api/v2/internal/projects/${encodeURIComponent(projectId)}/public-aliases`,
+    token,
+    { method: "POST", body: alias === undefined ? { variant } : { variant, alias } },
   );
   return body.data;
 }

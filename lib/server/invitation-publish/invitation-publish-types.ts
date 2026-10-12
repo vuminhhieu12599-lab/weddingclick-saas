@@ -81,4 +81,20 @@ export interface ProjectPublishState {
   variants: RequiredVariantPublishState[];
   /** Every required variant's publication is sourced from its current review. */
   allRequiredVariantsPublished: boolean;
+  /**
+   * LAUNCH-P0-02: public links of every REQUIRED variant that has a current
+   * publication (never-published variants are absent).
+   */
+  publicLinks: PublishedVariantPublicLink[];
+}
+
+/** Public link of one published variant (LAUNCH-P0-02). */
+export interface PublishedVariantPublicLink {
+  variant: InvitationVariant;
+  /** Unchanged canonical path `/i/<public_slug>`; stays valid forever. */
+  canonicalPath: string;
+  /** Friendly `/i/<alias>` once assigned (GROOM/BRIDE only), else `null`. */
+  friendlyPath: string | null;
+  /** A friendly link may still be created once (GROOM/BRIDE without an alias). */
+  canCreateFriendlyLink: boolean;
 }

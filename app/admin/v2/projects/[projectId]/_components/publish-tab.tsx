@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import {
+  assignInvitationPublicAlias,
   fetchProjectPublishState,
   issuePortalAccessLink,
   markProjectPaid,
@@ -17,12 +18,14 @@ import { getProjectStatusLabel } from "../../../../../../lib/presentation/projec
 import type {
   ProjectPublishState,
   PublishBlockerReason,
+  PublishedVariantPublicLink,
   RequiredVariantPublishState,
 } from "../../../../../../lib/server/invitation-publish/invitation-publish-types";
 import type { ProjectSummary } from "../../../../../../lib/server/projects/project-types";
 import { ErrorState, LoadingState } from "../../../_components/page-states";
 import { PREVIEW_VARIANT_LABELS } from "../preview/_components/preview-state";
 import { AccessLinkInventory } from "./access-link-inventory";
+import { friendlyLinkFailure, PublicLinkPanel, type FriendlyLinkFailure } from "./public-link-panel";
 
 const BLOCKER_MESSAGES: Readonly<Record<NonNullable<RequiredVariantPublishState["blocker"]>, string>> = {
   LIFECYCLE_NOT_READY: "Dự án chưa ở trạng thái “Sẵn sàng xuất bản”.",
@@ -78,15 +81,19 @@ export function publishErrorFeedback(error: unknown): PublishErrorFeedback {
 function VariantPublishCard({
   projectId,
   row,
+  link,
   onChanged,
 }: {
   projectId: string;
   row: RequiredVariantPublishState;
+  /** LAUNCH-P0-02: present only once this variant has a current publication. */
+  link: PublishedVariantPublicLink | null;
   onChanged: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
   const [feedback, setFeedback] = useState<PublishFeedback | null>(null);
+  const [aliasFailure, setAliasFailure] = useState<FriendlyLinkFailure | null>(null);
   const review = row.currentReview;
   const published = row.publishedVersion;
 
@@ -100,6 +107,16 @@ function VariantPublishCard({
       const created = await publishInvitationVariant(projectId, row.variant, review.id, published?.id ?? null);
       setFeedback({ kind: "PUBLISHED", versionNumber: created.versionNumber });
       setConfirming(false);
+      // LAUNCH-P0-02: post-publish friendly link (GROOM/BRIDE, first time only).
+      // Its own request: a failure here never turns the publish into a failure.
+      if ((row.variant === "GROOM" || row.variant === "BRIDE") && (link === null || link.canCreateFriendlyLink)) {
+        try {
+          await assignInvitationPublicAlias(projectId, row.variant);
+          setAliasFailure(null);
+        } catch (aliasError) {
+          setAliasFailure(friendlyLinkFailure(aliasError));
+        }
+      }
       onChanged();
     } catch (error) {
       setFeedback(publishErrorFeedback(error));
@@ -187,6 +204,16 @@ function VariantPublishCard({
             </button>
           </div>
         </div>
+      )}
+
+      {link !== null && (
+        <PublicLinkPanel
+          key={`${link.friendlyPath ?? ""}|${aliasFailure?.message ?? ""}`}
+          projectId={projectId}
+          link={link}
+          initialFailure={aliasFailure}
+          onChanged={onChanged}
+        />
       )}
 
       {feedback?.kind === "PUBLISHED" && (
@@ -431,7 +458,9 @@ function PortalLinkIssuer({ projectId }: { projectId: string }) {
  * Task 031 staff publish area: per REQUIRED variant (canonical package
  * policy, server-derived) the approved current review, the current
  * publication, the first blocker, and a confirmed publish action. No
- * public link, QR, sharing, analytics, guest or rollback controls here.
+ * QR, sharing, analytics, guest or rollback controls here. LAUNCH-P0-02
+ * adds, per published variant only, its public link (friendly alias for
+ * GROOM/BRIDE when assigned) with open/copy and the one-time "Tạo link đẹp".
  * Task 033C adds only the customer PORTAL link issuer, shown once at
  * least one variant has a current publication. Launch Hardening 02 adds the
  * staff access-link inventory (list + revoke of every INTAKE/REVIEW/PORTAL
@@ -492,7 +521,13 @@ export function PublishTab({ project, onProjectChanged }: { project: ProjectSumm
             )
           )}
           {data.variants.map((row) => (
-            <VariantPublishCard key={row.variant} projectId={project.id} row={row} onChanged={handleChanged} />
+            <VariantPublishCard
+              key={row.variant}
+              projectId={project.id}
+              row={row}
+              link={data.publicLinks.find((item) => item.variant === row.variant) ?? null}
+              onChanged={handleChanged}
+            />
           ))}
           {data.variants.some((row) => row.publishedVersion !== null) && <PortalLinkIssuer projectId={project.id} />}
         </>

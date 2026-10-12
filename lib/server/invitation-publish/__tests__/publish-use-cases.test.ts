@@ -337,8 +337,13 @@ describe("getProjectPublishState", () => {
         listFeedbackForVersions: async () => [approval(REVIEW_2)],
       },
       publications: { listPublishedVersionsByIds: async () => [publishedRow(PUBLISHED_1, COMMON_INV, REVIEW_1, 2)] },
+      links: { listPublicLinks: async () => [{ invitationId: COMMON_INV, variant: "COMMON", publicSlug: "wc-2026-000001-common", alias: null }] },
     });
     expect(listReviewVersionsByIds.mock.calls[0][2]).toEqual([REVIEW_2, REVIEW_1]);
+    // LAUNCH-P0-02: COMMON keeps only its canonical link; no friendly-link action.
+    expect(state.publicLinks).toEqual([
+      { variant: "COMMON", canonicalPath: "/i/wc-2026-000001-common", friendlyPath: null, canCreateFriendlyLink: false },
+    ]);
     expect(state.variants[0]).toMatchObject({ canPublish: true, publishedVersion: { sourceReviewVersionNumber: 1 } });
   });
 
@@ -347,6 +352,7 @@ describe("getProjectPublishState", () => {
       projects: { getProjectById: async () => null },
       reviews: { listProjectInvitations: vi.fn(), listReviewVersionsByIds: vi.fn(), listFeedbackForVersions: vi.fn() },
       publications: { listPublishedVersionsByIds: vi.fn() },
+      links: { listPublicLinks: vi.fn() },
     };
     await expect(getProjectPublishState(PROJECT_ID, staff, deps)).rejects.toMatchObject({ kind: "NOT_FOUND" });
     await expect(getProjectPublishState("x", staff, deps)).rejects.toMatchObject({ kind: "BAD_REQUEST" });

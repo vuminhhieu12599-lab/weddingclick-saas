@@ -203,8 +203,11 @@ describe("containment (G, J, K, M, N)", () => {
   it("the page stays dynamic, renders through the unchanged public RSVP wrapper and loads only through the 032A use case", () => {
     const page = read(PAGE);
     expect(page).toMatch(/export const dynamic = "force-dynamic"/);
-    expect(page).toMatch(/<PublicInvitationRenderer\s+publicSlug=\{slug\}/);
-    expect(page).toMatch(/cache\(\(slug: string\) => loadPublicInvitation\(slug, createPublicInvitationPageDependencies\(\)\)\)/);
+    // LAUNCH-P0-02: the segment may be a friendly alias; RSVP/share cover bind to the resolved CANONICAL slug,
+    // and loading goes through the alias-aware wrapper around the unchanged 032A loadPublicInvitation.
+    expect(page).toMatch(/<PublicInvitationRenderer\s+publicSlug=\{publicSlug\}/);
+    expect(page).toMatch(/cache\(\(segment: string\) => loadPublicInvitationByRoute\(segment, createPublicInvitationPageDependencies\(\)\)\)/);
+    expect(read("lib/server/public-invitation/resolve-public-invitation-route.ts")).toMatch(/await loadPublicInvitation\(publicSlug, deps\)/);
     expect(page).not.toMatch(/service-role-client|openGraph|searchParams|headers\(/);
   });
 });

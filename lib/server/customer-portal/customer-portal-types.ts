@@ -17,6 +17,8 @@ export interface PortalInvitationRecord {
   variant: InvitationVariant;
   publicSlug: string;
   publishedVersionId: string;
+  /** LAUNCH-P0-02 friendly alias (GROOM/BRIDE only), `null` when none. */
+  publicAlias: string | null;
 }
 
 /** The `invitation_versions` row a published pointer references, as persisted. */
@@ -72,7 +74,7 @@ export interface CustomerPortalGateway {
 /** One published invitation as the customer sees it. No ids, storage paths or renderer data. */
 export interface CustomerPortalInvitationCard {
   variant: InvitationVariant;
-  /** Relative public path `/i/<public_slug>`. */
+  /** Relative public path: the friendly `/i/<alias>` when assigned (LAUNCH-P0-02), else `/i/<public_slug>`. */
   invitationPath: string;
   primaryName: string;
   secondaryName: string;

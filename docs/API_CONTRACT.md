@@ -1554,3 +1554,38 @@ No migration, RPC, Snapshot or ViewModel change. Every route: Bearer Staff auth 
 - **`GET /api/v2/internal/projects/[id]/photo-library`** → `200 { data: PhotoLibraryItem[] }`, oldest first: `{ id, mediaType, mimeType, sizeBytes, width, height, createdAt, previewUrl }` for slot-assignable photos only (`PHOTO`, `COVER`, `GALLERY`, `PORTRAIT_GROOM`, `PORTRAIT_BRIDE`, `PHOTO_STORY`, `LOVE_STORY_PHOTO`). No storage bucket/path or creator. `previewUrl` is a 1-hour URL signed at request time by the existing staff-scoped batch resolver (one RLS SELECT + one batch signing), or `null` when that one object cannot be signed; the bucket stays private. Unknown Project → 404.
 - **`GET /api/v2/internal/projects/[id]/editor-readiness`** → `200 { data: { overall, items, nextAction } }` (`docs/DECISIONS.md` "TE-05A" readiness model). No design → 200 with `overall: "BLOCKING"`, `nextAction: "Chọn mẫu thiệp"`. Draft slot rows that cannot be frozen → a BLOCKING `TEMPLATE_MEDIA_INVALID` item with a fixed message (no ids or DB detail). Staff guidance only; Review creation is unchanged.
 - **Uploads/deletes** reuse the Task 024 routes unchanged: the photo library uploads `mediaType: "PHOTO"` through `uploadProjectMedia`; deleting an assigned/pinned photo returns the existing 409, shown as "Ảnh đang được sử dụng và chưa thể xoá."
+
+## 39. LAUNCH-P0-02 — Human-Friendly Public URLs for SEPARATE Invitations
+
+**Scope.** Published SEPARATE invitations get a short public URL from the couple's names: GROOM `/i/minh-anh&thu-ha` (groom first), BRIDE `/i/thu-ha&minh-anh` (bride first). COMMON is unchanged (canonical link only). Migration `0049_invitation_public_aliases.sql`. The canonical `/i/<public_slug>` (0012, frozen by 0013b) stays valid and unchanged; personalized links stay `/i/<public_slug>/g/<token>`.
+
+**Alias.** Lowercase unaccented ASCII: diacritics removed, `đ` → `d`, words joined by `-`, the two names joined by a literal `&` (`lib/domain/invitation-public-alias.ts`; same shape as the 0049 CHECK, ≤ 100 chars). Never a Project code, number, random string or variant suffix. Disjoint from the canonical slug shape (which never contains `&`). A routing identifier, never authorization.
+
+**Persistence.** One alias per invitation (`invitation_id` PK), globally `UNIQUE`, write-once: renaming the couple or republishing never changes it. It resolves to the invitation's CURRENT PUBLISHED version, so a republish is served on the same alias.
+
+### 39.1 `POST /api/v2/internal/projects/[id]/public-aliases`
+
+Path A (Bearer → `requireStaff` → staff-scoped client). Body exactly `{ variant: "GROOM" | "BRIDE", alias?: string | null }`. Without `alias` the server derives the default from the variant's **current PUBLISHED Snapshot** names (integrity-gated; never the draft). With `alias` it must already be well-formed (never rewritten). Then `assign_invitation_public_alias` (0049; `SECURITY DEFINER`, empty `search_path`, `EXECUTE` to `authenticated` only) re-checks: active staff (PA001), shape (PA002), Project (PA003), SEPARATE package + GROOM/BRIDE (PA004), invitation (PA005), current PUBLISHED pointer (PA006 / PI001), not already aliased (PA007), alias free (PA008). No activity type is logged (frozen union §6); the row records `created_by`/`created_at`. Every response is `no-store`.
+
+| Condition | HTTP |
+|---|---|
+| Assigned | 201 `{ data: { variant, alias, publicPath } }` |
+| No/invalid bearer · not active staff | 401 · 403 |
+| Bad body / malformed alias / COMMON | 400 |
+| Project or invitation not found | 404 |
+| Alias used by another invitation | 409 `{ error, reason: "ALIAS_TAKEN", alias }` |
+| Invitation already has an alias | 409 `{ reason: "ALIAS_ALREADY_ASSIGNED" }` |
+| Not published | 409 `{ reason: "NOT_PUBLISHED" }` |
+| Not SEPARATE GROOM/BRIDE | 422 |
+| Default not derivable from the names | 422 `{ reason: "ALIAS_UNDERIVABLE" }` |
+| Other | fixed 500 |
+
+A collision never overwrites another couple's alias and never adds a suffix: Staff chooses another readable alias.
+
+### 39.2 Public resolution
+
+`/i/[slug]`: a canonical-slug segment is handled exactly as §19. An alias-shaped segment (`%26` decoded once) is resolved by `resolve_public_invitation_alias` (0049; `STABLE SECURITY DEFINER`, `service_role` only) to the bound invitation's canonical `public_slug`, only while its `published_version_id` is a valid PUBLISHED row (else not-found; pointer fault PI001 → the fixed §19 error). The page then runs the unchanged §19 pipeline and renders **at the alias address** (no redirect). RSVP (§20/§22.3) and the share cover (§21) receive the resolved canonical slug, so their bindings are unchanged. No draft/REVIEW fallback, no cross-Project or cross-variant resolution, no Snapshot change.
+
+### 39.3 Staff and Portal UI
+
+Xuất bản: every published variant shows its link (friendly when assigned, else canonical; "Link cũ vẫn hoạt động" shows the canonical path), labelled Nhà trai / Nhà gái / Thiệp chung, with **Mở thiệp** and **Sao chép link** (success only after the clipboard resolved). Unpublished variants show no link. After a successful publish of GROOM/BRIDE without an alias the tab requests the default alias in a separate call; a failure is reported as a link problem, never as a publish failure. A published GROOM/BRIDE without an alias shows the one-time **Tạo link đẹp**; on `ALIAS_TAKEN`/`ALIAS_UNDERIVABLE` it offers two name inputs (normalized live, preview shown). `GET …/publish` adds `publicLinks: { variant, canonicalPath, friendlyPath, canCreateFriendlyLink }[]` (published required variants only). The Customer Portal (§23) shows the friendly path when one exists, else the canonical path.

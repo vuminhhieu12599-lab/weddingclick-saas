@@ -75,6 +75,7 @@ function publishState(projectStatus: ProjectStatus, canPublish: boolean): Projec
     requiredVariants: ["COMMON"],
     projectBlocker: canPublish ? null : "LIFECYCLE_NOT_READY",
     allRequiredVariantsPublished: false,
+    publicLinks: [],
     variants: [
       {
         variant: "COMMON",

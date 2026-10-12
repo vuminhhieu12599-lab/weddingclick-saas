@@ -260,7 +260,7 @@ describe("033E-A A–E: PERSONALIZED_GUEST gating", () => {
     const record = (entitled: boolean) => ({
       projectCode: snapshot.project.code,
       packageCode: "SEPARATE",
-      invitations: [{ id: "11111111-0000-4000-8000-000000000001", variant: "COMMON" as const, publicSlug: "wc-a", publishedVersionId: "22222222-0000-4000-8000-000000000001" }],
+      invitations: [{ id: "11111111-0000-4000-8000-000000000001", variant: "COMMON" as const, publicSlug: "wc-a", publishedVersionId: "22222222-0000-4000-8000-000000000001" , publicAlias: null }],
       versions: [
         {
           id: "22222222-0000-4000-8000-000000000001",
@@ -694,13 +694,15 @@ describe("033E-B AG–AI: staff path, resolver and RSVP preserved", () => {
     // TE-03B (checkpoint maintenance): exactly 0046 may follow 0044; 0045 is retired and must stay absent.
     // OWS-04 (checkpoint maintenance): exactly the data-only catalog seed 0047 may follow 0046.
     // DB-CONSISTENCY-01 (checkpoint maintenance): exactly the data-only VH/RM catalog seed 0048 may follow 0047.
-    expect(readdirMigrations().slice(-6).map((name) => name.split("/").at(-1))).toEqual([
+    // LAUNCH-P0-02 (checkpoint maintenance): exactly 0049 (friendly public aliases) may follow 0048.
+    expect(readdirMigrations().slice(-7).map((name) => name.split("/").at(-1))).toEqual([
       "20260911041202_0042_personalized_guest_link.sql",
       "20260911041203_0043_legacy_v1_lockdown.sql",
       "20260911041204_0044_republish_after_published.sql",
       "20260911041206_0046_project_template_media_slots.sql",
       "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql",
       "20260911041208_0048_seed_vietnamese_heritage_romantic_minimal_v1_catalog.sql",
+      "20260911041209_0049_invitation_public_aliases.sql",
     ]);
   });
 });
@@ -856,7 +858,7 @@ describe("033E-C R–X: loader, entitlement, 033D and UI", () => {
     const record = (entitled: boolean) => ({
       projectCode: snapshot.project.code,
       packageCode: "SEPARATE",
-      invitations: [{ id: "11111111-0000-4000-8000-000000000001", variant: "COMMON" as const, publicSlug: "wc-a", publishedVersionId: "22222222-0000-4000-8000-000000000001" }],
+      invitations: [{ id: "11111111-0000-4000-8000-000000000001", variant: "COMMON" as const, publicSlug: "wc-a", publishedVersionId: "22222222-0000-4000-8000-000000000001" , publicAlias: null }],
       versions: [{ id: "22222222-0000-4000-8000-000000000001", invitationId: "11111111-0000-4000-8000-000000000001", projectId: PROJECT_A, versionType: "PUBLISHED", templateVersionId: FIXTURE_TEMPLATE_VERSION_ID, rendererKey: snapshot.template.rendererKey, payload: snapshot }],
       personalizedGuestEntitled: entitled,
     });

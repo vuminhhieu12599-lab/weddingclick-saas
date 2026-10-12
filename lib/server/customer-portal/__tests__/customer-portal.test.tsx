@@ -56,7 +56,7 @@ async function publication(variant: InvitationVariant, projectId = PROJECT_A) {
   const snapshot = (await buildRendererFixture({ variant })).snapshot;
   return {
     snapshot,
-    invitation: { id: ids[variant].inv, variant, publicSlug: `${snapshot.project.code.toLowerCase()}-${variant.toLowerCase()}`, publishedVersionId: ids[variant].ver },
+    invitation: { id: ids[variant].inv, variant, publicSlug: `${snapshot.project.code.toLowerCase()}-${variant.toLowerCase()}`, publishedVersionId: ids[variant].ver , publicAlias: null },
     version: {
       id: ids[variant].ver,
       invitationId: ids[variant].inv,
@@ -260,10 +260,11 @@ describe("K–P: boundaries", () => {
     );
   });
 
-  it("the repository queries exactly the five Project-scoped tables, each filtered by the resolved projectId", () => {
+  it("the repository queries exactly the six Project-scoped tables, each filtered by the resolved projectId", () => {
     const repo = strip(read(REPO));
-    expect([...repo.matchAll(/\.from\("([a-z_]+)"\)/g)].map((m) => m[1])).toEqual(["projects", "project_invitations", "invitation_versions", "project_addons", "rsvps"]);
-    expect(repo.match(/\.eq\("project_id", projectId\)/g)).toHaveLength(4);
+    // LAUNCH-P0-02: + invitation_public_aliases (friendly link display), Project-scoped like the rest.
+    expect([...repo.matchAll(/\.from\("([a-z_]+)"\)/g)].map((m) => m[1])).toEqual(["projects", "project_invitations", "invitation_public_aliases", "invitation_versions", "project_addons", "rsvps"]);
+    expect(repo.match(/\.eq\("project_id", projectId\)/g)).toHaveLength(5);
     expect(repo).toMatch(/\.eq\("id", projectId\)/);
     expect(repo).not.toMatch(/console\./);
   });
