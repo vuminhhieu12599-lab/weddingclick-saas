@@ -1103,6 +1103,8 @@ const HARNESS_WRAPPER = `${HARNESS_ROOT}/renderer-harness-client.tsx`;
 const STAFF_PREVIEW_WRAPPER = "app/admin/preview-frame/staff-preview-renderer.tsx";
 /** Task 033A: the public /i/[slug] wrapper, the only caller with a REAL RSVP capability. */
 const PUBLIC_INVITATION_WRAPPER = "app/i/[slug]/public-invitation-renderer.tsx";
+/** LAUNCH-P0-04 public showroom demo wrapper: fictional demo data, UNAVAILABLE-only RSVP. */
+const SHOWROOM_DEMO_WRAPPER = "app/mau-thiep/_components/demo-invitation-renderer.tsx";
 const HARNESS_SCENARIOS = `${HARNESS_ROOT}/harness-scenarios.ts`;
 const HARNESS_FILES = [HARNESS_GATE, HARNESS_PAGE, HARNESS_WRAPPER, HARNESS_SCENARIOS] as const;
 /** RF-06D: provenance note for the harness-only audio tone (not code). */
@@ -1598,11 +1600,13 @@ describe("RF-06C boundaries across the repository", () => {
   const appSources = nonTestSources("app");
   const productionSources = [...nonTestSources("templates"), ...nonTestSources("lib"), ...appSources];
 
-  it("only the production host, the harness wrapper, the staff preview wrapper and the Task 033A public wrapper render the host core", () => {
+  it("only the production host, the harness wrapper, the staff preview wrapper, the Task 033A public wrapper and the LAUNCH-P0-04 showroom demo wrapper render the host core", () => {
     const importers = productionSources.filter((file) =>
       resolvedImportsOf(file).includes(RF06C_HOST_CORE_MODULE.replace(/\.tsx$/, "")),
     );
-    expect(importers.sort()).toStrictEqual([HARNESS_WRAPPER, HOST_MODULE, PUBLIC_INVITATION_WRAPPER, STAFF_PREVIEW_WRAPPER].sort());
+    expect(importers.sort()).toStrictEqual(
+      [HARNESS_WRAPPER, HOST_MODULE, PUBLIC_INVITATION_WRAPPER, SHOWROOM_DEMO_WRAPPER, STAFF_PREVIEW_WRAPPER].sort(),
+    );
     for (const importer of importers) expect(readRepoFile(importer).startsWith('"use client";\n'), importer).toBe(true);
   });
 
@@ -1624,14 +1628,18 @@ describe("RF-06C boundaries across the repository", () => {
     }
   });
 
-  it("an RSVP capability is constructed only in the harness, staff preview and Task 033A public wrappers; preview ones only as UNAVAILABLE", () => {
+  it("an RSVP capability is constructed only in the harness, staff preview, Task 033A public and showroom demo wrappers; preview and demo ones only as UNAVAILABLE", () => {
     for (const file of productionSources) {
       const constructs = /:\s*RsvpCapabilityV1\s*=/.test(codeOf(file));
-      expect(constructs, file).toBe(file === HARNESS_WRAPPER || file === STAFF_PREVIEW_WRAPPER || file === PUBLIC_INVITATION_WRAPPER);
+      expect(constructs, file).toBe(
+        file === HARNESS_WRAPPER || file === STAFF_PREVIEW_WRAPPER || file === PUBLIC_INVITATION_WRAPPER || file === SHOWROOM_DEMO_WRAPPER,
+      );
     }
-    const staffPreview = codeOf(STAFF_PREVIEW_WRAPPER);
-    expect(staffPreview).toMatch(/Object\.freeze\(\{ status: "UNAVAILABLE" \}\)/);
-    expect(staffPreview).not.toMatch(/"SUCCESS"|fetch\(|supabase|"rsvps"|method:/i);
+    for (const unavailableOnly of [STAFF_PREVIEW_WRAPPER, SHOWROOM_DEMO_WRAPPER]) {
+      const code = codeOf(unavailableOnly);
+      expect(code, unavailableOnly).toMatch(/Object\.freeze\(\{ status: "UNAVAILABLE" \}\)/);
+      expect(code, unavailableOnly).not.toMatch(/"SUCCESS"|fetch\(|supabase|"rsvps"|method:/i);
+    }
   });
 
   it("no server-safe registry, manifest or fixture module reaches an RF-06C module", () => {

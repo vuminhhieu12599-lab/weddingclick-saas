@@ -127,6 +127,16 @@ Suggested public invitation route family:
 /i/[slug]
 ```
 
+Public showroom (LAUNCH-P0-04; static, no backend, no customer data):
+
+```text
+/                                      showroom homepage
+/mau-thiep/[templateCode]              live demo, thiệp chung (COMMON)
+/mau-thiep/[templateCode]/nha-trai     live demo, GROOM
+/mau-thiep/[templateCode]/nha-gai      live demo, BRIDE
+/tu-van?mau=[templateCode]             consultation with the chosen template
+```
+
 Personalized guest access should use a secure guest token in a path segment or query parameter that is validated server-side.
 
 Do not use predictable Project IDs as access control.

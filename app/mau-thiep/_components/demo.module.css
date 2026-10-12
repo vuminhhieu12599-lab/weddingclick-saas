@@ -1,0 +1,242 @@
+/* LAUNCH-P0-04 — showroom demo frame (in-flow bar above, CTA below the real invitation). */
+
+.root {
+  --d-ivory: #fbf7f0;
+  --d-ink: #2a211d;
+  --d-ink-soft: #564a43;
+  --d-muted: #7d7067;
+  --d-line: rgba(42, 33, 29, 0.12);
+  --d-gold: #a9864f;
+  --d-burgundy: #74202f;
+  --d-burgundy-deep: #4f1420;
+  --d-display: var(--sr-font-display), "Cormorant Garamond", Georgia, serif;
+  --d-sans: var(--sr-font-sans), "Inter", system-ui, sans-serif;
+
+  min-height: 100svh;
+  background: var(--d-ivory);
+  overflow-x: clip;
+}
+
+.root :focus-visible {
+  outline: 2px solid var(--d-burgundy);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.bar {
+  position: relative;
+  z-index: 1;
+  padding: 10px 14px 10px;
+  background: var(--d-ivory);
+  border-bottom: 1px solid var(--d-line);
+  font-family: var(--d-sans);
+  color: var(--d-ink);
+}
+
+.barRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding-right: 6px;
+  font-size: 14px;
+  color: var(--d-ink-soft);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.back:hover {
+  color: var(--d-ink);
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+}
+
+.badge {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(169, 134, 79, 0.45);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--d-gold);
+  white-space: nowrap;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--d-display);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+@media (max-width: 400px) {
+  .name {
+    display: none;
+  }
+}
+
+.choose {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--d-burgundy);
+  color: #fffdf9;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.choose:hover {
+  background: var(--d-burgundy-deep);
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  max-width: 360px;
+  margin: 10px auto 0;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(42, 33, 29, 0.06);
+}
+
+.tab {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 38px;
+  border-radius: 999px;
+  font-size: 14px;
+  color: var(--d-ink-soft);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--d-ink);
+}
+
+.tab[aria-current="page"] {
+  background: #fffdf9;
+  color: var(--d-ink);
+  font-weight: 500;
+  box-shadow: 0 4px 12px -6px rgba(62, 36, 22, 0.35);
+}
+
+.note {
+  max-width: 520px;
+  margin: 8px auto 0;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--d-muted);
+}
+
+.footer {
+  position: relative;
+  z-index: 1;
+  padding: 56px 20px 64px;
+  background: var(--d-ivory);
+  border-top: 1px solid var(--d-line);
+  text-align: center;
+  font-family: var(--d-sans);
+  color: var(--d-ink);
+}
+
+.footerEyebrow {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--d-gold);
+}
+
+.footerTitle {
+  margin: 10px auto 0;
+  max-width: 560px;
+  font-family: var(--d-display);
+  font-size: clamp(30px, 7vw, 42px);
+  font-weight: 500;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.footerText {
+  margin: 12px auto 0;
+  max-width: 480px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--d-ink-soft);
+}
+
+.footerActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  padding: 0 28px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.primary {
+  background: var(--d-burgundy);
+  color: #fffdf9;
+}
+
+.primary:hover {
+  background: var(--d-burgundy-deep);
+}
+
+.secondary {
+  border: 1px solid rgba(42, 33, 29, 0.28);
+  color: var(--d-ink);
+}
+
+.secondary:hover {
+  border-color: var(--d-ink);
+}
+
+@media (max-width: 420px) {
+  .primary,
+  .secondary {
+    flex: 1 1 100%;
+  }
+}
