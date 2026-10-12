@@ -1,6 +1,6 @@
 "use client";
 
-import { fetchEditorReadiness } from "../../../../../../lib/admin/admin-api-client";
+import { adminQueries } from "../../../../../../lib/admin/admin-queries";
 import { useAdminQuery } from "../../../../../../lib/admin/use-admin-query";
 import type { EditorReadiness, EditorReadinessItemStatus } from "../../../../../../lib/server/template-editor/editor-readiness";
 import { ErrorState, LoadingState } from "../../../_components/page-states";
@@ -54,7 +54,8 @@ export function EditorReadinessView({ readiness, templateName, onReload }: { rea
 }
 
 export function EditorReadinessPanel({ projectId, templateName, revision }: { projectId: string; templateName: string | null; revision: number }) {
-  const { data, loading, error, reload } = useAdminQuery(() => fetchEditorReadiness(projectId), [projectId, revision]);
+  const query = adminQueries.editorReadiness(projectId);
+  const { data, loading, error, reload } = useAdminQuery(query.fetch, [projectId, revision], { cacheKey: query.key });
   if (loading && !data) return <LoadingState label="Đang kiểm tra tiến độ nội dung..." />;
   if (error || !data) return <ErrorState message={error ?? "Không thể kiểm tra tiến độ nội dung"} onRetry={reload} />;
   return <EditorReadinessView readiness={data} templateName={templateName} onReload={reload} />;

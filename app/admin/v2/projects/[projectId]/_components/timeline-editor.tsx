@@ -5,7 +5,6 @@ import { useState } from "react";
 import {
   createProjectTimelineItem,
   deleteProjectTimelineItem,
-  fetchProjectTimeline,
   updateProjectTimelineItem,
 } from "../../../../../../lib/admin/admin-api-client";
 import {
@@ -14,6 +13,7 @@ import {
   parseTimelineForm,
   reorderPlan,
 } from "../../../../../../lib/admin/optional-content-editor";
+import { adminQueries } from "../../../../../../lib/admin/admin-queries";
 import { useAdminQuery } from "../../../../../../lib/admin/use-admin-query";
 import type { ProjectTimelineItemRecord } from "../../../../../../lib/server/project-timeline/project-timeline-types";
 import { ErrorState, LoadingState } from "../../../_components/page-states";
@@ -139,7 +139,8 @@ export function TimelineEditorView({
 }
 
 export function TimelineEditor({ projectId, onSaved }: { projectId: string; onSaved: () => void }) {
-  const { data, loading, error, reload } = useAdminQuery(() => fetchProjectTimeline(projectId), [projectId]);
+  const query = adminQueries.timeline(projectId);
+  const { data, loading, error, reload } = useAdminQuery(query.fetch, [projectId], { cacheKey: query.key });
   if (loading) return <LoadingState label="Đang tải lịch trình..." />;
   if (error || !data) return <ErrorState message={error ?? "Không thể tải lịch trình"} onRetry={reload} />;
   return <TimelineEditorView projectId={projectId} initialItems={data} onSaved={onSaved} />;

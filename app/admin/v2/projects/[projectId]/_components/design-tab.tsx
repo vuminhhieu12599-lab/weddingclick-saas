@@ -3,11 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import {
-  fetchProjectDesign,
-  fetchTemplateCatalog,
-  saveProjectDesign,
-} from "../../../../../../lib/admin/admin-api-client";
+import { saveProjectDesign } from "../../../../../../lib/admin/admin-api-client";
 import {
   buildDesignAssignmentBody,
   findTemplateVersionOption,
@@ -15,6 +11,7 @@ import {
   listTemplateVersionOptions,
   UNSUPPORTED_TEMPLATE_VERSION_MESSAGE,
 } from "../../../../../../lib/admin/design-assignment";
+import { adminQueries } from "../../../../../../lib/admin/admin-queries";
 import { useAdminQuery } from "../../../../../../lib/admin/use-admin-query";
 import type { ProjectDesignRecord } from "../../../../../../lib/server/project-design/project-design-types";
 import type { ProjectSummary } from "../../../../../../lib/server/projects/project-types";
@@ -181,13 +178,8 @@ export function DesignAssignmentView({
 }
 
 export function DesignTab({ project, onNavigate }: { project: ProjectSummary; onNavigate?: (tab: TabKey) => void }) {
-  const { data, loading, error, reload } = useAdminQuery(
-    async () => {
-      const [catalog, design] = await Promise.all([fetchTemplateCatalog(), fetchProjectDesign(project.id)]);
-      return { catalog, design };
-    },
-    [project.id],
-  );
+  const designQuery = adminQueries.designAndCatalog(project.id);
+  const { data, loading, error, reload } = useAdminQuery(designQuery.fetch, [project.id], { cacheKey: designQuery.key });
   const [savedDesign, setSavedDesign] = useState<ProjectDesignRecord | null>(null);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>({ kind: "IDLE" });

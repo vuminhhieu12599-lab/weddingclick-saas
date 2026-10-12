@@ -72,7 +72,9 @@ describe("Task 034C boundaries", () => {
     }
     expect(readFileSync(join(ROOT, "lib/server/routes/admin-dashboard.ts"), "utf8")).toMatch(/requireStaff\(/);
     const page = readFileSync(join(ROOT, "app/admin/v2/page.tsx"), "utf8");
-    expect(page).toContain("fetchAdminDashboard()");
+    // LAUNCH-P0-03: the page reads the dashboard through its reuse definition, which is the aggregate endpoint.
+    expect(page).toContain("adminQueries.dashboard()");
+    expect(readFileSync(join(ROOT, "lib/admin/admin-queries.ts"), "utf8")).toMatch(/dashboard: \(\) => \(\{ key: "dashboard", fetch: \(\) => fetchAdminDashboard\(\) \}\)/);
     expect(page).not.toMatch(/PROJECT_LIST_LIMIT|isStatusNeedingStaffAttention|\.filter\(/);
 
     // Task 035B: the only migration allowed after 0042 is the owner-approved legacy V1 lockdown.

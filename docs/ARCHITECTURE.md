@@ -155,6 +155,8 @@ Do not expose Supabase service-role credentials to client components.
 
 The full per-use-case contract (direct-RLS vs. trusted-business-action classification, the two customer/guest security paths, error model, and activity-log union) is frozen in `docs/API_CONTRACT.md`.
 
+**V2 Admin browser read layer (LAUNCH-P0-03).** `lib/admin/admin-api-client.ts` shares identical in-flight GETs (same access token + path) and bounds reads (20 s abort) and the local session read (10 s); writes are never shared, stored, aborted or retried, and invalidate every shared/stored read. `lib/admin/admin-data-cache.ts` + `lib/admin/admin-queries.ts` let `useAdminQuery` reuse an explicitly keyed result for 30 s, in browser memory only, partitioned by the signed-in Staff user and cleared on any write, sign-out or user change. Review/Publish state, Activity, access links, previews and signed-URL reads are never reused. This is a latency layer only: every request is still authorized server-side (`requireStaff` + RLS), and the Admin layout may mount the page while `/me` is still verifying because the page's reads authorize independently (`docs/SECURITY.md` §19).
+
 ---
 
 ## 6. Domain Modules

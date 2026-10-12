@@ -20,6 +20,7 @@ import {
   validateMediaFile,
   type MediaRoleConfig,
 } from "../../../../../../lib/admin/optional-content-editor";
+import { adminQueries } from "../../../../../../lib/admin/admin-queries";
 import { useAdminQuery } from "../../../../../../lib/admin/use-admin-query";
 import type { ProjectMediaRecord } from "../../../../../../lib/server/media/media-types";
 import { ErrorState, LoadingState } from "../../../_components/page-states";
@@ -216,7 +217,8 @@ export function MediaEditor({
   onSaved: () => void;
   roles?: readonly MediaRoleConfig[];
 }) {
-  const { data, loading, error, reload } = useAdminQuery(() => fetchProjectMedia(projectId), [projectId]);
+  const query = adminQueries.media(projectId);
+  const { data, loading, error, reload } = useAdminQuery(query.fetch, [projectId], { cacheKey: query.key });
   if (loading) return <LoadingState label="Đang tải ảnh & âm thanh..." />;
   if (error || !data) return <ErrorState message={error ?? "Không thể tải ảnh & âm thanh"} onRetry={reload} />;
   return <MediaEditorView projectId={projectId} initialMedia={data} onSaved={onSaved} roles={roles} />;

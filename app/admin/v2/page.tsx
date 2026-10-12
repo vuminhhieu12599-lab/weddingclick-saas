@@ -1,6 +1,6 @@
 "use client";
 
-import { fetchAdminDashboard, fetchProjects } from "../../../lib/admin/admin-api-client";
+import { adminQueries } from "../../../lib/admin/admin-queries";
 import { useAdminQuery } from "../../../lib/admin/use-admin-query";
 import { DashboardView } from "./_components/dashboard-view";
 import { EmptyState, ErrorState, LoadingState } from "./_components/page-states";
@@ -11,9 +11,11 @@ const RECENT_PROJECTS_COUNT = 5;
 
 export default function AdminDashboardPage() {
   // Totals come from the server aggregate endpoint (exact counts, no 100-row cap).
-  const dashboard = useAdminQuery(() => fetchAdminDashboard(), []);
+  const dashboardQuery = adminQueries.dashboard();
+  const dashboard = useAdminQuery(dashboardQuery.fetch, [], { cacheKey: dashboardQuery.key });
   // "Dự án gần đây": the existing list endpoint (created_at DESC, id DESC), bounded to 5.
-  const recent = useAdminQuery(() => fetchProjects({ limit: RECENT_PROJECTS_COUNT }), []);
+  const recentQuery = adminQueries.projects(RECENT_PROJECTS_COUNT);
+  const recent = useAdminQuery(recentQuery.fetch, [], { cacheKey: recentQuery.key });
 
   return (
     <div>

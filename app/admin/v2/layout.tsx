@@ -9,6 +9,10 @@ import { useStaffSession } from "./_hooks/use-staff-session";
 /**
  * V2 Admin shell/auth-guard layout (UI-001). Applies to every route under
  * `/admin/v2` without touching the unrelated V1 `/admin` route.
+ *
+ * LAUNCH-P0-03: while `/me` confirms the Staff profile (`verifying`) the
+ * shell and page are already mounted, so the page's own reads — each
+ * authorized server-side by requireStaff + RLS — load in parallel with it.
  */
 export default function AdminV2Layout({ children }: { children: React.ReactNode }) {
   const session = useStaffSession();
@@ -34,10 +38,17 @@ export default function AdminV2Layout({ children }: { children: React.ReactNode 
         <div className="max-w-sm rounded-xl border border-red-200 bg-red-50 p-6 text-center">
           <p className="text-sm font-medium text-red-700">Không thể mở khu vực quản trị V2</p>
           <p className="mt-2 text-sm text-red-600">{session.message}</p>
+          <button
+            type="button"
+            onClick={session.retry}
+            className="mt-4 min-h-11 w-full rounded-lg border border-red-300 bg-white px-4 text-sm font-medium text-red-700 hover:bg-red-100 sm:w-auto"
+          >
+            Thử lại
+          </button>
         </div>
       </div>
     );
   }
 
-  return <AdminShell staff={session.staff}>{children}</AdminShell>;
+  return <AdminShell staff={session.status === "ready" ? session.staff : null}>{children}</AdminShell>;
 }
