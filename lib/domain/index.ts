@@ -20,3 +20,4 @@ export * from "./guest-display-name";
 export * from "./template-design-manifest";
 export * from "./activity-action-type";
 export * from "./project-dashboard-groups";
+export * from "./invitation-public-alias";

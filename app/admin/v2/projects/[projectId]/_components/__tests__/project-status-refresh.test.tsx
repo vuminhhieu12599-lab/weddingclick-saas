@@ -202,6 +202,7 @@ describe("PublishTab change handler", () => {
     requiredVariants: ["COMMON"],
     projectBlocker: "LIFECYCLE_NOT_READY",
     allRequiredVariantsPublished: false,
+    publicLinks: [],
     variants: [
       {
         variant: "COMMON",

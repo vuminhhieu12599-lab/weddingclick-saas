@@ -411,6 +411,8 @@ Critical constraint:
 
 - unique `(project_id, variant)`.
 
+**Friendly public alias (LAUNCH-P0-02, migration 0049).** `invitation_public_aliases` holds at most one write-once alias per published SEPARATE (`GROOM`/`BRIDE`) invitation: `invitation_id` PK, `project_id` (composite FK to `project_invitations(id, project_id)`, `ON DELETE RESTRICT`), `alias` `UNIQUE` across all Projects with the shape CHECK `name-slug&name-slug` (≤ 100 chars), `created_by`, `created_at`. Forced RLS, staff SELECT only; no direct writes (only `assign_invitation_public_alias`); a trigger rejects every UPDATE/DELETE. `public_slug` is unchanged and remains the canonical locator. See `docs/API_CONTRACT.md` §39.
+
 Package entitlement determines which variants are allowed.
 
 Do not store duplicated groom/bride/family/event data here.

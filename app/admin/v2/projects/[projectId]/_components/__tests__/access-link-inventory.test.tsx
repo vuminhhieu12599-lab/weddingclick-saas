@@ -161,6 +161,7 @@ describe("PublishTab integration (AC)", () => {
       requiredVariants: ["COMMON"],
       projectBlocker: "PROJECT_CLOSED",
       allRequiredVariantsPublished: true,
+      publicLinks: [],
       variants: [{ variant: "COMMON", invitationId: "a1", currentReview: null, publishedVersion: published, upToDate: true, canPublish: false, blocker: "PROJECT_CLOSED" }],
     };
     const html = renderToStaticMarkup(<PublishTab project={{ id: PROJECT_ID, status: "PUBLISHED" } as ProjectSummary} />);

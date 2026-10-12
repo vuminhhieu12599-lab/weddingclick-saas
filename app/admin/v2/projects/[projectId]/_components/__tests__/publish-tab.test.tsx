@@ -15,11 +15,13 @@ vi.mock("../../../../../../../lib/admin/use-admin-query", () => ({
 vi.mock("../../../../../../../lib/admin/admin-api-client", () => ({
   fetchProjectPublishState: vi.fn(),
   publishInvitationVariant: vi.fn(),
+  assignInvitationPublicAlias: vi.fn(),
   markProjectPaid: vi.fn(),
   transitionProjectStatus: vi.fn(),
 }));
 
 const { PublishTab, nextPaymentStep, publishErrorFeedback } = await import("../publish-tab");
+const { friendlyLinkFailure } = await import("../public-link-panel");
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
 const project = { id: PROJECT_ID, status: "READY_TO_PUBLISH" } as ProjectSummary;
@@ -40,6 +42,7 @@ describe("PublishTab", () => {
       requiredVariants: ["GROOM", "BRIDE"],
       projectBlocker: null,
       allRequiredVariantsPublished: false,
+      publicLinks: [],
       variants: [
         {
           variant: "GROOM",
@@ -80,6 +83,7 @@ describe("PublishTab", () => {
       requiredVariants: ["COMMON"],
       projectBlocker: "PAYMENT_NOT_READY",
       allRequiredVariantsPublished: false,
+      publicLinks: [],
       variants: [
         { variant: "COMMON", invitationId: "a1", currentReview: review(1), publishedVersion: null, upToDate: false, canPublish: false, blocker: "PAYMENT_NOT_READY" },
       ],
@@ -111,6 +115,7 @@ describe("PublishTab", () => {
       requiredVariants: ["COMMON"],
       projectBlocker: "PAYMENT_NOT_READY",
       allRequiredVariantsPublished: false,
+      publicLinks: [],
       variants: [
         { variant: "COMMON", invitationId: "a1", currentReview: review(1), publishedVersion: null, upToDate: false, canPublish: false, blocker: "PAYMENT_NOT_READY" },
       ],
@@ -128,5 +133,73 @@ describe("PublishTab", () => {
     expect(publishErrorFeedback(new AdminApiError(409, "x", { error: "x", reason: "PAYMENT_NOT_READY" })).message).toContain("thanh toán");
     expect(publishErrorFeedback(new AdminApiError(403, "x")).message).toContain("không có quyền");
     expect(publishErrorFeedback(new Error("boom")).message).toContain("Không thể xuất bản");
+  });
+
+  it("LAUNCH-P0-02: published sides show their link with Mở thiệp / Sao chép link; Tạo link đẹp only without alias; unpublished side has no link", () => {
+    const publishedVersion = (id: string, inv: string) => ({
+      id,
+      invitationId: inv,
+      projectId: PROJECT_ID,
+      versionNumber: 2,
+      sourceReviewVersionId: review(1).id,
+      sourceReviewVersionNumber: 1,
+      templateVersionId: "t",
+      rendererKeySnapshot: "r",
+      publishedAt: "2026-10-02T00:00:00.000Z",
+    });
+    const base = {
+      projectId: PROJECT_ID,
+      projectStatus: "READY_TO_PUBLISH" as const,
+      paymentStatus: "PAID" as const,
+      packageCode: "SEPARATE",
+      requiredVariants: ["GROOM" as const, "BRIDE" as const],
+      projectBlocker: null,
+      allRequiredVariantsPublished: false,
+    };
+    queryData = {
+      ...base,
+      variants: [
+        { variant: "GROOM", invitationId: "a1", currentReview: review(1), publishedVersion: publishedVersion("e1", "a1"), upToDate: true, canPublish: false, blocker: "ALREADY_PUBLISHED" },
+        { variant: "BRIDE", invitationId: "a2", currentReview: review(1), publishedVersion: publishedVersion("e2", "a2"), upToDate: true, canPublish: false, blocker: "ALREADY_PUBLISHED" },
+      ],
+      publicLinks: [
+        { variant: "GROOM", canonicalPath: "/i/wc-2026-000046-groom", friendlyPath: "/i/minh-anh&thu-ha", canCreateFriendlyLink: false, suggestedAlias: null },
+        { variant: "BRIDE", canonicalPath: "/i/wc-2026-000046-bride", friendlyPath: null, canCreateFriendlyLink: true, suggestedAlias: "thu-ha&minh-anh" },
+      ],
+    };
+    const html = renderToStaticMarkup(<PublishTab project={project} />);
+    const groom = html.slice(html.indexOf('data-testid="public-link-GROOM"'), html.indexOf('data-testid="publish-variant-BRIDE"'));
+    const bride = html.slice(html.indexOf('data-testid="public-link-BRIDE"'));
+    expect(groom).toContain("Link thiệp Nhà trai");
+    expect(groom).toContain('href="/i/minh-anh&amp;thu-ha"');
+    expect(groom).toContain("Mở thiệp");
+    expect(groom).toContain("Sao chép link");
+    expect(groom).toContain("Link cũ vẫn hoạt động");
+    expect(groom).not.toContain("Tạo link đẹp");
+    expect(bride).toContain("Link thiệp Nhà gái");
+    expect(bride).toContain('href="/i/wc-2026-000046-bride"');
+    expect(bride).toContain("Tạo link đẹp");
+    // Review step is closed until Staff opens it; nothing is confirmed on render.
+    expect(bride).not.toContain("Xác nhận tạo link");
+
+    queryData = {
+      ...queryData,
+      variants: [queryData.variants[0], { variant: "BRIDE", invitationId: "a2", currentReview: review(1), publishedVersion: null, upToDate: false, canPublish: true, blocker: null }],
+      publicLinks: [queryData.publicLinks[0]],
+    };
+    const partial = renderToStaticMarkup(<PublishTab project={project} />);
+    expect(partial).not.toContain('data-testid="public-link-BRIDE"');
+    expect(partial).not.toContain("wc-2026-000046-bride");
+  });
+
+  it("LAUNCH-P0-02: friendly-link failures are usable and never claim the publication failed", () => {
+    const taken = friendlyLinkFailure(new AdminApiError(409, "x", { reason: "ALIAS_TAKEN", alias: "minh-anh&thu-ha" }));
+    expect(taken.manual).toBe(true);
+    expect(taken.suggestion).toEqual({ primary: "minh-anh", secondary: "thu-ha" });
+    expect(taken.message).toContain("/i/minh-anh&thu-ha");
+    expect(friendlyLinkFailure(new AdminApiError(422, "x", { reason: "ALIAS_UNDERIVABLE" })).manual).toBe(true);
+    const generic = friendlyLinkFailure(new Error("network"));
+    expect(generic.message).toContain("Thiệp vẫn đã xuất bản");
+    expect(generic.message).not.toMatch(/Chưa xuất bản/);
   });
 });

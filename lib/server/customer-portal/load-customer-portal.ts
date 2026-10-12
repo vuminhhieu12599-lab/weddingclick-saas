@@ -1,4 +1,4 @@
-import { INVITATION_VARIANTS } from "../../domain";
+import { INVITATION_VARIANTS, invitationPublicAliasPath } from "../../domain";
 import { buildInvitationViewModel } from "../../invitation-rendering/build-invitation-view-model";
 import { deriveEventDateTimePresentationV1 } from "../../invitation-rendering/event-date-time-presentation";
 import type { MediaResolver } from "../../invitation-rendering/invitation-view-model-types";
@@ -91,7 +91,8 @@ export async function loadCustomerPortal(rawToken: string, deps: LoadCustomerPor
     const viewModel = buildInvitationViewModel({ snapshot, mediaResolutions: await resolveSnapshotMedia(snapshot, NO_MEDIA_RESOLVER) });
     invitations.push({
       variant,
-      invitationPath: `/i/${invitation.publicSlug}`,
+      // LAUNCH-P0-02: prefer the friendly link; the canonical one stays valid.
+      invitationPath: invitation.publicAlias === null ? `/i/${invitation.publicSlug}` : invitationPublicAliasPath(invitation.publicAlias),
       primaryName: viewModel.people.primary.name,
       secondaryName: viewModel.people.secondary.name,
       ceremonyTitle: viewModel.ceremony.title,

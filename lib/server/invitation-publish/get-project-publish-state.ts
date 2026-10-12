@@ -1,14 +1,52 @@
-import type { PaymentStatus, ProjectStatus } from "../../domain";
+import { invitationPublicAliasPath, isPublicAliasVariant, type PaymentStatus, type ProjectStatus } from "../../domain";
 import type { StaffContext } from "../auth/staff-context";
 import { ApiError } from "../errors/api-error";
 import { evaluateProjectReviewState, type ProjectReviewStateDependencies } from "../invitation-review/get-project-review-state";
 import type { ProjectInvitationRecord, ProjectReviewState, ReviewVersionSummary } from "../invitation-review/invitation-review-types";
+import { deriveAliasFromPublishedSnapshot } from "../invitation-alias/assign-invitation-public-alias";
+import type { InvitationAliasGateway, InvitationPublicLinkRecord } from "../invitation-alias/invitation-alias-types";
 import { isValidUuid } from "../validation/uuid";
 import type { InvitationPublishGateway } from "./invitation-publish-gateway";
-import type { ProjectPublishState, PublishedVersionSummary, RequiredVariantPublishState } from "./invitation-publish-types";
+import type {
+  ProjectPublishState,
+  PublishedVariantPublicLink,
+  PublishedVersionSummary,
+  RequiredVariantPublishState,
+} from "./invitation-publish-types";
 
 export interface ProjectPublishStateDependencies<TClient> extends ProjectReviewStateDependencies<TClient> {
   publications: Pick<InvitationPublishGateway<TClient>, "listPublishedVersionsByIds">;
+  /** LAUNCH-P0-02: canonical slugs + friendly aliases (direct RLS). */
+  links: Pick<InvitationAliasGateway<TClient>, "listPublicLinks" | "getPublishedSnapshot">;
+}
+
+/**
+ * LAUNCH-P0-02: links only for required variants with a current publication.
+ * COMMON keeps only its canonical path. A link record that is missing for a
+ * published variant is a load fault, never a silent omission.
+ */
+export function evaluatePublicLinks(
+  variants: readonly RequiredVariantPublishState[],
+  links: readonly InvitationPublicLinkRecord[],
+): PublishedVariantPublicLink[] {
+  return variants.flatMap((row) => {
+    if (row.publishedVersion === null) return [];
+    const link = links.find((item) => item.invitationId === row.invitationId && item.variant === row.variant);
+    if (link === undefined) {
+      throw new Error("Public link could not be loaded for a published invitation");
+    }
+    const eligible = isPublicAliasVariant(row.variant);
+    const alias = eligible ? link.alias : null;
+    return [
+      {
+        variant: row.variant,
+        canonicalPath: `/i/${link.publicSlug}`,
+        friendlyPath: alias === null ? null : invitationPublicAliasPath(alias),
+        canCreateFriendlyLink: eligible && alias === null,
+        suggestedAlias: null,
+      },
+    ];
+  });
 }
 
 const CLOSED_STATUSES: readonly ProjectStatus[] = ["PUBLISHED", "COMPLETED", "ARCHIVED"];
@@ -41,6 +79,8 @@ export function evaluateProjectPublishState(input: {
   invitations: readonly ProjectInvitationRecord[];
   publishedVersions: readonly PublishedVersionSummary[];
   sourceReviews: readonly ReviewVersionSummary[];
+  /** LAUNCH-P0-02; omitted only by callers that render no links. */
+  publicLinks?: readonly InvitationPublicLinkRecord[];
 }): ProjectPublishState {
   const { review } = input;
   const projectBlocker = projectPublishBlocker(review.projectStatus, input.paymentStatus);
@@ -96,6 +136,7 @@ export function evaluateProjectPublishState(input: {
     projectBlocker,
     variants,
     allRequiredVariantsPublished: variants.length > 0 && variants.every((row) => row.upToDate),
+    publicLinks: input.publicLinks === undefined ? [] : evaluatePublicLinks(variants, input.publicLinks),
   };
 }
 
@@ -129,6 +170,8 @@ export async function getProjectPublishState<TClient>(
     publishedIds.length === 0 ? [] : await deps.publications.listPublishedVersionsByIds(client, rawProjectId, publishedIds);
   const reviewIds = [...new Set([...currentIds, ...publishedVersions.map((row) => row.sourceReviewVersionId)])];
 
+  const publicLinks = publishedIds.length === 0 ? [] : await deps.links.listPublicLinks(client, rawProjectId);
+
   const [reviewVersions, feedback] =
     reviewIds.length === 0
       ? [[], []]
@@ -146,11 +189,23 @@ export async function getProjectPublishState<TClient>(
     feedback,
   });
 
-  return evaluateProjectPublishState({
+  const state = evaluateProjectPublishState({
     review,
     paymentStatus: project.paymentStatus,
     invitations,
     publishedVersions,
     sourceReviews: reviewVersions,
+    publicLinks,
   });
+
+  // LAUNCH-P0-02 review-before-write: propose (never assign) an alias from
+  // the PUBLISHED names for each published GROOM/BRIDE still without one.
+  const withSuggestions = await Promise.all(
+    state.publicLinks.map(async (link) => {
+      if (!link.canCreateFriendlyLink || (link.variant !== "GROOM" && link.variant !== "BRIDE")) return link;
+      const published = await deps.links.getPublishedSnapshot(client, rawProjectId, link.variant);
+      return { ...link, suggestedAlias: published === null ? null : deriveAliasFromPublishedSnapshot(link.variant, published) };
+    }),
+  );
+  return { ...state, publicLinks: withSuggestions };
 }

@@ -1,4 +1,4 @@
-import { INVITATION_VARIANTS, RSVP_ATTENDANCE_STATUSES, SERVICE_ADDON_CODES, type InvitationVariant, type RsvpAttendanceStatus } from "../../domain";
+import { INVITATION_VARIANTS, isWellFormedInvitationPublicAlias, RSVP_ATTENDANCE_STATUSES, SERVICE_ADDON_CODES, type InvitationVariant, type RsvpAttendanceStatus } from "../../domain";
 import type {
   CustomerPortalGateway,
   PortalInvitationRecord,
@@ -40,7 +40,24 @@ function fail(): never {
   throw new Error("Failed to load customer portal");
 }
 
-export function toPortalInvitations(rows: unknown): PortalInvitationRecord[] {
+/**
+ * LAUNCH-P0-02: `invitation_public_aliases` rows of the resolved Project →
+ * alias by invitation id. Only GROOM/BRIDE rows can exist (0049); an alias
+ * of another Project or a malformed alias fails closed.
+ */
+export function toPortalAliases(rows: unknown, projectId: string): Map<string, string> {
+  if (!Array.isArray(rows)) fail();
+  const aliases = new Map<string, string>();
+  for (const row of rows) {
+    if (typeof row !== "object" || row === null) fail();
+    const r = row as Record<string, unknown>;
+    if (!isUuid(r.invitation_id) || r.project_id !== projectId || typeof r.alias !== "string" || !isWellFormedInvitationPublicAlias(r.alias)) fail();
+    aliases.set(r.invitation_id, r.alias);
+  }
+  return aliases;
+}
+
+export function toPortalInvitations(rows: unknown, aliases: ReadonlyMap<string, string> = new Map()): PortalInvitationRecord[] {
   if (!Array.isArray(rows)) fail();
   return rows.map((row: unknown) => {
     if (typeof row !== "object" || row === null) fail();
@@ -48,7 +65,13 @@ export function toPortalInvitations(rows: unknown): PortalInvitationRecord[] {
     if (!isUuid(r.id) || !isVariant(r.variant) || typeof r.public_slug !== "string" || r.public_slug.length === 0 || !isUuid(r.published_version_id)) {
       fail();
     }
-    return { id: r.id, variant: r.variant, publicSlug: r.public_slug, publishedVersionId: r.published_version_id };
+    return {
+      id: r.id,
+      variant: r.variant,
+      publicSlug: r.public_slug,
+      publishedVersionId: r.published_version_id,
+      publicAlias: aliases.get(r.id) ?? null,
+    };
   });
 }
 
@@ -162,7 +185,12 @@ export function getServiceRoleCustomerPortalGateway(): CustomerPortalGateway {
         .eq("project_id", projectId)
         .not("published_version_id", "is", null);
       if (invitationRows.error) fail();
-      const invitations = toPortalInvitations(invitationRows.data);
+      const aliasRows = await client
+        .from("invitation_public_aliases")
+        .select("invitation_id, project_id, alias")
+        .eq("project_id", projectId);
+      if (aliasRows.error) fail();
+      const invitations = toPortalInvitations(invitationRows.data, toPortalAliases(aliasRows.data, projectId));
 
       let versions: PortalPublishedVersionRecord[] = [];
       if (invitations.length > 0) {

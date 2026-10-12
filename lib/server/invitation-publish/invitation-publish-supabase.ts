@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { supabaseProjectReviewStateDependencies } from "../invitation-review/invitation-review-supabase";
+import { supabaseInvitationAliasGateway } from "../supabase/invitation-alias-repository";
 import { supabaseInvitationPublishGateway } from "../supabase/invitation-publish-repository";
 import type { ProjectPublishStateDependencies } from "./get-project-publish-state";
 import type { PublishInvitationDependencies } from "./publish-invitation";
@@ -16,4 +17,5 @@ export const supabasePublishInvitationDependencies: PublishInvitationDependencie
 export const supabaseProjectPublishStateDependencies: ProjectPublishStateDependencies<SupabaseClient> = {
   ...supabaseProjectReviewStateDependencies,
   publications: supabaseInvitationPublishGateway,
+  links: supabaseInvitationAliasGateway,
 };

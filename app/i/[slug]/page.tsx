@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 
-import { loadPublicInvitation } from "../../../lib/server/public-invitation/load-public-invitation";
 import { buildPublicInvitationMetadata } from "../../../lib/server/public-invitation/public-invitation-metadata";
 import { createPublicInvitationPageDependencies } from "../../../lib/server/public-invitation/public-invitation-supabase";
 import { createPublicSocialShareCoverGateway } from "../../../lib/server/public-invitation/public-social-share-supabase";
 import type { SignedSocialShareCover } from "../../../lib/server/public-invitation/public-social-share-types";
 import type { PublicInvitationView } from "../../../lib/server/public-invitation/public-invitation-types";
+import { loadPublicInvitationByRoute } from "../../../lib/server/public-invitation/resolve-public-invitation-route";
 import { PublicInvitationRenderer } from "./public-invitation-renderer";
 
 /**
@@ -20,8 +20,11 @@ export const dynamic = "force-dynamic";
 /**
  * One PUBLISHED read per request, shared by `generateMetadata` and the page
  * (React request memoization); the Task 032A use case itself is unchanged.
+ * LAUNCH-P0-02: the segment is either the canonical slug or a friendly
+ * alias (`minh-anh&thu-ha`) resolved server-side to that canonical slug;
+ * the page renders at its own address, never a redirect.
  */
-const loadPublishedInvitation = cache((slug: string) => loadPublicInvitation(slug, createPublicInvitationPageDependencies()));
+const loadPublishedInvitation = cache((segment: string) => loadPublicInvitationByRoute(segment, createPublicInvitationPageDependencies()));
 
 /**
  * Task 032B social metadata, resolved per request (force-dynamic). Couple
@@ -33,19 +36,20 @@ const loadPublishedInvitation = cache((slug: string) => loadPublicInvitation(slu
  */
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  let view: PublicInvitationView | null;
+  let loaded: { publicSlug: string; view: PublicInvitationView } | null;
   try {
-    view = await loadPublishedInvitation(slug);
+    loaded = await loadPublishedInvitation(slug);
   } catch {
-    view = null;
+    loaded = null;
   }
-  if (view === null) {
+  if (loaded === null) {
     return buildPublicInvitationMetadata(null, null);
   }
+  const { publicSlug, view } = loaded;
 
   let cover: SignedSocialShareCover | null = null;
   try {
-    cover = await createPublicSocialShareCoverGateway().getSignedSocialShareCover(slug);
+    cover = await createPublicSocialShareCoverGateway().getSignedSocialShareCover(publicSlug);
   } catch {
     console.error("[PublicInvitationPage] Failed to resolve social share cover");
   }
@@ -78,20 +82,22 @@ function PublicInvitationUnavailable() {
 export default async function PublicInvitationPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  let view: PublicInvitationView | null;
+  let loaded: { publicSlug: string; view: PublicInvitationView } | null;
   try {
-    view = await loadPublishedInvitation(slug);
+    loaded = await loadPublishedInvitation(slug);
   } catch {
     console.error("[PublicInvitationPage] Failed to render published invitation");
     return <PublicInvitationUnavailable />;
   }
-  if (view === null) {
+  if (loaded === null) {
     notFound();
   }
+  const { publicSlug, view } = loaded;
 
+  // RSVP binds through the canonical slug, exactly as on the canonical link.
   return (
     <PublicInvitationRenderer
-      publicSlug={slug}
+      publicSlug={publicSlug}
       rendererKey={view.rendererKey}
       viewModel={view.viewModel}
       sections={view.sections}

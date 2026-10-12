@@ -84,7 +84,7 @@ async function publishedRecord(projectId: string): Promise<PortalProjectRecord> 
   return {
     projectCode: snapshot.project.code,
     packageCode: "COMMON",
-    invitations: [{ id: INV, variant: "COMMON", publicSlug: "wc-common", publishedVersionId: VER }],
+    invitations: [{ id: INV, variant: "COMMON", publicSlug: "wc-common", publishedVersionId: VER , publicAlias: null }],
     versions: [
       { id: VER, invitationId: INV, projectId, versionType: "PUBLISHED", templateVersionId: FIXTURE_TEMPLATE_VERSION_ID, rendererKey: snapshot.template.rendererKey, payload: snapshot },
     ],
