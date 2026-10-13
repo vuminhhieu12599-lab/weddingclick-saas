@@ -11,7 +11,14 @@ import {
 } from "../../../templates/core/editor-manifest";
 import { lookupTemplateEditorManifest } from "../../../templates/core/production-editor-manifests";
 import { PRODUCTION_COMPATIBILITY_REGISTRY } from "../../../templates/core/production-renderer-manifests";
-import { DEMO_IMAGES, lookupDemoLegacyRolePhotoSet, type DemoImage, type DemoImageOrientation } from "./demo-media";
+import {
+  DEMO_IMAGES,
+  lookupDemoLegacyRolePhotoSet,
+  lookupDemoTemplateSlotPhotoSet,
+  type DemoImage,
+  type DemoImageOrientation,
+  type DemoTemplateSlotPhotoSet,
+} from "./demo-media";
 
 /**
  * LAUNCH-P0-04 — canonical source records of the fictional showroom couple.
@@ -209,6 +216,17 @@ function isPersonBoundSlot(rendererKey: string, slotKey: string): boolean {
     && TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS[rendererKey]?.includes(slotKey) === true;
 }
 
+/** Fail closed: every photo-set key is a declared slot and every list fits its `maxCount`. */
+function assertSlotPhotoSetFits(slots: readonly TemplateEditorMediaSlotV1[], set: DemoTemplateSlotPhotoSet): void {
+  for (const [slotKey, images] of Object.entries(set)) {
+    const slot = slots.find((candidate) => candidate.key === slotKey);
+    if (slot === undefined) throw new Error("Showroom demo photo set names an undeclared template slot");
+    if (slot.maxCount !== null && images.length > slot.maxCount) {
+      throw new Error("Showroom demo photo set exceeds a template slot's maxCount");
+    }
+  }
+}
+
 /**
  * Builds the demo canonical input for one registered production renderer and
  * one variant. Throws for an unregistered key (fail closed).
@@ -235,7 +253,19 @@ export function buildDemoWeddingSource(rendererKey: string, variant: InvitationV
   const photoSet = lookupDemoLegacyRolePhotoSet(rendererKey);
 
   let templateMedia: BuildSnapshotPayloadInput["templateMedia"];
-  if (editor.mediaModel === "TEMPLATE_SLOTS") {
+  const slotPhotoSet = lookupDemoTemplateSlotPhotoSet(rendererKey);
+  if (editor.mediaModel === "TEMPLATE_SLOTS" && slotPhotoSet !== undefined) {
+    // Fictional couple photography, slot by slot in position order; omitted slots stay empty.
+    assertSlotPhotoSetFits(editor.mediaSlots, slotPhotoSet);
+    const rows: TemplateMediaSlotItem[] = editor.mediaSlots.flatMap((slot) =>
+      (Object.hasOwn(slotPhotoSet, slot.key) ? (slotPhotoSet[slot.key] ?? []) : []).map((image, position) => ({
+        slotKey: slot.key,
+        position,
+        projectMediaId: addImage("PHOTO", image, next),
+      })),
+    );
+    templateMedia = buildTemplateMediaSource(editor, rows, media);
+  } else if (editor.mediaModel === "TEMPLATE_SLOTS") {
     // Person-bound portrait slots stay empty: abstract images never pose as a person.
     const rows: TemplateMediaSlotItem[] = editor.mediaSlots
       .filter((slot) => !isPersonBoundSlot(rendererKey, slot.key))

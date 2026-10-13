@@ -82,6 +82,62 @@ export const DEMO_LEGACY_ROLE_PHOTO_SETS: Readonly<Record<string, DemoLegacyRole
   }),
 });
 
+/**
+ * Fictional couple photography for one `TEMPLATE_SLOTS` renderer: editor
+ * manifest slot key → images in slot position order. Authoritative for that
+ * renderer: a slot it omits stays empty. Every key must be a declared slot
+ * and every list must fit the slot's `maxCount` (checked when the demo is
+ * built, fail closed). Provenance in `lib/showroom/demo/ASSETS.md`.
+ */
+export type DemoTemplateSlotPhotoSet = Readonly<Record<string, readonly DemoImage[]>>;
+
+/** A WebP photo under `<folder>/photos/`; portrait photos are 1086×1448, landscape 1448×1086. */
+function folderPhoto(folder: string, name: string, orientation: "PORTRAIT" | "LANDSCAPE" = "PORTRAIT"): DemoImage {
+  const [width, height] = orientation === "LANDSCAPE" ? [1448, 1086] : [1086, 1448];
+  return Object.freeze({ file: `${folder}/photos/${name}.webp`, width, height, orientation });
+}
+
+const VH_PHOTOS = Object.freeze(
+  [
+    ["01-cover-doi-uyen-uong-ao-dai-tren-nen-do"],
+    ["02-couple-portrait-ao-dai-sac-do-le-hoi"],
+    ["03-bride-portrait-ao-dai-do-quat-xep"],
+    ["04-groom-portrait-chu-re-ben-chu-hy-do"],
+    ["05-tea-ceremony-traditional-vietnamese", "LANDSCAPE"],
+    ["06-double-happiness-red-background"],
+    ["07-couple-ao-dai-red-lanterns"],
+    ["08-couple-portrait-with-double-happiness"],
+    ["09-celebration-confetti-red"],
+    ["10-playful-couple-ao-dai-red-black"],
+  ].map(([name, orientation]) => folderPhoto("vietnamese-heritage", name ?? "", orientation === "LANDSCAPE" ? "LANDSCAPE" : "PORTRAIT")),
+);
+
+/** Numbered photo `n` (1-based, the file name prefix) of a set. */
+function nth(photos: readonly DemoImage[], n: number): DemoImage {
+  const photo = photos[n - 1];
+  if (photo === undefined) throw new Error("Showroom demo photo number is out of range");
+  return photo;
+}
+
+/** Slot photo sets by exact renderer key. A renderer without one keeps the abstract mood images. */
+export const DEMO_TEMPLATE_SLOT_PHOTO_SETS: Readonly<Record<string, DemoTemplateSlotPhotoSet>> = Object.freeze({
+  "wedding.vietnamese-heritage.v1": Object.freeze({
+    heroPhoto: Object.freeze([nth(VH_PHOTOS, 1)]),
+    // Layout positions only (side / dominant centre / side), identical for every variant:
+    // groom solo, couple portrait, bride solo.
+    portraitCluster: Object.freeze([nth(VH_PHOTOS, 4), nth(VH_PHOTOS, 2), nth(VH_PHOTOS, 3)]),
+    // Background under a dark overlay; the landscape tea ceremony.
+    loveStoryPhoto: Object.freeze([nth(VH_PHOTOS, 5)]),
+    // All ten in file-number order, except 05 and 06 swap so the landscape 05 lands on the
+    // album's full-width "wide" row (position 6) instead of a tall pair (position 5).
+    gallery: Object.freeze([1, 2, 3, 4, 6, 5, 7, 8, 9, 10].map((n) => nth(VH_PHOTOS, n))),
+  }),
+});
+
+export function lookupDemoTemplateSlotPhotoSet(rendererKey: string): DemoTemplateSlotPhotoSet | undefined {
+  return Object.hasOwn(DEMO_TEMPLATE_SLOT_PHOTO_SETS, rendererKey) ? DEMO_TEMPLATE_SLOT_PHOTO_SETS[rendererKey] : undefined;
+}
+
 export function lookupDemoLegacyRolePhotoSet(rendererKey: string): DemoLegacyRolePhotoSet | undefined {
   return Object.hasOwn(DEMO_LEGACY_ROLE_PHOTO_SETS, rendererKey) ? DEMO_LEGACY_ROLE_PHOTO_SETS[rendererKey] : undefined;
 }
@@ -96,7 +152,8 @@ export function allDemoImages(): DemoImage[] {
     set.loveStoryPhoto,
     ...set.gallery,
   ]);
-  return [...DEMO_IMAGES, ...photos];
+  const slotPhotos = Object.values(DEMO_TEMPLATE_SLOT_PHOTO_SETS).flatMap((set) => Object.values(set).flat());
+  return [...DEMO_IMAGES, ...photos, ...slotPhotos];
 }
 
 /**

@@ -45,6 +45,27 @@ Wired only for `wedding.elegant-editorial.v1` through `DEMO_LEGACY_ROLE_PHOTO_SE
 | 09-bride-full-length.webp | 1122×1402 | d432f997e44a8ac1ef7b1b133d272985fcebceceb081f09180714894a12795cc |
 | 10-wide-couple.webp | 1448×1086 | 516b9705e9f7982279c6a34168a671c0b35712ea2d173c58d069a5cbf5babf40 |
 
+## Vietnamese Heritage demo photos — `public/showroom/demo/vietnamese-heritage/photos/`
+
+Supplied by the Product Owner on 2026-10-13 (LAUNCH-P0-04) as ten 1086×1448 / 1448×1086 PNGs (about 18 MB in total). They are fictional demo photos, never a real couple, wedding or client portfolio. **No provenance or licence note came with this folder: the Product Owner must confirm their origin and web/commercial use rights before release.**
+
+Only the WebP files below are committed and served. Pillow 12.1.1, `quality=86, method=6`, same pixel dimensions, about 950 KB for all ten. At 100 % they are visually indistinguishable from the PNGs, with no banding on the red backdrops. The source PNGs are not committed.
+
+Wired only for `wedding.vietnamese-heritage.v1` through `DEMO_TEMPLATE_SLOT_PHOTO_SETS` (`demo-media.ts`): `heroPhoto` 01; `portraitCluster` 04, 02, 03 (layout positions side / dominant centre / side, identical for every variant); `loveStoryPhoto` 05; `gallery` 01, 02, 03, 04, 06, 05, 07–10: file-number order with 05/06 swapped, so the landscape 05 falls on the album's full-width row instead of a tall pair, where it would show as a small print on a large mat.
+
+| File | Size | Bytes | SHA-256 |
+|---|---|---|---|
+| 01-cover-doi-uyen-uong-ao-dai-tren-nen-do.webp | 1086×1448 | 92 KB | 28cd07198afd72a1ea0b1033889b4f10314ea24cda61d2751cd62fe95384a37b |
+| 02-couple-portrait-ao-dai-sac-do-le-hoi.webp | 1086×1448 | 87 KB | 86c5db8259a10862eba4b74d4bf14d4a89845a5c1afd2649c55f294d94357a51 |
+| 03-bride-portrait-ao-dai-do-quat-xep.webp | 1086×1448 | 117 KB | 160d9e49aad34440eb5e1b87bf14b3b4ab110af3bea90bf685fb6385138d27d9 |
+| 04-groom-portrait-chu-re-ben-chu-hy-do.webp | 1086×1448 | 73 KB | 6b55acdc47ad897f7ad538ca331e1d2a3a8cda6a9074c2d14576d9b98f654e49 |
+| 05-tea-ceremony-traditional-vietnamese.webp | 1448×1086 | 191 KB | 042feabfeec8a4e94bc57ac3698c9443ef47fbaed5b00a59138180f584377e92 |
+| 06-double-happiness-red-background.webp | 1086×1448 | 78 KB | ebd85349d70696ce461a63c9b4ee536df5567828b1f2dbed8e51e35c9058bbc3 |
+| 07-couple-ao-dai-red-lanterns.webp | 1086×1448 | 67 KB | 3451795d0fb939ebe1e0319f46d65a768bb62cde5f7f85e5c2f973f97e0e4a0c |
+| 08-couple-portrait-with-double-happiness.webp | 1086×1448 | 66 KB | 87bde3f3dc359f6a0acf9dd77cf99624dd9e73f65b621e24d338dac178eb7eac |
+| 09-celebration-confetti-red.webp | 1086×1448 | 103 KB | 275fc7559367bff0c18952090ad785965c0d639ed20a9faa2fe940ca89ca27fa |
+| 10-playful-couple-ao-dai-red-black.webp | 1086×1448 | 80 KB | e76d0607bd3551f6b754ff728d2a42f78713dea65707d67a9021ae965e2df3a7 |
+
 ## Template screenshots — `public/showroom/templates/`
 
 Real screenshots of the public demo pages (`/mau-thiep/<code>`, demo bar removed) from a local production build, headless Chrome, 390×844 CSS px at 2× (780×1688), WebP quality 78. `<code>-cover.webp` is the closed opening screen; `<code>-inside.webp` is an inner section after opening. Re-capture whenever a renderer version, the demo data or the demo images change, and for every new template.
