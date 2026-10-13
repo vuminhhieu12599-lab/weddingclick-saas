@@ -118,8 +118,8 @@ export const SHOWROOM_TEMPLATE_ENTRIES: readonly ShowroomTemplateEntry[] = [
   },
   {
     templateCode: "vietnamese-heritage",
-    // VH-V2-01: the demo shows v2 (approved gift wording, typography, motion).
-    // Release gate: v2 needs a catalog row before this showroom ships to Production.
+    // VH-V2-01: the demo shows v2 (approved gift wording, typography, motion);
+    // seeded as catalog version 2 by migration 0050. v1 stays for its pinned Projects.
     versionNumber: 2,
     nameVi: "Sắc Son Trăm Năm",
     nameEn: "Vietnamese Heritage",

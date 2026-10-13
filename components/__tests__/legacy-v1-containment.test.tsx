@@ -79,7 +79,9 @@ describe("migration 0043 — database lockdown (A–E, I, S)", () => {
     const migrations = readdirSync(join(ROOT, "supabase/migrations")).sort();
     // Launch Hardening 04 (owner-approved checkpoint maintenance): exactly the approved 0044 may follow 0043.
     // TE-03B (checkpoint maintenance): exactly 0046 may follow 0044; 0045 is retired and must stay absent.
-    expect(migrations.slice(-4)).toEqual(["20260911041202_0042_personalized_guest_link.sql", "20260911041203_0043_legacy_v1_lockdown.sql", "20260911041204_0044_republish_after_published.sql", "20260911041206_0046_project_template_media_slots.sql"]);
+    // Checkpoint maintenance (missed at OWS-04 / DB-CONSISTENCY-01 / LAUNCH-P0-02, restored at VH-V2-RELEASE-READINESS):
+    // exactly the data-only catalog seeds 0047/0048, 0049 friendly aliases and the data-only VH v2 catalog seed 0050 follow 0046.
+    expect(migrations.slice(-8)).toEqual(["20260911041202_0042_personalized_guest_link.sql", "20260911041203_0043_legacy_v1_lockdown.sql", "20260911041204_0044_republish_after_published.sql", "20260911041206_0046_project_template_media_slots.sql", "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql", "20260911041208_0048_seed_vietnamese_heritage_romantic_minimal_v1_catalog.sql", "20260911041209_0049_invitation_public_aliases.sql", "20260911041210_0050_seed_vietnamese_heritage_v2_catalog.sql"]);
   });
 });
 
