@@ -33,6 +33,10 @@ vi.mock("../../wedding/romantic-minimal/v1/fonts", () => ({
 vi.mock("../../wedding/our-wedding-story/v1/fonts", () => ({
   OUR_WEDDING_STORY_V1_FONT_VARIABLES_CLASS_NAME: "ows-test-font-variables",
 }));
+// VH-V2-01: and Vietnamese Heritage v2, likewise.
+vi.mock("../../wedding/vietnamese-heritage/v2/fonts", () => ({
+  VIETNAMESE_HERITAGE_V2_FONT_VARIABLES_CLASS_NAME: "vh2-test-font-variables",
+}));
 vi.mock("../../wedding/elegant-editorial/v1/fonts", () => ({
   ELEGANT_EDITORIAL_V1_FONT_VARIABLES_CLASS_NAME: "ee-test-font-variables",
 }));
@@ -46,6 +50,7 @@ const { ElegantEditorialV1 } = await import("../../wedding/elegant-editorial/v1/
 const { VietnameseHeritageV1 } = await import("../../wedding/vietnamese-heritage/v1/vietnamese-heritage-v1");
 const { RomanticMinimalV1 } = await import("../../wedding/romantic-minimal/v1/romantic-minimal-v1");
 const { OurWeddingStoryV1 } = await import("../../wedding/our-wedding-story/v1/our-wedding-story-v1");
+const { VietnameseHeritageV2 } = await import("../../wedding/vietnamese-heritage/v2/vietnamese-heritage-v2");
 
 /**
  * RF-06B production binding registry (docs/DECISIONS.md "RF-06-0 …" P27 B,
@@ -62,14 +67,16 @@ const EE_KEY = "wedding.elegant-editorial.v1";
 const VH_KEY = "wedding.vietnamese-heritage.v1";
 const RM_KEY = "wedding.romantic-minimal.v1";
 const OWS_KEY = "wedding.our-wedding-story.v1";
+const VH2_KEY = "wedding.vietnamese-heritage.v2";
 
-/** The real production key → component pairs (VH-01: two renderers; RM-02: three; OWS-01: four). */
+/** The real production key → component pairs (VH-01: two renderers; RM-02: three; OWS-01: four; VH-V2-01: five). */
 function productionComponents(): Map<string, InvitationRendererComponentV1> {
   return new Map<string, InvitationRendererComponentV1>([
     [EE_KEY, ElegantEditorialV1],
     [VH_KEY, VietnameseHeritageV1],
     [RM_KEY, RomanticMinimalV1],
     [OWS_KEY, OurWeddingStoryV1],
+    [VH2_KEY, VietnameseHeritageV2],
   ]);
 }
 
@@ -84,7 +91,8 @@ function isDeferred(value: unknown): boolean {
     value !== ElegantEditorialV1 &&
     value !== VietnameseHeritageV1 &&
     value !== RomanticMinimalV1 &&
-    value !== OurWeddingStoryV1
+    value !== OurWeddingStoryV1 &&
+    value !== VietnameseHeritageV2
   );
 }
 
@@ -153,7 +161,7 @@ describe("key-set equality (P27)", () => {
 describe("Elegant Editorial binding", () => {
   it("wedding.elegant-editorial.v1 resolves to a deferred binding of exactly ElegantEditorialV1", async () => {
     // VH-01 generalization: the production key list is now exactly EE then VH (was EE only).
-    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([EE_KEY, VH_KEY, RM_KEY, OWS_KEY]);
+    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([EE_KEY, VH_KEY, RM_KEY, OWS_KEY, VH2_KEY]);
     const bound = resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, "wedding.elegant-editorial.v1");
     expect(isDeferred(bound)).toBe(true);
     expect(await lazyMarkup(bound, "COMMON")).toBe(directMarkup(ElegantEditorialV1, "COMMON"));
@@ -195,7 +203,7 @@ describe("Vietnamese Heritage binding (VH-01)", () => {
   });
 
   it.each([
-    "wedding.vietnamese-heritage.v2",
+    "wedding.vietnamese-heritage.v3",
     "wedding.vietnamese-heritage",
     "wedding.vietnamese-heritage.latest",
     "wedding.vietnamese-heritage.V1",
@@ -270,6 +278,31 @@ describe("fail closed: no default, fallback, latest or alias", () => {
 
   it("the registry object is frozen", () => {
     expect(Object.isFrozen(PRODUCTION_RENDERER_BINDING_REGISTRY)).toBe(true);
+  });
+});
+
+describe("Vietnamese Heritage v2 binding (VH-V2-01)", () => {
+  it("wedding.vietnamese-heritage.v2 resolves to a deferred binding of exactly VietnameseHeritageV2, distinct from v1 and the others", async () => {
+    const vh2 = resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, VH2_KEY);
+    expect(isDeferred(vh2)).toBe(true);
+    for (const key of [EE_KEY, VH_KEY, RM_KEY, OWS_KEY]) {
+      expect(vh2).not.toBe(resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, key));
+    }
+    const markup = await lazyMarkup(vh2, "BRIDE");
+    expect(markup).toBe(directMarkup(VietnameseHeritageV2, "BRIDE"));
+    expect(markup).toContain('data-renderer="vietnamese-heritage-v2"');
+    expect(markup).not.toMatch(/elegant-editorial-v1|vietnamese-heritage-v1|romantic-minimal-v1|our-wedding-story-v1/);
+  });
+
+  it("v1 still resolves to exactly VietnameseHeritageV1 (v2 never replaces it)", async () => {
+    const vh1 = resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, VH_KEY);
+    expect(await lazyMarkup(vh1, "COMMON")).toBe(directMarkup(VietnameseHeritageV1, "COMMON"));
+  });
+
+  it("the bound manifest is the validated projection, not the raw source constant", () => {
+    const bound = PRODUCTION_RENDERER_BINDING_REGISTRY.compatibilityRegistry.lookup(VH2_KEY);
+    expect(bound).toStrictEqual(projectCompatibilityManifest(PRODUCTION_RENDERER_MANIFESTS[4]?.compatibility));
+    expect(bound).not.toBe(PRODUCTION_RENDERER_MANIFESTS[4]?.compatibility);
   });
 });
 

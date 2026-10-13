@@ -121,7 +121,8 @@ function nth(photos: readonly DemoImage[], n: number): DemoImage {
 
 /** Slot photo sets by exact renderer key. A renderer without one keeps the abstract mood images. */
 export const DEMO_TEMPLATE_SLOT_PHOTO_SETS: Readonly<Record<string, DemoTemplateSlotPhotoSet>> = Object.freeze({
-  "wedding.vietnamese-heritage.v1": Object.freeze({
+  // VH-V2-01: the public demo runs Vietnamese Heritage v2 (same slots as v1).
+  "wedding.vietnamese-heritage.v2": Object.freeze({
     heroPhoto: Object.freeze([nth(VH_PHOTOS, 1)]),
     // Layout positions only (side / dominant centre / side), identical for every variant:
     // groom solo, couple portrait, bride solo.

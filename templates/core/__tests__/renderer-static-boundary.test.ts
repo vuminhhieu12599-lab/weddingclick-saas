@@ -49,6 +49,8 @@ const ALLOWED_IMPORTS: Readonly<Record<(typeof RF06A_FILES)[number], readonly st
     "templates/wedding/romantic-minimal/v1/manifest",
     // OWS-01: the fourth explicit production manifest.
     "templates/wedding/our-wedding-story/v1/manifest",
+    // VH-V2-01: the fifth explicit production manifest.
+    "templates/wedding/vietnamese-heritage/v2/manifest",
     "templates/core/renderer-manifest",
   ],
   "templates/wedding/elegant-editorial/v1/manifest.ts": ["templates/core/renderer-manifest"],
@@ -122,6 +124,8 @@ const RS01_LAZY_ROOTS = [
   "templates/wedding/romantic-minimal/v1/romantic-minimal-v1",
   // OWS-01: the fourth production renderer root.
   "templates/wedding/our-wedding-story/v1/our-wedding-story-v1",
+  // VH-V2-01: the fifth production renderer root.
+  "templates/wedding/vietnamese-heritage/v2/vietnamese-heritage-v2",
 ] as const;
 
 /** Resolves a relative specifier from `file` to a repository-relative module path. */
@@ -242,7 +246,7 @@ describe("RF-06A files", () => {
     const code = stripComments(readRepoFile("templates/core/production-renderer-manifests.ts"));
     // VH-01: still one explicit, ordered literal list, now with the second manifest; RM-02: and the third; OWS-01: and the fourth.
     expect(code).toMatch(
-      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*OUR_WEDDING_STORY_V1_MANIFEST,\s*\]\)/,
+      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*OUR_WEDDING_STORY_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V2_MANIFEST,\s*\]\)/,
     );
     expect(/["'`]wedding\.[\w-]+\.v\d+/.test(code)).toBe(false);
   });
@@ -341,6 +345,7 @@ describe("templates/** production tree (P39)", () => {
         ...RM01_FILES,
         ...RM02_FILES,
         ...OWS01_FILES,
+        ...VH2_FILES,
       ].sort(),
     );
   });
@@ -638,12 +643,14 @@ describe("RF-06B template files", () => {
           OWS01_CSS_FILE,
           ...OWS01_RENDERER_FILES,
           ...OWS01_ISLAND_FILES,
+          VH2_CSS_FILE,
+          ...VH2_TSX_FILES,
         ],
         file,
       ).toContain(file);
     }
     expect(sources.filter((source) => source.endsWith(".css")).sort()).toStrictEqual(
-      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE].sort(),
+      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE, VH2_CSS_FILE].sort(),
     );
   });
 
@@ -1354,19 +1361,20 @@ describe("RS-01 renderer-key lazy loading", () => {
 
   it("the binding module owns exactly one literal import() per production renderer root, nothing else", () => {
     const { specifiers, total } = dynamicImportsOf(readRepoFile(BINDINGS_MODULE));
-    expect(total).toBe(4);
+    expect(total).toBe(5);
     expect(specifiers.map((specifier) => resolveSpecifier(BINDINGS_MODULE, specifier))).toStrictEqual([...RS01_LAZY_ROOTS]);
     const code = codeOf(BINDINGS_MODULE);
     // No template literal, concatenation, variable or discovery in a specifier.
     expect(code).not.toMatch(/import\(\s*[^"'\s]|import\(`|import\([^)]*\+|readdir|glob|require\(/);
     // next/dynamic with no options: SSR on, no `loading` (no Suspense boundary, no placeholder content).
-    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(4);
+    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(5);
     expect(code).not.toMatch(/ssr:|loading:|suspense/i);
     // Each lazy root binds its own export only.
     expect(code).toMatch(/import\("\.\.\/wedding\/elegant-editorial\/v1\/elegant-editorial-v1"\)\.then\(\(module\) => module\.ElegantEditorialV1\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/vietnamese-heritage\/v1\/vietnamese-heritage-v1"\)\.then\(\(module\) => module\.VietnameseHeritageV1\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/romantic-minimal\/v1\/romantic-minimal-v1"\)\.then\(\(module\) => module\.RomanticMinimalV1\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/our-wedding-story\/v1\/our-wedding-story-v1"\)\.then\(\(module\) => module\.OurWeddingStoryV1\)/);
+    expect(code).toMatch(/import\("\.\.\/wedding\/vietnamese-heritage\/v2\/vietnamese-heritage-v2"\)\.then\(\(module\) => module\.VietnameseHeritageV2\)/);
     expect(code).not.toMatch(/\bcatch\b|\.catch\(/);
   });
 
@@ -1383,6 +1391,7 @@ describe("RS-01 renderer-key lazy loading", () => {
       "templates/wedding/our-wedding-story/v1/manifest.ts",
       "templates/wedding/romantic-minimal/v1/manifest.ts",
       "templates/wedding/vietnamese-heritage/v1/manifest.ts",
+      "templates/wedding/vietnamese-heritage/v2/manifest.ts",
     ]);
     expect(eager.files.filter((file) => file.endsWith(".css"))).toStrictEqual([]);
     expect(eager.external).not.toContain("next/font/google");
@@ -2506,6 +2515,8 @@ const TE02_FILES = [
   "templates/core/production-editor-manifests.ts",
   "templates/editor/wedding/elegant-editorial-v1.ts",
   "templates/editor/wedding/vietnamese-heritage-v1.ts",
+  // VH-V2-01: the Vietnamese Heritage v2 editor manifest.
+  "templates/editor/wedding/vietnamese-heritage-v2.ts",
 ] as const;
 
 // ===========================================================================
@@ -3014,5 +3025,154 @@ describe("OWS-01 renderer CSS", () => {
     // Animations are declared only inside the no-preference block.
     const outsideNoPreference = cssCode.replace(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}\n/, "");
     expect(/animation:\s*ows-/.test(outsideNoPreference)).toBe(false);
+  });
+});
+
+// ===========================================================================
+// VH-V2-01 extension (docs/DECISIONS.md "VH-V2-01 — Vietnamese Heritage v2").
+// v1 is released and immutable (RF7/RF14), so the Product Owner-approved gift
+// wording, typography and motion ship as a separate v2 directory. Every v1
+// rule above stays as is; v2 gets the same boundary with its own tree. Its
+// file set is derived from the exact v1 lists, so v2 has v1's structure.
+// ===========================================================================
+
+const VH2 = "templates/wedding/vietnamese-heritage/v2";
+function toVh2(file: string): string {
+  return file.replace(`${VH}/`, `${VH2}/`).replace("vietnamese-heritage-v1", "vietnamese-heritage-v2");
+}
+const VH2_CODE_FILES = VH01_CODE_FILES.map(toVh2);
+const VH2_ISLAND_FILES = VH02B_ISLAND_FILES.map(toVh2);
+const VH2_ROOT = toVh2(VH01_ROOT);
+const VH2_CSS_FILE = toVh2(VH01_CSS_FILE);
+const VH2_FILES = [...VH01_FILES, ...VH02B_ISLAND_FILES, ...VH02B_MODEL_FILES].map(toVh2);
+const VH2_TSX_FILES = VH2_FILES.filter((file) => file.endsWith(".tsx"));
+
+describe("VH-V2-01 Vietnamese Heritage v2 files", () => {
+  it("v2 mirrors the v1 file set exactly and every file exists", () => {
+    expect(VH2_FILES).toHaveLength(VH01_FILES.length + VH02B_ISLAND_FILES.length + VH02B_MODEL_FILES.length);
+    for (const file of VH2_FILES) expect(() => readRepoFile(file), file).not.toThrow();
+  });
+
+  it("the v2 manifest is data only and the v2 key literal lives only there and in the binding module", () => {
+    expect(importsOf(readRepoFile(`${VH2}/manifest.ts`))).toStrictEqual([{ specifier: "../../../core/renderer-manifest", typeOnly: true }]);
+    for (const file of [`${VH2}/manifest.ts`, ...VH2_CODE_FILES, ...VH2_ISLAND_FILES, ...VH01_CODE_FILES, ...RF06A_FILES, ...RF06B_CODE_FILES]) {
+      const hasLiteral = /["'`]wedding\.vietnamese-heritage\.v2["'`]/.test(codeOf(file));
+      expect(hasLiteral, file).toBe(file === `${VH2}/manifest.ts` || file === BINDINGS_MODULE);
+    }
+  });
+
+  it("v2 imports nothing from another template tree (v1 included) or templates/core", () => {
+    for (const file of [...VH2_CODE_FILES, ...VH2_ISLAND_FILES]) {
+      for (const modulePath of resolvedImportsOf(file)) {
+        if (modulePath.startsWith("templates/")) expect(modulePath.startsWith(`${VH2}/`), `${file} → ${modulePath}`).toBe(true);
+      }
+    }
+    // No v1 renderer file imports v2 either (the registries import only the data-only v2 manifest).
+    for (const file of [...VH01_CODE_FILES, ...VH02B_ISLAND_FILES]) {
+      expect(resolvedImportsOf(file).some((modulePath) => modulePath.startsWith(`${VH2}/`)), file).toBe(false);
+    }
+  });
+
+  it.each(VH2_CODE_FILES)("%s (static) has no forbidden runtime, data, browser, prototype or hook code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of [...RF06B_FORBIDDEN, ...VH01_EXTRA_FORBIDDEN]) {
+      if (file === VH2_ROOT && label === "capabilities read outside the root") continue;
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+    expect(ALL_HOOKS.test(code), `${file}: hooks`).toBe(false);
+    expect(/<button\b|\bonClick\b/.test(code), file).toBe(false);
+  });
+
+  it.each(VH2_ISLAND_FILES)("%s (island) has no data, network, persistence, browser-global, time or identity code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of RF06D_FORBIDDEN) expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    for (const [label, pattern] of VH01_EXTRA_FORBIDDEN) {
+      if (file === toVh2(VH02B_RSVP) && label === "RSVP contract") continue;
+      if (file === toVh2(VH02B_COUNTDOWN) && label === "countdown / clock derivation") continue;
+      if (file === toVh2(VH02B_REVEAL) && label === "IntersectionObserver / matchMedia / animation") continue;
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+  });
+
+  it("decor is reused by exact literal from the immutable v1 asset directory; v2 ships no asset directory", () => {
+    const decor = codeOf(`${VH2}/sections/decor.tsx`);
+    const paths = [...decor.matchAll(/["'(]((?:\/[\w.-]+)+\.webp)["')]/g)].map((match) => match[1] as string);
+    for (const path of paths) expect(path.startsWith(VH_DECOR_URL), path).toBe(true);
+    expect(paths.map((path) => path.slice(VH_DECOR_URL.length)).sort()).toStrictEqual([...VH_DECOR_FILES].sort());
+    expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding", "vietnamese-heritage"))).toStrictEqual(["v1"]);
+  });
+
+  it("the approved gift intro is v2-only: v2 has the exact new wording, v1 keeps its released wording", () => {
+    expect(readRepoFile(`${VH2}/copy.ts`)).toContain(
+      '"Sự hiện diện của bạn là món quà quý giá nhất. Nếu không thể tham dự và muốn gửi quà chúc mừng, gia đình xin phép nhận tại đây."',
+    );
+    expect(readRepoFile(`${VH}/copy.ts`)).toContain(
+      '"Sự hiện diện của bạn là món quà quý giá nhất. Nếu muốn gửi lời chúc mừng, gia đình xin phép nhận tại đây."',
+    );
+  });
+
+  it("the v1 and v2 lazy subgraphs never reach each other", () => {
+    const v1 = clientGraph(resolveModuleFile(`${VH}/vietnamese-heritage-v1`) as string, { followLazy: true }).files;
+    const v2 = clientGraph(resolveModuleFile(`${VH2}/vietnamese-heritage-v2`) as string, { followLazy: true }).files;
+    expect(v1.some((file) => file.startsWith(`${VH2}/`))).toBe(false);
+    expect(v2.some((file) => /templates\/wedding\/(elegant-editorial|romantic-minimal|our-wedding-story)\/|templates\/wedding\/vietnamese-heritage\/v1\//.test(file))).toBe(false);
+    expect(v2.filter((file) => file.endsWith(".css"))).toStrictEqual([VH2_CSS_FILE]);
+  });
+});
+
+describe("VH-V2-01 renderer CSS motion", () => {
+  const cssCode = readRepoFile(VH2_CSS_FILE).replace(/\/\*[\s\S]*?\*\//g, "");
+  const noPreference = [...cssCode.matchAll(/@media \(prefers-reduced-motion: no-preference\)[^{]*\{[\s\S]*?\n\}/g)].map((match) => match[0]);
+  const reduce = [...cssCode.matchAll(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/g)].map((match) => match[0]);
+  let outside = cssCode;
+  for (const block of [...noPreference, ...reduce]) outside = outside.replace(block, "");
+  outside = outside.replace(/@keyframes[\s\S]*?\n\}/g, "");
+
+  it.each([
+    ["runtime @import", /@import/],
+    ["external/url resource", /url\(|https?:/],
+    ["global selector", /:global|(^|[\s,}])(html|body|:root)\b/m],
+    ["!important", /!important/],
+    ["raw hex colour (palette.ts owns colours)", /#[0-9a-fA-F]{3,8}\b/],
+  ])("has no %s", (_label, pattern) => {
+    expect(pattern.test(cssCode)).toBe(false);
+  });
+
+  it("every animation outside the motion-preference blocks is neutralised under reduced motion (v1 rule)", () => {
+    const animated = [...outside.matchAll(/([^{}]+)\{[^}]*\banimation:/g)].map((match) => (match[1] as string).trim());
+    expect(animated.length).toBeGreaterThan(5);
+    for (const selector of animated) expect(reduce.join("\n"), selector).toContain(selector);
+  });
+
+  it("transitions exist only inside no-preference blocks and move no layout property", () => {
+    expect(/\btransition\b/.test(outside)).toBe(false);
+    for (const block of noPreference) {
+      for (const [, value] of block.matchAll(/transition:\s*([^;]+);/g)) {
+        // Split the list on top-level commas only (cubic-bezier() arguments stay intact).
+        for (const part of (value as string).split(/,(?![^(]*\))/)) {
+          expect(["translate", "scale", "box-shadow", "background-color"], part).toContain(part.trim().split(/\s+/)[0]);
+        }
+      }
+    }
+  });
+
+  it("no new endless loop: only v1's music pulse is infinite; idle invitations stop after three cycles", () => {
+    expect(cssCode.match(/infinite/g)).toHaveLength(1);
+    expect(cssCode).toMatch(/vh-medallion-breathe 2600ms ease-in-out 2200ms 3;/);
+    expect(cssCode).toMatch(/vh-hint-breathe 2600ms ease-in-out 2200ms 3;/);
+  });
+
+  it("the hero choreography finishes inside the 1180 ms opening, so nothing is cut when the cover leaves", () => {
+    const hero = [...cssCode.matchAll(/\.column:has\(> \.opening\[data-opening="opening"\]\) \.hero\w+ \{[^}]*animation: [\w-]+ (\d+)ms [^)]*\) (\d+)ms both;/g)];
+    expect(hero.length).toBeGreaterThanOrEqual(6);
+    for (const match of hero) expect(Number(match[1]) + Number(match[2]), match[0]).toBeLessThanOrEqual(1180);
+  });
+
+  it("motion keyframes move only opacity, translate, scale and clip-path", () => {
+    for (const [, body] of cssCode.matchAll(/@keyframes (?:vh-cover-rise|vh-cover-names|vh-bloom|vh-medallion-in|vh-medallion-breathe|vh-hint-breathe|vh-hero-photo|vh-sheet-up|vh-reveal-draw|vh-reveal-image)\s*\{([\s\S]*?)\n\}/g)) {
+      for (const [, property] of (body as string).matchAll(/([a-z-]+):/g)) {
+        expect(["opacity", "translate", "scale", "clip-path"], property).toContain(property);
+      }
+    }
   });
 });

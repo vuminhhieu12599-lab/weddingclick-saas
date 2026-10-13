@@ -53,6 +53,8 @@ describe("OWS-01 Our Wedding Story v1 renderer manifest", () => {
       "wedding.vietnamese-heritage.v1",
       "wedding.romantic-minimal.v1",
       OWS_KEY,
+      // VH-V2-01: Vietnamese Heritage v2 is appended fifth; OWS keeps its fourth position.
+      "wedding.vietnamese-heritage.v2",
     ]);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(OWS_KEY)).toStrictEqual(OUR_WEDDING_STORY_V1_MANIFEST);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(OWS_KEY)).not.toBe(OUR_WEDDING_STORY_V1_MANIFEST);

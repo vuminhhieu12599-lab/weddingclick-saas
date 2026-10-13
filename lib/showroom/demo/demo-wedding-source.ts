@@ -48,6 +48,38 @@ const DEMO_TIMEZONE = "Asia/Ho_Chi_Minh";
 
 export const DEMO_COUPLE = Object.freeze({ groomName: "Trần Gia Huy", brideName: "Nguyễn Khánh Linh" });
 
+export interface DemoCoupleOverride {
+  readonly groomName: string;
+  readonly brideName: string;
+  /** Demo bank holder names, kept consistent with the displayed names. */
+  readonly groomAccountName: string;
+  readonly brideAccountName: string;
+}
+
+/**
+ * Per-renderer couple names (Product Owner, 2026-10-13): the Vietnamese
+ * Heritage demo shows only the short names "Gia Huy" / "Khánh Linh"
+ * everywhere. Keyed by exact renderer key, so the other demos keep
+ * `DEMO_COUPLE` unchanged. Fictional people only; never a real customer.
+ */
+export const DEMO_COUPLE_OVERRIDES: Readonly<Record<string, DemoCoupleOverride>> = Object.freeze({
+  "wedding.vietnamese-heritage.v2": Object.freeze({
+    groomName: "Gia Huy",
+    brideName: "Khánh Linh",
+    groomAccountName: "GIA HUY",
+    brideAccountName: "KHANH LINH",
+  }),
+});
+
+/** The couple a demo of `rendererKey` presents (exact-key override, else `DEMO_COUPLE`). */
+export function demoCoupleFor(rendererKey: string): DemoCoupleOverride {
+  if (Object.hasOwn(DEMO_COUPLE_OVERRIDES, rendererKey)) {
+    const override = DEMO_COUPLE_OVERRIDES[rendererKey];
+    if (override !== undefined) return override;
+  }
+  return { ...DEMO_COUPLE, groomAccountName: "TRAN GIA HUY", brideAccountName: "NGUYEN KHANH LINH" };
+}
+
 export const DEMO_EVENT_STARTS = Object.freeze({
   /** Saturday 2027-12-04 09:00 Asia/Ho_Chi_Minh. */
   VU_QUY: "2027-12-04T02:00:00.000Z",
@@ -134,11 +166,11 @@ function demoEvents(): BuildSnapshotPayloadInput["events"] {
   ];
 }
 
-function demoWeddingDetails(): NonNullable<BuildSnapshotPayloadInput["weddingDetails"]> {
+function demoWeddingDetails(couple: DemoCoupleOverride): NonNullable<BuildSnapshotPayloadInput["weddingDetails"]> {
   return {
     projectId: DEMO_PROJECT_ID,
-    groomName: DEMO_COUPLE.groomName,
-    brideName: DEMO_COUPLE.brideName,
+    groomName: couple.groomName,
+    brideName: couple.brideName,
     groomFather: "Trần Văn Bình",
     groomMother: "Lê Thị Mai",
     brideFather: "Nguyễn Đức Hải",
@@ -149,11 +181,11 @@ function demoWeddingDetails(): NonNullable<BuildSnapshotPayloadInput["weddingDet
     loveStory:
       "Chúng mình gặp nhau trong một buổi chiều mưa ở hiệu sách cũ, cùng với tay lấy một cuốn thơ.\nSau năm năm đi qua bao mùa hoa sữa, chúng mình quyết định về chung một nhà.",
     groomBankName: "Ngân hàng Demo (thiệp mẫu)",
-    groomBankAccountName: "TRAN GIA HUY",
+    groomBankAccountName: couple.groomAccountName,
     groomBankAccountNumber: "0000000001",
     groomBankQrMediaId: null,
     brideBankName: "Ngân hàng Demo (thiệp mẫu)",
-    brideBankAccountName: "NGUYEN KHANH LINH",
+    brideBankAccountName: couple.brideAccountName,
     brideBankAccountNumber: "0000000002",
     brideBankQrMediaId: null,
   };
@@ -297,7 +329,7 @@ export function buildDemoWeddingSource(rendererKey: string, variant: InvitationV
   const input: BuildSnapshotPayloadInput = {
     project: { id: DEMO_PROJECT_ID, projectCode: DEMO_PROJECT_CODE },
     variant,
-    weddingDetails: demoWeddingDetails(),
+    weddingDetails: demoWeddingDetails(demoCoupleFor(rendererKey)),
     events: demoEvents(),
     media,
     timelineItems: demoTimeline(),

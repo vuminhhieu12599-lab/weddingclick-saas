@@ -360,7 +360,7 @@ describe("B. compatibility", () => {
   });
 
   it.each([
-    "wedding.vietnamese-heritage.v2",
+    "wedding.vietnamese-heritage.v3",
     "wedding.vietnamese-heritage.v0",
     "wedding.vietnamese-heritage",
     "wedding.vietnamese-heritage.latest",

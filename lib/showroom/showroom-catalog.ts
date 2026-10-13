@@ -118,7 +118,9 @@ export const SHOWROOM_TEMPLATE_ENTRIES: readonly ShowroomTemplateEntry[] = [
   },
   {
     templateCode: "vietnamese-heritage",
-    versionNumber: 1,
+    // VH-V2-01: the demo shows v2 (approved gift wording, typography, motion).
+    // Release gate: v2 needs a catalog row before this showroom ships to Production.
+    versionNumber: 2,
     nameVi: "Sắc Son Trăm Năm",
     nameEn: "Vietnamese Heritage",
     taglineVi: "Cánh cửa son đỏ mở ra nghi lễ truyền thống, ấm áp và trang trọng.",

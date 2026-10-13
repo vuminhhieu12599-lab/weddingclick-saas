@@ -1,0 +1,2999 @@
+/*
+ * Vietnamese Heritage v2 — renderer-scoped styles (VH-02A static visuals).
+ *
+ * Mirrors the approved Task 029 Vietnamese Heritage direction. Mobile-first
+ * (360 / 390 / 430 px); at ≥ 768 px the invitation stays a centred ≈ 480 px
+ * column over the renderer-owned backdrop. Colours come only from palette
+ * custom properties (transparency through color-mix), paper textures only
+ * from the `--vh-texture-*` properties set by sections/decor.tsx, fonts only
+ * from the renderer-scoped next/font variables. No url(), no @import, no
+ * global selectors, no `vh` units (the cover uses `svh` after a fixed-height
+ * fallback). No motion in VH-02A: VH-02B adds it with its reduced-motion
+ * fallback.
+ */
+
+.root {
+  min-height: 100%;
+  background: var(--vh-paper);
+  color: var(--vh-ink);
+  font-family: var(--vh-font-serif), Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  font-variant-numeric: lining-nums proportional-nums;
+  overflow-x: hidden;
+}
+
+.column {
+  position: relative;
+  max-width: 480px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--vh-paper);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Lotus line art (sections/decor.tsx) --------------------------------------- */
+
+.lotusPetalSoft {
+  fill: color-mix(in srgb, var(--vh-gold) 12%, transparent);
+}
+
+.lotusPetal {
+  fill: color-mix(in srgb, var(--vh-gold) 16%, transparent);
+}
+
+.lotusHeart {
+  fill: color-mix(in srgb, var(--vh-vermilion) 16%, transparent);
+}
+
+/* Song Hỷ (vector) ------------------------------------------------------------ */
+
+.songHy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.songHyRule {
+  width: 30px;
+  height: 0.5px;
+  background: color-mix(in srgb, var(--vh-gold) 80%, transparent);
+}
+
+.songHyMark {
+  display: block;
+  line-height: 0;
+}
+
+.songHyGlyph {
+  display: block;
+  width: 38px;
+  height: 38px;
+  color: var(--vh-vermilion);
+}
+
+.songHySeal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 14px;
+  border: 1px solid var(--vh-gold);
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, var(--vh-vermilion-rose), var(--vh-vermilion) 55%, var(--vh-vermilion-deep) 100%);
+  box-shadow:
+    inset 0 2px 3px color-mix(in srgb, var(--vh-white-warm) 18%, transparent),
+    0 6px 14px -8px color-mix(in srgb, var(--vh-door-shade) 60%, transparent);
+}
+
+.songHySealGlyph {
+  display: block;
+  width: 18px;
+  height: 18px;
+  color: var(--vh-silk);
+}
+
+/* Opening: ceremonial double-door cover, closed state -------------------------- */
+
+/*
+ * VH-02B-M1: the cover lies over the top of the invitation (the Hero is
+ * rendered underneath and shows through the parting doors), with the same
+ * size and composition as the VH-02A closed cover.
+ */
+.opening {
+  --border-piece-h: calc((100cqh - 28px) * 0.64);
+  --border-reach: calc(var(--border-piece-h) * 0.105 + 12px);
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 20;
+  height: 640px;
+  height: clamp(560px, 100svh, 920px);
+  overflow: hidden;
+  container-type: size;
+  background: var(--vh-door);
+}
+
+.doors {
+  position: absolute;
+  inset: 0;
+}
+
+.door {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  overflow: hidden;
+}
+
+.door[data-door="left"] {
+  left: 0;
+  width: calc(50% + 1px);
+}
+
+.door[data-door="right"] {
+  right: 0;
+}
+
+.doorFace {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100cqw;
+  background-color: var(--vh-door);
+  background-image: var(--vh-texture-red);
+  background-size: 620px auto;
+  background-position: center;
+}
+
+.door[data-door="left"] .doorFace {
+  left: 0;
+}
+
+.door[data-door="right"] .doorFace {
+  left: -50cqw;
+}
+
+.doorFace::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 75% 60% at 50% 46%, color-mix(in srgb, var(--vh-gold-pale) 10%, transparent), transparent 70%),
+    radial-gradient(ellipse 125% 95% at 50% 50%, transparent 60%, color-mix(in srgb, var(--vh-shadow) 38%, transparent) 100%),
+    linear-gradient(color-mix(in srgb, var(--vh-door-shade) 46%, transparent), color-mix(in srgb, var(--vh-door-shade) 46%, transparent));
+  pointer-events: none;
+}
+
+.doorFrame {
+  position: absolute;
+  inset: 14px;
+  border: 1px solid color-mix(in srgb, var(--vh-gold-soft) 42%, transparent);
+  pointer-events: none;
+}
+
+.doorFrame::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid color-mix(in srgb, var(--vh-gold-soft) 18%, transparent);
+}
+
+.coverBorder {
+  position: absolute;
+  width: auto;
+  height: var(--border-piece-h);
+  aspect-ratio: 724 / 2172;
+  opacity: 0.62;
+  filter: saturate(0.65) brightness(0.93);
+  pointer-events: none;
+}
+
+.coverBorderLeft {
+  left: 8px;
+}
+
+.coverBorderRight {
+  right: 8px;
+}
+
+.coverBorderTop {
+  top: 14px;
+  mask-image: linear-gradient(to bottom, black 0%, black 18%, transparent 46%);
+}
+
+.coverBorderBottom {
+  bottom: 14px;
+  mask-image: linear-gradient(to top, black 0%, black 18%, transparent 46%);
+}
+
+.coverFloral {
+  position: absolute;
+  width: 21cqw;
+  height: auto;
+  aspect-ratio: 1;
+  opacity: 0.9;
+  filter: saturate(0.8) drop-shadow(0 4px 8px color-mix(in srgb, var(--vh-shadow) 25%, transparent));
+  pointer-events: none;
+}
+
+.coverFloralTopLeft {
+  top: -1.5cqw;
+  left: -2cqw;
+}
+
+.coverFloralBottomRight {
+  bottom: -1.5cqw;
+  right: -2cqw;
+}
+
+.coverContent {
+  position: absolute;
+  inset: 0 var(--border-reach);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6cqh 0 5cqh;
+  text-align: center;
+  color: var(--vh-lacquer-text);
+}
+
+.coverContent p {
+  margin: 0;
+}
+
+.coverText {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.coverTitle {
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.42em;
+  margin-right: -0.42em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--vh-gold-soft);
+  opacity: 0.9;
+}
+
+.coverDivider {
+  display: block;
+  width: min(112px, 100%);
+  height: auto;
+  aspect-ratio: 3 / 1;
+  margin: 0.6cqh 0 1.4cqh;
+  opacity: 0.75;
+  filter: saturate(0.7);
+}
+
+.coverNames {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  font-family: var(--vh-font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(31px, 9.8cqw, 41px);
+  line-height: 1.14;
+  color: var(--vh-gold-pale);
+  text-shadow: 0 1px 8px color-mix(in srgb, var(--vh-shadow) 30%, transparent);
+  overflow-wrap: anywhere;
+}
+
+.coverAmp {
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-style: italic;
+  font-size: 0.5em;
+  line-height: 1.5;
+  color: var(--vh-gold-soft);
+  opacity: 0.85;
+}
+
+.coverContent .coverDate {
+  margin-top: 2.6cqh;
+  font-weight: 500;
+  font-size: 15px;
+  letter-spacing: 0.2em;
+  margin-right: -0.2em;
+  opacity: 0.9;
+}
+
+.coverWeekday {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  margin-right: -0.34em;
+  text-transform: uppercase;
+  color: var(--vh-gold-soft);
+}
+
+.coverMedallionWrap {
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+  margin-top: 3.6cqh;
+}
+
+/* Task 029 medallion glow, shown only while the doors open. */
+.coverMedallionWrap::before {
+  content: "";
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--vh-gold-light) 50%, transparent), transparent 65%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.coverMedallion {
+  position: relative;
+  display: block;
+  width: min(39cqw, 19.5cqh);
+  height: auto;
+  aspect-ratio: 1;
+  filter: saturate(0.82) drop-shadow(0 6px 12px color-mix(in srgb, var(--vh-shadow) 32%, transparent));
+}
+
+.coverContent .coverHint {
+  margin-top: 5.6cqh;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  margin-right: -0.3em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0.9;
+  text-shadow: 0 1px 6px color-mix(in srgb, var(--vh-shadow) 45%, transparent);
+}
+
+/* Opening interaction (VH-02B-M1) ------------------------------------------------- */
+
+/* The explicit opening control covers the whole closed cover; its accessible name is the hint. */
+.coverOpenButton {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.coverOpenButton:focus-visible {
+  outline: 2px solid var(--vh-gold-soft);
+  outline-offset: -8px;
+}
+
+/* Inner shading on each door's meeting edge, shown only once a real gap has opened. */
+.doorEdge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.door[data-door="left"] .doorEdge {
+  right: 0;
+  background: linear-gradient(to left, color-mix(in srgb, var(--vh-shadow) 28%, transparent), transparent);
+}
+
+.door[data-door="right"] .doorEdge {
+  left: 0;
+  background: linear-gradient(to right, color-mix(in srgb, var(--vh-shadow) 28%, transparent), transparent);
+}
+
+/* While closed (and only once the island is interactive) the page is held at the cover. */
+.column:has(> .opening[data-opening="closed"][data-interactive="true"]) {
+  height: 640px;
+  height: clamp(560px, 100svh, 920px);
+}
+
+/*
+ * Task 029 sequence, 1180 ms: the cover text settles away (300 ms) and the
+ * medallion glows and pulses (450 ms); from 260 ms the doors part for
+ * 880 ms; the invitation behind settles in from 260 ms over 700 ms. The
+ * cover's own no-op animation marks the end (animationend → DONE).
+ */
+.opening[data-opening="opening"] {
+  /* The invitation behind must show through the widening gap, not the cover's own fill. */
+  background: transparent;
+  pointer-events: none;
+  animation: vh-opening-finish 1180ms linear both;
+}
+
+.opening[data-opening="opening"] .coverText {
+  animation: vh-cover-text-out 300ms ease-out both;
+}
+
+.opening[data-opening="opening"] .coverHint {
+  animation: vh-fade-out 200ms ease-out both;
+}
+
+.opening[data-opening="opening"] .coverMedallionWrap {
+  animation: vh-medallion-pulse 450ms ease-out both;
+}
+
+.opening[data-opening="opening"] .coverMedallionWrap::before {
+  animation: vh-fade-in 300ms ease-out both;
+}
+
+.opening[data-opening="opening"] .door[data-door="left"] {
+  animation: vh-door-left 880ms cubic-bezier(0.65, 0, 0.35, 1) 260ms both;
+}
+
+.opening[data-opening="opening"] .door[data-door="right"] {
+  animation: vh-door-right 880ms cubic-bezier(0.65, 0, 0.35, 1) 260ms both;
+}
+
+.opening[data-opening="opening"] .doorEdge {
+  animation: vh-fade-in 300ms ease-out 560ms both;
+}
+
+.column:has(> .opening[data-opening="opening"]) > :not(.opening) {
+  animation: vh-inner-settle 700ms ease-out 260ms both;
+}
+
+@keyframes vh-opening-finish {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes vh-cover-text-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes vh-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vh-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes vh-medallion-pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  60% {
+    transform: scale(1.05);
+  }
+
+  100% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes vh-door-left {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes vh-door-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes vh-inner-settle {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Reduced motion: still an explicit tap, but no door travel: a 220 ms fade of the whole cover. */
+@media (prefers-reduced-motion: reduce) {
+  .opening[data-opening="opening"] {
+    animation: vh-opening-fade 220ms ease-out both;
+  }
+
+  .opening[data-opening="opening"] .coverText,
+  .opening[data-opening="opening"] .coverHint,
+  .opening[data-opening="opening"] .coverMedallionWrap,
+  .opening[data-opening="opening"] .coverMedallionWrap::before,
+  .opening[data-opening="opening"] .door[data-door="left"],
+  .opening[data-opening="opening"] .door[data-door="right"],
+  .opening[data-opening="opening"] .doorEdge,
+  .column:has(> .opening[data-opening="opening"]) > :not(.opening) {
+    animation: none;
+  }
+
+  .musicButton[aria-pressed="true"] .musicGlyph {
+    animation: none;
+  }
+}
+
+@keyframes vh-opening-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Music control (VH-02B-M1): Task 029 small round heritage control, top right of the column. */
+.music {
+  position: fixed;
+  top: 16px;
+  right: max(16px, calc((100vw - 480px) / 2 + 16px));
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: calc(100vw - 32px);
+  pointer-events: none;
+}
+
+.musicButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--vh-gold);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--vh-ivory) 92%, transparent);
+  box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--vh-ink) 40%, transparent);
+  color: var(--vh-vermilion);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.musicButton[aria-pressed="true"] {
+  background: var(--vh-vermilion);
+  color: var(--vh-silk);
+}
+
+.musicButton:focus-visible {
+  outline: 2px solid var(--vh-gold-deep);
+  outline-offset: 3px;
+}
+
+.musicGlyph {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.musicButton[aria-pressed="true"] .musicGlyph {
+  animation: vh-music-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes vh-music-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+.musicNote {
+  max-width: 220px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--vh-gold) 55%, transparent);
+  border-radius: 10px;
+  background: var(--vh-card);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: right;
+  color: var(--vh-vermilion-deep);
+  pointer-events: auto;
+}
+
+/* Hero ------------------------------------------------------------------------ */
+
+.hero {
+  position: relative;
+  padding: 44px 26px 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: var(--vh-paper-warm);
+  background-image: var(--vh-texture-ivory);
+  background-size: 620px auto;
+  container-type: inline-size;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 55% at 50% 40%, color-mix(in srgb, var(--vh-white-warm) 35%, transparent), transparent 75%),
+    linear-gradient(to bottom, transparent 80%, color-mix(in srgb, var(--vh-paper) 90%, transparent));
+  pointer-events: none;
+}
+
+.hero > * {
+  position: relative;
+}
+
+.hero p {
+  margin: 0;
+}
+
+.heroPhotoWrap {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 5 / 7;
+  max-height: 620px;
+}
+
+.heroPhotoFrame {
+  height: 100%;
+  box-sizing: border-box;
+  padding: 4px;
+  border: 0.5px solid color-mix(in srgb, var(--vh-gold) 62%, transparent);
+  background: var(--vh-card);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--vh-door-shade) 5%, transparent),
+    0 12px 26px -18px color-mix(in srgb, var(--vh-door-shade) 26%, transparent);
+}
+
+.heroPhoto {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--vh-gold) 35%, transparent);
+}
+
+.heroCorner {
+  position: absolute;
+  pointer-events: none;
+}
+
+.heroCornerTopLeft {
+  width: 19cqw;
+  aspect-ratio: 1;
+  top: -5cqw;
+  left: -5cqw;
+}
+
+.heroCornerBottomRight {
+  width: 20.5cqw;
+  aspect-ratio: 1;
+  right: -5cqw;
+  bottom: -5.5cqw;
+}
+
+.heroFloral {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.84;
+  filter: saturate(0.72) drop-shadow(0 2px 5px color-mix(in srgb, var(--vh-shadow) 12%, transparent));
+}
+
+.heroLotus {
+  position: absolute;
+  width: 16cqw;
+  color: var(--vh-gold-deep);
+}
+
+.heroCornerTopLeft .heroLotus {
+  right: -9cqw;
+  top: 2cqw;
+  transform: rotate(14deg);
+}
+
+.heroCornerBottomRight .heroLotus {
+  left: -9cqw;
+  bottom: 2cqw;
+  transform: rotate(-14deg);
+}
+
+.heroSeal {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 46px;
+  aspect-ratio: 1;
+  margin: -23px 0 0 -23px;
+  padding: 3px;
+  border-radius: 50%;
+  background: var(--vh-card);
+  box-shadow:
+    0 0 0 0.5px color-mix(in srgb, var(--vh-gold) 55%, transparent),
+    0 4px 10px -6px color-mix(in srgb, var(--vh-door-shade) 30%, transparent);
+}
+
+.heroSealImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: saturate(0.82);
+}
+
+.heroOrnament {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 132px;
+  height: 18px;
+  margin: 0 0 -9px -66px;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, var(--vh-paper-warm) 62%, transparent 100%);
+}
+
+.heroOrnamentImage {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  width: 104px;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  transform: translateY(-50%);
+  opacity: 0.85;
+  filter: saturate(0.75);
+}
+
+.heroMedallion {
+  display: block;
+  width: 96px;
+  height: auto;
+  aspect-ratio: 1;
+  filter: saturate(0.82) drop-shadow(0 4px 8px color-mix(in srgb, var(--vh-door-shade) 18%, transparent));
+}
+
+.hero .heroCeremony {
+  margin-top: 26px;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.38em;
+  margin-right: -0.38em;
+  text-transform: uppercase;
+  color: var(--vh-vermilion);
+}
+
+.heroNames {
+  margin: 14px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  font-family: var(--vh-font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(30px, 9.4cqw, 38px);
+  line-height: 1.1;
+  color: var(--vh-vermilion-deep);
+  overflow-wrap: anywhere;
+}
+
+/*
+ * VH-02A-QA1 couple names: each full name is one block on one line, sized as
+ * available width ÷ (code points × 0.56) between the approved minimum and
+ * maximum (no JS measurement; `--vh-name-chars` comes from the markup).
+ * Names over 24 code points wrap onto balanced lines at the half-length size.
+ */
+.coupleName {
+  --vh-name-chars: 14;
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.coupleName[data-name-fit="wrap"] {
+  white-space: normal;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.coverNames .coupleName {
+  font-size: clamp(17px, calc((100cqw - 2 * var(--border-reach) - 12px) / (var(--vh-name-chars) * 0.56)), 41px);
+}
+
+.coverNames .coupleName[data-name-fit="wrap"] {
+  font-size: clamp(17px, calc((100cqw - 2 * var(--border-reach) - 12px) / (var(--vh-name-chars) * 0.3)), 30px);
+}
+
+.heroNames .coupleName {
+  font-size: clamp(17px, calc((100cqw - 60px) / (var(--vh-name-chars) * 0.56)), 38px);
+}
+
+.heroNames .coupleName[data-name-fit="wrap"] {
+  font-size: clamp(17px, calc((100cqw - 60px) / (var(--vh-name-chars) * 0.3)), 30px);
+}
+
+.heroAmp {
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-size: 0.5em;
+  line-height: 1.45;
+  color: var(--vh-gold);
+}
+
+.hero .heroDate {
+  margin-top: 18px;
+  font-weight: 500;
+  font-size: 13.5px;
+  letter-spacing: 0.18em;
+  margin-right: -0.18em;
+  text-transform: uppercase;
+  color: var(--vh-ink-date);
+}
+
+.heroDateSep {
+  margin: 0 0.45em;
+  color: var(--vh-gold);
+}
+
+/* Ceremonial page -------------------------------------------------------------- */
+
+.page {
+  position: relative;
+  padding: 28px 30px 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: var(--vh-paper);
+  background-image: var(--vh-texture-ivory);
+  background-size: 620px auto;
+  container-type: inline-size;
+  overflow: hidden;
+}
+
+.page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(color-mix(in srgb, var(--vh-paper) 55%, transparent), color-mix(in srgb, var(--vh-paper) 35%, transparent));
+  pointer-events: none;
+}
+
+.page > * {
+  position: relative;
+  z-index: 1;
+}
+
+.page > .pageBorders {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.page p,
+.page h3 {
+  margin: 0;
+}
+
+.pageBorders::before,
+.pageBorders::after {
+  content: "";
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  width: 0.5px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--vh-gold) 55%, transparent) 12%,
+    color-mix(in srgb, var(--vh-gold) 55%, transparent) 88%,
+    transparent
+  );
+}
+
+.pageBorders::before {
+  left: 11px;
+}
+
+.pageBorders::after {
+  right: 11px;
+}
+
+.pageBorderCap {
+  position: absolute;
+  width: 44px;
+  height: auto;
+  aspect-ratio: 724 / 2172;
+  opacity: 0.5;
+  filter: saturate(0.65) brightness(0.95);
+}
+
+.pageBorderCapTop {
+  top: 10px;
+  mask-image: linear-gradient(to bottom, black 0%, black 22%, transparent 70%);
+}
+
+.pageBorderCapBottom {
+  bottom: 10px;
+  mask-image: linear-gradient(to top, black 0%, black 22%, transparent 70%);
+}
+
+.pageBorderLeft {
+  left: 5px;
+}
+
+.pageBorderRight {
+  right: 5px;
+}
+
+.familyColumns {
+  width: 100%;
+  max-width: 420px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: start;
+}
+
+.familyColumns[data-count="1"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.familyColumns[data-count="2"]::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 50%;
+  width: 0.5px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--vh-gold) 30%, transparent) 18%,
+    color-mix(in srgb, var(--vh-gold) 30%, transparent) 82%,
+    transparent
+  );
+}
+
+.familyColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.familyLabel {
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.34em;
+  margin-right: -0.34em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--vh-vermilion);
+}
+
+.familyRule {
+  width: 22px;
+  height: 0.5px;
+  margin: 9px 0 10px;
+  background: color-mix(in srgb, var(--vh-gold) 85%, transparent);
+}
+
+.familyParent {
+  font-weight: 600;
+  font-size: clamp(13.5px, 4.2cqw, 15.5px);
+  line-height: 1.45;
+  color: var(--vh-ink);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.familyParent + .familyParent {
+  margin-top: 2px;
+}
+
+.page .familyAddress {
+  margin-top: 5px;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(12px, 3.55cqw, 12.5px);
+  line-height: 1.42;
+  color: var(--vh-ink-soft);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.portraitRow {
+  width: 100%;
+  max-width: 340px;
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.portraitRow[data-count="1"] {
+  grid-template-columns: minmax(0, 190px);
+  justify-content: center;
+}
+
+/*
+ * Task 029 three-photo composition: narrower side frames around a dominant
+ * centre frame, bleeding 12px into the 30px page padding. Positions are
+ * layout only (1 | 2 | 3), never groom / couple / bride.
+ */
+.portraitRow[data-count="3"] {
+  width: calc(100% + 24px);
+  max-width: 452px;
+  margin-right: -12px;
+  margin-left: -12px;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr) minmax(0, 0.82fr);
+  gap: 8px;
+}
+
+.portraitFrame {
+  margin: 0;
+  padding: 3px;
+  border: 0.5px solid color-mix(in srgb, var(--vh-gold) 62%, transparent);
+  background: var(--vh-card);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--vh-door-shade) 5%, transparent),
+    0 10px 22px -16px color-mix(in srgb, var(--vh-door-shade) 28%, transparent);
+}
+
+.portraitFrame[data-emphasis="center"] {
+  position: relative;
+  z-index: 1;
+  border-color: color-mix(in srgb, var(--vh-gold) 78%, transparent);
+  box-shadow:
+    inset 0 0 0 2.5px var(--vh-card),
+    inset 0 0 0 3px color-mix(in srgb, var(--vh-gold) 30%, transparent),
+    0 2px 4px color-mix(in srgb, var(--vh-door-shade) 6%, transparent),
+    0 16px 30px -18px color-mix(in srgb, var(--vh-door-shade) 40%, transparent);
+}
+
+.portraitPhoto {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4.2;
+  object-fit: cover;
+}
+
+.portraitFrame[data-emphasis="center"] .portraitPhoto {
+  aspect-ratio: 3 / 4.3;
+}
+
+.inviteBlock {
+  position: relative;
+  max-width: 100%;
+  margin-top: 26px;
+  padding: 11px 16px 13px;
+}
+
+.inviteCorner {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: color-mix(in srgb, var(--vh-vermilion) 42%, transparent);
+  border-style: solid;
+  border-width: 0;
+}
+
+.inviteCornerTopLeft {
+  top: 0;
+  left: 0;
+  border-top-width: 1px;
+  border-left-width: 1px;
+}
+
+.inviteCornerBottomRight {
+  right: 0;
+  bottom: 0;
+  border-right-width: 1px;
+  border-bottom-width: 1px;
+}
+
+.inviteSalutation {
+  font-family: var(--vh-font-script), "Brush Script MT", cursive;
+  font-weight: 400;
+  font-size: clamp(24px, 7.2cqw, 32.5px);
+  line-height: 1.25;
+  white-space: nowrap;
+  color: var(--vh-vermilion-rose);
+}
+
+.page .inviteGuest {
+  display: inline-block;
+  max-width: 100%;
+  margin-top: 6px;
+  padding: 0 10px 6px;
+  border-bottom: 0.5px solid color-mix(in srgb, var(--vh-gold) 65%, transparent);
+  font-family: var(--vh-font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(19px, 5.8cqw, 23px);
+  line-height: 1.35;
+  color: var(--vh-vermilion-deep);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.rite {
+  width: 100%;
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.riteTitle {
+  font-weight: 600;
+  font-size: clamp(18px, 5.6cqw, 21px);
+  letter-spacing: 0.28em;
+  margin-right: -0.28em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--vh-vermilion);
+}
+
+.page .riteWeekday {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--vh-vermilion);
+}
+
+.riteWeekday::before,
+.riteWeekday::after {
+  content: "";
+  width: 26px;
+  height: 0.5px;
+  background: color-mix(in srgb, var(--vh-gold) 75%, transparent);
+}
+
+.riteDateRow {
+  width: 100%;
+  max-width: 300px;
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
+
+.riteDateCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.riteDateCellStart {
+  border-right: 0.5px solid color-mix(in srgb, var(--vh-gold) 60%, transparent);
+}
+
+.riteDateCellEnd {
+  border-left: 0.5px solid color-mix(in srgb, var(--vh-gold) 60%, transparent);
+}
+
+.riteSideValue {
+  font-weight: 600;
+  font-size: 21px;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  color: var(--vh-vermilion-deep);
+}
+
+.riteDayCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 18px;
+}
+
+.riteDay {
+  font-weight: 600;
+  font-size: 72px;
+  line-height: 0.95;
+  color: var(--vh-vermilion-deep);
+}
+
+.riteMonth {
+  margin-top: 4px;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.24em;
+  margin-right: -0.24em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--vh-vermilion);
+}
+
+.page .riteLunar {
+  margin-top: 12px;
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--vh-ink-soft);
+}
+
+.riteDivider {
+  display: block;
+  width: 104px;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  margin: 16px auto 0;
+  opacity: 0.8;
+  filter: saturate(0.75);
+}
+
+/* Venue cards (inside the ceremonial page) ------------------------------------ */
+
+.venues {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.venueList {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.venueBlock {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.page .venueSide {
+  margin-bottom: 10px;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.34em;
+  margin-right: -0.34em;
+  text-transform: uppercase;
+  color: var(--vh-vermilion);
+}
+
+.venueCard {
+  width: 100%;
+  max-width: 320px;
+  padding: 20px 16px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--vh-vermilion) 45%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--vh-card) 85%, transparent);
+  box-shadow: 0 12px 26px -20px color-mix(in srgb, var(--vh-door-shade) 35%, transparent);
+}
+
+.venueTitle {
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.2em;
+  margin-right: -0.2em;
+  text-transform: uppercase;
+  color: var(--vh-vermilion);
+  text-wrap: balance;
+}
+
+.page .venueTime {
+  margin-top: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vh-ink-muted);
+}
+
+.venueDate {
+  font-weight: 600;
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  color: var(--vh-vermilion-deep);
+}
+
+.venueRule {
+  width: 36px;
+  height: 0.5px;
+  margin: 14px 0 12px;
+  background: color-mix(in srgb, var(--vh-gold) 85%, transparent);
+}
+
+.venueName {
+  max-width: 300px;
+  font-weight: 600;
+  font-size: clamp(15px, 4.5cqw, 17px);
+  line-height: 1.4;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--vh-vermilion-deep);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.page .venueAddress {
+  max-width: 290px;
+  margin-top: 4px;
+  font-weight: 500;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--vh-ink-muted);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.venueMapLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 14px;
+  padding: 0 24px;
+  border-radius: 999px;
+  background: var(--vh-vermilion);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--vh-cream);
+  box-shadow: 0 8px 18px -12px color-mix(in srgb, var(--vh-door-shade) 60%, transparent);
+}
+
+.venueMapLink:focus-visible {
+  outline: 1px solid var(--vh-vermilion);
+  outline-offset: 3px;
+}
+
+/* Timeline (inside the ceremonial page) ---------------------------------------- */
+
+.scheduleBlock {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.schedule {
+  width: 100%;
+  max-width: 320px;
+  margin: 30px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 14px;
+}
+
+.schedule[data-columns="2"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.schedule[data-columns="3"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.schedule[data-columns="4"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.scheduleItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 2px 4px;
+  border-left: 0.5px solid color-mix(in srgb, var(--vh-gold) 60%, transparent);
+}
+
+.scheduleItem[data-row-start="true"] {
+  border-left: 0;
+}
+
+.scheduleTime {
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  color: var(--vh-vermilion-deep);
+}
+
+.scheduleLabel {
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--vh-ink-muted);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+/* Love Story --------------------------------------------------------------------- */
+
+/* Countdown (VH-02B-M1): Task 029 four cells under a gold rule on the ceremonial sheet. */
+.countdown {
+  width: 100%;
+  max-width: 340px;
+  margin-top: 26px;
+}
+
+.countdownRow {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 20px;
+  padding: 18px 0 0;
+  border-top: 1px solid color-mix(in srgb, var(--vh-gold) 45%, transparent);
+  list-style: none;
+}
+
+.countdownCell {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.countdownValue {
+  display: block;
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 21px;
+  line-height: 1.2;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--vh-vermilion);
+}
+
+.countdownLabel {
+  display: block;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vh-ink-soft);
+}
+
+.loveStory {
+  position: relative;
+  padding: 58px 22px 70px;
+  overflow: hidden;
+  text-align: center;
+  background-color: var(--vh-lacquer);
+  background-image: linear-gradient(180deg, var(--vh-lacquer-top) 0%, var(--vh-lacquer) 55%, var(--vh-lacquer-bottom) 100%);
+  color: var(--vh-lacquer-text);
+  container-type: inline-size;
+}
+
+.loveStory::before,
+.loveStory::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  height: 0.5px;
+  background: color-mix(in srgb, var(--vh-gold-soft) 55%, transparent);
+}
+
+.loveStory::before {
+  top: 16px;
+}
+
+.loveStory::after {
+  bottom: 16px;
+}
+
+.loveStoryHeader {
+  margin-bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.loveStoryEyebrow {
+  margin: 0;
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 0.46em;
+  margin-right: -0.46em;
+  text-transform: uppercase;
+  color: var(--vh-gold-soft);
+}
+
+.loveStoryHeading {
+  margin: 4px 0 0;
+  font-family: var(--vh-font-script), "Brush Script MT", cursive;
+  font-weight: 400;
+  font-size: clamp(32px, 10cqw, 40px);
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--vh-lacquer-heading);
+}
+
+.loveStoryRule {
+  width: 40px;
+  height: 0.5px;
+  margin-top: 10px;
+  background: color-mix(in srgb, var(--vh-gold-soft) 80%, transparent);
+}
+
+.loveStoryPhotoFrame {
+  max-width: 260px;
+  margin: 0 auto 28px;
+  overflow: hidden;
+  border: 3px solid color-mix(in srgb, var(--vh-lacquer-text) 90%, transparent);
+  border-radius: 14px;
+  box-shadow: 0 16px 30px -14px color-mix(in srgb, var(--vh-shadow) 80%, transparent);
+}
+
+.loveStoryPhoto {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+}
+
+.loveStoryText {
+  max-width: 340px;
+  margin: 0 auto;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 1.7;
+  color: color-mix(in srgb, var(--vh-lacquer-text) 90%, transparent);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+/* Gift (static entry / preview) -------------------------------------------------- */
+
+/* RSVP (VH-02B-E1): Task 029 ivory page, two-line title, deep red form panel ------- */
+
+.rsvp {
+  position: relative;
+  padding: 44px 24px 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: var(--vh-paper);
+  background-image: var(--vh-texture-ivory);
+  background-size: 620px auto;
+  container-type: inline-size;
+}
+
+.rsvpHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.rsvpDivider {
+  display: block;
+  width: 110px;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  margin-bottom: 8px;
+  opacity: 0.85;
+}
+
+.rsvpTitle {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--vh-font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(23px, 7cqw, 28px);
+  line-height: 1.25;
+  color: var(--vh-vermilion-deep);
+}
+
+.rsvpTitle span {
+  white-space: nowrap;
+}
+
+.rsvpPanel {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 360px;
+  padding: 22px 16px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, var(--vh-vermilion), var(--vh-vermilion-deep));
+  box-shadow: 0 16px 30px -22px color-mix(in srgb, var(--vh-door-shade) 55%, transparent);
+  text-align: left;
+}
+
+.rsvpFields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rsvpField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rsvpLabel {
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vh-gold-light);
+}
+
+.rsvpInput {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--vh-gold-soft) 40%, transparent);
+  border-radius: 8px;
+  background: var(--vh-card);
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-weight: 500;
+  font-size: 17px;
+  font-variant-numeric: lining-nums;
+  line-height: 1.45;
+  color: var(--vh-ink);
+}
+
+.rsvpInput::placeholder {
+  color: var(--vh-ink-soft);
+  opacity: 1;
+}
+
+.rsvpInput:focus-visible {
+  outline: 2px solid var(--vh-gold-light);
+  outline-offset: 2px;
+}
+
+.rsvpInput[aria-invalid="true"] {
+  border-color: var(--vh-gold-light);
+}
+
+.rsvpSelect {
+  appearance: auto;
+}
+
+.rsvpTextarea {
+  min-height: 104px;
+  resize: vertical;
+}
+
+.rsvpError,
+.rsvpHint,
+.rsvpResult {
+  margin: 0;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--vh-gold-pale);
+  overflow-wrap: anywhere;
+}
+
+.rsvpResult {
+  text-align: center;
+}
+
+.rsvpSubmit,
+.rsvpEdit {
+  min-height: 48px;
+  margin-top: 4px;
+  padding: 0 20px;
+  border: 1px solid color-mix(in srgb, var(--vh-gold-light) 85%, transparent);
+  border-radius: 10px;
+  background: var(--vh-lacquer);
+  box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--vh-shadow) 70%, transparent);
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--vh-white-warm);
+  cursor: pointer;
+}
+
+.rsvpSubmit[aria-disabled="true"] {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.rsvpSubmit:focus-visible,
+.rsvpEdit:focus-visible {
+  outline: 2px solid var(--vh-gold-light);
+  outline-offset: 3px;
+}
+
+.rsvpDone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--vh-lacquer-text);
+}
+
+.rsvpDone p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.rsvpDoneThanks {
+  font-family: var(--vh-font-display), Georgia, serif;
+  font-style: italic;
+  font-size: 24px;
+  line-height: 1.3;
+  color: var(--vh-white-warm);
+}
+
+.rsvpDoneChoice {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--vh-gold-light);
+}
+
+.rsvpDoneMessage {
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.rsvpEdit {
+  margin-top: 10px;
+}
+
+/* Wedding Gift --------------------------------------------------------------------- */
+
+.gift {
+  position: relative;
+  padding: 38px 24px 42px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: var(--vh-paper);
+  background-image: var(--vh-texture-ivory);
+  background-size: 620px auto;
+}
+
+.gift::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(color-mix(in srgb, var(--vh-paper) 55%, transparent), color-mix(in srgb, var(--vh-paper) 35%, transparent));
+  pointer-events: none;
+}
+
+.gift > * {
+  position: relative;
+}
+
+/*
+ * VH-V2-01 gift typography: Cormorant's small x-height made the 16.5px
+ * muted note read like a caption. The intro now scales with the column
+ * (18.5px at 360 → 20.5px from ~420px), uses the full ink colour and a
+ * measure of about 30–34 characters, so it fills the column instead of
+ * floating in empty paper; the lotus and a 24px gap tie it to the CTA.
+ */
+.giftLotus {
+  display: block;
+  width: 46px;
+  margin: 0 auto 12px;
+  color: var(--vh-gold-deep);
+}
+
+.giftIntro {
+  max-width: min(100%, 344px);
+  margin: 0 0 24px;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(18.5px, 4.9vw, 20.5px);
+  line-height: 1.55;
+  color: var(--vh-ink);
+  text-wrap: balance;
+  hyphens: manual;
+}
+
+/* Task 029 gift CTA: the only gift element on the page. */
+.giftOpen {
+  min-height: 50px;
+  padding: 0 32px;
+  border: 1px solid color-mix(in srgb, var(--vh-gold-light) 85%, transparent);
+  border-radius: 10px;
+  background: var(--vh-vermilion);
+  box-shadow: 0 8px 18px -12px color-mix(in srgb, var(--vh-door-shade) 60%, transparent);
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.26em;
+  margin-right: -0.26em;
+  text-transform: uppercase;
+  color: var(--vh-white-warm);
+  cursor: pointer;
+}
+
+.giftOpen:focus-visible,
+.giftClose:focus-visible,
+.giftTab:focus-visible,
+.giftCopy:focus-visible {
+  outline: 2px solid var(--vh-gold-deep);
+  outline-offset: 3px;
+}
+
+/* Native modal dialog: bottom sheet on phones, centred modal from 600px. */
+.giftDialog {
+  width: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  margin: auto auto 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--vh-ink);
+  font-family: var(--vh-font-serif), Georgia, "Times New Roman", serif;
+  font-variant-numeric: lining-nums;
+  overflow: visible;
+}
+
+.giftDialog::backdrop {
+  background: color-mix(in srgb, var(--vh-shadow) 55%, transparent);
+}
+
+.giftSheet {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-height: 88svh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 30px 22px calc(26px + env(safe-area-inset-bottom));
+  border-top: 1px solid color-mix(in srgb, var(--vh-gold) 55%, transparent);
+  border-radius: 18px 18px 0 0;
+  background-color: var(--vh-card);
+  background-image: var(--vh-texture-ivory);
+  background-size: 620px auto;
+  box-shadow: 0 -18px 40px -20px color-mix(in srgb, var(--vh-shadow) 50%, transparent);
+  text-align: center;
+}
+
+@media (min-width: 600px) {
+  .giftDialog {
+    width: calc(100% - 32px);
+    max-width: 400px;
+    margin: auto;
+  }
+
+  .giftSheet {
+    max-height: 86svh;
+    padding-bottom: 24px;
+    border: 1px solid color-mix(in srgb, var(--vh-gold) 55%, transparent);
+    border-radius: 16px;
+    box-shadow: 0 24px 50px -20px color-mix(in srgb, var(--vh-shadow) 50%, transparent);
+  }
+}
+
+.giftClose {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--vh-ink-soft);
+  cursor: pointer;
+}
+
+.giftSheetLotus {
+  display: block;
+  width: 36px;
+  margin: 0 auto 4px;
+  color: var(--vh-gold-deep);
+}
+
+.giftTitle {
+  margin: 0;
+  font-family: var(--vh-font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 25px;
+  line-height: 1.25;
+  color: var(--vh-vermilion-deep);
+}
+
+.giftTabs {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+  max-width: 260px;
+  margin: 16px auto 0;
+  padding: 3px;
+  border: 1px solid color-mix(in srgb, var(--vh-vermilion) 35%, transparent);
+  border-radius: 999px;
+}
+
+.giftTab {
+  flex: 1;
+  min-height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vh-vermilion);
+  cursor: pointer;
+}
+
+.giftTab[aria-pressed="true"] {
+  background: var(--vh-vermilion);
+  color: var(--vh-cream);
+}
+
+.giftSideLabel {
+  margin: 14px 0 0;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.3em;
+  margin-right: -0.3em;
+  text-transform: uppercase;
+  color: var(--vh-vermilion);
+}
+
+.giftPanel {
+  margin-top: 18px;
+}
+
+.giftPanel[hidden] {
+  display: none;
+}
+
+.giftDetails {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.giftQr {
+  box-sizing: border-box;
+  width: 196px;
+  max-width: 100%;
+  aspect-ratio: 1;
+  margin: 0 auto 6px;
+  padding: 10px;
+  border: 0.5px solid color-mix(in srgb, var(--vh-gold) 70%, transparent);
+  border-radius: 10px;
+  background: var(--vh-qr-plate);
+  box-shadow: 0 8px 18px -14px color-mix(in srgb, var(--vh-shadow) 40%, transparent);
+}
+
+.giftQrImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.giftLines {
+  width: 100%;
+  margin: 12px 0 0;
+  padding: 0;
+  text-align: center;
+}
+
+.giftLine {
+  padding: 10px 0;
+  border-top: 0.5px solid color-mix(in srgb, var(--vh-gold) 45%, transparent);
+}
+
+.giftLine dt {
+  margin-bottom: 3px;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--vh-gold-deep);
+}
+
+.giftLine dd {
+  margin: 0;
+  font-weight: 600;
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--vh-ink);
+  overflow-wrap: anywhere;
+}
+
+.giftLine .giftAccountNumber {
+  font-size: 21px;
+  letter-spacing: 0.08em;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--vh-vermilion-deep);
+  user-select: all;
+}
+
+.giftLine .giftLineAction {
+  margin-top: 8px;
+}
+
+.giftCopyControl {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.giftCopy {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid color-mix(in srgb, var(--vh-vermilion) 55%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--vh-font-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--vh-vermilion);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.giftCopy[data-copy-feedback="success"] {
+  background: var(--vh-vermilion);
+  color: var(--vh-cream);
+}
+
+.giftCopyNote {
+  max-width: 260px;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--vh-vermilion-deep);
+}
+
+/* Dress Code ---------------------------------------------------------------------- */
+
+.dressCode {
+  position: relative;
+  padding: 26px 28px 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: var(--vh-paper);
+  background-image: var(--vh-texture-ivory);
+  background-size: 620px auto;
+}
+
+.dressCode::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(color-mix(in srgb, var(--vh-paper) 55%, transparent), color-mix(in srgb, var(--vh-paper) 35%, transparent));
+  pointer-events: none;
+}
+
+.dressCode > * {
+  position: relative;
+}
+
+.dressRule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.dressRule::before,
+.dressRule::after {
+  content: "";
+  width: 34px;
+  height: 0.5px;
+  background: color-mix(in srgb, var(--vh-gold) 75%, transparent);
+}
+
+.dressRuleDiamond {
+  width: 5px;
+  height: 5px;
+  background: var(--vh-gold);
+  opacity: 0.8;
+  transform: rotate(45deg);
+}
+
+.dressTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.34em;
+  margin-right: -0.34em;
+  text-transform: uppercase;
+  color: var(--vh-vermilion);
+}
+
+.dressCodeText {
+  max-width: 310px;
+  margin: 12px 0 0;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--vh-ink-muted);
+  white-space: pre-line;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.dressCodeSwatches {
+  max-width: 310px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px 16px;
+}
+
+.dressCodeSwatch {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--vh-ink) 8%, transparent),
+    0 0 0 3px var(--vh-card),
+    0 0 0 3.5px color-mix(in srgb, var(--vh-gold) 60%, transparent),
+    0 5px 10px -4px color-mix(in srgb, var(--vh-ink) 35%, transparent);
+}
+
+/* Gallery / album ---------------------------------------------------------------- */
+
+.album {
+  position: relative;
+  padding: 34px 18px 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: var(--vh-paper);
+  background-image: var(--vh-texture-ivory);
+  background-size: 620px auto;
+  container-type: inline-size;
+}
+
+.album::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(color-mix(in srgb, var(--vh-paper) 55%, transparent), color-mix(in srgb, var(--vh-paper) 35%, transparent));
+  pointer-events: none;
+}
+
+.album > * {
+  position: relative;
+}
+
+.albumHeader {
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.albumDivider {
+  display: block;
+  width: 104px;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  margin-bottom: 10px;
+  opacity: 0.8;
+  filter: saturate(0.75);
+}
+
+.albumEyebrow {
+  margin: 0;
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 0.4em;
+  margin-right: -0.4em;
+  text-transform: uppercase;
+  color: var(--vh-gold-deep);
+}
+
+.albumHeading {
+  margin: 4px 0 0;
+  font-family: var(--vh-font-script), "Brush Script MT", cursive;
+  font-weight: 400;
+  font-size: clamp(30px, 9cqw, 38px);
+  line-height: 1.2;
+  color: var(--vh-vermilion-rose);
+  text-wrap: balance;
+}
+
+.albumRows {
+  width: 100%;
+  max-width: 460px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.albumRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.albumRowPair {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.albumRowTall {
+  grid-template-columns: minmax(0, 1.33fr) minmax(0, 1fr);
+}
+
+.albumPrint {
+  display: flex;
+  min-width: 0;
+  padding: 3px;
+  border: 0.5px solid color-mix(in srgb, var(--vh-gold) 60%, transparent);
+  border-radius: 2px;
+  background: var(--vh-card);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--vh-door-shade) 5%, transparent),
+    0 12px 24px -18px color-mix(in srgb, var(--vh-door-shade) 35%, transparent);
+}
+
+/*
+ * VH-02A-QA1 safe album prints: the whole photograph is always shown
+ * (`object-fit: contain`) on the print's silk mat, never cropped to the tile.
+ * Full-width rows take the photo's own ratio, bounded 4:5 – 3:2, through
+ * `--vh-print-ratio` (set from MediaResolution dimensions in markup); paired
+ * rows keep their shared shape so the heritage rhythm holds.
+ */
+.albumPhoto,
+.albumUnavailable {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  object-fit: contain;
+  background: var(--vh-silk);
+}
+
+.albumRowLarge .albumPrint {
+  --vh-print-ratio: 4 / 5;
+}
+
+.albumRowWide .albumPrint {
+  --vh-print-ratio: 3 / 2;
+}
+
+.albumRowLarge .albumPhoto,
+.albumRowLarge .albumUnavailable,
+.albumRowWide .albumPhoto,
+.albumRowWide .albumUnavailable {
+  aspect-ratio: var(--vh-print-ratio);
+}
+
+.albumRowTall .albumPhoto,
+.albumRowTall .albumUnavailable {
+  aspect-ratio: 3 / 4;
+}
+
+.albumRowTall .albumPrint:last-child .albumPhoto,
+.albumRowTall .albumPrint:last-child .albumUnavailable {
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+.albumUnavailable {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background: var(--vh-silk);
+  font-style: italic;
+  font-size: 13px;
+  text-align: center;
+  color: var(--vh-ink-soft);
+}
+
+/* Closing (text-only, ruling D5) -------------------------------------------------- */
+
+.closing {
+  padding: 30px 0 0;
+  text-align: center;
+  background: var(--vh-paper);
+}
+
+.closingDivider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 auto 10px;
+  color: var(--vh-gold-deep);
+}
+
+.closingDividerRule {
+  width: 52px;
+  height: 0.5px;
+  background: color-mix(in srgb, var(--vh-gold) 75%, transparent);
+}
+
+.closingLotus {
+  display: block;
+  width: 30px;
+  opacity: 0.85;
+}
+
+.closingPanel {
+  min-height: 0;
+  aspect-ratio: 3 / 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 26px 18px 34px;
+  background:
+    radial-gradient(ellipse 90% 80% at 50% 50%, var(--vh-lacquer-top), var(--vh-lacquer-bottom)),
+    var(--vh-lacquer);
+  color: var(--vh-cream);
+  container-type: inline-size;
+}
+
+.closingPanel p {
+  margin: 0;
+}
+
+.closingMessage {
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(13.5px, 4.6cqw, 17px);
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--vh-cream) 94%, transparent);
+}
+
+.closingLine {
+  display: block;
+}
+
+.closingPanel .closingNames {
+  margin-top: 12px;
+  font-family: var(--vh-font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(22px, 7cqw, 27px);
+  line-height: 1.25;
+  color: var(--vh-white-warm);
+  overflow-wrap: anywhere;
+}
+
+.closingPanel .closingDate {
+  margin-top: 8px;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.22em;
+  color: var(--vh-gold-light);
+}
+
+/* Desktop: centred premium column over the renderer-owned backdrop --------------- */
+
+@media (min-width: 768px) {
+  .root {
+    background: var(--vh-backdrop);
+  }
+
+  .column {
+    margin-top: 32px;
+    margin-bottom: 32px;
+    box-shadow: 0 10px 40px color-mix(in srgb, var(--vh-ink) 18%, transparent);
+  }
+}
+
+/* Album lightbox (VH-02B-M2) ------------------------------------------------------ */
+
+/* The open control is invisible chrome over the print's photograph: the frame is unchanged. */
+.albumOpen {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: zoom-in;
+}
+
+.albumOpen:focus-visible {
+  outline: 2px solid var(--vh-gold-deep);
+  outline-offset: 3px;
+}
+
+.viewer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--vh-lacquer-text);
+  font-family: var(--vh-font-serif), Georgia, "Times New Roman", serif;
+  overflow: hidden;
+}
+
+.viewer::backdrop {
+  background: color-mix(in srgb, var(--vh-shadow) 94%, transparent);
+}
+
+/* The whole photograph, bounded by the viewport inside safe margins; clicks around it reach the backdrop. */
+.viewerStage {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 68px 16px 60px;
+  pointer-events: none;
+}
+
+.viewerImage {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(100%, 720px);
+  max-height: 100%;
+  object-fit: contain;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--vh-gold-soft) 45%, transparent),
+    0 24px 50px -20px color-mix(in srgb, var(--vh-shadow) 80%, transparent);
+  pointer-events: auto;
+}
+
+/* The image entrance plays only without a reduced-motion preference; otherwise it simply appears. */
+@media (prefers-reduced-motion: no-preference) {
+  .viewerImage {
+    animation: vh-viewer-in 240ms ease-out both;
+  }
+}
+
+.viewerClose,
+.viewerNav {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--vh-gold-soft) 60%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--vh-shadow) 55%, transparent);
+  color: var(--vh-lacquer-heading);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.viewerClose {
+  top: 12px;
+  right: 12px;
+  font-size: 17px;
+}
+
+.viewerNav {
+  top: 50%;
+  translate: 0 -50%;
+  font-size: 28px;
+}
+
+.viewerPrev {
+  left: 10px;
+}
+
+.viewerNext {
+  right: 10px;
+}
+
+.viewerClose:focus-visible,
+.viewerNav:focus-visible {
+  outline: 2px solid var(--vh-gold-light);
+  outline-offset: 3px;
+}
+
+.viewerCount {
+  position: absolute;
+  bottom: 18px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  margin: 0;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.3em;
+  font-variant-numeric: lining-nums;
+  text-align: center;
+  color: var(--vh-gold-soft);
+  pointer-events: none;
+}
+
+@keyframes vh-viewer-in {
+  from {
+    opacity: 0;
+    scale: 0.98;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+/* Section reveal (VH-02B-M2) ------------------------------------------------------ */
+
+/*
+ * Pending states exist only on targets the reveal controller marked after
+ * hydration (`data-vh-reveal="<variant>"`); server markup is never hidden.
+ * Every pending state and entrance lives inside
+ * `@media (prefers-reduced-motion: no-preference)`: under reduced motion
+ * none of it applies, so each target keeps exactly its natural style
+ * (designed translucencies included), visible and still.
+ * Once shown (`"<variant> shown"`) each target plays its entrance once with
+ * `backwards` fill, so its settled state is always its natural style. Only
+ * opacity, translate, scale and clip-path move: the layout footprint is
+ * fixed. Calm, ceremonial tempo; per-batch stagger via --vh-reveal-delay.
+ */
+.column {
+  --vh-reveal-delay: 0ms;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .column [data-vh-reveal="rise"] {
+    opacity: 0;
+    translate: 0 18px;
+  }
+
+  .column [data-vh-reveal="fade"] {
+    opacity: 0;
+  }
+
+  .column [data-vh-reveal="card"] {
+    opacity: 0;
+    translate: 0 24px;
+    scale: 0.97;
+  }
+
+  .column [data-vh-reveal="image"] {
+    opacity: 0;
+    clip-path: inset(7%);
+    scale: 1.035;
+  }
+
+  /* VH-V2-01: gold rules and dividers unfurl from their centre. */
+  .column [data-vh-reveal="draw"] {
+    opacity: 0;
+    scale: 0.2 1;
+  }
+
+  .column [data-vh-reveal="left"] {
+    opacity: 0;
+    translate: -22px 0;
+  }
+
+  .column [data-vh-reveal="right"] {
+    opacity: 0;
+    translate: 22px 0;
+  }
+
+  .column [data-vh-reveal="scale"] {
+    opacity: 0;
+    scale: 0.88;
+  }
+
+  .column [data-vh-reveal="rise shown"] {
+    animation: vh-reveal-rise 760ms cubic-bezier(0.22, 1, 0.36, 1) var(--vh-reveal-delay) backwards;
+  }
+
+  .column [data-vh-reveal="fade shown"] {
+    animation: vh-reveal-fade 700ms ease-out var(--vh-reveal-delay) backwards;
+  }
+
+  .column [data-vh-reveal="card shown"] {
+    animation: vh-reveal-card 900ms cubic-bezier(0.22, 1, 0.36, 1) var(--vh-reveal-delay) backwards;
+  }
+
+  .column [data-vh-reveal="image shown"] {
+    animation: vh-reveal-image 1100ms cubic-bezier(0.22, 1, 0.36, 1) var(--vh-reveal-delay) backwards;
+  }
+
+  .column [data-vh-reveal="draw shown"] {
+    animation: vh-reveal-draw 900ms cubic-bezier(0.22, 1, 0.36, 1) var(--vh-reveal-delay) backwards;
+  }
+
+  .column [data-vh-reveal="left shown"] {
+    animation: vh-reveal-left 900ms cubic-bezier(0.22, 1, 0.36, 1) var(--vh-reveal-delay) backwards;
+  }
+
+  .column [data-vh-reveal="right shown"] {
+    animation: vh-reveal-right 900ms cubic-bezier(0.22, 1, 0.36, 1) var(--vh-reveal-delay) backwards;
+  }
+
+  .column [data-vh-reveal="scale shown"] {
+    animation: vh-reveal-scale 760ms cubic-bezier(0.22, 1, 0.36, 1) var(--vh-reveal-delay) backwards;
+  }
+}
+
+@keyframes vh-reveal-rise {
+  from {
+    opacity: 0;
+    translate: 0 18px;
+  }
+}
+
+@keyframes vh-reveal-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes vh-reveal-card {
+  from {
+    opacity: 0;
+    translate: 0 24px;
+    scale: 0.97;
+  }
+}
+
+@keyframes vh-reveal-image {
+  from {
+    opacity: 0;
+    clip-path: inset(7%);
+    scale: 1.035;
+  }
+
+  to {
+    opacity: 1;
+    clip-path: inset(0);
+    scale: 1;
+  }
+}
+
+@keyframes vh-reveal-draw {
+  from {
+    opacity: 0;
+    scale: 0.2 1;
+  }
+}
+
+@keyframes vh-reveal-left {
+  from {
+    opacity: 0;
+    translate: -22px 0;
+  }
+}
+
+@keyframes vh-reveal-right {
+  from {
+    opacity: 0;
+    translate: 22px 0;
+  }
+}
+
+@keyframes vh-reveal-scale {
+  from {
+    opacity: 0;
+    scale: 0.88;
+  }
+}
+
+/* VH-V2-01 premium motion ---------------------------------------------------------- */
+
+/*
+ * Progressive and non-blocking by construction:
+ * - every rule below lives inside `prefers-reduced-motion: no-preference`,
+ *   so under reduced motion nothing here applies and each element keeps its
+ *   natural style (the opening keeps its existing 220 ms fade);
+ * - only opacity and the individual translate / scale / clip-path
+ *   properties move (no layout property, no scroll handler, no timer);
+ * - every keyframe states only its starting pose (or returns to the natural
+ *   one), so a finished or removed animation always rests on the natural
+ *   style, and no content depends on JavaScript to become visible: the cover
+ *   entrance is pure CSS on server markup;
+ * - nothing loops forever: the two idle invitations to tap run three cycles
+ *   and stop once the cover starts opening.
+ */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* A. Closed cover: a ceremonial entrance on first paint, then a quiet invitation to tap. */
+  .opening[data-opening="closed"] .coverFloral {
+    animation: vh-bloom 1300ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+  }
+
+  .opening[data-opening="closed"] .coverFloralTopLeft {
+    transform-origin: top left;
+  }
+
+  .opening[data-opening="closed"] .coverFloralBottomRight {
+    transform-origin: bottom right;
+  }
+
+  .opening[data-opening="closed"] .coverTitle {
+    animation: vh-cover-rise 900ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+  }
+
+  .opening[data-opening="closed"] .coverDivider {
+    animation: vh-reveal-draw 1000ms cubic-bezier(0.22, 1, 0.36, 1) 380ms both;
+  }
+
+  .opening[data-opening="closed"] .coverNames {
+    animation: vh-cover-names 1200ms cubic-bezier(0.22, 1, 0.36, 1) 480ms both;
+  }
+
+  .opening[data-opening="closed"] .coverDate {
+    animation: vh-cover-rise 900ms cubic-bezier(0.22, 1, 0.36, 1) 760ms both;
+  }
+
+  .opening[data-opening="closed"] .coverMedallionWrap {
+    animation: vh-medallion-in 1100ms cubic-bezier(0.22, 1, 0.36, 1) 860ms both;
+  }
+
+  .opening[data-opening="closed"] .coverMedallion {
+    animation: vh-medallion-breathe 2600ms ease-in-out 2200ms 3;
+  }
+
+  .opening[data-opening="closed"] .coverHint {
+    animation:
+      vh-cover-rise 800ms cubic-bezier(0.22, 1, 0.36, 1) 1250ms both,
+      vh-hint-breathe 2600ms ease-in-out 2200ms 3;
+  }
+
+  /*
+   * B. Hero choreography behind the parting doors. Keyed to the OPENING
+   * phase and finished by 1160 ms, inside the 1180 ms sequence, so nothing
+   * is cut when the cover leaves the tree.
+   */
+  .column:has(> .opening[data-opening="opening"]) .heroPhotoFrame {
+    animation: vh-hero-photo 840ms cubic-bezier(0.22, 1, 0.36, 1) 300ms both;
+  }
+
+  .column:has(> .opening[data-opening="opening"]) .heroCornerTopLeft {
+    transform-origin: top left;
+    animation: vh-bloom 700ms cubic-bezier(0.22, 1, 0.36, 1) 440ms both;
+  }
+
+  .column:has(> .opening[data-opening="opening"]) .heroCornerBottomRight {
+    transform-origin: bottom right;
+    animation: vh-bloom 700ms cubic-bezier(0.22, 1, 0.36, 1) 440ms both;
+  }
+
+  .column:has(> .opening[data-opening="opening"]) .heroSeal {
+    animation: vh-medallion-in 600ms cubic-bezier(0.22, 1, 0.36, 1) 540ms both;
+  }
+
+  .column:has(> .opening[data-opening="opening"]) .heroOrnament {
+    animation: vh-reveal-draw 600ms cubic-bezier(0.22, 1, 0.36, 1) 540ms both;
+  }
+
+  .column:has(> .opening[data-opening="opening"]) .heroCeremony {
+    animation: vh-cover-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) 440ms both;
+  }
+
+  .column:has(> .opening[data-opening="opening"]) .heroNames {
+    animation: vh-cover-names 620ms cubic-bezier(0.22, 1, 0.36, 1) 500ms both;
+  }
+
+  .column:has(> .opening[data-opening="opening"]) .heroDate {
+    animation: vh-cover-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) 600ms both;
+  }
+
+  /* C. Tactile controls: a short lift on hover (pointer devices only) and a press-in on tap. */
+  .giftOpen,
+  .venueMapLink,
+  .rsvpSubmit,
+  .rsvpEdit,
+  .giftCopy,
+  .giftTab,
+  .musicButton,
+  .viewerNav,
+  .viewerClose {
+    transition:
+      translate 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      scale 160ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 220ms ease-out,
+      background-color 220ms ease-out;
+  }
+
+  .giftOpen:active,
+  .venueMapLink:active,
+  .rsvpSubmit:active,
+  .rsvpEdit:active,
+  .giftCopy:active,
+  .giftTab:active,
+  .musicButton:active,
+  .viewerNav:active,
+  .viewerClose:active {
+    scale: 0.96;
+  }
+
+  .albumPrint {
+    transition: translate 260ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 260ms ease-out;
+  }
+
+  /* D. The gift sheet rises into place; its backdrop fades in. */
+  .giftDialog[open] .giftSheet {
+    animation: vh-sheet-up 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .giftDialog[open]::backdrop {
+    animation: vh-reveal-fade 300ms ease-out both;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .giftOpen:hover,
+  .venueMapLink:hover,
+  .rsvpSubmit:hover {
+    translate: 0 -2px;
+    box-shadow: 0 14px 24px -14px color-mix(in srgb, var(--vh-door-shade) 70%, transparent);
+  }
+
+  .albumPrint:hover {
+    translate: 0 -3px;
+    box-shadow:
+      0 1px 2px color-mix(in srgb, var(--vh-door-shade) 6%, transparent),
+      0 18px 30px -18px color-mix(in srgb, var(--vh-door-shade) 45%, transparent);
+  }
+}
+
+/* Reduced motion keeps a clear, motion-free pressed state. */
+@media (prefers-reduced-motion: reduce) {
+  .giftOpen:active,
+  .venueMapLink:active,
+  .rsvpSubmit:active,
+  .rsvpEdit:active,
+  .giftCopy:active,
+  .giftTab:active,
+  .musicButton:active {
+    filter: brightness(0.92);
+  }
+}
+
+@keyframes vh-cover-rise {
+  from {
+    opacity: 0;
+    translate: 0 12px;
+  }
+}
+
+@keyframes vh-cover-names {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+    scale: 0.97;
+  }
+}
+
+@keyframes vh-bloom {
+  from {
+    opacity: 0;
+    scale: 0.82;
+  }
+}
+
+@keyframes vh-medallion-in {
+  from {
+    opacity: 0;
+    scale: 0.84;
+  }
+}
+
+@keyframes vh-medallion-breathe {
+  50% {
+    scale: 1.035;
+  }
+}
+
+@keyframes vh-hint-breathe {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes vh-hero-photo {
+  from {
+    opacity: 0;
+    clip-path: inset(6%);
+    scale: 1.03;
+  }
+
+  to {
+    opacity: 1;
+    clip-path: inset(0);
+    scale: 1;
+  }
+}
+
+@keyframes vh-sheet-up {
+  from {
+    opacity: 0;
+    translate: 0 36px;
+  }
+}

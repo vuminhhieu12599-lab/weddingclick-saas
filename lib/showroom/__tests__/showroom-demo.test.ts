@@ -15,7 +15,7 @@ import {
   type DemoImage,
 } from "../demo/demo-media";
 import { lookupTemplateEditorManifest } from "../../../templates/core/production-editor-manifests";
-import { DEMO_COUPLE, DEMO_EVENT_STARTS, buildDemoWeddingSource } from "../demo/demo-wedding-source";
+import { DEMO_COUPLE, DEMO_EVENT_STARTS, buildDemoWeddingSource, demoCoupleFor } from "../demo/demo-wedding-source";
 
 /** Every resolved URL anywhere in a ViewModel's media. */
 function mediaUrls(value: unknown): string[] {
@@ -33,8 +33,8 @@ describe("LAUNCH-P0-04 showroom demos run the real pipeline", () => {
         const data = await buildDemoRenderData(template.rendererKey, variant);
         expect(data.rendererKey, `${template.templateCode} ${variant}`).toBe(template.rendererKey);
         expect(data.viewModel.variant).toBe(variant);
-        expect(data.viewModel.people.groom.name).toBe(DEMO_COUPLE.groomName);
-        expect(data.viewModel.people.bride.name).toBe(DEMO_COUPLE.brideName);
+        expect(data.viewModel.people.groom.name).toBe(demoCoupleFor(template.rendererKey).groomName);
+        expect(data.viewModel.people.bride.name).toBe(demoCoupleFor(template.rendererKey).brideName);
       }
     }
   });
@@ -89,7 +89,7 @@ describe("LAUNCH-P0-04 showroom demos run the real pipeline", () => {
   });
 
   it("Vietnamese Heritage shows its fictional photo set slot by slot for COMMON/GROOM/BRIDE", async () => {
-    const set = DEMO_TEMPLATE_SLOT_PHOTO_SETS["wedding.vietnamese-heritage.v1"];
+    const set = DEMO_TEMPLATE_SLOT_PHOTO_SETS["wedding.vietnamese-heritage.v2"];
     expect(set).toBeDefined();
     if (set === undefined) return;
     const url = (image: DemoImage) => `${DEMO_MEDIA_BASE_PATH}${image.file}`;
@@ -102,13 +102,34 @@ describe("LAUNCH-P0-04 showroom demos run the real pipeline", () => {
     expect(set.portraitCluster?.map((image) => image.file)).toStrictEqual([file(4), file(2), file(3)]);
     expect(set.loveStoryPhoto?.map((image) => image.file)).toStrictEqual([file(5)]);
     for (const variant of INVITATION_VARIANTS) {
-      const { viewModel } = await buildDemoRenderData("wedding.vietnamese-heritage.v1", variant);
+      const { viewModel } = await buildDemoRenderData("wedding.vietnamese-heritage.v2", variant);
       const slots = viewModel.media.templateSlots ?? {};
       for (const [slotKey, images] of Object.entries(set)) {
         expect((slots[slotKey] ?? []).map(urlOf), `${variant} ${slotKey}`).toStrictEqual(images.map(url));
       }
       expect(viewModel.media.portrait).toStrictEqual({});
     }
+  });
+
+  it("the Vietnamese Heritage demo runs v2 and shows only Gia Huy / Khánh Linh, in variant order", async () => {
+    const vh = PUBLIC_SHOWROOM_TEMPLATES.find((template) => template.templateCode === "vietnamese-heritage");
+    expect(vh?.rendererKey).toBe("wedding.vietnamese-heritage.v2");
+    const order = { COMMON: ["Gia Huy", "Khánh Linh"], GROOM: ["Gia Huy", "Khánh Linh"], BRIDE: ["Khánh Linh", "Gia Huy"] } as const;
+    for (const variant of INVITATION_VARIANTS) {
+      const { viewModel } = await buildDemoRenderData("wedding.vietnamese-heritage.v2", variant);
+      expect([viewModel.people.primary.name, viewModel.people.secondary.name], variant).toStrictEqual([...order[variant]]);
+      const text = JSON.stringify(viewModel);
+      expect(text, variant).not.toMatch(/Trần Gia Huy|Nguyễn Khánh Linh|TRAN GIA HUY|NGUYEN KHANH LINH/);
+    }
+    const { input } = buildDemoWeddingSource("wedding.vietnamese-heritage.v2", "COMMON");
+    expect([input.weddingDetails?.groomBankAccountName, input.weddingDetails?.brideBankAccountName]).toStrictEqual(["GIA HUY", "KHANH LINH"]);
+  });
+
+  it("the short names are a VH-only override: every other demo keeps the shared couple", () => {
+    for (const template of PUBLIC_SHOWROOM_TEMPLATES.filter((entry) => entry.templateCode !== "vietnamese-heritage")) {
+      expect(demoCoupleFor(template.rendererKey)).toMatchObject(DEMO_COUPLE);
+    }
+    expect(demoCoupleFor("wedding.vietnamese-heritage.v1")).toMatchObject(DEMO_COUPLE);
   });
 
   it("every slot photo set names only declared slots within maxCount", () => {

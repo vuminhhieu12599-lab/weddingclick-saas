@@ -70,6 +70,7 @@ describe("RM-01 Romantic Minimal v1 renderer manifest", () => {
       "wedding.vietnamese-heritage.v1",
       RM_KEY,
       "wedding.our-wedding-story.v1",
+      "wedding.vietnamese-heritage.v2",
     ]);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(RM_KEY)).toStrictEqual(ROMANTIC_MINIMAL_V1_MANIFEST);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(RM_KEY)).not.toBe(ROMANTIC_MINIMAL_V1_MANIFEST);
