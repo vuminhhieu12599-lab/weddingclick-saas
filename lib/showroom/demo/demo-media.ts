@@ -1,4 +1,5 @@
 import type { MediaResolution, MediaResolver } from "../../invitation-rendering/invitation-view-model-types";
+import { PRODUCTION_RENDERER_MANIFESTS } from "../../../templates/core/production-renderer-manifests";
 
 /**
  * LAUNCH-P0-04 — showroom demo imagery.
@@ -7,7 +8,8 @@ import type { MediaResolution, MediaResolver } from "../../invitation-rendering/
  * generated in this repository; provenance in `lib/showroom/demo/ASSETS.md`.
  * They stand in for a couple's photographs in public demos only and are never
  * a production fallback for any Project. A renderer with an entry in
- * `DEMO_LEGACY_ROLE_PHOTO_SETS` shows that fictional photography instead.
+ * `DEMO_LEGACY_ROLE_PHOTO_SETS` or `DEMO_TEMPLATE_SLOT_PHOTO_SETS` shows that
+ * fictional photography instead.
  */
 
 export const DEMO_MEDIA_BASE_PATH = "/showroom/demo/";
@@ -91,9 +93,14 @@ export const DEMO_LEGACY_ROLE_PHOTO_SETS: Readonly<Record<string, DemoLegacyRole
  */
 export type DemoTemplateSlotPhotoSet = Readonly<Record<string, readonly DemoImage[]>>;
 
-/** A WebP photo under `<folder>/photos/`; portrait photos are 1086×1448, landscape 1448×1086. */
-function folderPhoto(folder: string, name: string, orientation: "PORTRAIT" | "LANDSCAPE" = "PORTRAIT"): DemoImage {
-  const [width, height] = orientation === "LANDSCAPE" ? [1448, 1086] : [1086, 1448];
+/** A WebP photo under `<folder>/photos/`; landscape photos are 1448×1086, portraits `portraitSize` (default 1086×1448). */
+function folderPhoto(
+  folder: string,
+  name: string,
+  orientation: "PORTRAIT" | "LANDSCAPE" = "PORTRAIT",
+  portraitSize: readonly [number, number] = [1086, 1448],
+): DemoImage {
+  const [width, height] = orientation === "LANDSCAPE" ? [1448, 1086] : portraitSize;
   return Object.freeze({ file: `${folder}/photos/${name}.webp`, width, height, orientation });
 }
 
@@ -112,11 +119,43 @@ const VH_PHOTOS = Object.freeze(
   ].map(([name, orientation]) => folderPhoto("vietnamese-heritage", name ?? "", orientation === "LANDSCAPE" ? "LANDSCAPE" : "PORTRAIT")),
 );
 
+/** Romantic Minimal portraits are 1024×1536 (2:3); 02 and 10 are 1448×1086 landscapes. */
+const RM_PHOTOS = Object.freeze(
+  [
+    ["01-save-the-date-umbrella-couple"],
+    ["02-just-married-garden-couple", "LANDSCAPE"],
+    ["03-our-love-bride-golden-garden"],
+    ["04-our-love-lakeside-couple"],
+    ["05-our-love-groom-garden"],
+    ["06-golden-hour-dance"],
+    ["07-garden-wedding-vows"],
+    ["08-rose-petal-celebration"],
+    ["09-wedding-couple-steps"],
+    ["10-thank-you-ivory-bow", "LANDSCAPE"],
+  ].map(([name, orientation]) =>
+    folderPhoto("romantic-minimal", name ?? "", orientation === "LANDSCAPE" ? "LANDSCAPE" : "PORTRAIT", [1024, 1536]),
+  ),
+);
+
 /** Numbered photo `n` (1-based, the file name prefix) of a set. */
 function nth(photos: readonly DemoImage[], n: number): DemoImage {
   const photo = photos[n - 1];
   if (photo === undefined) throw new Error("Showroom demo photo number is out of range");
   return photo;
+}
+
+/**
+ * The registered renderer key for one template identity, so frozen renderers
+ * whose static boundary forbids their key literal outside their own files can
+ * still be keyed here. Fails closed unless exactly one renderer matches.
+ */
+function registeredRendererKey(templateCode: string, versionNumber: number): string {
+  const matches = PRODUCTION_RENDERER_MANIFESTS.filter(
+    (manifest) => manifest.identity.templateCode === templateCode && manifest.identity.versionNumber === versionNumber,
+  );
+  const manifest = matches[0];
+  if (manifest === undefined || matches.length !== 1) throw new Error("Showroom demo photo set names no single registered renderer");
+  return manifest.compatibility.rendererKey;
 }
 
 /** Slot photo sets by exact renderer key. A renderer without one keeps the abstract mood images. */
@@ -132,6 +171,18 @@ export const DEMO_TEMPLATE_SLOT_PHOTO_SETS: Readonly<Record<string, DemoTemplate
     // All ten in file-number order, except 05 and 06 swap so the landscape 05 lands on the
     // album's full-width "wide" row (position 6) instead of a tall pair (position 5).
     gallery: Object.freeze([1, 2, 3, 4, 6, 5, 7, 8, 9, 10].map((n) => nth(VH_PHOTOS, n))),
+  }),
+  // wedding.romantic-minimal.v1 (RM-02 keeps that key literal inside the renderer's own files).
+  [registeredRendererKey("romantic-minimal", 1)]: Object.freeze({
+    saveTheDatePhoto: Object.freeze([nth(RM_PHOTOS, 1)]),
+    justMarriedPhoto: Object.freeze([nth(RM_PHOTOS, 2)]),
+    // Positions 1, 2, 3: bride solo, couple by the lake, groom solo.
+    ourLovePhotos: Object.freeze([nth(RM_PHOTOS, 3), nth(RM_PHOTOS, 4), nth(RM_PHOTOS, 5)]),
+    // All ten, two per row of uniform 4:5 tiles. Opens on frames not already shown above
+    // (06 dance / 07 vows, 09 close-up / 08 petals), then 01 / 04, the bride and groom
+    // solos side by side, and the two landscapes last, leading into the Thank You photo.
+    gallery: Object.freeze([6, 7, 9, 8, 1, 4, 3, 5, 2, 10].map((n) => nth(RM_PHOTOS, n))),
+    thankYouPhoto: Object.freeze([nth(RM_PHOTOS, 10)]),
   }),
 });
 

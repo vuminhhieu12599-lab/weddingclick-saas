@@ -66,6 +66,27 @@ Wired only for `wedding.vietnamese-heritage.v1` through `DEMO_TEMPLATE_SLOT_PHOT
 | 09-celebration-confetti-red.webp | 1086×1448 | 103 KB | 275fc7559367bff0c18952090ad785965c0d639ed20a9faa2fe940ca89ca27fa |
 | 10-playful-couple-ao-dai-red-black.webp | 1086×1448 | 80 KB | e76d0607bd3551f6b754ff728d2a42f78713dea65707d67a9021ae965e2df3a7 |
 
+## Romantic Minimal demo photos — `public/showroom/demo/romantic-minimal/photos/`
+
+AI-generated **fictional** wedding photographs created for the WeddingClick showroom on 2026-10-13 from Product Owner-supplied visual references. They show no real customer, couple or wedding and must never be represented as one, or as client portfolio work. The reference images and any third-party watermarks or logos are not included. Source metadata (original file names, PNG sizes and SHA-256) is in the Product Owner's `photo-set.json` next to the PNGs.
+
+Only the WebP files below are committed and served. Pillow 12.1.1, `quality=86, method=6`, same pixel dimensions as the PNGs (portraits 1024×1536, landscapes 1448×1086), about 2.4 MB for all ten (the PNGs are about 25 MB). The source PNGs stay local and are not committed. Each photo exists once on disk; slots that reuse a photo reference the same file.
+
+Wired only for `wedding.romantic-minimal.v1` through `DEMO_TEMPLATE_SLOT_PHOTO_SETS` (`demo-media.ts`): `saveTheDatePhoto` 01; `justMarriedPhoto` 02; `ourLovePhotos` 03, 04, 05 (positions 1–3); `gallery` all ten as 06, 07, 09, 08, 01, 04, 03, 05, 02, 10 (two per row: it opens on frames not already shown above, keeps the bride and groom solos side by side and ends on the two landscapes before the Thank You); `thankYouPhoto` 10. The renderer is unchanged: its 4:5 album tiles crop the two landscapes, and the viewer shows every photo whole.
+
+| File | Size | Bytes | SHA-256 |
+|---|---|---|---|
+| 01-save-the-date-umbrella-couple.webp | 1024×1536 | 278 KB | 53cce0e5cdacd97a8c3e03cbbe36907ca4bd41bd0078b3a844088eb74222d164 |
+| 02-just-married-garden-couple.webp | 1448×1086 | 381 KB | e5088a73da9aa3826fc6f61b99e6c248412da2232da2382162a92cf835913fa8 |
+| 03-our-love-bride-golden-garden.webp | 1024×1536 | 247 KB | db92f1a755556c4b2dc946a9d686f764cb3c4611e0816904ab4dabdaf8916d85 |
+| 04-our-love-lakeside-couple.webp | 1024×1536 | 228 KB | 3d930ff740698ea21bdc47848e09b70a8241800021c382b4d4517b1bc0f3664c |
+| 05-our-love-groom-garden.webp | 1024×1536 | 237 KB | 16a08db360271b232f5e6d03eddedfd3711d99ea9c5d2e4375f3ae917dd06781 |
+| 06-golden-hour-dance.webp | 1024×1536 | 278 KB | 528f71fe32699c937762fdee4fd1cd5cf66fb16371b22d43f0cba0d8ca2d1ae2 |
+| 07-garden-wedding-vows.webp | 1024×1536 | 208 KB | cd670a13b0f24ad8cb0910466464b061425b24b57f125cf3a4e735eaddb2dde3 |
+| 08-rose-petal-celebration.webp | 1024×1536 | 211 KB | 5561f79d7c317c7f09fad969d4552cad327c7de11cc51a81ea0482f30cba6147 |
+| 09-wedding-couple-steps.webp | 1024×1536 | 145 KB | a22bdc4049a3332bdeb3a6a42edd1bca83b730e1b5181184a1528ed1b8a2d673 |
+| 10-thank-you-ivory-bow.webp | 1448×1086 | 180 KB | 2e2e61c0207e64053edc8027429496a85ca18c18f9557d59d51a7ef6aa885ac4 |
+
 ## Template screenshots — `public/showroom/templates/`
 
 Real screenshots of the public demo pages (`/mau-thiep/<code>`, demo bar removed) from a local production build, headless Chrome, 390×844 CSS px at 2× (780×1688), WebP quality 78. `<code>-cover.webp` is the closed opening screen; `<code>-inside.webp` is an inner section after opening. Re-capture whenever a renderer version, the demo data or the demo images change, and for every new template.
@@ -77,7 +98,7 @@ Real screenshots of the public demo pages (`/mau-thiep/<code>`, demo bar removed
 | vietnamese-heritage-cover.webp | — | 21396f3280d4334f488f8d11a8b453420d73eebf736003ced5f24eb521c91d34 |
 | vietnamese-heritage-inside.webp | families, portrait cluster | 2a801e4d0396867f6c95232d0271c59e9ab44be55b832000ff734045fc65beac |
 | romantic-minimal-cover.webp | — | baaa1fd05977ce4ffd559fe9b4af43607dff90759f27019ee5e1d78a17dfa15c |
-| romantic-minimal-inside.webp | envelope, couple, families | eb57a996108905bc82058985a6479603e0f14454e91eb1c6d30b55d0e31c4592 |
+| romantic-minimal-inside.webp | Save The Date photo rising from the envelope | df6b452d4b804b2782ac6446132e9628568f45c41edef00904916248d3025833 |
 | our-wedding-story-cover.webp | — | c816fc8764546953dcde388d2d7d8948ef35ea205b19ee8f705dbaccf23c5e74 |
 | our-wedding-story-inside.webp | invitation card | b31ed26be213b56d7c14daf0680a0df794a6a9bb9227ca67c863f1c2ed2a719a |
 

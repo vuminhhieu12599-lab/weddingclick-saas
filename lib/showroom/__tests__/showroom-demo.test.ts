@@ -111,6 +111,40 @@ describe("LAUNCH-P0-04 showroom demos run the real pipeline", () => {
     }
   });
 
+  it("Romantic Minimal shows its fictional photo set slot by slot for COMMON/GROOM/BRIDE", async () => {
+    const set = DEMO_TEMPLATE_SLOT_PHOTO_SETS["wedding.romantic-minimal.v1"];
+    expect(set).toBeDefined();
+    if (set === undefined) return;
+    const url = (image: DemoImage) => `${DEMO_MEDIA_BASE_PATH}${image.file}`;
+    const urlOf = (item: unknown) => (item as { status: string; url?: string }).url;
+    const name = (image: DemoImage) => image.file.split("/").pop()?.replace(/\.webp$/, "");
+    expect(set.saveTheDatePhoto?.map(name)).toStrictEqual(["01-save-the-date-umbrella-couple"]);
+    expect(set.justMarriedPhoto?.map(name)).toStrictEqual(["02-just-married-garden-couple"]);
+    expect(set.ourLovePhotos?.map(name)).toStrictEqual([
+      "03-our-love-bride-golden-garden",
+      "04-our-love-lakeside-couple",
+      "05-our-love-groom-garden",
+    ]);
+    expect(set.thankYouPhoto?.map(name)).toStrictEqual(["10-thank-you-ivory-bow"]);
+    // All ten distinct photographs, each file once.
+    const gallery = set.gallery?.map(name) ?? [];
+    expect(gallery.map((file) => file?.slice(0, 2)).sort()).toStrictEqual(["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"]);
+    expect(new Set(Object.values(set).flat().map((image) => image.file)).size).toBe(10);
+    for (const image of Object.values(set).flat()) {
+      const landscape = image.file.includes("/02-") || image.file.includes("/10-");
+      expect([image.width, image.height, image.orientation], image.file).toStrictEqual(
+        landscape ? [1448, 1086, "LANDSCAPE"] : [1024, 1536, "PORTRAIT"],
+      );
+    }
+    for (const variant of INVITATION_VARIANTS) {
+      const { viewModel } = await buildDemoRenderData("wedding.romantic-minimal.v1", variant);
+      const slots = viewModel.media.templateSlots ?? {};
+      for (const [slotKey, images] of Object.entries(set)) {
+        expect((slots[slotKey] ?? []).map(urlOf), `${variant} ${slotKey}`).toStrictEqual(images.map(url));
+      }
+    }
+  });
+
   it("the Vietnamese Heritage demo runs v2 and shows only Gia Huy / Khánh Linh, in variant order", async () => {
     const vh = PUBLIC_SHOWROOM_TEMPLATES.find((template) => template.templateCode === "vietnamese-heritage");
     expect(vh?.rendererKey).toBe("wedding.vietnamese-heritage.v2");
