@@ -11,7 +11,7 @@ import {
 } from "../../../templates/core/editor-manifest";
 import { lookupTemplateEditorManifest } from "../../../templates/core/production-editor-manifests";
 import { PRODUCTION_COMPATIBILITY_REGISTRY } from "../../../templates/core/production-renderer-manifests";
-import { DEMO_IMAGES, type DemoImage, type DemoImageOrientation } from "./demo-media";
+import { DEMO_IMAGES, lookupDemoLegacyRolePhotoSet, type DemoImage, type DemoImageOrientation } from "./demo-media";
 
 /**
  * LAUNCH-P0-04 — canonical source records of the fictional showroom couple.
@@ -224,12 +224,15 @@ export function buildDemoWeddingSource(rendererKey: string, variant: InvitationV
   const imageById = new Map<string, DemoImage>();
   const media: SnapshotMediaSource[] = [];
   let next = 1;
-  const add = (mediaType: SnapshotMediaSource["mediaType"], orientation: DemoImageOrientation | "ANY", sortOrder: number): string => {
+  const addImage = (mediaType: SnapshotMediaSource["mediaType"], image: DemoImage, sortOrder: number): string => {
     const id = demoMediaId(next++);
-    imageById.set(id, picker.next(orientation));
+    imageById.set(id, image);
     media.push({ id, projectId: DEMO_PROJECT_ID, mediaType, sortOrder });
     return id;
   };
+  const add = (mediaType: SnapshotMediaSource["mediaType"], orientation: DemoImageOrientation | "ANY", sortOrder: number): string =>
+    addImage(mediaType, picker.next(orientation), sortOrder);
+  const photoSet = lookupDemoLegacyRolePhotoSet(rendererKey);
 
   let templateMedia: BuildSnapshotPayloadInput["templateMedia"];
   if (editor.mediaModel === "TEMPLATE_SLOTS") {
@@ -244,6 +247,14 @@ export function buildDemoWeddingSource(rendererKey: string, variant: InvitationV
         })),
       );
     templateMedia = buildTemplateMediaSource(editor, rows, media);
+  } else if (photoSet !== undefined) {
+    // LEGACY_ROLES with fictional couple photography: every role, portraits included.
+    addImage("COVER", photoSet.cover, 0);
+    addImage("PORTRAIT_GROOM", photoSet.groomPortrait, 0);
+    addImage("PORTRAIT_BRIDE", photoSet.bridePortrait, 0);
+    photoSet.gallery.forEach((image, i) => addImage("GALLERY", image, i + 1));
+    photoSet.photoStory.forEach((image, i) => addImage("PHOTO_STORY", image, i));
+    addImage("LOVE_STORY_PHOTO", photoSet.loveStoryPhoto, 0);
   } else {
     // LEGACY_ROLES: cover, gallery, photo story and love story photo; no portraits (see above).
     add("COVER", "PORTRAIT", 0);

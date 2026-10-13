@@ -4,7 +4,10 @@ import { INVITATION_VARIANTS } from "../../domain";
 import { PRODUCTION_RENDERER_KEYS } from "../../../templates/core/production-renderer-manifests";
 import { PUBLIC_SHOWROOM_TEMPLATES } from "../showroom-catalog";
 import { buildDemoRenderData, DEMO_VARIANT_SEGMENTS, isDemoVariantSegment } from "../demo/build-demo-render-data";
-import { DEMO_MEDIA_BASE_PATH, DEMO_IMAGES } from "../demo/demo-media";
+import { existsSync } from "node:fs";
+import path from "node:path";
+
+import { DEMO_MEDIA_BASE_PATH, DEMO_LEGACY_ROLE_PHOTO_SETS, allDemoImages, type DemoImage } from "../demo/demo-media";
 import { DEMO_COUPLE, DEMO_EVENT_STARTS, buildDemoWeddingSource } from "../demo/demo-wedding-source";
 
 /** Every resolved URL anywhere in a ViewModel's media. */
@@ -40,8 +43,8 @@ describe("LAUNCH-P0-04 showroom demos run the real pipeline", () => {
     }
   });
 
-  it("demo media are only local demo images; no QR, no audio, no person-bound portrait", async () => {
-    const allowed = new Set(DEMO_IMAGES.map((image) => `${DEMO_MEDIA_BASE_PATH}${image.file}`));
+  it("demo media are only local demo images; no QR, no audio; portraits only from a photo set", async () => {
+    const allowed = new Set(allDemoImages().map((image) => `${DEMO_MEDIA_BASE_PATH}${image.file}`));
     for (const template of PUBLIC_SHOWROOM_TEMPLATES) {
       const data = await buildDemoRenderData(template.rendererKey, "COMMON");
       const urls = mediaUrls(data.viewModel.media);
@@ -50,9 +53,37 @@ describe("LAUNCH-P0-04 showroom demos run the real pipeline", () => {
       expect(data.viewModel.media.qr).toStrictEqual({});
       expect(data.viewModel.media.audio).toBeUndefined();
       expect(data.sections.music).toBe(false);
+      if (Object.hasOwn(DEMO_LEGACY_ROLE_PHOTO_SETS, template.rendererKey)) continue;
       expect(data.viewModel.media.portrait).toStrictEqual({});
       expect(data.viewModel.media.templateSlots?.groomPortrait ?? []).toStrictEqual([]);
       expect(data.viewModel.media.templateSlots?.bridePortrait ?? []).toStrictEqual([]);
+    }
+  });
+
+  it("Elegant Editorial shows its fictional photo set in every role for COMMON/GROOM/BRIDE", async () => {
+    const set = DEMO_LEGACY_ROLE_PHOTO_SETS["wedding.elegant-editorial.v1"];
+    expect(set).toBeDefined();
+    if (set === undefined) return;
+    const url = (image: DemoImage) => `${DEMO_MEDIA_BASE_PATH}${image.file}`;
+    const urlOf = (item: unknown) => (item as { status: string; url?: string }).url;
+    for (const variant of INVITATION_VARIANTS) {
+      const { viewModel } = await buildDemoRenderData("wedding.elegant-editorial.v1", variant);
+      const { media } = viewModel;
+      expect(urlOf(media.cover), variant).toBe(url(set.cover));
+      // Portraits are bound by explicit side, never by variant order.
+      expect(urlOf(media.portrait.groom)).toBe(url(set.groomPortrait));
+      expect(urlOf(media.portrait.bride)).toBe(url(set.bridePortrait));
+      expect(media.photoStory.map(urlOf)).toStrictEqual(set.photoStory.map(url));
+      expect(urlOf(media.loveStoryPhoto)).toBe(url(set.loveStoryPhoto));
+      expect(media.gallery.map(urlOf)).toStrictEqual(set.gallery.map(url));
+    }
+    expect(new Set(set.gallery.map(url)).size).toBe(set.gallery.length);
+    expect(set.gallery.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it("every demo image file exists under public/", () => {
+    for (const image of allDemoImages()) {
+      expect(existsSync(path.join(process.cwd(), "public", DEMO_MEDIA_BASE_PATH, image.file)), image.file).toBe(true);
     }
   });
 
