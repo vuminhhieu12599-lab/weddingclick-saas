@@ -51,6 +51,8 @@ const ALLOWED_IMPORTS: Readonly<Record<(typeof RF06A_FILES)[number], readonly st
     "templates/wedding/our-wedding-story/v1/manifest",
     // VH-V2-01: the fifth explicit production manifest.
     "templates/wedding/vietnamese-heritage/v2/manifest",
+    // OWS-V2-01: the sixth explicit production manifest.
+    "templates/wedding/our-wedding-story/v2/manifest",
     "templates/core/renderer-manifest",
   ],
   "templates/wedding/elegant-editorial/v1/manifest.ts": ["templates/core/renderer-manifest"],
@@ -126,6 +128,8 @@ const RS01_LAZY_ROOTS = [
   "templates/wedding/our-wedding-story/v1/our-wedding-story-v1",
   // VH-V2-01: the fifth production renderer root.
   "templates/wedding/vietnamese-heritage/v2/vietnamese-heritage-v2",
+  // OWS-V2-01: the sixth production renderer root.
+  "templates/wedding/our-wedding-story/v2/our-wedding-story-v2",
 ] as const;
 
 /** Resolves a relative specifier from `file` to a repository-relative module path. */
@@ -246,7 +250,7 @@ describe("RF-06A files", () => {
     const code = stripComments(readRepoFile("templates/core/production-renderer-manifests.ts"));
     // VH-01: still one explicit, ordered literal list, now with the second manifest; RM-02: and the third; OWS-01: and the fourth.
     expect(code).toMatch(
-      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*OUR_WEDDING_STORY_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V2_MANIFEST,\s*\]\)/,
+      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*OUR_WEDDING_STORY_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V2_MANIFEST,\s*OUR_WEDDING_STORY_V2_MANIFEST,\s*\]\)/,
     );
     expect(/["'`]wedding\.[\w-]+\.v\d+/.test(code)).toBe(false);
   });
@@ -346,6 +350,7 @@ describe("templates/** production tree (P39)", () => {
         ...RM02_FILES,
         ...OWS01_FILES,
         ...VH2_FILES,
+        ...OWS2_FILES,
       ].sort(),
     );
   });
@@ -645,12 +650,14 @@ describe("RF-06B template files", () => {
           ...OWS01_ISLAND_FILES,
           VH2_CSS_FILE,
           ...VH2_TSX_FILES,
+          OWS2_CSS_FILE,
+          ...OWS2_TSX_FILES,
         ],
         file,
       ).toContain(file);
     }
     expect(sources.filter((source) => source.endsWith(".css")).sort()).toStrictEqual(
-      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE, VH2_CSS_FILE].sort(),
+      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE, VH2_CSS_FILE, OWS2_CSS_FILE].sort(),
     );
   });
 
@@ -1361,13 +1368,13 @@ describe("RS-01 renderer-key lazy loading", () => {
 
   it("the binding module owns exactly one literal import() per production renderer root, nothing else", () => {
     const { specifiers, total } = dynamicImportsOf(readRepoFile(BINDINGS_MODULE));
-    expect(total).toBe(5);
+    expect(total).toBe(6);
     expect(specifiers.map((specifier) => resolveSpecifier(BINDINGS_MODULE, specifier))).toStrictEqual([...RS01_LAZY_ROOTS]);
     const code = codeOf(BINDINGS_MODULE);
     // No template literal, concatenation, variable or discovery in a specifier.
     expect(code).not.toMatch(/import\(\s*[^"'\s]|import\(`|import\([^)]*\+|readdir|glob|require\(/);
     // next/dynamic with no options: SSR on, no `loading` (no Suspense boundary, no placeholder content).
-    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(5);
+    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(6);
     expect(code).not.toMatch(/ssr:|loading:|suspense/i);
     // Each lazy root binds its own export only.
     expect(code).toMatch(/import\("\.\.\/wedding\/elegant-editorial\/v1\/elegant-editorial-v1"\)\.then\(\(module\) => module\.ElegantEditorialV1\)/);
@@ -1375,6 +1382,7 @@ describe("RS-01 renderer-key lazy loading", () => {
     expect(code).toMatch(/import\("\.\.\/wedding\/romantic-minimal\/v1\/romantic-minimal-v1"\)\.then\(\(module\) => module\.RomanticMinimalV1\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/our-wedding-story\/v1\/our-wedding-story-v1"\)\.then\(\(module\) => module\.OurWeddingStoryV1\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/vietnamese-heritage\/v2\/vietnamese-heritage-v2"\)\.then\(\(module\) => module\.VietnameseHeritageV2\)/);
+    expect(code).toMatch(/import\("\.\.\/wedding\/our-wedding-story\/v2\/our-wedding-story-v2"\)\.then\(\(module\) => module\.OurWeddingStoryV2\)/);
     expect(code).not.toMatch(/\bcatch\b|\.catch\(/);
   });
 
@@ -1389,6 +1397,7 @@ describe("RS-01 renderer-key lazy loading", () => {
     expect(eager.files.filter((file) => file.startsWith("templates/wedding/")).sort()).toStrictEqual([
       "templates/wedding/elegant-editorial/v1/manifest.ts",
       "templates/wedding/our-wedding-story/v1/manifest.ts",
+      "templates/wedding/our-wedding-story/v2/manifest.ts",
       "templates/wedding/romantic-minimal/v1/manifest.ts",
       "templates/wedding/vietnamese-heritage/v1/manifest.ts",
       "templates/wedding/vietnamese-heritage/v2/manifest.ts",
@@ -3174,5 +3183,288 @@ describe("VH-V2-01 renderer CSS motion", () => {
         expect(["opacity", "translate", "scale", "clip-path"], property).toContain(property);
       }
     }
+  });
+});
+
+// ===========================================================================
+// OWS-V2-01 extension (docs/DECISIONS.md "OWS-V2-01 — Our Wedding Story v2").
+// v1 is released and immutable (RF7/RF14), so the Product Owner-approved
+// gate removal, text removals, gift typography and motion ship as a separate
+// v2 directory. Every OWS-01 rule above stays as is; v2 gets the same
+// boundary with its own tree. Its file set is v1's minus the opening gate.
+// ===========================================================================
+
+const OWS2 = "templates/wedding/our-wedding-story/v2";
+function toOws2(file: string): string {
+  return file.replace(`${OWS}/`, `${OWS2}/`).replace("our-wedding-story-v1", "our-wedding-story-v2");
+}
+/** The v1 opening gate: its island and state model have no v2 counterpart. */
+const OWS2_REMOVED_GATE_FILES = [`${OWS}/interactive/opening-stage.tsx`, OWS01_OPENING_STATE] as const;
+const OWS2_MANIFEST_FILE = toOws2(OWS01_MANIFEST_FILE);
+const OWS2_EDITOR_FILE = "templates/editor/wedding/our-wedding-story-v2.ts";
+const OWS2_ROOT = toOws2(OWS01_ROOT);
+const OWS2_FONTS = toOws2(OWS01_FONTS);
+const OWS2_MEDIA_IMAGE = toOws2(OWS01_MEDIA_IMAGE);
+const OWS2_CODE_FILES = OWS01_CODE_FILES.map(toOws2);
+const OWS2_ISLAND_FILES = OWS01_ISLAND_FILES.filter((file) => !(OWS2_REMOVED_GATE_FILES as readonly string[]).includes(file)).map(toOws2);
+const OWS2_CSS_FILE = toOws2(OWS01_CSS_FILE);
+const OWS2_FILES = [OWS2_MANIFEST_FILE, OWS2_EDITOR_FILE, ...OWS2_CODE_FILES, ...OWS2_ISLAND_FILES, OWS2_CSS_FILE];
+const OWS2_TSX_FILES = OWS2_FILES.filter((file) => file.endsWith(".tsx"));
+
+describe("OWS-V2-01 Our Wedding Story v2 files", () => {
+  const productionSources = () =>
+    [...listSources(TEMPLATES_ROOT), ...nonTestSources("app"), ...nonTestSources("lib")].filter((file) => /\.(ts|tsx)$/.test(file));
+
+  it("v2 mirrors the v1 file set minus the opening gate, and every file exists", () => {
+    expect(OWS2_FILES).toHaveLength(OWS01_FILES.length - OWS2_REMOVED_GATE_FILES.length);
+    for (const file of OWS2_FILES) expect(() => readRepoFile(file), file).not.toThrow();
+    for (const file of OWS2_REMOVED_GATE_FILES.map(toOws2)) expect(() => readRepoFile(file), file).toThrow();
+    // The v1 gate is untouched in v1.
+    for (const file of OWS2_REMOVED_GATE_FILES) expect(() => readRepoFile(file), file).not.toThrow();
+  });
+
+  it("the v2 manifest is data only and equals v1's except version and key", () => {
+    expect(importsOf(readRepoFile(OWS2_MANIFEST_FILE))).toStrictEqual([{ specifier: "../../../core/renderer-manifest", typeOnly: true }]);
+    expect(/["']use (client|server)["']|\bReact\b|next\/|\.css["']/.test(codeOf(OWS2_MANIFEST_FILE))).toBe(false);
+    const body = (file: string) => codeOf(file).slice(codeOf(file).indexOf("= {"));
+    expect(body(OWS2_MANIFEST_FILE).replace("versionNumber: 2", "versionNumber: 1").replace("wedding.our-wedding-story.v2", "wedding.our-wedding-story.v1")).toBe(
+      body(OWS01_MANIFEST_FILE),
+    );
+  });
+
+  it("the v2 key literal appears only in the two v2 manifests, the binding table and the validator's person-bound exception", () => {
+    const withLiteral = productionSources().filter((file) => /["'`]wedding\.our-wedding-story\.v2["'`]/.test(codeOf(file)));
+    expect(withLiteral.sort()).toStrictEqual([OWS2_MANIFEST_FILE, OWS2_EDITOR_FILE, BINDINGS_MODULE, "templates/core/editor-manifest.ts"].sort());
+  });
+
+  it("only the two production lists import the v2 manifests, and only the binding module loads the v2 root (lazily)", () => {
+    const importersOf = (target: string) =>
+      productionSources().filter((file) => importsOf(readRepoFile(file)).some((statement) => resolveSpecifier(file, statement.specifier) === target));
+    expect(importersOf(`${OWS2}/manifest`)).toStrictEqual(["templates/core/production-renderer-manifests.ts"]);
+    expect(importersOf("templates/editor/wedding/our-wedding-story-v2")).toStrictEqual(["templates/core/production-editor-manifests.ts"]);
+    expect(importersOf(`${OWS2}/our-wedding-story-v2`)).toStrictEqual([]);
+    const lazyLoaders = productionSources().filter((file) =>
+      dynamicImportsOf(readRepoFile(file)).specifiers.some((specifier) => resolveSpecifier(file, specifier) === `${OWS2}/our-wedding-story-v2`),
+    );
+    expect(lazyLoaders).toStrictEqual([BINDINGS_MODULE]);
+  });
+
+  it("v2 imports only its own tree, the shared lib/ contracts, react and (fonts only) next/font/google; never v1", () => {
+    for (const file of [...OWS2_CODE_FILES, ...OWS2_ISLAND_FILES]) {
+      for (const modulePath of resolvedImportsOf(file)) {
+        const allowed =
+          modulePath.startsWith(`${OWS2}/`) ||
+          modulePath.startsWith(`${LIB}/`) ||
+          modulePath === "lib/domain" ||
+          modulePath === "react" ||
+          (file === OWS2_FONTS && modulePath === "next/font/google");
+        expect(allowed, `${file} → ${modulePath}`).toBe(true);
+      }
+    }
+    // No v1 renderer file imports v2 either.
+    for (const file of [...OWS01_CODE_FILES, ...OWS01_ISLAND_FILES, OWS01_OPENING_STATE]) {
+      expect(resolvedImportsOf(file).some((modulePath) => modulePath.startsWith(`${OWS2}/`)), file).toBe(false);
+    }
+  });
+
+  it.each(OWS2_CODE_FILES)("%s (static) has no forbidden runtime, data, browser, prototype or hook code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of [...RF06B_FORBIDDEN, ...OWS01_EXTRA_FORBIDDEN]) {
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+    expect(ALL_HOOKS.test(code), `${file}: hooks`).toBe(false);
+    expect(/IntersectionObserver|<button\b|\bonClick\b|<form\b|<dialog\b/.test(code), `${file}: interaction`).toBe(false);
+  });
+
+  it.each(OWS2_ISLAND_FILES)("%s (island) has no data, network, persistence, browser-global, time or prototype code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of [...RF06D_FORBIDDEN, ...OWS01_EXTRA_FORBIDDEN]) {
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+    expect(/<img\b/.test(code), file).toBe(false);
+    expect(/<svg\b/.test(code), file).toBe(file === `${OWS2}/interactive/music-control.tsx` || file === `${OWS2}/interactive/gift-sheet.tsx`);
+    expect(/IntersectionObserver/.test(code), file).toBe(file === `${OWS2}/interactive/section-reveal.tsx`);
+    expect(/nowEpochMs|deriveCeremonyCountdownV1/.test(code), file).toBe(file === `${OWS2}/interactive/countdown.tsx`);
+    expect(/gate\.run\(|createRsvpSubmissionGate/.test(code), file).toBe(file === `${OWS2}/interactive/rsvp.tsx`);
+    expect(/copyWithFeedback/.test(code), file).toBe(file === `${OWS2}/interactive/copy-account-button.tsx`);
+    expect(/runMusicToggle/.test(code), file).toBe(file === `${OWS2}/interactive/music-control.tsx`);
+    expect(/showModal|<dialog\b/.test(code), file).toBe(file === `${OWS2}/interactive/gallery-viewer.tsx` || file === `${OWS2}/interactive/gift-sheet.tsx`);
+    // No gate: nothing scrolls the page or moves focus to the body.
+    expect(/scrollIntoView|\btabIndex\b/.test(code), file).toBe(false);
+  });
+
+  it("no v2 file declares a client or server boundary; only the fonts module touches next/font (the v1 families)", () => {
+    for (const file of [OWS2_MANIFEST_FILE, ...OWS2_CODE_FILES, ...OWS2_ISLAND_FILES]) {
+      expect(/["']use (client|server)["']/.test(codeOf(file)), file).toBe(false);
+      expect(/next\/font/.test(codeOf(file)), file).toBe(file === OWS2_FONTS);
+    }
+    expect(codeOf(OWS2_FONTS).replaceAll("V2", "V1").replaceAll("v2", "v1")).toBe(codeOf(OWS01_FONTS));
+  });
+
+  it("no opening gate: no open action, no start-on-open music, no hydration-gated body; the music control plays only on its own tap", () => {
+    const root = codeOf(OWS2_ROOT);
+    expect(root).not.toMatch(/OpeningStage|opening-st|startMusicOnOpen|onOpen|data-opening|data-interactive/);
+    expect(root).toMatch(/<Cover people=\{people\} ceremonyDate=\{ceremonyDate\} photo=\{coverPhoto\} guestDisplayName=\{guestDisplayName\} \/>/);
+    expect(root).toMatch(/\{music === undefined \? null : <MusicControl music=\{music\} \/>\}/);
+    expect(codeOf(`${OWS2}/sections/cover.tsx`)).not.toMatch(/action|ReactNode/);
+  });
+
+  it("the root reads only the K6 props, and capabilities only as presence gates and passthroughs (as v1)", () => {
+    const code = codeOf(OWS2_ROOT);
+    expect(code).toMatch(/export function OurWeddingStoryV2\(\{ viewModel, sections, capabilities \}: InvitationRendererPropsV1\)/);
+    expect(code).not.toMatch(/manifest|rendererKey/);
+    expect([...code.matchAll(/\bcapabilities\.(\w+)/g)].map((match) => match[1]).sort()).toStrictEqual([
+      "clipboard",
+      "clock",
+      "clock",
+      "clock",
+      "music",
+      "rsvp",
+      "rsvp",
+      "rsvp",
+    ]);
+    for (const file of [...OWS2_CODE_FILES, ...OWS2_ISLAND_FILES]) {
+      if (file !== OWS2_ROOT) expect(/(?<![-/])\bcapabilities\b/.test(codeOf(file)), file).toBe(false);
+    }
+    expect(code).toMatch(/const music = sections\.music \? capabilities\.music : undefined;/);
+    expect(code).toMatch(/rsvp=\{capabilities\.rsvp === undefined \? null : <Rsvp rsvp=\{capabilities\.rsvp\} \/>\}/);
+    expect(code).toMatch(/const panels = sections\.gift \? giftPanels\(operationalSides, gift, media\.qr\) : \[\];/);
+    expect(code).toMatch(/<SectionReveal hasCountdown=\{capabilities\.clock !== undefined\} \/>/);
+  });
+
+  it("media: layout media only from templateSlots, person-bound portraits each read once into their own person", () => {
+    const root = codeOf(OWS2_ROOT);
+    for (const slot of ["coverPhoto", "groomPortrait", "bridePortrait", "storyPhoto", "thankYouPhoto"]) {
+      expect(root, slot).toMatch(new RegExp(`singleResolved\\(slots\\?\\.${slot}\\)`));
+    }
+    expect(root).toMatch(/slots\?\.gallery \?\? \[\]/);
+    expect([...root.matchAll(/\bmedia\.(\w+)/g)].map((match) => match[1]).sort()).toStrictEqual(["qr", "templateSlots"]);
+    expect(root).not.toMatch(/\?\?\s*(media\.|slots\?\.|singleResolved)/);
+    expect(root).toMatch(/groom: singleResolved\(slots\?\.groomPortrait\),\s*bride: singleResolved\(slots\?\.bridePortrait\),/);
+    for (const file of [...OWS2_CODE_FILES, ...OWS2_ISLAND_FILES]) {
+      if (file !== OWS2_ROOT) expect(/groomPortrait|bridePortrait|templateSlots/.test(codeOf(file)), file).toBe(false);
+    }
+    expect(codeOf(`${OWS2}/sections/couple-people.ts`)).toMatch(/portrait: entry\.side === "GROOM" \? portraits\.groom : portraits\.bride/);
+  });
+
+  it("<img> only in the media element; inline <svg> only for the approved pin icon; no literal src/href", () => {
+    for (const file of OWS2_CODE_FILES) {
+      const code = codeOf(file);
+      expect(/<img\b/.test(code), file).toBe(file === OWS2_MEDIA_IMAGE);
+      expect(/<svg\b/.test(code), file).toBe(file === `${OWS2}/sections/invitation.tsx`);
+      expect(/<image\b|<text\b|<use\b|xlink:href/.test(code), file).toBe(false);
+      expect(code, file).not.toMatch(/\s(?:src|href)="[^"]*"/);
+    }
+  });
+
+  it("the approved text removals are v2-only: v2 has none of the four strings, v1 keeps every one", () => {
+    const removed = ["Mở thiệp", "Cuộn xuống để đọc tiếp", "Chạm vào ảnh để xem toàn màn hình", "Ví dụ: Anh Hiếu và gia đình"];
+    for (const file of [...OWS2_CODE_FILES, ...OWS2_ISLAND_FILES]) {
+      for (const text of removed) expect(codeOf(file).includes(`"${text}"`), `${file}: ${text}`).toBe(false);
+    }
+    for (const text of removed) expect(readRepoFile(`${OWS}/copy.ts`), text).toContain(`"${text}"`);
+    expect(codeOf(`${OWS2}/interactive/rsvp.tsx`)).not.toMatch(/guestNamePlaceholder/);
+    // The message field keeps its placeholder; the gift wording is v1's, unchanged.
+    expect(codeOf(`${OWS2}/interactive/rsvp.tsx`)).toMatch(/placeholder=\{COPY\.messagePlaceholder\}/);
+    const giftCopy = (file: string) => readRepoFile(file).slice(readRepoFile(file).indexOf("  gift: Object.freeze({"));
+    expect(giftCopy(`${OWS2}/copy.ts`).slice(0, 1200)).toBe(giftCopy(`${OWS}/copy.ts`).slice(0, 1200));
+  });
+
+  it("the v1 and v2 lazy subgraphs never reach each other or any other template", () => {
+    const v1 = clientGraph(resolveModuleFile(`${OWS}/our-wedding-story-v1`) as string, { followLazy: true }).files;
+    const v2 = clientGraph(resolveModuleFile(`${OWS2}/our-wedding-story-v2`) as string, { followLazy: true }).files;
+    expect(v1.some((file) => file.startsWith(`${OWS2}/`))).toBe(false);
+    expect(v2.some((file) => file.startsWith(`${OWS}/`))).toBe(false);
+    expect(v2.some((file) => /templates\/wedding\/(elegant-editorial|vietnamese-heritage|romantic-minimal)\//.test(file))).toBe(false);
+    expect(v2.filter((file) => file.endsWith(".css"))).toStrictEqual([OWS2_CSS_FILE]);
+    expect(v2).toContain(OWS2_FONTS);
+  });
+});
+
+describe("OWS-V2-01 renderer CSS motion", () => {
+  const cssCode = readRepoFile(OWS2_CSS_FILE).replace(/\/\*[\s\S]*?\*\//g, "");
+  const supportsBlocks = [...cssCode.matchAll(/@supports \(animation-timeline: view\(\)\) \{[\s\S]*?\n\}/g)].map((match) => match[0]);
+  let withoutSupports = cssCode;
+  for (const block of supportsBlocks) withoutSupports = withoutSupports.replace(block, "");
+  const noPreference = [...withoutSupports.matchAll(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}/g)].map((match) => match[0]);
+  const reduce = [...withoutSupports.matchAll(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/g)].map((match) => match[0]);
+  let outside = withoutSupports;
+  for (const block of [...noPreference, ...reduce]) outside = outside.replace(block, "");
+  outside = outside.replace(/@keyframes[\s\S]*?\n\}/g, "");
+
+  it.each([
+    ["runtime @import", /@import/],
+    ["external resource", /url\(|https?:\/\//],
+    ["Tailwind directive", /@(tailwind|apply|layer|theme)\b/],
+    ["global selector", /:global|(^|[\s,}])(html|body|:root)\b/m],
+    ["other template tokens", /--ee-|--vh-|--rm-/],
+    ["!important", /!important/],
+    ["infinite loop", /\binfinite\b/],
+    ["opening gate, open button or helper-text rule", /data-opening|data-interactive|openButton|coverAction|coverScrollHint|galleryHint/],
+  ])("has no %s", (_label, pattern) => {
+    expect(pattern.test(cssCode)).toBe(false);
+  });
+
+  it("nothing animates or transitions outside the motion-preference blocks", () => {
+    expect(noPreference.length).toBeGreaterThanOrEqual(1);
+    expect(/\banimation(-name|-timeline)?:|\btransition:/.test(outside)).toBe(false);
+  });
+
+  it("one reduced-motion block that stops every animation and transition", () => {
+    expect(reduce).toHaveLength(1);
+    expect(reduce[0]).toMatch(/animation: none;\s*transition: none;/);
+  });
+
+  it("transitions move no layout property", () => {
+    for (const block of noPreference) {
+      for (const [, value] of block.matchAll(/transition:\s*([^;]+);/g)) {
+        for (const part of (value as string).split(/,(?![^(]*\))/)) {
+          expect(["opacity", "translate", "scale", "box-shadow", "background-color", "color", "border-color", "overlay", "display"], part).toContain(
+            part.trim().split(/\s+/)[0],
+          );
+        }
+      }
+    }
+  });
+
+  it("keyframes move only opacity, translate, scale and clip-path", () => {
+    const keyframes = [...cssCode.matchAll(/@keyframes ([\w-]+)\s*\{([\s\S]*?)\n\}/g)];
+    expect(keyframes.length).toBeGreaterThanOrEqual(15);
+    for (const [, name, body] of keyframes) {
+      for (const [, property] of (body as string).matchAll(/([a-z-]+):/g)) {
+        expect(["opacity", "translate", "scale", "clip-path"], `${name as string}: ${property as string}`).toContain(property);
+      }
+    }
+  });
+
+  it("the cover is never held back: its whole entrance finishes within 1.8 s of first paint", () => {
+    const cover = [...noPreference.join("\n").matchAll(/\.(masthead\w*|cover\w*)\s*\{\s*animation: [\w-]+ (\d+)ms [^;]*?(\d+)ms backwards;/g)];
+    expect(cover.length).toBeGreaterThanOrEqual(8);
+    for (const match of cover) expect(Number(match[2]) + Number(match[3]), match[0]).toBeLessThanOrEqual(1800);
+  });
+
+  it("scroll-linked parallax is native, limited to the three large photos, and only without a reduced-motion preference", () => {
+    expect(supportsBlocks).toHaveLength(1);
+    const block = supportsBlocks[0] as string;
+    expect(block).toMatch(/@media \(prefers-reduced-motion: no-preference\)/);
+    const selectors = [...block.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .filter((match) => (match[2] as string).includes("animation-timeline: view()"))
+      .map((match) => (match[1] as string).trim());
+    expect(selectors).toStrictEqual([".coverPhoto > .fillImage,\n    .couplePhoto > .fillImage,\n    .thanksPhoto > .fillImage"]);
+    expect(/animation-timeline/.test(cssCode.replace(block, ""))).toBe(false);
+  });
+
+  it("the cover follows the small viewport (no forced full-height blank space) and respects safe areas", () => {
+    const cover = cssCode.match(/\n\.cover \{[\s\S]*?\n\}/)?.[0] ?? "";
+    expect(cover).not.toMatch(/min-height/);
+    expect(cover).toMatch(/env\(safe-area-inset-top\)/);
+    expect(cssCode).toMatch(/\.coverPhoto \{\s*width: 100%;\s*height: clamp\(250px, calc\(100svh - 318px\), 125cqi\);/);
+  });
+
+  it("the gift note is full ink and at least 19 px", () => {
+    const note = cssCode.match(/\n\.giftNote \{[\s\S]*?\n\}/)?.[0] ?? "";
+    expect(note).toMatch(/font-size: clamp\(19px, [\d.]+cqi, 20\.5px\);/);
+    expect(note).toMatch(/color: var\(--brown\);/);
+    expect(note).toMatch(/line-height: 1\.6\d?;/);
   });
 });

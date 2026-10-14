@@ -59,14 +59,38 @@ describe("LAUNCH-P0-04 showroom catalog", () => {
     }
   });
 
+  /**
+   * OWS-V2-01 release gate: the Our Wedding Story demo runs v2 before its
+   * catalog row exists. This is the one named exception, and it must stay
+   * unseeded here, so seeding v2 forces this list to be emptied. The showroom
+   * must not reach Production while the list is non-empty (a demo of a
+   * version Staff cannot select).
+   */
+  const PENDING_CATALOG_SEED_RENDERER_KEYS: readonly string[] = ["wedding.our-wedding-story.v2"];
+
   // VH-V2-RELEASE-READINESS: v2 is seeded by migration 0050, so the VH-V2-01 pending-seed exception is gone;
   // every public entry (the Vietnamese Heritage v2 demo included) needs its exact renderer key seeded.
   it("every public entry is seeded in the reproducible catalog migrations (templates.code + name)", () => {
     for (const template of PUBLIC_SHOWROOM_TEMPLATES) {
       expect(ALL_MIGRATIONS_SQL, template.templateCode).toContain(`('${template.templateCode}', 'WEDDING', '${template.nameEn}'`);
+      if (PENDING_CATALOG_SEED_RENDERER_KEYS.includes(template.rendererKey)) continue;
       expect(ALL_MIGRATIONS_SQL).toContain(`'${template.rendererKey}'`);
     }
     expect(PUBLIC_SHOWROOM_TEMPLATES.find((template) => template.templateCode === "vietnamese-heritage")?.rendererKey).toBe("wedding.vietnamese-heritage.v2");
+  });
+
+  it("the pending-seed exception is exactly Our Wedding Story v2, public, and not yet seeded", () => {
+    expect(PENDING_CATALOG_SEED_RENDERER_KEYS).toStrictEqual(["wedding.our-wedding-story.v2"]);
+    for (const key of PENDING_CATALOG_SEED_RENDERER_KEYS) {
+      expect(PUBLIC_SHOWROOM_TEMPLATES.map((template) => template.rendererKey)).toContain(key);
+      expect(ALL_MIGRATIONS_SQL).not.toContain(`'${key}'`);
+    }
+  });
+
+  it("Our Wedding Story is one public card, on v2, under its unchanged code", () => {
+    const ows = PUBLIC_SHOWROOM_TEMPLATES.filter((template) => template.templateCode === "our-wedding-story");
+    expect(ows.map((template) => [template.versionNumber, template.rendererKey, template.nameVi])).toStrictEqual([[2, "wedding.our-wedding-story.v2", "Chuyện Chúng Mình"]]);
+    expect(SHOWROOM_TEMPLATE_ENTRIES.filter((entry) => entry.templateCode === "our-wedding-story")).toHaveLength(1);
   });
 
   it("screenshots follow the one naming rule and real dimensions", () => {

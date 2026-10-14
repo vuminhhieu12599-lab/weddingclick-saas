@@ -150,7 +150,8 @@ export const SHOWROOM_TEMPLATE_ENTRIES: readonly ShowroomTemplateEntry[] = [
   },
   {
     templateCode: "our-wedding-story",
-    versionNumber: 1,
+    // OWS-V2-01: the demo shows v2 (no opening gate, gift typography, motion); one card, same code.
+    versionNumber: 2,
     nameVi: "Chuyện Chúng Mình",
     nameEn: "Our Wedding Story",
     taglineVi: "Kể chuyện tình yêu như một cuốn sách ảnh màu sâm panh.",

@@ -166,6 +166,25 @@ describe("LAUNCH-P0-04 showroom demos run the real pipeline", () => {
     expect(demoCoupleFor("wedding.vietnamese-heritage.v1")).toMatchObject(DEMO_COUPLE);
   });
 
+  it("the Our Wedding Story demo runs v2 on exactly v1's abstract placeholder mapping (no new or borrowed photos)", async () => {
+    const ows = PUBLIC_SHOWROOM_TEMPLATES.find((template) => template.templateCode === "our-wedding-story");
+    expect(ows?.rendererKey).toBe("wedding.our-wedding-story.v2");
+    expect(Object.hasOwn(DEMO_TEMPLATE_SLOT_PHOTO_SETS, "wedding.our-wedding-story.v2")).toBe(false);
+    expect(Object.hasOwn(DEMO_LEGACY_ROLE_PHOTO_SETS, "wedding.our-wedding-story.v2")).toBe(false);
+    for (const variant of INVITATION_VARIANTS) {
+      const v2 = await buildDemoRenderData("wedding.our-wedding-story.v2", variant);
+      const v1 = await buildDemoRenderData("wedding.our-wedding-story.v1", variant);
+      expect(v2.viewModel.media.templateSlots, variant).toStrictEqual(v1.viewModel.media.templateSlots);
+      const urls = Object.values(v2.viewModel.media.templateSlots ?? {}).flat().map((item) => (item as { url?: string }).url);
+      expect(urls.length).toBeGreaterThan(0);
+      for (const url of urls) expect(url, variant).toMatch(/^\/showroom\/demo\/mood-[\w-]+\.webp$/);
+      // Person-bound portraits stay empty: abstract images never pose as a person.
+      expect(v2.viewModel.media.templateSlots?.groomPortrait ?? []).toStrictEqual([]);
+      expect(v2.viewModel.media.templateSlots?.bridePortrait ?? []).toStrictEqual([]);
+      expect([v2.viewModel.people.primary.name, v2.viewModel.people.secondary.name]).toStrictEqual([v1.viewModel.people.primary.name, v1.viewModel.people.secondary.name]);
+    }
+  });
+
   it("every slot photo set names only declared slots within maxCount", () => {
     for (const [rendererKey, set] of Object.entries(DEMO_TEMPLATE_SLOT_PHOTO_SETS)) {
       const editor = lookupTemplateEditorManifest(rendererKey);

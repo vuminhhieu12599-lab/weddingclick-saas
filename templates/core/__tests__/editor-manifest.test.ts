@@ -216,6 +216,8 @@ describe("C. media slots", () => {
   // OWS-01 (docs/DECISIONS.md "OWS-01"): the one Product Owner-approved exception.
   describe("OWS-01 person-bound portrait exception", () => {
     const OWS_KEY = "wedding.our-wedding-story.v1";
+    // OWS-V2-01: the presentation-only v2 keeps the same two person-bound slots.
+    const OWS2_KEY = "wedding.our-wedding-story.v2";
     const portraits = (rendererKey: string, overrides: Rec = {}) =>
       manifest({
         rendererKey,
@@ -225,8 +227,8 @@ describe("C. media slots", () => {
         ],
       });
 
-    it("accepts exactly groomPortrait and bridePortrait as SINGLE slots for exactly wedding.our-wedding-story.v1", () => {
-      const result = validateTemplateEditorManifest(portraits(OWS_KEY));
+    it.each([OWS_KEY, OWS2_KEY])("accepts exactly groomPortrait and bridePortrait as SINGLE slots for exactly %s", (rendererKey) => {
+      const result = validateTemplateEditorManifest(portraits(rendererKey));
       expect(result.mediaSlots.map((entry) => [entry.key, entry.cardinality, entry.maxCount])).toStrictEqual([
         ["groomPortrait", "SINGLE", 1],
         ["bridePortrait", "SINGLE", 1],
@@ -237,7 +239,8 @@ describe("C. media slots", () => {
       "wedding.romantic-minimal.v1",
       "wedding.vietnamese-heritage.v1",
       "wedding.elegant-editorial.v1",
-      "wedding.our-wedding-story.v2",
+      "wedding.our-wedding-story.v3",
+      "wedding.vietnamese-heritage.v2",
       "wedding.our-wedding-story",
       "Wedding.our-wedding-story.v1",
       "wedding.test.v1",
@@ -246,23 +249,31 @@ describe("C. media slots", () => {
     });
 
     it.each(["groomPhoto", "brideImage", "couplePhoto", "groomBridePortrait", "portraitGroom", "groomportrait", "GroomPortrait", "coupleGallery"])(
-      "still rejects other person/side key %p for wedding.our-wedding-story.v1",
+      "still rejects other person/side key %p for both Our Wedding Story keys",
       (key) => {
-        expect(() =>
-          validateTemplateEditorManifest(manifest({ rendererKey: OWS_KEY, mediaSlots: [slot({ key })] })),
-        ).toThrow(TemplateEditorManifestInvariantError);
+        for (const rendererKey of [OWS_KEY, OWS2_KEY]) {
+          expect(() =>
+            validateTemplateEditorManifest(manifest({ rendererKey, mediaSlots: [slot({ key })] })),
+          ).toThrow(TemplateEditorManifestInvariantError);
+        }
       },
     );
 
     it("rejects a person-bound slot that is not SINGLE", () => {
-      expectFail(portraits(OWS_KEY, { cardinality: "ORDERED_MULTI", maxCount: 2 }), M.MEDIA_SLOT_PERSON_BOUND_SINGLE);
-      expectFail(portraits(OWS_KEY, { cardinality: "ORDERED_MULTI", maxCount: 1 }), M.MEDIA_SLOT_PERSON_BOUND_SINGLE);
+      for (const rendererKey of [OWS_KEY, OWS2_KEY]) {
+        expectFail(portraits(rendererKey, { cardinality: "ORDERED_MULTI", maxCount: 2 }), M.MEDIA_SLOT_PERSON_BOUND_SINGLE);
+        expectFail(portraits(rendererKey, { cardinality: "ORDERED_MULTI", maxCount: 1 }), M.MEDIA_SLOT_PERSON_BOUND_SINGLE);
+      }
     });
 
-    it("the exception table is frozen and holds exactly one renderer key with two slot keys", () => {
+    it("the exception table is frozen and holds exactly the two Our Wedding Story keys, each with the same two slot keys", () => {
       expect(Object.isFrozen(TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS)).toBe(true);
-      expect(Object.entries(TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS)).toStrictEqual([[OWS_KEY, ["groomPortrait", "bridePortrait"]]]);
+      expect(Object.entries(TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS)).toStrictEqual([
+        [OWS_KEY, ["groomPortrait", "bridePortrait"]],
+        [OWS2_KEY, ["groomPortrait", "bridePortrait"]],
+      ]);
       expect(Object.isFrozen(TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS[OWS_KEY])).toBe(true);
+      expect(Object.isFrozen(TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS[OWS2_KEY])).toBe(true);
       // Inherited Object.prototype names are never exception keys.
       expectFail(portraits("constructor"), M.MEDIA_SLOT_KEY_SEMANTIC);
     });
