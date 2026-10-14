@@ -62,8 +62,15 @@ describe("LAUNCH-P0-04 showroom demos run the real pipeline", () => {
       expect(data.sections.music).toBe(false);
       if (Object.hasOwn(DEMO_LEGACY_ROLE_PHOTO_SETS, template.rendererKey)) continue;
       expect(data.viewModel.media.portrait).toStrictEqual({});
-      expect(data.viewModel.media.templateSlots?.groomPortrait ?? []).toStrictEqual([]);
-      expect(data.viewModel.media.templateSlots?.bridePortrait ?? []).toStrictEqual([]);
+      // A person-bound portrait may come only from that renderer's own slot photo set
+      // (fictional people); a renderer without one keeps both portraits empty, because
+      // the abstract mood images must never pose as a person.
+      const slotSet = DEMO_TEMPLATE_SLOT_PHOTO_SETS[template.rendererKey];
+      const declared = (slot: string) => (slotSet?.[slot] ?? []).map((image) => `${DEMO_MEDIA_BASE_PATH}${image.file}`);
+      for (const slot of ["groomPortrait", "bridePortrait"]) {
+        const rendered = (data.viewModel.media.templateSlots?.[slot] ?? []).map((item) => (item as { url?: string }).url);
+        expect(rendered, `${template.rendererKey} ${slot}`).toStrictEqual(declared(slot));
+      }
     }
   });
 
@@ -166,22 +173,54 @@ describe("LAUNCH-P0-04 showroom demos run the real pipeline", () => {
     expect(demoCoupleFor("wedding.vietnamese-heritage.v1")).toMatchObject(DEMO_COUPLE);
   });
 
-  it("the Our Wedding Story demo runs v2 on exactly v1's abstract placeholder mapping (no new or borrowed photos)", async () => {
+  it("the Our Wedding Story demo runs v2 on its own fictional photo set, identical for every variant", async () => {
     const ows = PUBLIC_SHOWROOM_TEMPLATES.find((template) => template.templateCode === "our-wedding-story");
     expect(ows?.rendererKey).toBe("wedding.our-wedding-story.v2");
-    expect(Object.hasOwn(DEMO_TEMPLATE_SLOT_PHOTO_SETS, "wedding.our-wedding-story.v2")).toBe(false);
+    const set = DEMO_TEMPLATE_SLOT_PHOTO_SETS["wedding.our-wedding-story.v2"];
+    expect(set).toBeDefined();
+    if (set === undefined) return;
+    // v1 keeps the abstract mood images: the new photography is wired to v2 alone.
+    expect(Object.hasOwn(DEMO_TEMPLATE_SLOT_PHOTO_SETS, "wedding.our-wedding-story.v1")).toBe(false);
     expect(Object.hasOwn(DEMO_LEGACY_ROLE_PHOTO_SETS, "wedding.our-wedding-story.v2")).toBe(false);
+
+    const file = (slot: string, index = 0) => set[slot]?.[index]?.file;
+    expect(file("coverPhoto")).toBe("our-wedding-story/photos/01-cover-couple-fullbody.webp");
+    // Person-bound (OWS-01): the groom's frame is the groom's, the bride's is the bride's.
+    expect(file("groomPortrait")).toBe("our-wedding-story/photos/04-groom-portrait.webp");
+    expect(file("bridePortrait")).toBe("our-wedding-story/photos/03-bride-portrait.webp");
+    expect(file("storyPhoto")).toBe("our-wedding-story/photos/09-editorial-seated-wide.webp");
+    expect(file("thankYouPhoto")).toBe("our-wedding-story/photos/10-thank-you-couple.webp");
+    // All ten frames, each exactly once, in the approved album order.
+    expect(set.gallery?.map((image) => image.file)).toStrictEqual([
+      "our-wedding-story/photos/05-magazine-couple.webp",
+      "our-wedding-story/photos/06-camera-couple.webp",
+      "our-wedding-story/photos/07-fashion-couple-wide.webp",
+      "our-wedding-story/photos/08-intimate-veil-couple.webp",
+      "our-wedding-story/photos/02-veil-couple.webp",
+      "our-wedding-story/photos/09-editorial-seated-wide.webp",
+      "our-wedding-story/photos/03-bride-portrait.webp",
+      "our-wedding-story/photos/04-groom-portrait.webp",
+      "our-wedding-story/photos/01-cover-couple-fullbody.webp",
+      "our-wedding-story/photos/10-thank-you-couple.webp",
+    ]);
+    expect(new Set(set.gallery?.map((image) => image.file)).size).toBe(10);
+    // The slot declared LANDSCAPE gets a real landscape frame.
+    expect(set.storyPhoto?.[0]?.orientation).toBe("LANDSCAPE");
+
     for (const variant of INVITATION_VARIANTS) {
       const v2 = await buildDemoRenderData("wedding.our-wedding-story.v2", variant);
-      const v1 = await buildDemoRenderData("wedding.our-wedding-story.v1", variant);
-      expect(v2.viewModel.media.templateSlots, variant).toStrictEqual(v1.viewModel.media.templateSlots);
-      const urls = Object.values(v2.viewModel.media.templateSlots ?? {}).flat().map((item) => (item as { url?: string }).url);
+      const slots = v2.viewModel.media.templateSlots ?? {};
+      const urls = Object.values(slots).flat().map((item) => (item as { url?: string }).url);
       expect(urls.length).toBeGreaterThan(0);
-      for (const url of urls) expect(url, variant).toMatch(/^\/showroom\/demo\/mood-[\w-]+\.webp$/);
-      // Person-bound portraits stay empty: abstract images never pose as a person.
-      expect(v2.viewModel.media.templateSlots?.groomPortrait ?? []).toStrictEqual([]);
-      expect(v2.viewModel.media.templateSlots?.bridePortrait ?? []).toStrictEqual([]);
-      expect([v2.viewModel.people.primary.name, v2.viewModel.people.secondary.name]).toStrictEqual([v1.viewModel.people.primary.name, v1.viewModel.people.secondary.name]);
+      // Every frame is one of the new local WebP photographs — never a mood image.
+      for (const url of urls) expect(url, variant).toMatch(/^\/showroom\/demo\/our-wedding-story\/photos\/\d\d-[\w-]+\.webp$/);
+      expect((slots.groomPortrait ?? []).map((item) => (item as { url?: string }).url), variant).toStrictEqual([
+        "/showroom/demo/our-wedding-story/photos/04-groom-portrait.webp",
+      ]);
+      expect((slots.bridePortrait ?? []).map((item) => (item as { url?: string }).url), variant).toStrictEqual([
+        "/showroom/demo/our-wedding-story/photos/03-bride-portrait.webp",
+      ]);
+      expect((slots.gallery ?? []).length, variant).toBe(10);
     }
   });
 

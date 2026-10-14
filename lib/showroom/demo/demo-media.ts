@@ -137,6 +137,22 @@ const RM_PHOTOS = Object.freeze(
   ),
 );
 
+/** Our Wedding Story portraits are 1086×1448 (3:4); 07 and 09 are 1448×1086 landscapes. */
+const OWS_PHOTOS = Object.freeze(
+  [
+    ["01-cover-couple-fullbody"],
+    ["02-veil-couple"],
+    ["03-bride-portrait"],
+    ["04-groom-portrait"],
+    ["05-magazine-couple"],
+    ["06-camera-couple"],
+    ["07-fashion-couple-wide", "LANDSCAPE"],
+    ["08-intimate-veil-couple"],
+    ["09-editorial-seated-wide", "LANDSCAPE"],
+    ["10-thank-you-couple"],
+  ].map(([name, orientation]) => folderPhoto("our-wedding-story", name ?? "", orientation === "LANDSCAPE" ? "LANDSCAPE" : "PORTRAIT")),
+);
+
 /** Numbered photo `n` (1-based, the file name prefix) of a set. */
 function nth(photos: readonly DemoImage[], n: number): DemoImage {
   const photo = photos[n - 1];
@@ -183,6 +199,23 @@ export const DEMO_TEMPLATE_SLOT_PHOTO_SETS: Readonly<Record<string, DemoTemplate
     // solos side by side, and the two landscapes last, leading into the Thank You photo.
     gallery: Object.freeze([6, 7, 9, 8, 1, 4, 3, 5, 2, 10].map((n) => nth(RM_PHOTOS, n))),
     thankYouPhoto: Object.freeze([nth(RM_PHOTOS, 10)]),
+  }),
+  // OWS-V2-01: the public demo runs Our Wedding Story v2. Its key literal is forbidden in
+  // lib/ by the renderer static boundary, so it is resolved from the production registry.
+  [registeredRendererKey("our-wedding-story", 2)]: Object.freeze({
+    coverPhoto: Object.freeze([nth(OWS_PHOTOS, 1)]),
+    // Person-bound (OWS-01): each portrait follows its own person, never a layout position.
+    groomPortrait: Object.freeze([nth(OWS_PHOTOS, 4)]),
+    bridePortrait: Object.freeze([nth(OWS_PHOTOS, 3)]),
+    // The slot is declared LANDSCAPE: 09 is one of the two landscape frames.
+    storyPhoto: Object.freeze([nth(OWS_PHOTOS, 9)]),
+    // All ten (the slot has no maxCount). The magazine rhythm takes them in chunks of three
+    // (one large portrait-preferred + two small) and closes on a single wide row, so each
+    // chunk here keeps a portrait for the large slot and the two landscapes (07, 09) fall to
+    // small slots. It opens on frames not already shown above, then the bride and groom solos,
+    // and ends on the cover and the Thank You frame.
+    gallery: Object.freeze([5, 6, 7, 8, 2, 9, 3, 4, 1, 10].map((n) => nth(OWS_PHOTOS, n))),
+    thankYouPhoto: Object.freeze([nth(OWS_PHOTOS, 10)]),
   }),
 });
 
