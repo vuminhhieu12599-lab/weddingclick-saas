@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="750" viewBox="0 0 600 750">
+  <!-- Se Duyên prototype placeholder portrait (self-generated abstract art).
+       Warm ivory / rosewood wash so the gilded frame treatment can be judged
+       against a tone close to real Vietnamese wedding photography. Replaced
+       by real Project media in any production work. -->
+  <defs>
+    <linearGradient id="sd1Wash" x1="18%" y1="4%" x2="82%" y2="98%">
+      <stop offset="0%" stop-color="#efdcc2" />
+      <stop offset="52%" stop-color="#d2a98c" />
+      <stop offset="100%" stop-color="#7d4a3e" />
+    </linearGradient>
+    <radialGradient id="sd1Bloom" cx="42%" cy="30%" r="52%">
+      <stop offset="0%" stop-color="#fff6e6" stop-opacity="0.72" />
+      <stop offset="100%" stop-color="#fff6e6" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="sd1Vignette" cx="50%" cy="44%" r="74%">
+      <stop offset="58%" stop-color="#2a0a0d" stop-opacity="0" />
+      <stop offset="100%" stop-color="#2a0a0d" stop-opacity="0.42" />
+    </radialGradient>
+  </defs>
+  <rect width="600" height="750" fill="url(#sd1Wash)" />
+  <ellipse cx="300" cy="470" rx="150" ry="250" fill="#5e2f2b" opacity="0.18" />
+  <ellipse cx="300" cy="300" rx="92" ry="112" fill="#f3e3cb" opacity="0.26" />
+  <rect width="600" height="750" fill="url(#sd1Bloom)" />
+  <rect width="600" height="750" fill="url(#sd1Vignette)" />
+</svg>

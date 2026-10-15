@@ -5,6 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import { PROTOTYPE_WEDDING_DATA } from "./_data/wedding-data";
 import { VietnameseHeritagePrototype } from "./_directions/vietnamese-heritage/vietnamese-heritage";
 import { RomanticMinimalPrototype } from "./_directions/romantic-minimal/romantic-minimal";
+// SD-00 checkpoint: Se Duyên ("Thread of Fate") is a new premium direction
+// under review, not a production template. Only its opening/cover and couple
+// section are built — the other sections and the section toggles below do
+// not apply to it yet.
+import { SeDuyenPrototype } from "./_directions/se-duyen/se-duyen";
 // "Elegant Editorial" now renders the rebuilt moss-green/ivory editorial
 // implementation (checkpoint V8 — this replaces the old elegant-editorial
 // component; it is not a separate 4th direction). The prior implementation
@@ -20,6 +25,7 @@ const DIRECTIONS = [
   { key: "elegant-editorial", label: "Elegant Editorial" },
   { key: "vietnamese-heritage", label: "Vietnamese Heritage" },
   { key: "romantic-minimal", label: "Romantic Minimal" },
+  { key: "se-duyen", label: "Se Duyên (SD-00, WIP)" },
 ] as const;
 
 type DirectionKey = (typeof DIRECTIONS)[number]["key"];
@@ -283,6 +289,9 @@ function PrototypeSurface({
   }
   if (direction === "romantic-minimal") {
     return <RomanticMinimalPrototype key={key} {...props} />;
+  }
+  if (direction === "se-duyen") {
+    return <SeDuyenPrototype key={key} {...props} />;
   }
   return <GreenIvoryEditorialPrototype key={key} {...props} />;
 }
