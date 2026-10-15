@@ -28,6 +28,8 @@ The security model must prevent:
 
 May only access explicitly public published invitation content and approved public actions such as RSVP submission through a validated server endpoint.
 
+The public showroom (LAUNCH-P0-04: `/`, `/mau-thiep/**`, `/tu-van`) is also Zone A but reads **no** database, storage, token or Project: its demos run the production renderers over fixed fictional source records in code, with a demo RSVP capability that never sends a request. Its template list is a marketing projection validated against the production renderer registry, not the Staff templates API (which stays Staff-only under RLS). Contact numbers come from server environment variables and are public business contacts, not secrets.
+
 ### Zone B — Guest Token
 
 Anonymous browser possessing a valid guest-specific capability token.

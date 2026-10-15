@@ -360,7 +360,7 @@ describe("B. compatibility", () => {
   });
 
   it.each([
-    "wedding.vietnamese-heritage.v2",
+    "wedding.vietnamese-heritage.v3",
     "wedding.vietnamese-heritage.v0",
     "wedding.vietnamese-heritage",
     "wedding.vietnamese-heritage.latest",
@@ -380,10 +380,23 @@ describe("B. compatibility", () => {
 // ---------------------------------------------------------------------------
 
 describe("C. registry coexistence", () => {
-  it("both production renderers are registered, Elegant Editorial first and unchanged", () => {
-    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([EE_KEY, VH_KEY]);
+  // Checkpoint maintenance (stale since RM-02; restored at VH-V2-RELEASE-READINESS): the exact
+  // five-renderer list. v1 keeps its second position and exact manifest; v2 is a separate key.
+  it("all production renderers are registered, Elegant Editorial first and v1 unchanged beside v2", () => {
+    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([
+      EE_KEY,
+      VH_KEY,
+      "wedding.romantic-minimal.v1",
+      "wedding.our-wedding-story.v1",
+      "wedding.vietnamese-heritage.v2",
+      // OWS-V2-01: Our Wedding Story v2 is appended sixth.
+      "wedding.our-wedding-story.v2",
+    ]);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(EE_KEY)).toStrictEqual(ELEGANT_EDITORIAL_V1_MANIFEST);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(VH_KEY)).toStrictEqual(VIETNAMESE_HERITAGE_V1_MANIFEST);
+    const v2 = PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest("wedding.vietnamese-heritage.v2");
+    expect(v2?.identity.versionNumber).toBe(2);
+    expect(v2).not.toStrictEqual(VIETNAMESE_HERITAGE_V1_MANIFEST);
   });
 
   it("the production client host resolves each key to its own renderer", async () => {

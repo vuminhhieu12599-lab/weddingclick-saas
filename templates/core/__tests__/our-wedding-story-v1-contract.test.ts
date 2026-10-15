@@ -53,10 +53,14 @@ describe("OWS-01 Our Wedding Story v1 renderer manifest", () => {
       "wedding.vietnamese-heritage.v1",
       "wedding.romantic-minimal.v1",
       OWS_KEY,
+      // VH-V2-01: Vietnamese Heritage v2 is appended fifth; OWS keeps its fourth position.
+      "wedding.vietnamese-heritage.v2",
+      // OWS-V2-01: Our Wedding Story v2 is appended sixth; v1 keeps its fourth position and its own manifest.
+      "wedding.our-wedding-story.v2",
     ]);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(OWS_KEY)).toStrictEqual(OUR_WEDDING_STORY_V1_MANIFEST);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(OWS_KEY)).not.toBe(OUR_WEDDING_STORY_V1_MANIFEST);
-    for (const key of ["wedding.our-wedding-story", "wedding.our-wedding-story.v2", ` ${OWS_KEY}`, OWS_KEY.toUpperCase()]) {
+    for (const key of ["wedding.our-wedding-story", "wedding.our-wedding-story.v3", ` ${OWS_KEY}`, OWS_KEY.toUpperCase()]) {
       expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(key), key).toBeUndefined();
     }
   });
@@ -126,7 +130,7 @@ describe("OWS-01 Our Wedding Story v1 editor manifest", () => {
   it("registered fourth in the production editor list; lookup is exact and fails closed otherwise", () => {
     expect(PRODUCTION_EDITOR_MANIFESTS.map((manifest) => manifest.rendererKey)).toStrictEqual([...PRODUCTION_RENDERER_KEYS]);
     expect(lookupTemplateEditorManifest(OWS_KEY)).toStrictEqual(editor);
-    for (const key of ["wedding.our-wedding-story", "wedding.our-wedding-story.v2", `${OWS_KEY} `]) {
+    for (const key of ["wedding.our-wedding-story", "wedding.our-wedding-story.v3", `${OWS_KEY} `]) {
       expect(lookupTemplateEditorManifest(key), key).toBeUndefined();
     }
   });

@@ -87,13 +87,16 @@ export const TEMPLATE_EDITOR_SLOT_KEY_FORBIDDEN_WORDS = /groom|bride|couple/i;
 /**
  * The one approved exception to the position-only rule (docs/DECISIONS.md
  * "OWS-01", Product Owner 2026-10-10): exactly `groomPortrait` and
- * `bridePortrait`, only for exactly `wedding.our-wedding-story.v1`, each a
- * SINGLE slot bound to a stable person identity (never a display position).
+ * `bridePortrait`, only for exactly `wedding.our-wedding-story.v1` and its
+ * presentation-only successor `wedding.our-wedding-story.v2` (OWS-V2-01, same
+ * slots), each a SINGLE slot bound to a stable person identity (never a
+ * display position).
  * Exact string equality only; every other renderer key and every other
  * person/side slot key still fails with `MEDIA_SLOT_KEY_SEMANTIC`.
  */
 export const TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   "wedding.our-wedding-story.v1": Object.freeze(["groomPortrait", "bridePortrait"]),
+  "wedding.our-wedding-story.v2": Object.freeze(["groomPortrait", "bridePortrait"]),
 });
 
 function isPersonBoundSlotException(rendererKey: string, slotKey: string): boolean {

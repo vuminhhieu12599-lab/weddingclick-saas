@@ -685,3 +685,24 @@ Minimum matrix:
 - acceptable performance.
 
 Only certified template versions may become active for new production Projects.
+
+---
+
+## 26. Public Showroom Catalog (LAUNCH-P0-04)
+
+The public homepage, demo pages and consultation page are driven by one marketing manifest, `lib/showroom/showroom-catalog.ts` (`SHOWROOM_TEMPLATE_ENTRIES`), keyed by the authoritative template code. It is presentation only; it never activates, seeds or prices anything. Validation fails closed at module load: a `PUBLIC` entry must name a registered production renderer whose `identity.templateCode` and `displayName` equal the entry's `templateCode` and `nameEn`. `HIDDEN` entries are never rendered, routed or offered for selection.
+
+Demos (`/mau-thiep/<code>[/nha-trai|/nha-gai]`) run the frozen pipeline (RF-02 → RF-03 → RF-04 → production host core) over fictional source records in `lib/showroom/demo/`. Design keys come from the renderer manifest and photo slots from the editor manifest, so a new renderer needs no demo code. With the abstract mood images, person-bound portrait slots stay empty. A `LEGACY_ROLES` renderer with an entry in `DEMO_LEGACY_ROLE_PHOTO_SETS` (`lib/showroom/demo/demo-media.ts`; today only Elegant Editorial) instead shows that fictional photo set in every role, portraits included. Likewise a `TEMPLATE_SLOTS` renderer with an entry in `DEMO_TEMPLATE_SLOT_PHOTO_SETS` (today Vietnamese Heritage and Romantic Minimal) shows exactly the listed images per slot key, in position order. Slots it omits stay empty, and a key that is not a declared slot, or a list over the slot's `maxCount`, fails the demo build.
+
+### Adding the fifth (or any) template to the showroom
+
+Prerequisites: the template is certified (§25), its renderer and editor manifests are registered, and its catalog row is seeded active.
+
+1. Add one entry to `SHOWROOM_TEMPLATE_ENTRIES`, with `visibility: "HIDDEN"`, the exact `templateCode` and `rendererKey`, Vietnamese/English names, tagline, description, three mood words, an accent colour and a `sortOrder`.
+2. Build locally and open `/mau-thiep/<code>` after temporarily switching it to `PUBLIC` (not committed). Check COMMON / Nhà trai / Nhà gái.
+3. Capture `public/showroom/templates/<code>-cover.webp` and `<code>-inside.webp` (390×844 at 2×, demo bar removed, WebP); record them in `lib/showroom/demo/ASSETS.md`.
+4. Set `visibility: "PUBLIC"`. Run `npm test`: the catalog tests check the renderer identity, the catalog seed and the screenshot files.
+
+No JSX, layout, route or CSS change is needed: cards, hero, static demo params and the consultation chooser derive from the list. Product Owner review of the demo is required before release.
+
+**Demo date freshness.** The demo wedding is fixed on Saturday 04.12.2027 and Sunday 05.12.2027 (lunar text 07/11 and 08/11 Âm Lịch, stored verbatim). A test fails 60 days before that date; then move `DEMO_EVENT_STARTS`, recompute the lunar text and re-capture the screenshots.

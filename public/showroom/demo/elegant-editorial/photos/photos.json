@@ -1,0 +1,110 @@
+[
+  {
+    "file": "public/showroom/demo/elegant-editorial/photos/01-cover-couple-portrait.webp",
+    "source": "a_formal_high_end_wedding_portrait_scene_in_a_lux_12_batch_1.png",
+    "usageHint": "hero/cover: formal portrait in black tuxedo and ivory wedding dress",
+    "width": 1122,
+    "height": 1402,
+    "bytes": 258496,
+    "sha256": "cf02a09758d0da1d7fb1791a9a61656bd3aa982e2dc74c237abea4fd816af8e5"
+  },
+  {
+    "file": "public/showroom/demo/elegant-editorial/photos/02-seated-editorial.webp",
+    "source": "a_high_end_elegant_indoor_wedding_portrait_scene_2.png",
+    "usageHint": "story: bride seated, groom standing",
+    "width": 1122,
+    "height": 1402,
+    "bytes": 269900,
+    "sha256": "edbea6ba86613bc7f77ad8f16327279ef802eba7674a9ae120818b580f36a9e4"
+  },
+  {
+    "file": "public/showroom/demo/elegant-editorial/photos/03-joyful-couple.webp",
+    "source": "a_bright_elegant_indoor_wedding_portrait_scene_in_14_batch_3.png",
+    "usageHint": "gallery: cheerful, white suit and wedding gown",
+    "width": 1122,
+    "height": 1402,
+    "bytes": 214994,
+    "sha256": "94f70a04923e2a19e69cb14db632a07d05e3e57ed45fcdbfe9b2d4826fe2c390"
+  },
+  {
+    "file": "public/showroom/demo/elegant-editorial/photos/04-ceremony-couple.webp",
+    "source": "a_polished_elegant_indoor_wedding_portrait_studio_16_batch_5.png",
+    "usageHint": "gallery: standing couple in formal studio",
+    "width": 1122,
+    "height": 1402,
+    "bytes": 212964,
+    "sha256": "d79d269cb3e9cdcbc493617f41b40e707157f8e99043e6eea40f123b8fc5a46b"
+  },
+  {
+    "file": "public/showroom/demo/elegant-editorial/photos/05-close-couple.webp",
+    "source": "a_romantic_close_up_wedding_portrait_in_a_soft_el_17_batch_6.png",
+    "usageHint": "close-up: hands and bouquet",
+    "width": 1122,
+    "height": 1402,
+    "bytes": 149054,
+    "sha256": "71496bbec24b4ff0c2dc0c7e7f6bc148762ceef094e9a789dcd2e6711e3e533b"
+  },
+  {
+    "file": "public/showroom/demo/elegant-editorial/photos/06-couple-gaze.webp",
+    "source": "a_romantic_elegant_wedding_portrait_scene_in_a_lu_18_batch_7.png",
+    "usageHint": "gallery: couple eye contact",
+    "width": 1122,
+    "height": 1402,
+    "bytes": 161780,
+    "sha256": "db18419e202d8429f843dee44eb76219ece67015fe05b52ae19b1b3214e8fe9d"
+  },
+  {
+    "file": "public/showroom/demo/elegant-editorial/photos/07-couple-intimate.webp",
+    "source": "a_luxurious_romantic_studio_wedding_portrait_sce_20_batch_9.png",
+    "usageHint": "gallery: intimate portrait",
+    "width": 1122,
+    "height": 1402,
+    "bytes": 224744,
+    "sha256": "c62de10c9b3b3765f2a5880b9da4c382b4fc9c48aff3c0ba8e7263a75554e4db"
+  },
+  {
+    "file": "public/showroom/demo/elegant-editorial/photos/08-couple-playful.webp",
+    "source": "indoor_wedding_photoshoot_scene_a_luxurious_eleg_13_batch_2.png",
+    "usageHint": "gallery: playful rose petal movement",
+    "width": 1122,
+    "height": 1402,
+    "bytes": 239950,
+    "sha256": "81edf2365a55c1ed1381b23cf56bb847aede553e3a613848795882d1a48be54a"
+  },
+  {
+    "file": "public/showroom/demo/elegant-editorial/photos/09-bride-full-length.webp",
+    "source": "wide_elegant_indoor_bridal_portrait_scene_a_high_15_batch_4.png",
+    "usageHint": "bride portrait: full length",
+    "width": 1122,
+    "height": 1402,
+    "bytes": 231714,
+    "sha256": "d432f997e44a8ac1ef7b1b133d272985fcebceceb081f09180714894a12795cc"
+  },
+  {
+    "file": "public/showroom/demo/elegant-editorial/photos/10-wide-couple.webp",
+    "source": "wide_elegant_indoor_wedding_portrait_scene_with_a_19_batch_8.png",
+    "usageHint": "landscape: couple full length",
+    "width": 1448,
+    "height": 1086,
+    "bytes": 294252,
+    "sha256": "516b9705e9f7982279c6a34168a671c0b35712ea2d173c58d069a5cbf5babf40"
+  },
+  {
+    "file": "public/showroom/demo/elegant-editorial/photos/11-bride-portrait.webp",
+    "source": "cô_dâu_lộng_lẫy_giữa_hoa_và_pha_lê.png",
+    "usageHint": "bride portrait: alternative",
+    "width": 1122,
+    "height": 1402,
+    "bytes": 231714,
+    "sha256": "d432f997e44a8ac1ef7b1b133d272985fcebceceb081f09180714894a12795cc"
+  },
+  {
+    "file": "public/showroom/demo/elegant-editorial/photos/12-groom-portrait.webp",
+    "source": "chân_dung_chú_rể_giữa_tiệc_hoa_sang_trọng.png",
+    "usageHint": "groom portrait: single",
+    "width": 1122,
+    "height": 1402,
+    "bytes": 212964,
+    "sha256": "d79d269cb3e9cdcbc493617f41b40e707157f8e99043e6eea40f123b8fc5a46b"
+  }
+]

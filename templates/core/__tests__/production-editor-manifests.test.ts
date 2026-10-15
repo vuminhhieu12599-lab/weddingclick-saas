@@ -12,8 +12,10 @@ import { PRODUCTION_RENDERER_KEYS, PRODUCTION_RENDERER_MANIFESTS } from "../prod
 import type { RendererProductionManifestV1 } from "../renderer-manifest";
 import { ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST } from "../../editor/wedding/elegant-editorial-v1";
 import { OUR_WEDDING_STORY_V1_EDITOR_MANIFEST } from "../../editor/wedding/our-wedding-story-v1";
+import { OUR_WEDDING_STORY_V2_EDITOR_MANIFEST } from "../../editor/wedding/our-wedding-story-v2";
 import { ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST } from "../../editor/wedding/romantic-minimal-v1";
 import { VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST } from "../../editor/wedding/vietnamese-heritage-v1";
+import { VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST } from "../../editor/wedding/vietnamese-heritage-v2";
 
 /** TE-02 — production editor registry and the production editor manifests (docs/DECISIONS.md "TE-02"; RM-02 adds the third). */
 
@@ -21,6 +23,8 @@ const EE_KEY = "wedding.elegant-editorial.v1";
 const VH_KEY = "wedding.vietnamese-heritage.v1";
 const RM_KEY = "wedding.romantic-minimal.v1";
 const OWS_KEY = "wedding.our-wedding-story.v1";
+const VH2_KEY = "wedding.vietnamese-heritage.v2";
+const OWS2_KEY = "wedding.our-wedding-story.v2";
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -54,12 +58,14 @@ const EDITORS = [
   VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST,
   ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST,
   OUR_WEDDING_STORY_V1_EDITOR_MANIFEST,
+  VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST,
+  OUR_WEDDING_STORY_V2_EDITOR_MANIFEST,
 ];
 
 describe("E. production editor registry / cross-manifest validation", () => {
   it("editor key list equals the production renderer key list, in order", () => {
     expect(PRODUCTION_EDITOR_MANIFESTS.map((manifest) => manifest.rendererKey)).toStrictEqual([...PRODUCTION_RENDERER_KEYS]);
-    expect([...PRODUCTION_RENDERER_KEYS]).toStrictEqual([EE_KEY, VH_KEY, RM_KEY, OWS_KEY]);
+    expect([...PRODUCTION_RENDERER_KEYS]).toStrictEqual([EE_KEY, VH_KEY, RM_KEY, OWS_KEY, VH2_KEY, OWS2_KEY]);
   });
 
   it("the production list is frozen and holds fresh validated copies", () => {
@@ -71,6 +77,14 @@ describe("E. production editor registry / cross-manifest validation", () => {
     expect(PRODUCTION_EDITOR_MANIFESTS[2]).toStrictEqual(ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST);
     expect(PRODUCTION_EDITOR_MANIFESTS[3]).not.toBe(OUR_WEDDING_STORY_V1_EDITOR_MANIFEST);
     expect(PRODUCTION_EDITOR_MANIFESTS[3]).toStrictEqual(OUR_WEDDING_STORY_V1_EDITOR_MANIFEST);
+    // VH-V2-01: appended fifth; the v2 editor contract is v1's with only its renderer key changed.
+    expect(PRODUCTION_EDITOR_MANIFESTS[4]).not.toBe(VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST);
+    expect(PRODUCTION_EDITOR_MANIFESTS[4]).toStrictEqual(VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST);
+    expect({ ...VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST, rendererKey: VH_KEY }).toStrictEqual(VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST);
+    // OWS-V2-01: appended sixth; likewise v1's editor contract with only its renderer key changed.
+    expect(PRODUCTION_EDITOR_MANIFESTS[5]).not.toBe(OUR_WEDDING_STORY_V2_EDITOR_MANIFEST);
+    expect(PRODUCTION_EDITOR_MANIFESTS[5]).toStrictEqual(OUR_WEDDING_STORY_V2_EDITOR_MANIFEST);
+    expect({ ...OUR_WEDDING_STORY_V2_EDITOR_MANIFEST, rendererKey: OWS_KEY }).toStrictEqual(OUR_WEDDING_STORY_V1_EDITOR_MANIFEST);
     for (const manifest of PRODUCTION_EDITOR_MANIFESTS) {
       expect(Object.isFrozen(manifest)).toBe(true);
       expect(Object.isFrozen(manifest.mediaSlots)).toBe(true);
@@ -105,7 +119,7 @@ describe("E. production editor registry / cross-manifest validation", () => {
 
   it("rejects a malformed editor manifest with the validator's own error", () => {
     const broken = { ...clone(VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST), mediaSlots: [] };
-    expect(() => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, broken, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST, OUR_WEDDING_STORY_V1_EDITOR_MANIFEST], PRODUCTION_RENDERER_MANIFESTS)).toThrow(
+    expect(() => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, broken, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST, OUR_WEDDING_STORY_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST, OUR_WEDDING_STORY_V2_EDITOR_MANIFEST], PRODUCTION_RENDERER_MANIFESTS)).toThrow(
       TemplateEditorManifestInvariantError,
     );
   });
@@ -116,7 +130,7 @@ describe("E. production editor registry / cross-manifest validation", () => {
     const withMessage = clone(VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST) as unknown as { contentItems: unknown[] };
     withMessage.contentItems.push({ key: "INVITATION_MESSAGE", label: "Lời mời", hint: "Lời mời.", requirement: "OPTIONAL", sectionKey: "invitationMessage" });
     expectFail(
-      () => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, withMessage, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST, OUR_WEDDING_STORY_V1_EDITOR_MANIFEST], PRODUCTION_RENDERER_MANIFESTS),
+      () => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, withMessage, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST, OUR_WEDDING_STORY_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST, OUR_WEDDING_STORY_V2_EDITOR_MANIFEST], PRODUCTION_RENDERER_MANIFESTS),
       M.CONTENT_SECTION_NOT_CAPABLE,
     );
   });
@@ -126,7 +140,7 @@ describe("E. production editor registry / cross-manifest validation", () => {
     const photoStorySlot = clone(VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST) as unknown as { mediaSlots: Record<string, unknown>[] };
     photoStorySlot.mediaSlots.push({ ...photoStorySlot.mediaSlots[3], key: "storyStrip", sectionKey: "photoStory" });
     expectFail(
-      () => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, photoStorySlot, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST, OUR_WEDDING_STORY_V1_EDITOR_MANIFEST], PRODUCTION_RENDERER_MANIFESTS),
+      () => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, photoStorySlot, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST, OUR_WEDDING_STORY_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST, OUR_WEDDING_STORY_V2_EDITOR_MANIFEST], PRODUCTION_RENDERER_MANIFESTS),
       M.SLOT_SECTION_NOT_CAPABLE,
     );
   });
@@ -136,9 +150,11 @@ describe("E. production editor registry / cross-manifest validation", () => {
     expect(lookupTemplateEditorManifest(VH_KEY)).toStrictEqual(PRODUCTION_EDITOR_MANIFESTS[1]);
     expect(lookupTemplateEditorManifest(RM_KEY)).toStrictEqual(PRODUCTION_EDITOR_MANIFESTS[2]);
     expect(lookupTemplateEditorManifest(OWS_KEY)).toStrictEqual(PRODUCTION_EDITOR_MANIFESTS[3]);
+    expect(lookupTemplateEditorManifest(VH2_KEY)).toStrictEqual(PRODUCTION_EDITOR_MANIFESTS[4]);
+    expect(lookupTemplateEditorManifest(OWS2_KEY)).toStrictEqual(PRODUCTION_EDITOR_MANIFESTS[5]);
     expect(Object.isFrozen(lookupTemplateEditorManifest(VH_KEY)?.mediaSlots[0])).toBe(true);
     expect(lookupTemplateEditorManifest(VH_KEY)).toBe(lookupTemplateEditorManifest(VH_KEY));
-    for (const key of ["", "wedding.vietnamese-heritage", "wedding.vietnamese-heritage.v2", ` ${VH_KEY}`, VH_KEY.toUpperCase(), "wedding.romantic-minimal", `${RM_KEY} `, "latest"]) {
+    for (const key of ["", "wedding.vietnamese-heritage", "wedding.vietnamese-heritage.v3", ` ${VH_KEY}`, VH_KEY.toUpperCase(), "wedding.romantic-minimal", `${RM_KEY} `, "latest", "wedding.our-wedding-story.v3", "wedding.our-wedding-story"]) {
       expect(lookupTemplateEditorManifest(key)).toBeUndefined();
     }
   });
@@ -213,12 +229,12 @@ describe("F. exact production editor manifests", () => {
     expect(cluster?.hint).toContain("1, 2, 3");
   });
 
-  // OWS-01: the one approved exception is exactly groomPortrait / bridePortrait of Our Wedding Story v1.
+  // OWS-01: the one approved exception is exactly groomPortrait / bridePortrait of Our Wedding Story (v1, and v2 by OWS-V2-01).
   it("no slot key carries groom/couple/bride semantics, except the two OWS-01 person-bound portraits", () => {
     for (const manifest of PRODUCTION_EDITOR_MANIFESTS) {
       const semantic = manifest.mediaSlots.filter((slot) => /groom|bride|couple/i.test(slot.key));
       expect(semantic.map((slot) => [slot.key, slot.cardinality, slot.maxCount]), manifest.rendererKey).toStrictEqual(
-        manifest.rendererKey === OWS_KEY
+        manifest.rendererKey === OWS_KEY || manifest.rendererKey === OWS2_KEY
           ? [
               ["groomPortrait", "SINGLE", 1],
               ["bridePortrait", "SINGLE", 1],
