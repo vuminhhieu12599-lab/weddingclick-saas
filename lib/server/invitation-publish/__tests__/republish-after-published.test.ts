@@ -34,15 +34,16 @@ function createReviewVersionBlock(sql: string): string {
 }
 
 describe("migration 0044", () => {
-  it("AF: is followed only by 0046, the 0047/0048 catalog seeds and 0049 friendly aliases and the 0050 VH v2 catalog seed (0045 retired and absent; no 0051+), and no earlier migration is edited", () => {
+  it("AF: is followed only by 0046, the 0047/0048 catalog seeds and 0049 friendly aliases the 0050 VH v2 catalog seed and the 0051 OWS v2 catalog seed (0045 retired and absent; no 0052+), and no earlier migration is edited", () => {
     const names = readdirSync(join(ROOT, MIGRATIONS)).sort();
     // TE-03B (checkpoint maintenance): exactly 0046 may follow 0044; 0045 is retired and must stay absent.
     // OWS-04 (checkpoint maintenance): exactly the data-only catalog seed 0047 may follow 0046.
     // DB-CONSISTENCY-01 (checkpoint maintenance): exactly the data-only VH/RM catalog seed 0048 may follow 0047.
     // LAUNCH-P0-02 (checkpoint maintenance): exactly 0049 (friendly public aliases) may follow 0048.
     // VH-V2-RELEASE-READINESS (checkpoint maintenance): exactly the data-only VH v2 catalog seed 0050 may follow 0049.
-    expect(names.at(-1)).toBe("20260911041210_0050_seed_vietnamese_heritage_v2_catalog.sql");
-    expect(names.filter((name) => /_(004[4-9]|00[5-9]\d|0[1-9]\d\d)_/.test(name))).toEqual([M0044_NAME, "20260911041206_0046_project_template_media_slots.sql", "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql", "20260911041208_0048_seed_vietnamese_heritage_romantic_minimal_v1_catalog.sql", "20260911041209_0049_invitation_public_aliases.sql", "20260911041210_0050_seed_vietnamese_heritage_v2_catalog.sql"]);
+    // OWS-V2-CATALOG-01 (checkpoint maintenance): exactly the data-only OWS v2 catalog seed 0051 may follow 0050.
+    expect(names.at(-1)).toBe("20260911041211_0051_seed_our_wedding_story_v2_catalog.sql");
+    expect(names.filter((name) => /_(004[4-9]|00[5-9]\d|0[1-9]\d\d)_/.test(name))).toEqual([M0044_NAME, "20260911041206_0046_project_template_media_slots.sql", "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql", "20260911041208_0048_seed_vietnamese_heritage_romantic_minimal_v1_catalog.sql", "20260911041209_0049_invitation_public_aliases.sql", "20260911041210_0050_seed_vietnamese_heritage_v2_catalog.sql", "20260911041211_0051_seed_our_wedding_story_v2_catalog.sql"]);
     const edited = execFileSync("git", ["diff", "--name-only", "HEAD", "--", MIGRATIONS], { cwd: ROOT, encoding: "utf8" });
     expect(edited.trim()).toBe("");
     expect(sql0044).toContain("AUTHORING ONLY — not applied.");

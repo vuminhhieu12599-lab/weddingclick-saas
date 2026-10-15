@@ -151,6 +151,7 @@ export const SHOWROOM_TEMPLATE_ENTRIES: readonly ShowroomTemplateEntry[] = [
   {
     templateCode: "our-wedding-story",
     // OWS-V2-01: the demo shows v2 (no opening gate, gift typography, motion); one card, same code.
+    // Seeded as catalog version 2 by migration 0051. v1 stays for its pinned Projects.
     versionNumber: 2,
     nameVi: "Chuyện Chúng Mình",
     nameEn: "Our Wedding Story",
