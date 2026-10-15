@@ -93,6 +93,11 @@ AI-generated **fictional** wedding photographs created for the WeddingClick show
 
 Only the WebP files below are committed and served. Pillow 12.1.1, `quality=86, method=6`, same pixel dimensions as the PNGs (portraits 1086×1448, landscapes 1448×1086), 10 source PNGs → 10 optimized WebPs, about 0.64 MB for all ten (the PNGs are about 17.6 MB). The source PNGs stay local and are not committed. Each photo exists once on disk; slots that reuse a photo reference the same file.
 
+**Amendment (2026-10-14, commit `31f78a4` "improve OWS v2 photo framing").** All ten WebPs were re-framed and
+re-encoded after the paragraph above was written; the byte sizes and SHA-256 values in the table below describe the
+current committed files (about 0.54 MB for all ten). The subjects, rights and fictional-origin statement are unchanged.
+The hashes were brought back in step with the files on 2026-10-15; they had been left at their pre-re-framing values.
+
 Public showroom only — never a fallback for any customer invitation.
 
 Wired only for `wedding.our-wedding-story.v2` through `DEMO_TEMPLATE_SLOT_PHOTO_SETS` (`demo-media.ts`), keyed by `registeredRendererKey("our-wedding-story", 2)` because the renderer static boundary forbids the v2 key literal outside the renderer's own files. v1 keeps the abstract mood images. Mapping, against the v2 editor manifest's declared slots and `maxCount`:
@@ -110,20 +115,25 @@ The person-bound portraits follow OWS-01: each photo stays with its own person i
 
 | File | Size | Bytes | SHA-256 |
 |---|---|---|---|
-| 01-cover-couple-fullbody.webp | 1086×1448 | 68 KB | 774a3112f84690d580687fbea81b1ca9310282112796c5278d40f2d582daf97d |
-| 02-veil-couple.webp | 1086×1448 | 67 KB | d1aa8677474f13441ef46e5fabc8027a26732c81c0f29bcd0b66d950ce6a570d |
-| 03-bride-portrait.webp | 1086×1448 | 54 KB | 0fa7da9ce17dfdcf5cc22d21e51c435d79a7ae059bc15ad8d929a6d50ceea3f0 |
-| 04-groom-portrait.webp | 1086×1448 | 29 KB | 730b0acc3143e71cb111205583c24d2e42812ff54059e59782d111c6cd2a8b67 |
-| 05-magazine-couple.webp | 1086×1448 | 65 KB | 4ea1c67fa2bfa4b58cc8b5bd5bc6c78e0728c0274dbc00b83ca08e5e49f97d2a |
-| 06-camera-couple.webp | 1086×1448 | 71 KB | cea75470fecb559ef347af291d168b77f3c33251a19d1726af5f5e2246967767 |
-| 07-fashion-couple-wide.webp | 1448×1086 | 52 KB | 19f20ca631321a2fed7629c0d55c644d8bcbbbb10a8540014bd8e8a7c1f5beb1 |
-| 08-intimate-veil-couple.webp | 1086×1448 | 100 KB | 1ba80e8feb4a3a3abcbfd4fa7a7805f3ed275f138c8382baa32af0122fa53ca1 |
-| 09-editorial-seated-wide.webp | 1448×1086 | 92 KB | 9e106e979ecd27edc9e94ef6af2c47a2b3b3f216a3441844ccc56735643b55c1 |
-| 10-thank-you-couple.webp | 1086×1448 | 55 KB | 8b776ceeb7531caca8c1ea6d671d3d56deb5713faf21a7ad0ef0e2751fe09dbe |
+| 01-cover-couple-fullbody.webp | 1086×1448 | 59 KB | 6a1b531efc4d59cf22dce6de773cd7e4292663c91af133429985cb8a69084da8 |
+| 02-veil-couple.webp | 1086×1448 | 52 KB | fc1bff0781f115ec464edf486e6f145017fad187a0ea5f8f39e3f3b67d7bbb8d |
+| 03-bride-portrait.webp | 1086×1448 | 47 KB | c0e0d120560354e3bff62c177139cb9fddb56838fd0cfa6b8ef2d04fa882c39f |
+| 04-groom-portrait.webp | 1086×1448 | 24 KB | 0c1096d32ca811959b51762b982491ec8409388283bf9d29b9ce2d167049a306 |
+| 05-magazine-couple.webp | 1086×1448 | 63 KB | 01f0e394de2f8c03abd0289db877b25fd886104d2790a2ce94ef62e050bfe7c3 |
+| 06-camera-couple.webp | 1086×1448 | 92 KB | 9d75de88c4acb108b8ecb71e85cc40b134c5c5bfc0d1dede576b8b084ceb3362 |
+| 07-fashion-couple-wide.webp | 1448×1086 | 46 KB | e62e2afabecdd9db05f3c04a9e72de6ca143fca108be7857add89bc346fe9de6 |
+| 08-intimate-veil-couple.webp | 1086×1448 | 69 KB | 32d30fd579bd6e25697ec40bf1ad81d1af87884f58653cc5ab2ddee999623a14 |
+| 09-editorial-seated-wide.webp | 1448×1086 | 52 KB | 8d537cbce3e34b648276ad105f49e8c41065a4d729c6430561879bf57f61818d |
+| 10-thank-you-couple.webp | 1086×1448 | 53 KB | a3b4403e3014919b59ba6328e340cd197f7aad796eb4e09093bff7d6c28e282c |
 
 ## Template screenshots — `public/showroom/templates/`
 
 Real screenshots of the public demo pages (`/mau-thiep/<code>`, demo bar removed) from a local production build, headless Chrome, 390×844 CSS px at 2× (780×1688), WebP quality 78. `<code>-cover.webp` is the closed opening screen; `<code>-inside.webp` is an inner section after opening. Re-capture whenever a renderer version, the demo data or the demo images change, and for every new template.
+
+`our-wedding-story-cover.webp` was re-captured on 2026-10-15 (OWS-V2-CATALOG-01) after the ten Our Wedding Story
+demo photos were re-framed; that capture used WebP quality 80 and a reduced-motion settled state. Its `-inside`
+counterpart was re-measured against a fresh capture, differed only by WebP compression noise, and was deliberately
+kept byte-for-byte, so its hash below is unchanged.
 
 | File | Inner view | SHA-256 |
 |---|---|---|
@@ -133,7 +143,7 @@ Real screenshots of the public demo pages (`/mau-thiep/<code>`, demo bar removed
 | vietnamese-heritage-inside.webp | families, portrait cluster | 2a801e4d0396867f6c95232d0271c59e9ab44be55b832000ff734045fc65beac |
 | romantic-minimal-cover.webp | — | baaa1fd05977ce4ffd559fe9b4af43607dff90759f27019ee5e1d78a17dfa15c |
 | romantic-minimal-inside.webp | Save The Date photo rising from the envelope | df6b452d4b804b2782ac6446132e9628568f45c41edef00904916248d3025833 |
-| our-wedding-story-cover.webp | — | 9a001cbe65d497ba1329bae586d3cfdfe9ded8cf012cf96603c617eefaf05b93 |
+| our-wedding-story-cover.webp | — | 35802259ea86ee3197fc257d7b681eb13b306ae39cd0d415f5fc3c63313677a9 |
 | our-wedding-story-inside.webp | invitation card | 724b2888147fe787dda0c44ce1d9434b9ab4c27c7b2657dc2a53aa5cbe6562a7 |
 
 ## Social share image — `public/showroom/og-weddingclick.jpg`
