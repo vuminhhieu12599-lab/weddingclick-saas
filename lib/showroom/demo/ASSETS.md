@@ -47,7 +47,7 @@ Wired only for `wedding.elegant-editorial.v1` through `DEMO_LEGACY_ROLE_PHOTO_SE
 
 ## Vietnamese Heritage demo photos — `public/showroom/demo/vietnamese-heritage/photos/`
 
-Supplied by the Product Owner on 2026-10-13 (LAUNCH-P0-04) as ten 1086×1448 / 1448×1086 PNGs (about 18 MB in total). They are fictional demo photos, never a real couple, wedding or client portfolio. **No provenance or licence note came with this folder: the Product Owner must confirm their origin and web/commercial use rights before release.**
+Supplied by the Product Owner on 2026-10-13 (LAUNCH-P0-04) as ten 1086×1448 / 1448×1086 PNGs (about 18 MB in total). They are fictional demo photos, never a real couple, wedding or client portfolio. **Product Owner attestation (2026-10-15): the Product Owner confirms the right to use this Vietnamese Heritage demo photo set publicly and commercially for WeddingClick.** The photographs are fictional showroom examples, not real customer or wedding photographs. The images' original creation details have not been independently verified.
 
 Only the WebP files below are committed and served. Pillow 12.1.1, `quality=86, method=6`, same pixel dimensions, about 950 KB for all ten. At 100 % they are visually indistinguishable from the PNGs, with no banding on the red backdrops. The source PNGs are not committed.
 
