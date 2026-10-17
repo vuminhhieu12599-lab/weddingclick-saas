@@ -1,0 +1,1158 @@
+/* ---------------------------------------------------------------------- */
+/* Page shell.                                                            */
+/*                                                                        */
+/* The opening (.root) is FROZEN — approved cover + approved animation.   */
+/* It stays exactly one screen tall and keeps `container-type: size`, so  */
+/* every cqh/cqw inside it resolves as before. The interior sections are  */
+/* siblings below it in this scroller; they are only rendered once the    */
+/* hero is reached, so a guest cannot scroll past an unopened box.        */
+/* ---------------------------------------------------------------------- */
+
+.page {
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--sdp-page-lacquer, #40090c);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Se Duyên — "Hộp cưới mở ra" (Visual Pilot v0.3).                       */
+/*                                                                        */
+/* One screen, three states: closed box -> lid lifts, photo rises ->      */
+/* photo-led hero. Artwork is the supplied v0.3 pilot set (background,    */
+/* lid, open base) plus the v0.2 couple photo and tơ hồng, unchanged.     */
+/*                                                                        */
+/* The closed box is COMPOSED from `box-lid` seated on `box-open-base`    */
+/* rather than drawn from `box-closed`: lid + base share one 1448x1086    */
+/* canvas and one camera, so seating the lid by a single vertical offset  */
+/* (--sdp-lid-seat, measured off the base's front inner rim at 58.5% of   */
+/* the canvas) gives a lid-lift that is mechanically registered. The      */
+/* independently rendered `box-closed` art cannot lift that way — see the */
+/* note in se-duyen-pilot.tsx.                                            */
+/*                                                                        */
+/* Motion is CSS only and lives inside the no-preference query, so the    */
+/* reduced-motion path is the finished layout with a short crossfade.     */
+/* ---------------------------------------------------------------------- */
+
+.root {
+  /* FROZEN opening screen — do not restyle without Product Owner sign-off. */
+  flex: 0 0 100%;
+
+  --sdp-lacquer: #40090c;
+  --sdp-gold: #d6b472;
+  --sdp-gold-hi: #f5e5bb;
+  --sdp-ivory: #f7f0e2;
+
+  /* Seated lid offset, as a share of the shared box canvas height. */
+  --sdp-lid-seat: -19.1%;
+  /* Where the lid travels to when it comes off. */
+  --sdp-lid-lift: -41%;
+
+  position: relative;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  background: var(--sdp-lacquer);
+  color: var(--sdp-ivory);
+  font-family: var(--sdp-sans), "Segoe UI", system-ui, sans-serif;
+  container-type: size;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Box stage.                                                             */
+/* ---------------------------------------------------------------------- */
+
+.stage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  /* names / box / date + hint — the box keeps the middle, the text sits  */
+  /* in the room around it.                                               */
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  padding-top: calc(14cqh + 12px);
+  padding-bottom: calc(10.5cqh + max(env(safe-area-inset-bottom, 0px), 12px));
+}
+
+.background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-color: var(--sdp-lacquer);
+  background-image: url("/prototypes/invitation/demo/se-duyen/pilot-v03/bg-red-lacquer.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Keeps the eyebrow/names/date/hint legible where the backdrop's gold     */
+/* lotus art runs under them, without flattening the lacquer.              */
+.background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(32, 4, 6, 0.52) 0%,
+    rgba(32, 4, 6, 0.12) 18%,
+    rgba(32, 4, 6, 0) 36%,
+    rgba(32, 4, 6, 0) 60%,
+    rgba(30, 4, 6, 0.3) 80%,
+    rgba(26, 3, 5, 0.6) 100%
+  );
+}
+
+/* ---- Cover text: names above the box, date below it ---- */
+
+.coverTop {
+  grid-row: 1;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 22px;
+}
+
+.coverEyebrow {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.48em;
+  text-transform: uppercase;
+  color: rgba(245, 229, 187, 0.78);
+}
+
+/* Stacked, like the hero: a single row orphans the ampersand once the two
+   names no longer fit, and long Vietnamese names make that the common case. */
+.coverNames {
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(32px, 9.2cqw, 41px);
+  line-height: 1.3;
+  letter-spacing: 0.012em;
+}
+
+.coverName {
+  padding: 0 2px 2px;
+  text-wrap: balance;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.coverAmp {
+  margin: 1px 0;
+  font-size: 0.5em;
+  color: rgba(214, 180, 114, 0.95);
+}
+
+.coverBottom {
+  grid-row: 3;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 22px;
+}
+
+.coverDate {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(247, 240, 226, 0.78);
+  text-shadow: 0 1px 8px rgba(20, 3, 4, 0.6);
+}
+
+.coverDateMain {
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-variant-numeric: lining-nums;
+  font-size: clamp(22px, 6.2cqw, 27px);
+  letter-spacing: 0.14em;
+  text-transform: none;
+  color: var(--sdp-gold-hi);
+}
+
+/* The only call to action: one line, no button (brief v0.3). It sits with
+   the box, not with the date, and is deliberately the quietest type on the
+   cover — an interaction cue, not content. */
+.coverHint {
+  position: relative;
+  isolation: isolate;
+  /* The box artwork leaves transparent canvas below the painted base (the
+     base ends at 86.5% of the asset), so a plain gap would read as a big
+     hole. Pull back by that dead band — 13.5% of the box's own height, which
+     is 0.135 x 0.75 x 90% of the stage width — to land ~18px under the
+     lacquer itself. */
+  margin: calc(18px - 9.1cqw) 0 0;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  color: rgba(249, 240, 214, 0.92);
+  text-shadow:
+    0 1px 3px rgba(20, 3, 4, 0.92),
+    0 2px 12px rgba(20, 3, 4, 0.8);
+}
+
+/* A soft halo, not a chip: the backdrop's gold lotus runs under this line. */
+.coverHint::before {
+  content: "";
+  position: absolute;
+  inset: -7px -20px;
+  z-index: -1;
+  background: radial-gradient(
+    62% 118% at 50% 50%,
+    rgba(22, 3, 5, 0.56) 0%,
+    rgba(22, 3, 5, 0.32) 46%,
+    rgba(22, 3, 5, 0) 78%
+  );
+}
+
+/* ---- The box itself. The whole object is the control. ---- */
+
+.boxArea {
+  grid-row: 2;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  padding: 1cqh 3% calc(1cqh + 36px);
+}
+
+.boxButton {
+  display: block;
+  width: min(90%, 52cqh);
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.boxButton:disabled {
+  cursor: default;
+}
+
+.box {
+  position: relative;
+  display: block;
+  width: 100%;
+  /* The v0.3 box artwork shares one 1448x1086 canvas. */
+  aspect-ratio: 1448 / 1086;
+}
+
+.boxArt {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.boxBase {
+  z-index: 1;
+  background-image: url("/prototypes/invitation/demo/se-duyen/pilot-v03/box-open-base.png");
+  filter: drop-shadow(0 18px 26px rgba(10, 2, 3, 0.62));
+}
+
+.boxLid {
+  z-index: 2;
+  transform: translate3d(0, var(--sdp-lid-seat), 0);
+  background-image: url("/prototypes/invitation/demo/se-duyen/pilot-v03/box-lid.png");
+  filter: drop-shadow(0 10px 18px rgba(10, 2, 3, 0.5));
+}
+
+/* The emergence slot. Its bottom edge is the basin's front inner rim,     */
+/* measured off `box-open-base.png` (the ivory lining stops at 58.5% of    */
+/* the canvas height), so the card's lower edge stays hidden inside the    */
+/* box and it reads as rising out of it rather than sliding over it.       */
+.photoSlot {
+  position: absolute;
+  left: 26%;
+  top: -30%;
+  width: 48%;
+  height: 86.5%;
+  z-index: 3;
+  display: block;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.photoCard {
+  position: absolute;
+  inset: 0;
+  display: block;
+  opacity: 0;
+  transform: translate3d(0, 100%, 0);
+  background-image: url("/prototypes/invitation/demo/se-duyen/se-duyen-visual-pilot-v02/couple-photo-demo.webp");
+  background-size: cover;
+  background-position: center 20%;
+  background-repeat: no-repeat;
+  /* A thin ivory edge, not a gold frame — the photo outranks the ornament. */
+  box-shadow:
+    0 0 0 2px rgba(247, 240, 226, 0.85),
+    0 16px 26px -12px rgba(10, 2, 3, 0.85);
+}
+
+.boxButton:focus-visible .box {
+  outline: 2px solid var(--sdp-gold-hi);
+  outline-offset: 8px;
+  border-radius: 10px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Photo-led hero.                                                        */
+/* ---------------------------------------------------------------------- */
+
+.hero {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  opacity: 0;
+  visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  /* Transparent by design: the photo underneath IS the hero image. There is
+     no .heroPhoto any more — a second full-screen copy of the same picture
+     is what produced the crossfade and the ghosted faces. */
+  background: transparent;
+}
+
+/* Keeps the names legible over the photo without a slab or a frame. */
+.heroScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(30, 5, 7, 0.42) 0%,
+    rgba(30, 5, 7, 0) 26%,
+    rgba(30, 5, 7, 0.08) 48%,
+    rgba(28, 5, 6, 0.74) 78%,
+    rgba(22, 3, 5, 0.92) 100%
+  );
+}
+
+.heroText {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 24px calc(9cqh + max(env(safe-area-inset-bottom, 0px), 10px));
+}
+
+.heroEyebrow {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  color: rgba(245, 229, 187, 0.78);
+}
+
+.heroNames {
+  margin: 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(37px, 11.2cqw, 50px);
+  line-height: 1.26;
+  letter-spacing: 0.012em;
+}
+
+.heroName {
+  padding: 0 2px 2px;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-wrap: balance;
+}
+
+.heroAmp {
+  margin: 2px 0;
+  font-size: 0.5em;
+  color: rgba(214, 180, 114, 0.95);
+}
+
+/* The one ornament: the supplied tơ hồng, small and once. */
+.heroThread {
+  width: clamp(116px, 38cqw, 168px);
+  height: clamp(26px, 8cqw, 38px);
+  margin: 12px 0 0;
+  background-image: url("/prototypes/invitation/demo/se-duyen/se-duyen-visual-pilot-v02/red-thread.webp");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.heroDate {
+  margin: 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(247, 240, 226, 0.82);
+}
+
+.heroDateMain {
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-variant-numeric: lining-nums;
+  font-size: 24px;
+  letter-spacing: 0.14em;
+  text-transform: none;
+  color: var(--sdp-gold-hi);
+}
+
+/* ---------------------------------------------------------------------- */
+/* State.                                                                 */
+/* ---------------------------------------------------------------------- */
+
+/* Opening and hero both lift the lid clear of the basin. */
+.root[data-phase="opening"] .boxLid,
+.root[data-phase="hero"] .boxLid {
+  opacity: 0;
+  transform: translate3d(0, var(--sdp-lid-lift), 0) scale(1.015);
+}
+
+.root[data-phase="opening"] .photoCard,
+.root[data-phase="hero"] .photoCard {
+  opacity: 1;
+  transform: none;
+}
+
+/* The cover text steps aside so the risen photo owns the screen. */
+.root[data-phase="opening"] .coverTop,
+.root[data-phase="hero"] .coverTop,
+.root[data-phase="opening"] .coverBottom,
+.root[data-phase="hero"] .coverBottom,
+.root[data-phase="opening"] .coverHint,
+.root[data-phase="hero"] .coverHint {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.root[data-phase="hero"] .stage {
+  pointer-events: none;
+}
+
+/* The risen card becomes the full-screen hero image — same element, same
+   pixels, so nothing crossfades and no second face appears behind it. */
+.root[data-phase="hero"] .photoSlot {
+  left: var(--sdp-expand-left, 0px);
+  top: var(--sdp-expand-top, 0px);
+  width: var(--sdp-expand-width, 100%);
+  height: var(--sdp-expand-height, 100%);
+}
+
+/* Lifted over the backdrop and the cover text, still under the hero text. */
+.root[data-phase="hero"] .boxArea {
+  z-index: 4;
+}
+
+/* The ivory card edge has no business framing the whole screen. */
+.root[data-phase="hero"] .photoCard {
+  box-shadow:
+    0 0 0 0 rgba(247, 240, 226, 0),
+    0 0 0 0 rgba(10, 2, 3, 0);
+}
+
+/* What the photo replaces. */
+.root[data-phase="hero"] .background,
+.root[data-phase="hero"] .boxBase {
+  opacity: 0;
+}
+
+.root[data-phase="hero"] .hero {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Motion.                                                                */
+/* ---------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The lid comes up and away; it fades only after it has cleared the    */
+  /* rim, so the reveal reads as an opening rather than a dissolve.       */
+  /* A lid starts at rest, so it eases IN as well as out — the old curve
+     was front-loaded and snapped off the basin. */
+  .boxLid {
+    transition:
+      transform 1180ms cubic-bezier(0.38, 0, 0.2, 1) 90ms,
+      opacity 620ms ease 700ms;
+  }
+
+  .photoCard {
+    transition:
+      transform 1040ms cubic-bezier(0.3, 0.86, 0.28, 1) 620ms,
+      opacity 420ms ease 620ms,
+      box-shadow 700ms ease;
+  }
+
+  /* The growth: one unhurried move from card to full screen. */
+  .photoSlot {
+    transition:
+      left 1150ms cubic-bezier(0.4, 0, 0.2, 1),
+      top 1150ms cubic-bezier(0.4, 0, 0.2, 1),
+      width 1150ms cubic-bezier(0.4, 0, 0.2, 1),
+      height 1150ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .background,
+  .boxBase {
+    transition: opacity 760ms ease 180ms;
+  }
+
+  .coverTop,
+  .coverBottom,
+  .coverHint {
+    transition: opacity 520ms ease;
+  }
+
+  /* The hero text waits for the photo to be most of the way up to full
+     screen, then settles in over it. */
+  .hero {
+    transition: opacity 900ms ease 620ms, visibility 0s linear 0s;
+  }
+
+  .root[data-phase="closed"] .hero {
+    transition: opacity 900ms ease, visibility 0s linear 900ms;
+  }
+
+  /* Entrance: the closed box settles once, on load. */
+  .boxArea {
+    animation: sdp-box-in 980ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* `backwards`, not `both`: a forwards-filling entrance animation would   */
+  /* keep painting opacity:1 and silently defeat the opening fade-out.      */
+  .coverTop {
+    animation: sdp-rise 820ms cubic-bezier(0.22, 1, 0.36, 1) 140ms backwards;
+  }
+
+  .coverBottom {
+    animation: sdp-rise 820ms cubic-bezier(0.22, 1, 0.36, 1) 520ms backwards;
+  }
+
+  /* A slow breath on the hint only — nothing else loops. */
+  .root[data-phase="closed"] .coverHint {
+    animation: sdp-breathe 4600ms ease-in-out 1900ms infinite;
+  }
+
+  .boxButton:active .box {
+    transform: scale(0.985);
+    transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes sdp-box-in {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 16px, 0) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes sdp-rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 12px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes sdp-breathe {
+    0%,
+    100% {
+      opacity: 0.82;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+}
+
+/* Reduced motion: states still change, nothing travels. */
+@media (prefers-reduced-motion: reduce) {
+  .boxLid,
+  .stage,
+  .hero,
+  .background,
+  .boxBase,
+  .coverTop,
+  .coverBottom,
+  .coverHint {
+    transition: opacity 200ms linear;
+  }
+
+  /* The slot still ends full screen; it just does not travel there. */
+  .photoSlot {
+    transition: none;
+  }
+
+  .root[data-phase="opening"] .boxLid,
+  .root[data-phase="hero"] .boxLid {
+    transform: translate3d(0, var(--sdp-lid-seat), 0);
+  }
+
+  .photoCard {
+    transform: none;
+    transition: opacity 200ms linear;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Narrow phones. Thresholds account for the review harness's phone frame */
+/* (10px chrome per side), so 360 sorts here on a real device AND here.    */
+/* ---------------------------------------------------------------------- */
+
+@container (max-width: 365px) {
+  .stage {
+    padding-top: calc(12.5cqh + 10px);
+    padding-bottom: calc(9.5cqh + max(env(safe-area-inset-bottom, 0px), 10px));
+  }
+
+  .boxButton {
+    width: min(94%, 50cqh);
+  }
+
+  /* Same correction, against the wider box on narrow phones. */
+  .coverHint {
+    margin-top: calc(16px - 9.5cqw);
+  }
+
+  .coverTop,
+  .coverBottom {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .heroText {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+}
+
+/* ====================================================================== */
+/* INTERIOR — the two sections below the frozen opening.                  */
+/*                                                                        */
+/* Nothing above this line is touched by them: they are siblings of       */
+/* .root inside .page, with their own type scale and their own colour     */
+/* ground. They share the opening's faces (Cormorant Garamond display,    */
+/* Be Vietnam Pro micro-type) through the same CSS variables.             */
+/* ====================================================================== */
+
+.interior {
+  --sdi-lacquer: #40090c;
+  --sdi-lacquer-deep: #2c0608;
+  --sdi-paper: #f2e6d2;
+  --sdi-paper-deep: #e0cdae;
+  --sdi-ink: #43301f;
+  --sdi-ink-soft: #7a6245;
+  --sdi-gold: #b08c45;
+  --sdi-gold-hi: #e4c88a;
+  --sdi-ivory: #f7f0e2;
+
+  display: block;
+  width: 100%;
+  /* Positioned above .root purely so the seam layer can reach up over the
+     hero's bottom edge; without it the veil lands behind the photograph.
+     6, not 1: .hero carries z-index 5 and is not confined to .root here, so
+     it competes directly with this sibling and wins at anything lower —
+     measured, not assumed. No layout effect: the two remain stacked flex
+     items, and the interior's own content all sits below the hero anyway. */
+  position: relative;
+  z-index: 6;
+  /* The interior's own query container. .root stays the size container for
+     the frozen opening, and it is a SIBLING of this, so the interior could
+     not have queried it. */
+  container-type: inline-size;
+  font-family: var(--sdp-sans), "Segoe UI", system-ui, sans-serif;
+}
+
+/* ---------------------------------------------------------------------- */
+/* 1. Invitation introduction — ivory silk plate on warm paper.           */
+/* ---------------------------------------------------------------------- */
+
+.invite {
+  position: relative;
+  padding: 76px 22px 84px;
+  background:
+    radial-gradient(
+      152% 98% at 50% -8%,
+      rgba(64, 9, 12, 0.2) 0%,
+      rgba(64, 9, 12, 0.07) 44%,
+      rgba(64, 9, 12, 0) 74%
+    ),
+    radial-gradient(92% 62% at 50% 46%, var(--sdi-paper) 0%, var(--sdi-paper-deep) 100%);
+  color: var(--sdi-ink);
+}
+
+/* Carries the lacquer of the hero into the paper instead of cutting.
+   A single linear ramp still shows its own edge where it lands, so the
+   fade is eased over a much longer run: dense for the first sixth, then
+   a long tail that reaches zero slowly.
+
+   The layer starts 90px ABOVE this section, over the foot of the hero.
+   What was cutting is the hero photograph's own bottom edge, and nothing
+   drawn below the boundary can soften something above it. This is the
+   whole fix, and it costs the frozen opening nothing: the interior only
+   exists once the hero phase has been reached, so the closed cover, the
+   lid animation and the photo's rise into the hero are never overlaid.
+   At rest the veil is purely tonal over the hero's lowest 11% — far
+   below the names and the date, and in the same direction as the hero's
+   own scrim. Layout, type and motion are untouched.
+
+   Painting order: .root is a stacking context (container-type) and so is
+   .interior, both at z-index auto, so this later sibling paints over the
+   hero by tree order. Inside .invite the seam stays below .inviteCard,
+   which holds z-index 1. */
+.inviteSeam {
+  position: absolute;
+  top: -90px;
+  left: 0;
+  right: 0;
+  height: 268px;
+  background: linear-gradient(
+    180deg,
+    rgba(64, 9, 12, 0) 0%,
+    rgba(64, 9, 12, 0.07) 11%,
+    rgba(64, 9, 12, 0.17) 18%,
+    rgba(64, 9, 12, 0.33) 24%,
+    rgba(64, 9, 12, 0.56) 28.4%,
+    rgba(64, 9, 12, 0.82) 31.2%,
+    var(--sdi-lacquer) 33.6%,
+    rgba(64, 9, 12, 0.94) 41.6%,
+    rgba(64, 9, 12, 0.79) 50.9%,
+    rgba(64, 9, 12, 0.57) 61.5%,
+    rgba(64, 9, 12, 0.34) 72.1%,
+    rgba(64, 9, 12, 0.16) 82.7%,
+    rgba(64, 9, 12, 0.05) 92%,
+    rgba(64, 9, 12, 0) 100%
+  );
+  pointer-events: none;
+}
+
+/* A single gold hairline where the two worlds meet — pinned to the section
+   boundary (90px down the layer), not to the layer's new top edge. */
+.inviteSeam::after {
+  content: "";
+  position: absolute;
+  inset: 90px 24% auto;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(224, 200, 138, 0) 0%,
+    rgba(224, 200, 138, 0.5) 50%,
+    rgba(224, 200, 138, 0) 100%
+  );
+}
+
+.invite::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 192px;
+  background: linear-gradient(
+    180deg,
+    rgba(64, 9, 12, 0) 0%,
+    rgba(64, 9, 12, 0.05) 13%,
+    rgba(64, 9, 12, 0.16) 27%,
+    rgba(64, 9, 12, 0.34) 43%,
+    rgba(64, 9, 12, 0.57) 59%,
+    rgba(64, 9, 12, 0.79) 75%,
+    rgba(64, 9, 12, 0.94) 88%,
+    var(--sdi-lacquer) 100%
+  );
+  pointer-events: none;
+}
+
+/* The supplied ivory plate. Artwork only — every word on it is DOM text. */
+.inviteCard {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 330px;
+  margin: 0 auto;
+  aspect-ratio: 720 / 1279;
+  background-image: url("/prototypes/invitation/demo/se-duyen/assets/ivory-invitation-card.webp");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 18px 30px rgba(62, 36, 12, 0.26));
+}
+
+/* Inset to clear the plate's gold lotus frame on all four sides. */
+.inviteInner {
+  position: absolute;
+  inset: 13.5% 13% 12%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  text-align: center;
+}
+
+.inviteRite {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--sdi-gold);
+}
+
+.inviteSalutation {
+  margin: 20px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(21px, 6.2cqw, 25px);
+  line-height: 1.32;
+  letter-spacing: 0.015em;
+  color: var(--sdi-ink);
+}
+
+.inviteGuest {
+  margin: 14px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(24px, 7.4cqw, 30px);
+  line-height: 1.3;
+  color: #6d1416;
+  text-wrap: balance;
+}
+
+/* The tơ hồng, once, as the rule between the greeting and the date — it
+   supports the guest's name and must not compete with it, so it is small,
+   pale, and its ends dissolve instead of stopping at the crop edge.
+   `cover`, not `contain`: the artwork's canvas is 4:3, so fitting all of it
+   into a divider-shaped box shrank the ribbon to a smudge; cropping to the
+   central band keeps the sweep of the silk at this smaller size. */
+.inviteThread {
+  width: clamp(104px, 33cqw, 136px);
+  height: clamp(25px, 8cqw, 33px);
+  margin: 18px 0 0;
+  background-image: url("/prototypes/invitation/demo/se-duyen/se-duyen-visual-pilot-v02/red-thread.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.52;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 24%,
+    #000 76%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(90deg, transparent 0%, #000 24%, #000 76%, transparent 100%);
+}
+/* The ceremonial date: weekday as a quiet opening line, the date itself
+   given air and lining figures, the hour set apart by one hairline. Spacing
+   is per-line rather than one uniform gap so the three lines read as a
+   hierarchy. The half-of-letter-spacing text-indent re-centres each line:
+   tracking adds its space after the last glyph too. */
+.inviteWhen {
+  margin: 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.inviteWeekday {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.38em;
+  text-indent: 0.19em;
+  text-transform: uppercase;
+  color: var(--sdi-ink-soft);
+}
+
+.inviteDate {
+  margin-top: 12px;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-variant-numeric: lining-nums;
+  font-size: clamp(29px, 8.8cqw, 35px);
+  line-height: 1.05;
+  letter-spacing: 0.17em;
+  text-indent: 0.085em;
+  color: var(--sdi-ink);
+}
+
+.inviteTime {
+  position: relative;
+  margin-top: 15px;
+  padding-top: 14px;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-indent: 0.15em;
+  text-transform: uppercase;
+  color: var(--sdi-ink-soft);
+}
+
+/* One hairline between the date and the hour — spacing, not ornament. */
+.inviteTime::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 46px;
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    90deg,
+    rgba(176, 140, 69, 0) 0%,
+    rgba(176, 140, 69, 0.52) 50%,
+    rgba(176, 140, 69, 0) 100%
+  );
+}
+
+/* Static companion label, never presented as computed (types.ts). */
+.inviteLunar {
+  margin: 13px 0 0;
+  font-size: 10px;
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  font-style: italic;
+  color: var(--sdi-ink-soft);
+}
+
+/* ---------------------------------------------------------------------- */
+/* 2. Couple — photography leads, ornament stays out of the way.          */
+/* ---------------------------------------------------------------------- */
+
+.couple {
+  position: relative;
+  padding: 56px 22px 72px;
+  background:
+    radial-gradient(104% 58% at 50% 0%, rgba(96, 18, 22, 0.55) 0%, rgba(64, 9, 12, 0) 62%),
+    linear-gradient(180deg, var(--sdi-lacquer) 0%, var(--sdi-lacquer-deep) 100%);
+  color: var(--sdi-ivory);
+  overflow: hidden;
+}
+
+.coupleHead {
+  text-align: center;
+  margin: 0 0 26px;
+}
+
+.coupleEyebrow {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.46em;
+  text-transform: uppercase;
+  color: rgba(228, 200, 138, 0.76);
+}
+
+.coupleHeading {
+  margin: 11px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(27px, 8.2cqw, 33px);
+  line-height: 1.26;
+  letter-spacing: 0.015em;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* One large photo, one smaller supporting photo stepping off its corner.
+   No frame: a hairline, a shadow and a few pixels of lacquer do the
+   separating. The two are deliberately different shapes — the supporting
+   photo is 4:5, not a second 3:4 portrait — and it overlaps a measured
+   18% of the width at the lower-right, which is what makes the pairing
+   read as composed rather than stacked. */
+.coupleFrames {
+  position: relative;
+  width: 100%;
+  max-width: 330px;
+  margin: 0 auto;
+  /* Room for the supporting photo's overhang at the foot. */
+  padding-bottom: 58px;
+}
+
+.couplePhotoMain {
+  position: relative;
+  width: 74%;
+  aspect-ratio: 1086 / 1448;
+  background-image: url("/prototypes/invitation/demo/se-duyen/interior/couple-walking.webp");
+  background-size: cover;
+  background-position: center 18%;
+  background-repeat: no-repeat;
+  box-shadow:
+    0 0 0 1px rgba(228, 200, 138, 0.4),
+    0 26px 44px -20px rgba(8, 1, 2, 0.9);
+}
+
+.couplePhotoAside {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 44%;
+  aspect-ratio: 4 / 5;
+  background-image: url("/prototypes/invitation/demo/se-duyen/interior/couple-portrait.webp");
+  /* Deliberately zoomed past `cover`: at this size the full-length frame
+     would only repeat the main photo in miniature, so the supporting image
+     is cropped in to the couple instead — a closer read, not a thumbnail. */
+  background-size: 168%;
+  background-position: 50% 21%;
+  background-repeat: no-repeat;
+  /* 5px of the section's own lacquer, then the hairline: negative space
+     instead of a frame, so the overlap stays legible. */
+  box-shadow:
+    0 0 0 5px #370709,
+    0 0 0 6px rgba(228, 200, 138, 0.34),
+    0 22px 36px -16px rgba(8, 1, 2, 0.92);
+}
+
+/* The composition hands off to the names instead of simply ending: one
+   thread of light drops from under the main photo into the name block. */
+.coupleFrames::after {
+  content: "";
+  position: absolute;
+  left: 37%;
+  bottom: -14px;
+  width: 1px;
+  height: 34px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    180deg,
+    rgba(228, 200, 138, 0.52) 0%,
+    rgba(228, 200, 138, 0) 100%
+  );
+}
+
+/* Names sit under the pair, not over the faces. */
+.coupleNames {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin: 26px auto 0;
+  max-width: 330px;
+  text-align: center;
+}
+
+.coupleRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.coupleRole {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: rgba(228, 200, 138, 0.74);
+}
+
+.coupleName {
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(25px, 7.6cqw, 31px);
+  line-height: 1.26;
+  letter-spacing: 0.012em;
+  color: var(--sdi-ivory);
+  text-wrap: balance;
+}
+
+.coupleAmp {
+  width: clamp(92px, 30cqw, 124px);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(228, 200, 138, 0.6) 50%,
+    rgba(228, 200, 138, 0) 100%
+  );
+}
+
+.coupleStory {
+  margin: 26px auto 0;
+  max-width: 310px;
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1.95;
+  text-align: center;
+  color: rgba(247, 240, 226, 0.8);
+}
+
+/* A single restrained lotus, bottom-centred and very quiet. */
+.coupleLotus {
+  display: block;
+  width: clamp(56px, 18cqw, 70px);
+  aspect-ratio: 1;
+  margin: 32px auto 0;
+  background-image: url("/prototypes/invitation/demo/se-duyen/assets/lotus-fate-medallion.webp");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.85;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Interior, narrow phones.                                               */
+/* ---------------------------------------------------------------------- */
+
+@container (max-width: 365px) {
+  .invite {
+    padding: 66px 16px 74px;
+  }
+
+  .invite::after {
+    height: 170px;
+  }
+
+  .couple {
+    padding: 48px 16px 64px;
+  }
+
+  .coupleStory {
+    font-size: 12.5px;
+    line-height: 1.9;
+  }
+}

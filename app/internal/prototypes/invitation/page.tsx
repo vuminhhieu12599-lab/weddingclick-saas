@@ -10,6 +10,11 @@ import { RomanticMinimalPrototype } from "./_directions/romantic-minimal/romanti
 // section are built — the other sections and the section toggles below do
 // not apply to it yet.
 import { SeDuyenPrototype } from "./_directions/se-duyen/se-duyen";
+// Visual Pilot v0.3: the "hộp cưới mở ra" sequence (closed box -> tap the
+// box -> lid lifts, photo rises -> photo-led hero). Registered BESIDE the SD-01
+// direction above rather than replacing it, so that uncommitted work is
+// preserved and the Product Owner can compare the two concepts directly.
+import { SeDuyenPilotPrototype } from "./_directions/se-duyen-pilot/se-duyen-pilot";
 // "Elegant Editorial" now renders the rebuilt moss-green/ivory editorial
 // implementation (checkpoint V8 — this replaces the old elegant-editorial
 // component; it is not a separate 4th direction). The prior implementation
@@ -26,6 +31,7 @@ const DIRECTIONS = [
   { key: "vietnamese-heritage", label: "Vietnamese Heritage" },
   { key: "romantic-minimal", label: "Romantic Minimal" },
   { key: "se-duyen", label: "Se Duyên (SD-00, WIP)" },
+  { key: "se-duyen-pilot", label: "Se Duyên — Hộp Cưới (Pilot v03)" },
 ] as const;
 
 type DirectionKey = (typeof DIRECTIONS)[number]["key"];
@@ -292,6 +298,9 @@ function PrototypeSurface({
   }
   if (direction === "se-duyen") {
     return <SeDuyenPrototype key={key} {...props} />;
+  }
+  if (direction === "se-duyen-pilot") {
+    return <SeDuyenPilotPrototype key={key} {...props} />;
   }
   return <GreenIvoryEditorialPrototype key={key} {...props} />;
 }
