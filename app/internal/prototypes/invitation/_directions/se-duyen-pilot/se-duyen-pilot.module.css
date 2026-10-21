@@ -82,7 +82,7 @@
   inset: 0;
   z-index: 0;
   background-color: var(--sdp-lacquer);
-  background-image: url("/prototypes/invitation/demo/se-duyen/pilot-v03/bg-red-lacquer.png");
+  background-image: url("/prototypes/invitation/demo/se-duyen/pilot-v03/bg-red-lacquer.webp");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -272,14 +272,14 @@
 
 .boxBase {
   z-index: 1;
-  background-image: url("/prototypes/invitation/demo/se-duyen/pilot-v03/box-open-base.png");
+  background-image: url("/prototypes/invitation/demo/se-duyen/pilot-v03/box-open-base.webp");
   filter: drop-shadow(0 18px 26px rgba(10, 2, 3, 0.62));
 }
 
 .boxLid {
   z-index: 2;
   transform: translate3d(0, var(--sdp-lid-seat), 0);
-  background-image: url("/prototypes/invitation/demo/se-duyen/pilot-v03/box-lid.png");
+  background-image: url("/prototypes/invitation/demo/se-duyen/pilot-v03/box-lid.webp");
   filter: drop-shadow(0 10px 18px rgba(10, 2, 3, 0.5));
 }
 
@@ -305,9 +305,9 @@
   display: block;
   opacity: 0;
   transform: translate3d(0, 100%, 0);
-  background-image: url("/prototypes/invitation/demo/se-duyen/se-duyen-visual-pilot-v02/couple-photo-demo.webp");
-  background-size: cover;
-  background-position: center 20%;
+  background-image: var(--sdp-hero-image, url("/prototypes/invitation/demo/se-duyen/se-duyen-visual-pilot-v02/couple-photo-demo.webp"));
+  background-size: var(--sdp-hero-size, cover);
+  background-position: var(--sdp-hero-pos, center 20%);
   background-repeat: no-repeat;
   /* A thin ivory edge, not a gold frame — the photo outranks the ornament. */
   box-shadow:
@@ -713,7 +713,11 @@
 
 .invite {
   position: relative;
-  padding: 76px 22px 84px;
+  /* Transition trim: the lead-in from the hero (was 76px) and the run-out
+     into the couple section (was 84px). The plate's distance from the
+     ivory-to-lacquer fade below is kept by shortening `.invite::after` by
+     the same amount. */
+  padding: 44px 22px 60px;
   background:
     radial-gradient(
       152% 98% at 50% -8%,
@@ -789,7 +793,7 @@
   content: "";
   position: absolute;
   inset: auto 0 0;
-  height: 192px;
+  height: 168px;
   background: linear-gradient(
     180deg,
     rgba(64, 9, 12, 0) 0%,
@@ -805,24 +809,60 @@
 }
 
 /* The supplied ivory plate. Artwork only — every word on it is DOM text. */
+/* The plate is the same approved artwork, drawn as a frame instead of one
+   fixed-ratio picture, so a long invitation sentence lengthens the paper
+   instead of running over the ornaments.
+
+   The two ornament bands (measured: the top flourish ends at y=207 of 1279,
+   the bottom one starts at y=1082) are the image's top and bottom slices and
+   keep their own proportions at every height; only the plain ivory middle
+   between them — flat paper and two straight gold rules — is stretched, so
+   nothing decorative is distorted.
+
+   At the default wording the card still sits at exactly its approved
+   720x1279 size: `min-height` holds that, and it only grows when the text
+   genuinely needs more paper. */
 .inviteCard {
+  /* The plate's own width: its max-width, or whatever the section's padding
+     leaves of the container. Mirrors `.invite`'s padding, including the
+     narrow-width override below, so the frame is drawn at exactly the
+     artwork's proportions. */
+  --sdp-plate-w: min(330px, 100cqw - 44px);
+
   position: relative;
   z-index: 1;
   width: 100%;
   max-width: 330px;
+  min-height: calc(var(--sdp-plate-w) * 1279 / 720);
   margin: 0 auto;
-  aspect-ratio: 720 / 1279;
-  background-image: url("/prototypes/invitation/demo/se-duyen/assets/ivory-invitation-card.webp");
-  background-size: contain;
-  background-position: center;
-  background-repeat: no-repeat;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-style: solid;
+  border-width: 0;
+  border-image-source: url("/prototypes/invitation/demo/se-duyen/assets/ivory-invitation-card.webp");
+  border-image-slice: 215 100 205 100 fill;
+  border-image-width: calc(var(--sdp-plate-w) * 215 / 720) calc(var(--sdp-plate-w) * 100 / 720)
+    calc(var(--sdp-plate-w) * 205 / 720);
+  border-image-repeat: stretch;
   filter: drop-shadow(0 18px 30px rgba(62, 36, 12, 0.26));
 }
 
 /* Inset to clear the plate's gold lotus frame on all four sides. */
+/* In flow now, so the content's own height is what makes the plate grow.
+
+   The block padding is the ornaments' own extent rather than the old inset:
+   the top flourish's ink ends at y=207 of 1279 (28.7% of the plate's width)
+   and the bottom one starts at y=1082 (28.0% from the foot). At the default
+   wording the text is shorter than that box and stays centred inside it, so
+   the approved plate keeps its size and the text barely moves; when a longer
+   sentence makes the plate grow, the first and last lines still start clear
+   of the ornaments instead of landing on them. Side padding is the approved
+   13%. */
 .inviteInner {
-  position: absolute;
-  inset: 13.5% 13% 12%;
+  position: relative;
+  width: 100%;
+  padding: 28.7% 13% 28%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -866,6 +906,19 @@
    `cover`, not `contain`: the artwork's canvas is 4:3, so fitting all of it
    into a divider-shaped box shrank the ribbon to a smudge; cropping to the
    central band keeps the sweep of the silk at this smaller size. */
+/* The rest of the customer's own invitation sentence, continuing from the
+   guest line above it: text, not a second heading, so the plate keeps its
+   salutation -> guest -> date rhythm. */
+.inviteMessage {
+  margin: 14px auto 0;
+  max-width: 268px;
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1.86;
+  color: var(--sdi-ink-soft);
+  text-wrap: balance;
+}
+
 .inviteThread {
   width: clamp(104px, 33cqw, 136px);
   height: clamp(25px, 8cqw, 33px);
@@ -963,7 +1016,7 @@
 
 .couple {
   position: relative;
-  padding: 56px 22px 72px;
+  padding: 40px 22px 72px;
   background:
     radial-gradient(104% 58% at 50% 0%, rgba(96, 18, 22, 0.55) 0%, rgba(64, 9, 12, 0) 62%),
     linear-gradient(180deg, var(--sdi-lacquer) 0%, var(--sdi-lacquer-deep) 100%);
@@ -1013,13 +1066,20 @@
   padding-bottom: 58px;
 }
 
+/* Only when the Project has no second photo for this section: without the
+   overhang there is nothing to leave footroom for. The populated frame above
+   is unchanged. */
+.coupleFramesSolo {
+  padding-bottom: 0;
+}
+
 .couplePhotoMain {
   position: relative;
   width: 74%;
   aspect-ratio: 1086 / 1448;
-  background-image: url("/prototypes/invitation/demo/se-duyen/interior/couple-walking.webp");
-  background-size: cover;
-  background-position: center 18%;
+  background-image: var(--sdp-coupleMain-image, url("/prototypes/invitation/demo/se-duyen/interior/couple-walking.webp"));
+  background-size: var(--sdp-coupleMain-size, cover);
+  background-position: var(--sdp-coupleMain-pos, center 18%);
   background-repeat: no-repeat;
   box-shadow:
     0 0 0 1px rgba(228, 200, 138, 0.4),
@@ -1032,12 +1092,12 @@
   bottom: 0;
   width: 44%;
   aspect-ratio: 4 / 5;
-  background-image: url("/prototypes/invitation/demo/se-duyen/interior/couple-portrait.webp");
+  background-image: var(--sdp-coupleAside-image, url("/prototypes/invitation/demo/se-duyen/interior/couple-portrait.webp"));
   /* Deliberately zoomed past `cover`: at this size the full-length frame
      would only repeat the main photo in miniature, so the supporting image
      is cropped in to the couple instead — a closer read, not a thumbnail. */
-  background-size: 168%;
-  background-position: 50% 21%;
+  background-size: var(--sdp-coupleAside-size, 168%);
+  background-position: var(--sdp-coupleAside-pos, 50% 21%);
   background-repeat: no-repeat;
   /* 5px of the section's own lacquer, then the hairline: negative space
      instead of a frame, so the overlap stays legible. */
@@ -1139,20 +1199,2652 @@
 /* ---------------------------------------------------------------------- */
 
 @container (max-width: 365px) {
+  .inviteCard {
+    --sdp-plate-w: min(330px, 100cqw - 32px);
+  }
+
   .invite {
-    padding: 66px 16px 74px;
+    padding: 40px 16px 54px;
   }
 
   .invite::after {
-    height: 170px;
+    height: 150px;
   }
 
   .couple {
-    padding: 48px 16px 64px;
+    padding: 34px 16px 64px;
   }
 
   .coupleStory {
     font-size: 12.5px;
     line-height: 1.9;
   }
+}
+
+/* ---------------------------------------------------------------------- */
+/* 2b. Hai Bên Gia Đình — two houses, one hairline.                       */
+/*                                                                        */
+/* Vietnamese wedding stationery names both houses side by side, so they  */
+/* are set as two equal columns with a single faded gold rule between —   */
+/* the same hairline idiom as the ceremony rail and the countdown dials,  */
+/* never a frame or a card around either family.                         */
+/*                                                                        */
+/* Colour contract: the couple section ends on flat --sdi-lacquer-deep    */
+/* and the ceremony's .riteSeam fades FROM exactly that colour, so this   */
+/* section opens and closes on it and only lifts slightly in the middle.  */
+/* Both approved junctions stay the identical pixels they already were.   */
+/* ---------------------------------------------------------------------- */
+
+.houses {
+  position: relative;
+  padding: 40px 20px 42px;
+  background: linear-gradient(
+    180deg,
+    var(--sdi-lacquer-deep) 0%,
+    #330709 46%,
+    #300608 68%,
+    var(--sdi-lacquer-deep) 100%
+  );
+  color: var(--sdi-ivory);
+  overflow: hidden;
+}
+
+/* The couple section closes on a lotus medallion at full strength, so the
+   one here is only a breath on the ground behind the names — low, wide
+   and almost out of sight, never a second ornament in a row. */
+.housesWatermark {
+  position: absolute;
+  top: 62%;
+  left: 50%;
+  width: clamp(230px, 72cqw, 290px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background-image: url("/prototypes/invitation/demo/se-duyen/assets/lotus-fate-medallion.webp");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.04;
+  -webkit-mask-image: radial-gradient(circle, #000 30%, transparent 70%);
+  mask-image: radial-gradient(circle, #000 30%, transparent 70%);
+  pointer-events: none;
+}
+
+.housesHead {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+
+.housesEyebrow {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.46em;
+  text-indent: 0.23em;
+  text-transform: uppercase;
+  color: rgba(228, 200, 138, 0.74);
+}
+
+.housesHeading {
+  margin: 13px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(26px, 7.4cqw, 31px);
+  line-height: 1.26;
+  letter-spacing: 0.016em;
+  text-wrap: balance;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.housesRule {
+  display: block;
+  width: clamp(68px, 22cqw, 88px);
+  height: 1px;
+  margin: 18px auto 0;
+  background: linear-gradient(
+    90deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(228, 200, 138, 0.6) 50%,
+    rgba(228, 200, 138, 0) 100%
+  );
+}
+
+/* Two equal columns. Equal on purpose: COMMON must not make either house
+   look like the lesser one, and the variant only decides which is first. */
+.housesGrid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(14px, 4.4cqw, 20px);
+  margin: 34px auto 0;
+  max-width: 356px;
+}
+
+/* One house only: a single centred column, and the divider below is never
+   drawn, so a missing family leaves no trace of itself. */
+.housesGrid[data-single] {
+  grid-template-columns: minmax(0, 250px);
+  justify-content: center;
+}
+
+.house {
+  position: relative;
+  text-align: center;
+  padding: 0 2px;
+}
+
+/* The hairline between the houses — set in the gap so it belongs to
+   neither, faded at both ends like every other rule in this direction. */
+.house + .house::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: calc(-1 * clamp(14px, 4.4cqw, 20px) / 2);
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(214, 180, 114, 0.42) 22%,
+    rgba(214, 180, 114, 0.42) 78%,
+    rgba(228, 200, 138, 0) 100%
+  );
+}
+
+.houseLabel {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.34em;
+  text-indent: 0.17em;
+  text-transform: uppercase;
+  color: rgba(214, 180, 114, 0.9);
+}
+
+.houseParents {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 17px 0 0;
+}
+
+/* The names carry the section: ivory, in the display face, each on its
+   own line. Long Vietnamese names wrap rather than shrink. */
+.houseParent {
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(14.5px, 4.3cqw, 16.5px);
+  line-height: 1.4;
+  letter-spacing: 0.004em;
+  color: var(--sdi-ivory);
+  text-wrap: balance;
+}
+
+.houseAddress {
+  margin: 14px 0 0;
+  font-size: 10.5px;
+  font-weight: 300;
+  line-height: 1.75;
+  letter-spacing: 0.004em;
+  color: rgba(247, 240, 226, 0.56);
+  text-wrap: pretty;
+}
+
+@container (max-width: 365px) {
+  .houses {
+    padding: 36px 15px 40px;
+  }
+
+  .housesGrid {
+    gap: 14px;
+  }
+
+  .house + .house::before {
+    left: -7px;
+  }
+
+  .houseParent {
+    font-size: 14px;
+  }
+
+  .houseAddress {
+    font-size: 10.5px;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* 3. Ceremony information — stationery, not a card.                      */
+/*                                                                        */
+/* Deliberately a different object from the invitation introduction: that  */
+/* one is an ivory PLATE with a printed gold frame, centred and enclosed.  */
+/* This is the open ivory page itself, with the date set as the three-cell */
+/* rail Vietnamese wedding stationery uses — month | day | year — so the   */
+/* day and the rite title carry the section and nothing is boxed.          */
+/* ---------------------------------------------------------------------- */
+
+.rite {
+  position: relative;
+  /* Transition trim: the run-in under the family section (was 178px) and
+     the run-out into the timeline (was 108px). `.riteSeam` and
+     `.rite::after` are shortened by the same amounts, so each gradient
+     still finishes exactly where it did relative to the first and last
+     lines of this page. */
+  padding: 134px 22px 84px;
+  background:
+    radial-gradient(124% 72% at 50% 44%, #f7eedd 0%, var(--sdi-paper-deep) 100%);
+  color: var(--sdi-ink);
+  overflow: hidden;
+}
+
+/* The couple section ends on flat --sdi-lacquer-deep, so this fade starts
+   from exactly that colour and no overlap is needed: the junction is two
+   identical pixels. Eased over a long run, like the invitation's seam. */
+.riteSeam {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 140px;
+  background: linear-gradient(
+    180deg,
+    var(--sdi-lacquer-deep) 0%,
+    rgba(44, 6, 8, 0.94) 12%,
+    rgba(44, 6, 8, 0.79) 26%,
+    rgba(44, 6, 8, 0.57) 42%,
+    rgba(44, 6, 8, 0.34) 58%,
+    rgba(44, 6, 8, 0.16) 74%,
+    rgba(44, 6, 8, 0.05) 88%,
+    rgba(44, 6, 8, 0) 100%
+  );
+  pointer-events: none;
+}
+
+/* The page closes back into lacquer so the end of the scroll is not an
+   ivory cliff against the app's own ground. */
+.rite::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 134px;
+  background: linear-gradient(
+    180deg,
+    rgba(64, 9, 12, 0) 0%,
+    rgba(64, 9, 12, 0.06) 16%,
+    rgba(64, 9, 12, 0.2) 34%,
+    rgba(64, 9, 12, 0.45) 54%,
+    rgba(64, 9, 12, 0.75) 76%,
+    var(--sdi-lacquer) 100%
+  );
+  pointer-events: none;
+}
+
+/* The one lotus in this section: an embossing under the date, not an
+   ornament beside it. Same medallion the couple section closes on, at a
+   different scale and barely there. */
+.riteWatermark {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  width: clamp(190px, 60cqw, 240px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background-image: url("/prototypes/invitation/demo/se-duyen/assets/lotus-fate-medallion.webp");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.06;
+  -webkit-mask-image: radial-gradient(circle, #000 38%, transparent 70%);
+  mask-image: radial-gradient(circle, #000 38%, transparent 70%);
+  pointer-events: none;
+}
+
+.riteHead {
+  position: relative;
+  text-align: center;
+}
+
+.riteEyebrow {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.46em;
+  text-indent: 0.23em;
+  text-transform: uppercase;
+  color: var(--sdi-gold);
+}
+
+/* Focal point one: the rite, in lacquer red on ivory. */
+.riteTitle {
+  margin: 14px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(33px, 10cqw, 41px);
+  line-height: 1.18;
+  letter-spacing: 0.02em;
+  color: #6d1416;
+}
+
+.riteRule {
+  display: block;
+  width: clamp(74px, 24cqw, 96px);
+  height: 1px;
+  margin: 22px auto 0;
+  background: linear-gradient(
+    90deg,
+    rgba(176, 140, 69, 0) 0%,
+    rgba(176, 140, 69, 0.62) 50%,
+    rgba(176, 140, 69, 0) 100%
+  );
+}
+
+.riteWhen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 34px 0 0;
+}
+
+.riteWeekday {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.4em;
+  text-indent: 0.2em;
+  text-transform: uppercase;
+  color: var(--sdi-ink-soft);
+}
+
+/* month | DAY | year — the stationery rail. */
+.riteRail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 4.6cqw, 20px);
+  margin: 16px 0 0;
+}
+
+.riteRailSide {
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: lining-nums;
+  letter-spacing: 0.2em;
+  text-indent: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--sdi-ink-soft);
+}
+
+.riteRailDivider {
+  width: 1px;
+  height: clamp(42px, 13cqw, 54px);
+  background: linear-gradient(
+    180deg,
+    rgba(176, 140, 69, 0) 0%,
+    rgba(176, 140, 69, 0.5) 50%,
+    rgba(176, 140, 69, 0) 100%
+  );
+}
+
+/* Focal point two: the day. */
+.riteDay {
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-variant-numeric: lining-nums;
+  font-size: clamp(58px, 18cqw, 74px);
+  line-height: 0.92;
+  letter-spacing: 0.01em;
+  color: #6d1416;
+}
+
+.riteTime {
+  margin: 18px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-variant-numeric: lining-nums;
+  font-size: clamp(19px, 5.8cqw, 23px);
+  letter-spacing: 0.22em;
+  text-indent: 0.11em;
+  color: var(--sdi-gold);
+}
+
+.riteVenue {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 40px auto 0;
+  max-width: 310px;
+  text-align: center;
+}
+
+.riteVenueLabel {
+  font-family: var(--sdp-display), Georgia, serif;
+  font-style: italic;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: var(--sdi-ink-soft);
+}
+
+.riteVenueName {
+  margin: 10px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(21px, 6.4cqw, 25px);
+  line-height: 1.38;
+  letter-spacing: 0.012em;
+  color: var(--sdi-ink);
+  text-wrap: balance;
+}
+
+.riteVenueAddress {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  font-weight: 300;
+  line-height: 1.85;
+  color: var(--sdi-ink-soft);
+  text-wrap: balance;
+}
+
+/* Demo affordance only — it opens the fictional map URL already in the
+   prototype data. No map embed, no new integration. */
+.riteDirections {
+  margin: 24px 0 0;
+  padding: 0 2px 6px;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-indent: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: #8a6a2c;
+  border-bottom: 1px solid rgba(176, 140, 69, 0.45);
+}
+
+@container (max-width: 365px) {
+  .rite {
+    padding: 126px 16px 76px;
+  }
+
+  .riteVenueAddress {
+    font-size: 12px;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* 4. Wedding gallery — photography on lacquer, nothing framed.           */
+/*                                                                        */
+/* The ceremony section closes on exactly --sdi-lacquer, so this one opens */
+/* on the same value and the junction is two identical pixels: no seam     */
+/* layer is needed here at all.                                           */
+/* ---------------------------------------------------------------------- */
+
+.album {
+  position: relative;
+  padding: 64px 22px 86px;
+  background: linear-gradient(180deg, var(--sdi-lacquer) 0%, var(--sdi-lacquer-deep) 100%);
+  color: var(--sdi-ivory);
+}
+
+.albumHead {
+  text-align: center;
+  margin: 0 0 26px;
+}
+
+.albumEyebrow {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.46em;
+  text-indent: 0.23em;
+  text-transform: uppercase;
+  color: rgba(228, 200, 138, 0.76);
+}
+
+.albumHeading {
+  margin: 12px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(26px, 8cqw, 32px);
+  line-height: 1.26;
+  letter-spacing: 0.015em;
+  text-wrap: balance;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.albumRule {
+  display: block;
+  width: clamp(74px, 24cqw, 96px);
+  height: 1px;
+  margin: 20px auto 0;
+  background: linear-gradient(
+    90deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(228, 200, 138, 0.55) 50%,
+    rgba(228, 200, 138, 0) 100%
+  );
+}
+
+/* One hairline and one shadow separate every frame from the lacquer —
+   the same treatment the couple section uses, never a gilded border. */
+.albumLead,
+.albumPairTall,
+.albumPairSmall,
+.albumFoot {
+  background-size: cover;
+  background-repeat: no-repeat;
+  box-shadow:
+    0 0 0 1px rgba(228, 200, 138, 0.38),
+    0 24px 40px -20px rgba(8, 1, 2, 0.9);
+}
+
+/* Beat one: held off the right margin, so the drift across the three beats
+   runs left -> both -> right instead of settling into a centred column. */
+.albumLeadRow {
+  width: 100%;
+  max-width: 330px;
+  margin: 0 auto;
+}
+
+.albumLead {
+  width: 86%;
+  margin: 0 auto 0 0;
+  aspect-ratio: 4 / 5;
+  background-image: var(--sdp-albumLead-image, url("/prototypes/invitation/demo/se-duyen/interior/gallery-confetti.webp"));
+  background-size: var(--sdp-albumLead-size, cover);
+  background-position: var(--sdp-albumLead-pos, center 26%);
+}
+
+/* Beat two: a tall frame and a small one, deliberately out of step — the
+   small frame starts below the tall one's top and ends above its foot. */
+.albumPair {
+  position: relative;
+  width: 100%;
+  max-width: 330px;
+  margin: 18px auto 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 4.5%;
+}
+
+/* Only when one of the pair has no photo: the remaining frame keeps its own
+   width and sits centred instead of against the gap the other one left. */
+.albumPairSolo {
+  justify-content: center;
+}
+
+.albumPairTall {
+  width: 55.5%;
+  aspect-ratio: 3 / 4;
+  background-image: var(--sdp-albumTall-image, url("/prototypes/invitation/demo/se-duyen/interior/gallery-bride.webp"));
+  background-size: var(--sdp-albumTall-size, cover);
+  background-position: var(--sdp-albumTall-pos, center 18%);
+}
+
+.albumPairSmall {
+  width: 40%;
+  margin-top: 46px;
+  aspect-ratio: 4 / 5;
+  background-image: var(--sdp-albumSmall-image, url("/prototypes/invitation/demo/se-duyen/interior/couple-portrait.webp"));
+  /* Zoomed well past cover: this photo also carries the couple section, and
+     a tight crop of the two of them is a different picture from the
+     full-length frame there. */
+  background-size: var(--sdp-albumSmall-size, 182%);
+  background-position: var(--sdp-albumSmall-pos, 50% 16%);
+}
+
+/* Beat three: a square, set against the right margin so the column of
+   frames never settles into a centred stack. The row carries the same
+   measure as the frames above it, so "right" means the same edge. */
+.albumFootRow {
+  width: 100%;
+  max-width: 330px;
+  margin: 0 auto;
+}
+
+.albumFoot {
+  width: 68%;
+  margin: 18px 0 0 auto;
+  aspect-ratio: 1;
+  background-image: var(--sdp-albumFoot-image, url("/prototypes/invitation/demo/se-duyen/interior/couple-walking.webp"));
+  background-size: var(--sdp-albumFoot-size, 134%);
+  background-position: var(--sdp-albumFoot-pos, 50% 22%);
+}
+
+@container (max-width: 365px) {
+  .album {
+    padding: 64px 16px 76px;
+  }
+
+  .albumPairSmall {
+    margin-top: 38px;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* 5. RSVP — a response card, not a web form.                             */
+/*                                                                        */
+/* The gallery closes on --sdi-lacquer-deep, so this opens on the same     */
+/* value: no seam layer, the junction is two identical pixels. Every       */
+/* control is a ruled line on ivory rather than a boxed input, which is    */
+/* what keeps it stationery; the only solid shape on the card is the CTA.  */
+/* ---------------------------------------------------------------------- */
+
+.rsvp {
+  position: relative;
+  padding: 72px 22px 92px;
+  background: linear-gradient(180deg, var(--sdi-lacquer-deep) 0%, #230406 100%);
+}
+
+/* Warm ivory, a hairline of champagne, and a soft shadow lifting it off the
+   lacquer. No printed frame artwork — that belongs to the invitation plate. */
+.rsvpCard {
+  position: relative;
+  width: 100%;
+  max-width: 330px;
+  margin: 0 auto;
+  padding: 38px 24px 34px;
+  text-align: center;
+  color: var(--sdi-ink);
+  background:
+    radial-gradient(128% 78% at 50% 0%, #f8efdf 0%, var(--sdi-paper) 62%, var(--sdi-paper-deep) 100%);
+  box-shadow:
+    0 0 0 1px rgba(176, 140, 69, 0.42),
+    0 0 0 7px rgba(247, 240, 226, 0.05),
+    0 26px 44px -24px rgba(8, 1, 2, 0.95);
+}
+
+.rsvpEyebrow {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.46em;
+  text-indent: 0.23em;
+  text-transform: uppercase;
+  color: var(--sdi-gold);
+}
+
+.rsvpHeading {
+  margin: 12px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(27px, 8.4cqw, 33px);
+  line-height: 1.22;
+  letter-spacing: 0.018em;
+  color: #6d1416;
+}
+
+.rsvpRule {
+  display: block;
+  width: 68px;
+  height: 1px;
+  margin: 18px auto 0;
+  background: linear-gradient(
+    90deg,
+    rgba(176, 140, 69, 0) 0%,
+    rgba(176, 140, 69, 0.58) 50%,
+    rgba(176, 140, 69, 0) 100%
+  );
+}
+
+.rsvpIntro {
+  margin: 16px 0 0;
+  font-size: 12.5px;
+  font-weight: 300;
+  line-height: 1.85;
+  color: var(--sdi-ink-soft);
+  text-wrap: pretty;
+}
+
+.rsvpForm {
+  display: flex;
+  flex-direction: column;
+  margin: 26px 0 0;
+  text-align: left;
+}
+
+.rsvpLabel,
+.rsvpLegend {
+  padding: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--sdi-gold);
+}
+
+/* A ruled line to write on, not a box to fill in. */
+.rsvpInput,
+.rsvpNoteField {
+  width: 100%;
+  margin: 9px 0 0;
+  padding: 7px 2px 9px;
+  font-family: var(--sdp-sans), "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  line-height: 1.6;
+  color: var(--sdi-ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(123, 98, 69, 0.34);
+  border-radius: 0;
+  appearance: none;
+}
+
+.rsvpInput::placeholder,
+.rsvpNoteField::placeholder {
+  color: rgba(123, 98, 69, 0.54);
+}
+
+.rsvpInput:focus-visible,
+.rsvpNoteField:focus-visible {
+  outline: none;
+  border-bottom-color: rgba(176, 140, 69, 0.95);
+}
+
+.rsvpNoteField {
+  resize: none;
+}
+
+/* The count row is a flex line of its own; this label needs its own air. */
+.rsvpNoteLabel {
+  margin-top: 26px;
+}
+
+.rsvpChoices {
+  margin: 26px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Three written lines, each with a small ring that fills with gold. */
+.rsvpChoice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 0;
+  cursor: pointer;
+}
+
+.rsvpRadio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.rsvpMark {
+  position: relative;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(176, 140, 69, 0.62);
+  border-radius: 50%;
+  transition: border-color 160ms ease;
+}
+
+.rsvpMark::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: linear-gradient(160deg, #d8b36a 0%, #b08c45 100%);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 160ms ease, transform 200ms cubic-bezier(0.3, 0.9, 0.3, 1);
+}
+
+.rsvpRadio:checked + .rsvpMark {
+  border-color: rgba(176, 140, 69, 0.95);
+}
+
+.rsvpRadio:checked + .rsvpMark::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.rsvpRadio:focus-visible + .rsvpMark {
+  outline: 2px solid rgba(176, 140, 69, 0.85);
+  outline-offset: 3px;
+}
+
+.rsvpChoiceText {
+  font-family: var(--sdp-display), Georgia, serif;
+  font-size: 18px;
+  line-height: 1.4;
+  letter-spacing: 0.012em;
+  color: var(--sdi-ink);
+}
+
+.rsvpCount {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 28px 0 0;
+  padding: 16px 0 0;
+  border-top: 1px solid rgba(123, 98, 69, 0.22);
+}
+
+.rsvpStepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rsvpStep {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  line-height: 1;
+  color: #8a6a2c;
+  background: transparent;
+  border: 1px solid rgba(176, 140, 69, 0.5);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.rsvpStep:hover:not(:disabled) {
+  background: rgba(176, 140, 69, 0.12);
+}
+
+.rsvpStep:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.rsvpCountValue {
+  min-width: 74px;
+  text-align: center;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-variant-numeric: lining-nums;
+  font-size: 22px;
+  color: var(--sdi-ink);
+}
+
+.rsvpCountUnit {
+  margin-left: 5px;
+  font-family: var(--sdp-sans), "Segoe UI", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  color: var(--sdi-ink-soft);
+}
+
+/* The one solid shape on the card. */
+.rsvpSubmit {
+  margin: 30px 0 0;
+  padding: 15px 20px;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-indent: 0.1em;
+  color: #f8efdf;
+  background: linear-gradient(170deg, #7c1a1b 0%, #5a0f12 100%);
+  border: 1px solid rgba(176, 140, 69, 0.55);
+  border-radius: 0;
+  cursor: pointer;
+  transition: filter 180ms ease;
+}
+
+.rsvpSubmit:hover {
+  filter: brightness(1.08);
+}
+
+.rsvpSubmit:focus-visible {
+  outline: 2px solid rgba(176, 140, 69, 0.9);
+  outline-offset: 3px;
+}
+
+/* Says on its face that nothing was sent. */
+.rsvpDemo {
+  margin: 14px 0 0;
+  font-size: 9.5px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
+  color: rgba(123, 98, 69, 0.78);
+}
+
+.rsvpDone {
+  margin: 28px 0 0;
+}
+
+.rsvpDoneTitle {
+  margin: 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-size: clamp(23px, 7cqw, 27px);
+  font-weight: 500;
+  color: #6d1416;
+}
+
+.rsvpDoneLine {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1.8;
+  color: var(--sdi-ink);
+}
+
+.rsvpDoneNote {
+  margin: 14px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--sdi-ink-soft);
+}
+
+.rsvpAgain {
+  margin: 20px 0 0;
+  padding: 0 2px 5px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-indent: 0.12em;
+  text-transform: uppercase;
+  color: #8a6a2c;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(176, 140, 69, 0.45);
+  cursor: pointer;
+}
+
+@container (max-width: 365px) {
+  .rsvp {
+    padding: 64px 14px 82px;
+  }
+
+  .rsvpCard {
+    padding: 34px 18px 30px;
+  }
+
+  .rsvpChoiceText {
+    font-size: 17px;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* 6. Mừng Cưới — the gift envelope.                                      */
+/*                                                                        */
+/* The RSVP section closes on flat #230406, so this one opens on exactly  */
+/* that value and warms downward: the junction is two identical pixels    */
+/* and no seam layer is needed, the same trick the rite section uses.     */
+/*                                                                        */
+/* One focal object: a lacquer-red envelope with gold hairline edges, a   */
+/* pointed flap folded over a dark mouth, the bottom flap's crease drawn  */
+/* under it, and the lotus medallion as its seal. Tapping it lays the     */
+/* flap back and an ivory slip is drawn up out of the paper. No frames,   */
+/* no second ornament and no QR block — this is stationery, not a banking */
+/* panel. Motion is CSS only and lives inside the no-preference query.    */
+/* ---------------------------------------------------------------------- */
+
+.gift {
+  position: relative;
+  /* The RSVP section is approved, so its own 92px foot stays as it is;
+     this section slides up over that empty padding instead. Both sides of
+     the junction are flat #230406, so nothing shows — only the dead band
+     between the response card and this heading is taken back. */
+  margin-top: -44px;
+  /* Foot cut from 100px to 72px. Closed, the envelope is the last object
+     on the page, and the old padding left a band of empty lacquer beneath
+     the hint that read as the composition having lost its footing. */
+  padding: 28px 22px 72px;
+  background: linear-gradient(180deg, #230406 0%, #2c0608 38%, #380a0c 100%);
+  overflow: hidden;
+}
+
+/* A single warm pool of light behind the envelope so the object sits in
+   the lacquer rather than on it. Cheaper and quieter than more artwork.
+   Dropped to sit on the envelope itself rather than between it and the
+   heading, so the closed object is what the light picks out. */
+.giftGlow {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  width: min(470px, 132cqw);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle,
+    rgba(176, 140, 69, 0.2) 0%,
+    rgba(140, 40, 32, 0.13) 36%,
+    rgba(56, 10, 12, 0) 68%
+  );
+  pointer-events: none;
+}
+
+.giftHead {
+  position: relative;
+  z-index: 3;
+  text-align: center;
+}
+
+.giftEyebrow {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.46em;
+  text-indent: 0.23em;
+  text-transform: uppercase;
+  color: var(--sdi-gold-hi);
+}
+
+.giftHeading {
+  margin: 13px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(31px, 9.6cqw, 39px);
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--sdi-ivory);
+}
+
+.giftRule {
+  display: block;
+  width: clamp(68px, 22cqw, 88px);
+  height: 1px;
+  margin: 18px auto 0;
+  background: linear-gradient(
+    90deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(228, 200, 138, 0.6) 50%,
+    rgba(228, 200, 138, 0) 100%
+  );
+}
+
+/* The thank-you line. Existing editable wording from the shared dataset.
+   Measure pulled in and the leading closed a notch: three short lines of
+   Vietnamese set this tight read as one spoken sentence rather than as a
+   loose paragraph, and the block stops competing with the heading. */
+.giftNote {
+  max-width: 292px;
+  margin: 17px auto 0;
+  font-size: 12.8px;
+  font-weight: 300;
+  line-height: 1.86;
+  color: rgba(247, 240, 226, 0.8);
+  text-wrap: pretty;
+}
+
+/* ---- The envelope ---- */
+
+.giftStage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Tightened from 54px: the thank-you line and the envelope now read as
+     one gesture instead of two blocks separated by dead lacquer. The
+     opened flap's tip rises into what is left of this gap. */
+  margin: 30px 0 0;
+}
+
+/* The whole envelope is the control; no visible button chrome. */
+.giftEnvelope {
+  position: relative;
+  z-index: 2;
+  display: block;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.giftEnvelope:focus-visible {
+  outline: 2px solid rgba(228, 200, 138, 0.9);
+  outline-offset: 10px;
+}
+
+/* Cut narrower and a little taller than a landscape card, closer to the
+   proportions of a real premium wedding envelope. The body carries three
+   shadow families: the stock's own cut edge and depth, one tight contact
+   shadow that pins it to the lacquer, and wide soft ambient layers that
+   give it air underneath. */
+.giftPaper {
+  position: relative;
+  display: block;
+  /* 82cqw rather than a tighter percentage so the envelope is cut at its
+     full 268px at 390px and 430px and gives up only a pixel or two at
+     360px: the object should be the same object at every width. */
+  width: min(268px, 82cqw);
+  aspect-ratio: 1.4;
+  perspective: 1100px;
+  background:
+    /* Specular sweep across the stock, lit from the upper left. */
+    linear-gradient(
+      104deg,
+      rgba(0, 0, 0, 0.18) 0%,
+      rgba(255, 232, 196, 0.07) 44%,
+      rgba(0, 0, 0, 0.22) 100%
+    ),
+    linear-gradient(168deg, #932726 0%, #6d1518 46%, #480b0e 100%);
+  box-shadow:
+    0 0 0 1px rgba(176, 140, 69, 0.52),
+    inset 0 1px 0 rgba(246, 220, 168, 0.24),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    inset 0 -20px 26px -20px rgba(0, 0, 0, 0.52),
+    /* The sheet darkening in from its own left and right folds. */
+    inset 16px 0 26px -22px rgba(0, 0, 0, 0.45),
+    inset -16px 0 26px -22px rgba(0, 0, 0, 0.45),
+    /* Real thickness, in two parts: the lit cut edge of the stock, then
+       the dark sliver of the sheet's depth beneath it. Spread pulls both
+       off the sides so they only show along the bottom, which is the one
+       edge this slightly-from-above view would expose. */
+    0 1px 0 rgba(255, 228, 184, 0.14),
+    0 4px 0 -1px rgba(42, 7, 9, 0.92),
+    0 5px 1px -1px rgba(10, 2, 3, 0.55),
+    0 3px 4px rgba(8, 1, 2, 0.46),
+    0 14px 20px -8px rgba(8, 1, 2, 0.54),
+    0 32px 46px -22px rgba(6, 1, 2, 0.62),
+    0 56px 78px -40px rgba(6, 1, 2, 0.72);
+}
+
+/* Handmade-paper tooth. Deliberately at the edge of visibility: anything
+   stronger reads as a printed grid rather than as material, so the two
+   grains are set at different periods and well under 2% alpha. */
+.giftPaper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+      94deg,
+      rgba(255, 236, 206, 0.011) 0 1px,
+      rgba(0, 0, 0, 0) 1px 9px
+    ),
+    repeating-linear-gradient(
+      4deg,
+      rgba(0, 0, 0, 0.013) 0 1px,
+      rgba(0, 0, 0, 0) 1px 13px
+    );
+  pointer-events: none;
+}
+
+/* Lotus pressed into the paper, not printed on it: the medallion at a
+   whisper of opacity, masked soft at the edges so it reads as an emboss.
+   Smaller and fainter than before — at 7% it had started to read as a
+   smudge on the lower half rather than as a blind deboss. z-index lifts
+   it over the bottom flap below, which is the sheet it would be pressed
+   into. */
+.giftPaper::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 74%;
+  left: 50%;
+  width: 37%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background-image: url("/prototypes/invitation/demo/se-duyen/assets/lotus-fate-medallion.webp");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.055;
+  -webkit-mask-image: radial-gradient(circle, #000 38%, transparent 68%);
+  mask-image: radial-gradient(circle, #000 38%, transparent 68%);
+  pointer-events: none;
+}
+
+/* The envelope's mouth: what lifting the flap uncovers. It has to read as
+   a cavity, so it is kept decisively darker than any face of the paper —
+   a lit hairline along the fold, light falling a short way in from the
+   opening, then the V deepening to near-black at its point. */
+.giftMouth {
+  position: absolute;
+  z-index: 1;
+  inset: 0 0 auto;
+  height: 53%;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  background: linear-gradient(
+      180deg,
+      rgba(250, 226, 180, 0.16) 0 1px,
+      rgba(0, 0, 0, 0) 1px
+    ),
+    radial-gradient(
+      118% 92% at 50% -4%,
+      rgba(118, 32, 26, 0.5) 0%,
+      rgba(118, 32, 26, 0) 58%
+    ),
+    linear-gradient(178deg, #150203 0%, #1d0405 34%, #290608 70%, #330809 100%);
+  pointer-events: none;
+}
+
+/* The bottom flap, folded up over the side flaps the way a pointed-flap
+   wedding envelope is made. Only its crease is drawn — a gold-lit edge
+   and the shadow it throws back onto the sheet behind it — so the paper
+   reads as folded construction, not as a printed panel. Its peak rises
+   behind the seal, which is where the two folds meet. */
+.giftFold {
+  position: absolute;
+  z-index: 1;
+  inset: auto 0 0;
+  height: 38%;
+  clip-path: polygon(0 100%, 0 22%, 50% 0, 100% 22%, 100% 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 228, 186, 0.055) 0%,
+    rgba(255, 228, 186, 0.012) 24%,
+    rgba(0, 0, 0, 0.05) 100%
+  );
+  filter: drop-shadow(0 -1px 0 rgba(248, 224, 178, 0.16))
+    drop-shadow(0 -3px 6px rgba(12, 2, 3, 0.34));
+  pointer-events: none;
+}
+
+/* A shallow flap, so the lifted point stays inside the gap above the
+   envelope. `drop-shadow` follows the clipped triangle, which is how the
+   fold gets a true gold hairline edge and casts onto the mouth. The faint
+   centre crease keeps the folded triangle from reading as one flat field
+   of colour. */
+.giftFlap {
+  position: absolute;
+  z-index: 2;
+  inset: 0 0 auto;
+  height: 53%;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  background: linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.07) 0%,
+      rgba(0, 0, 0, 0) 45%,
+      rgba(255, 232, 196, 0.045) 50%,
+      rgba(0, 0, 0, 0) 55%,
+      rgba(0, 0, 0, 0.07) 100%
+    ),
+    linear-gradient(
+      104deg,
+      rgba(255, 232, 196, 0.07) 0%,
+      rgba(0, 0, 0, 0.1) 58%,
+      rgba(0, 0, 0, 0.2) 100%
+    ),
+    linear-gradient(176deg, #a22f2b 0%, #7e1c1e 58%, #5d1012 100%);
+  transform-origin: top center;
+  transform: rotateX(0deg);
+  /* Same filter function list as the open state below, so the transition
+     interpolates instead of snapping. */
+  filter: drop-shadow(0 1px 0 rgba(246, 222, 172, 0.34))
+    drop-shadow(0 7px 9px rgba(10, 2, 3, 0.5)) brightness(1);
+}
+
+/* The medallion doubles as the wax seal, seated where the two folds meet.
+   It is the same asset the couple section uses — no new artwork. Smaller
+   again in this pass: at 66px it had begun to read as an applied coin. */
+.giftSeal {
+  position: absolute;
+  z-index: 3;
+  top: 53%;
+  left: 50%;
+  width: clamp(48px, 14.5cqw, 58px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background-image: url("/prototypes/invitation/demo/se-duyen/assets/lotus-fate-medallion.webp");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 2px 3px rgba(6, 1, 2, 0.6));
+}
+
+/* The stock pressed in under the seal: a soft well of shadow behind the
+   medallion plus one concentric hairline, so it sits in the paper rather
+   than on top of it. Negative z-index keeps the well behind the lotus and
+   inside the seal's own stacking context. */
+.giftSeal::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -9px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(16, 2, 3, 0.34) 0%,
+    rgba(16, 2, 3, 0) 70%
+  );
+  box-shadow: inset 0 0 0 1px rgba(228, 200, 138, 0.2);
+}
+
+/* ---- The ivory slip ---- */
+
+/* Tucked up behind the envelope's lower half, so it reads as paper drawn
+   out of it rather than a card stacked underneath. A gilt hairline outside
+   and a lit hairline inside give it a printed edge instead of a UI border. */
+.giftSlip {
+  position: relative;
+  z-index: 1;
+  /* Closed, the slip stays in the document but is not rendered. Keeping it
+     mounted in both states — rather than adding and removing it — is what
+     lets the paper slide back down into the envelope on close instead of
+     vanishing under a flap that is still falling. */
+  display: none;
+  width: min(240px, 70cqw);
+  margin: -96px 0 0;
+  /* Side padding kept tight so the longest demo bank name still sets on
+     one line at every supported width. 96px of the head is behind the
+     envelope, so the top padding also buys the band of bare ivory that
+     makes the slip read as an insert with a margin, not as a panel whose
+     content starts at its edge. */
+  padding: 126px 22px 28px;
+  text-align: center;
+  color: var(--sdi-ink);
+  /* A wide, shallow fall-off: the ivory warms toward the middle without
+     the edges darkening into a vignette. */
+  background: radial-gradient(
+    150% 94% at 50% 34%,
+    #fdf6e8 0%,
+    var(--sdi-paper) 60%,
+    var(--sdi-paper-deep) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(176, 140, 69, 0.34),
+    inset 0 0 0 1px rgba(255, 250, 240, 0.58),
+    0 3px 5px rgba(6, 1, 2, 0.34),
+    0 26px 40px -22px rgba(6, 1, 2, 0.72),
+    0 48px 66px -40px rgba(6, 1, 2, 0.62);
+}
+
+.giftStage[data-open] .giftSlip {
+  display: block;
+}
+
+/* The envelope's own edge laid across the slip's shoulders at the line
+   where the paper leaves it (that line is exactly the 96px of negative
+   margin above), falling away over the 80px below, plus a whisper of laid
+   texture on the ivory. */
+.giftSlip::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+      180deg,
+      rgba(58, 22, 10, 0) 0 92px,
+      rgba(58, 22, 10, 0.42) 97px,
+      rgba(58, 22, 10, 0.2) 112px,
+      rgba(58, 22, 10, 0.07) 142px,
+      rgba(58, 22, 10, 0) 178px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(123, 98, 69, 0.017) 0 1px,
+      rgba(0, 0, 0, 0) 1px 13px
+    );
+  pointer-events: none;
+}
+
+/* COMMON only: both families, set on the slip as two written choices with
+   a printed divider between them — not a pill group. */
+.giftTabs {
+  display: flex;
+  justify-content: center;
+  gap: 26px;
+}
+
+.giftTab {
+  position: relative;
+  padding: 0 1px 7px;
+  font-family: var(--sdp-sans), "Segoe UI", system-ui, sans-serif;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-indent: 0.12em;
+  text-transform: uppercase;
+  color: rgba(123, 98, 69, 0.68);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: color 200ms ease;
+}
+
+/* Hairline divider, set in the gap so it is outside both hit areas. */
+.giftTab + .giftTab::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: -13px;
+  width: 1px;
+  height: 9px;
+  background: rgba(123, 98, 69, 0.3);
+}
+
+/* The chosen side is marked with a short gilt rule, the way a printed
+   programme marks its current page. */
+.giftTabActive {
+  color: #8a6a2c;
+}
+
+.giftTabActive::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 18px;
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    90deg,
+    rgba(176, 140, 69, 0) 0%,
+    rgba(176, 140, 69, 0.85) 50%,
+    rgba(176, 140, 69, 0) 100%
+  );
+}
+
+.giftTab:focus-visible {
+  outline: 2px solid rgba(176, 140, 69, 0.85);
+  outline-offset: 3px;
+}
+
+/* GROOM / BRIDE: one side, so it is stated, not chosen. Same type as the
+   tabs above, with the same gilt rule beneath it. */
+.giftSideLabel {
+  position: relative;
+  margin: 0;
+  padding-bottom: 7px;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-indent: 0.12em;
+  text-transform: uppercase;
+  color: #8a6a2c;
+}
+
+.giftSideLabel::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 18px;
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    90deg,
+    rgba(176, 140, 69, 0) 0%,
+    rgba(176, 140, 69, 0.85) 50%,
+    rgba(176, 140, 69, 0) 100%
+  );
+}
+
+/* ---- Transfer QR ----
+
+   Printed on the slip between the side choice and the account rows: the
+   guest's eye lands on the code first and reads the numbers under it, which
+   is the order the code is actually used in. The artwork is a demo block
+   (see the asset README) and the caption under it says so, so the slip
+   carries the disclaimer twice -- here and in the badge at its foot.
+
+   Sized against the slip's own measure rather than the viewport: 148px
+   inside a 196px measure leaves ~24px of bare ivory either side, the same
+   breathing room the hairline row rules are inset by, so the code sits in
+   the paper's margin instead of filling it. */
+.giftQr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 26px 0 0;
+}
+
+/* Label stock laid on the ivory: a hairline of gilt outside, a lit hairline
+   inside and a short shadow -- the slip's own edge treatment at a smaller
+   scale, so the code reads as something printed and stuck on rather than an
+   image dropped into a panel. The inner padding is the code's quiet zone,
+   which a QR needs to read at all. */
+.giftQrImage {
+  box-sizing: border-box;
+  display: block;
+  width: 148px;
+  height: 148px;
+  padding: 9px;
+  background: #fbf5e9;
+  box-shadow:
+    0 0 0 1px rgba(176, 140, 69, 0.42),
+    inset 0 0 0 1px rgba(255, 250, 240, 0.7),
+    0 2px 3px rgba(6, 1, 2, 0.1),
+    0 10px 16px -10px rgba(6, 1, 2, 0.22);
+}
+
+/* Same footnote type as the row labels, so it belongs to the printed slip
+   rather than announcing itself as UI. */
+.giftQrCaption {
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-indent: 0.15em;
+  text-transform: uppercase;
+  color: rgba(138, 106, 44, 0.88);
+}
+
+.giftRows {
+  margin: 25px 0 0;
+}
+
+.giftRow {
+  position: relative;
+  padding: 15px 0;
+}
+
+.giftRow:first-child {
+  padding-top: 0;
+}
+
+/* Hairline separators set inside the paper's margin and faded at both
+   ends, the way a letterpress rule is, rather than edge-to-edge borders. */
+.giftRow + .giftRow::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(123, 98, 69, 0) 0%,
+    rgba(123, 98, 69, 0.3) 50%,
+    rgba(123, 98, 69, 0) 100%
+  );
+}
+
+/* Small and widely tracked: the label recedes and the value carries the
+   row. Deeper gold than --sdi-gold so 8.5px uppercase still reads on the
+   ivory, and now held just off full strength so it sits under the value
+   instead of beside it. */
+.giftRowLabel {
+  margin: 0;
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-indent: 0.15em;
+  text-transform: uppercase;
+  color: rgba(138, 106, 44, 0.88);
+}
+
+.giftRowValue {
+  margin: 8px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-size: 18.5px;
+  line-height: 1.4;
+  letter-spacing: 0.012em;
+  color: var(--sdi-ink);
+  text-wrap: pretty;
+}
+
+/* Read aloud off a phone, so it gets lining numerals and room to breathe. */
+.giftAccountNumber {
+  font-variant-numeric: lining-nums tabular-nums;
+  font-size: 20.5px;
+  letter-spacing: 0.15em;
+  text-indent: 0.075em;
+}
+
+/* ---- Copy the account number ----
+
+   The control is set in the slip's right margin rather than in the line, so
+   the number stays optically centred exactly where it was approved -- a
+   centred flex row would have pushed the figures off-axis by half the
+   glyph. The dd keeps its own type and its 8px top margin. */
+.giftAccountRow {
+  position: relative;
+}
+
+/* A mark in the margin of the slip rather than a button on a panel: no fill,
+   no border, no hit-area box -- just the glyph in the same gilt the row
+   label is set in. The 8px of padding keeps the touch target at ~30px while
+   the glyph itself stays small (CLAUDE.md §21). */
+.giftCopy {
+  position: absolute;
+  right: -7px;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  color: rgba(138, 106, 44, 0.9);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: color 200ms ease, opacity 200ms ease;
+}
+
+.giftCopy svg {
+  width: 13px;
+  height: 13px;
+}
+
+.giftCopy:hover {
+  color: #8a6a2c;
+}
+
+/* A press reads as the mark being inked, not as a button depressing. */
+.giftCopy:active {
+  opacity: 0.6;
+}
+
+.giftCopy:focus-visible {
+  outline: 2px solid rgba(176, 140, 69, 0.85);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* The label line while it is carrying the copy feedback: the same footnote
+   type, held on one line so a long message cannot reflow the row, and a
+   shade deeper so the change registers without a colour that announces
+   itself as UI. */
+.giftRowLabelStatus {
+  white-space: nowrap;
+  color: #8a6a2c;
+}
+
+/* Says on its face that the numbers above are fiction. Stated quietly in
+   footnote type, set off by whitespace rather than by weight. */
+.giftDemo {
+  margin: 22px 0 0;
+  font-size: 8.5px;
+  font-weight: 400;
+  letter-spacing: 0.11em;
+  line-height: 1.75;
+  text-transform: uppercase;
+  text-wrap: balance;
+  color: rgba(123, 98, 69, 0.8);
+}
+
+/* A quiet caption for the stage, not a second control: the envelope itself
+   carries the accessible name. Sits close under the paper. */
+.giftHint {
+  margin: 15px 0 0;
+  font-size: 8.5px;
+  font-weight: 400;
+  letter-spacing: 0.34em;
+  text-indent: 0.17em;
+  text-transform: uppercase;
+  color: rgba(228, 200, 138, 0.56);
+}
+
+/* Once the slip is out, the caption has done its work and steps back so
+   the eye stays on the paper. */
+.giftStage[data-open] .giftHint {
+  color: rgba(228, 200, 138, 0.4);
+}
+
+/* ---- Motion ---- */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Slow, soft and single-direction: a heavy paper flap being laid back by
+     hand, not a UI panel snapping open. */
+  .giftFlap {
+    transition: transform 1120ms cubic-bezier(0.24, 0.7, 0.14, 1),
+      filter 1120ms ease;
+  }
+
+  .giftSeal {
+    transition: opacity 420ms ease, transform 620ms cubic-bezier(0.3, 0.9, 0.3, 1);
+  }
+
+  /* The slip is drawn up out of the envelope once the flap has begun to
+     move, and slides back down into it when the flap closes. `display` is
+     in both transition lists with `allow-discrete`, which is what lets the
+     closed state stay `display: none` without the exit snapping; the
+     `@starting-style` rule gives the entry a frame to start from, since an
+     element coming out of `display: none` has no previous rendered state.
+     Browsers without the two features simply switch, exactly as before. */
+  .giftSlip {
+    opacity: 0;
+    transform: translateY(-34px);
+    /* Closing accelerates: the paper starts back slowly and is gone into
+       the envelope before the flap finishes falling over it. */
+    transition: opacity 520ms ease 60ms,
+      transform 660ms cubic-bezier(0.42, 0, 0.86, 0.3),
+      display 680ms allow-discrete;
+  }
+
+  .giftStage[data-open] .giftSlip {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 620ms ease 300ms,
+      transform 1020ms cubic-bezier(0.16, 0.84, 0.24, 1) 300ms,
+      display 1320ms allow-discrete;
+  }
+
+  @starting-style {
+    .giftStage[data-open] .giftSlip {
+      opacity: 0;
+      transform: translateY(-34px);
+    }
+  }
+
+  .giftHint {
+    transition: color 240ms ease;
+  }
+}
+
+/* Laid back far enough to clear the mouth, and darkened almost to the
+   lacquer so the lifted flap recedes instead of becoming a second shape
+   competing with the slip. */
+.giftStage[data-open] .giftFlap {
+  transform: rotateX(-124deg);
+  filter: drop-shadow(0 1px 0 rgba(246, 222, 172, 0.1))
+    drop-shadow(0 6px 8px rgba(10, 2, 3, 0.24)) brightness(0.42);
+}
+
+.giftStage[data-open] .giftSeal {
+  opacity: 0;
+  transform: translate(-50%, -62%) scale(0.86);
+}
+
+/* ---- Narrow phones ---- */
+
+@container (max-width: 365px) {
+  .gift {
+    padding: 26px 14px 66px;
+  }
+
+  .giftSlip {
+    /* Tracked to the same container width the envelope is cut from, so the
+       shoulder of red paper either side of the slip holds at ~20px down to
+       360px while the measure stays wide enough for the longest demo bank
+       name to set on one line. */
+    width: min(228px, 72cqw);
+    padding: 122px 17px 26px;
+  }
+
+  .giftTabs {
+    gap: 20px;
+  }
+
+  /* The slip narrows to a 194px measure here, so the code comes in with it
+     and keeps the same shoulder of bare ivory either side. */
+  .giftQrImage {
+    width: 138px;
+    height: 138px;
+  }
+
+  .giftRowValue {
+    font-size: 17.5px;
+  }
+
+  .giftAccountNumber {
+    font-size: 19px;
+  }
+}
+
+/* ======================================================================
+   7. Lời cảm ơn / Thank you
+   ====================================================================== */
+
+/* Picks the gift section's foot colour up exactly (#380a0c) and takes it
+   down to near-black, so the whole interior reads as one piece of lacquer
+   that finally darkens rather than as a new panel starting here. */
+.closing {
+  position: relative;
+  padding: 34px 22px 76px;
+  text-align: center;
+  background: linear-gradient(180deg, #380a0c 0%, #280507 46%, #160203 100%);
+  overflow: hidden;
+}
+
+/* One warm pool of light behind the photograph, the same device the gift
+   section uses, held lower and softer so the eye settles rather than
+   being drawn on. */
+.closingGlow {
+  position: absolute;
+  top: 34%;
+  left: 50%;
+  width: min(440px, 126cqw);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle,
+    rgba(176, 140, 69, 0.17) 0%,
+    rgba(140, 40, 32, 0.1) 38%,
+    rgba(22, 2, 3, 0) 70%
+  );
+  pointer-events: none;
+}
+
+.closingHead {
+  position: relative;
+  z-index: 2;
+}
+
+.closingEyebrow {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.46em;
+  text-indent: 0.23em;
+  text-transform: uppercase;
+  color: var(--sdi-gold-hi);
+}
+
+.closingRule {
+  display: block;
+  width: clamp(68px, 22cqw, 88px);
+  height: 1px;
+  margin: 18px auto 0;
+  background: linear-gradient(
+    90deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(228, 200, 138, 0.6) 50%,
+    rgba(228, 200, 138, 0) 100%
+  );
+}
+
+/* No frame: an arch cut straight out of the photograph, with the foot
+   masked away so the studio's red backdrop runs into the page's lacquer
+   and the picture has no bottom edge at all. The gilt hairline is on the
+   arch only, and the mask takes it down with the image.
+
+   The crop is tighter than the album's lead use of the same approved photo
+   (4/5 at 26%): scaled up and raised so this reads as the couple, not as a
+   second copy of a gallery frame. */
+.closingPhoto {
+  position: relative;
+  z-index: 2;
+  width: min(248px, 68cqw);
+  margin: 30px auto 0;
+  aspect-ratio: 4 / 5;
+  background-image: var(--sdp-closing-image, url("/prototypes/invitation/demo/se-duyen/interior/gallery-confetti.webp"));
+  background-size: var(--sdp-closing-size, 168% auto);
+  background-position: var(--sdp-closing-pos, 50% 17%);
+  background-repeat: no-repeat;
+  border-radius: 999px 999px 0 0;
+  box-shadow: inset 0 0 0 1px rgba(228, 200, 138, 0.22);
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0%,
+    #000 58%,
+    rgba(0, 0, 0, 0.55) 80%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 0%,
+    #000 58%,
+    rgba(0, 0, 0, 0.55) 80%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+/* Set in the display serif on a long line height: this is the couple
+   speaking, not a caption.
+
+   The demo copy carries its own line breaks, and this layout deliberately
+   ignores them (the wording's own comment allows for that): at a phone
+   measure the authored breaks left an orphaned "trọn vẹn" on a line of its
+   own. Flowed as one paragraph the rag comes out even, and the copy stays
+   editable without the breaks becoming a layout dependency. */
+.closingMessage {
+  position: relative;
+  z-index: 2;
+  max-width: 290px;
+  margin: 14px auto 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-size: clamp(16.5px, 4.9cqw, 19px);
+  line-height: 1.82;
+  letter-spacing: 0.012em;
+  text-wrap: pretty;
+  color: rgba(247, 240, 226, 0.9);
+}
+
+/* The tơ hồng, drawn once under the words and faded out at both ends so it
+   reads as a thread lying on the page rather than a divider ruled across
+   it. Same asset the hero binds the two names with. */
+.closingThread {
+  display: block;
+  width: min(238px, 64cqw);
+  /* A band cut through the ribbon's waist rather than the whole sweep: at
+     full height the asset is a large bow, and this section wants the line
+     it is tied from. The band is taken at the height of the lotus knot, so
+     the one detail the brief asks for is the thread and its lotus
+     together. */
+  height: 46px;
+  margin: 26px auto 0;
+  background-image: url("/prototypes/invitation/demo/se-duyen/se-duyen-visual-pilot-v02/red-thread.webp");
+  background-size: 100% auto;
+  background-position: center 54%;
+  background-repeat: no-repeat;
+  opacity: 0.6;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 26%,
+    #000 74%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 26%,
+    #000 74%,
+    transparent 100%
+  );
+}
+
+/* Signed, not titled: the cover's gilt lettering at two-thirds the size,
+   stacked so the longest Vietnamese name pair still sets without shrinking
+   at 360px. */
+.closingSign {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(25px, 7.2cqw, 30px);
+  line-height: 1.34;
+  letter-spacing: 0.014em;
+}
+
+.closingSignName {
+  padding: 0 2px 2px;
+  text-wrap: balance;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.closingSignAmp {
+  margin: 2px 0;
+  font-size: 0.44em;
+  color: rgba(214, 180, 114, 0.9);
+}
+
+/* ======================================================================
+   3a. Lịch Trình Hôn Lễ / wedding-day timeline
+   ======================================================================
+
+   A thread, not a table. One gold hairline runs down a fixed left rail
+   with a small knot per moment; the hour, the title and the line sit in
+   the room to its right, each block on its own baseline rhythm. Nothing
+   is boxed, nothing is bordered, and the steps are spaced like stationery
+   rather than packed like a dashboard.
+
+   Colour contract with the neighbours: the ceremony card closes down into
+   exactly --sdi-lacquer and the countdown opens on exactly --sdi-lacquer,
+   so this section opens AND closes on that same value and only deepens
+   through the middle. Both junctions stay the two identical pixels the
+   approved layout already had, and neither neighbour is modified.        */
+
+.flow {
+  position: relative;
+  padding: 48px 22px 46px;
+  background: linear-gradient(
+    180deg,
+    var(--sdi-lacquer) 0%,
+    #390709 18%,
+    #320609 50%,
+    #390709 82%,
+    var(--sdi-lacquer) 100%
+  );
+  color: var(--sdi-ivory);
+  overflow: hidden;
+}
+
+/* The section's single lotus: the same medallion the ceremony and couple
+   sections emboss, set low behind the list and barely there, so it reads
+   as lacquer depth rather than as an ornament placed beside the text. */
+.flowWatermark {
+  position: absolute;
+  top: 64%;
+  left: 76%;
+  width: clamp(190px, 58cqw, 240px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background-image: url("/prototypes/invitation/demo/se-duyen/assets/lotus-fate-medallion.webp");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.045;
+  -webkit-mask-image: radial-gradient(circle, #000 30%, transparent 70%);
+  mask-image: radial-gradient(circle, #000 30%, transparent 70%);
+  pointer-events: none;
+}
+
+.flowHead {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+
+.flowEyebrow {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.46em;
+  text-indent: 0.23em;
+  text-transform: uppercase;
+  color: rgba(228, 200, 138, 0.74);
+}
+
+/* Set in the same gilt as the countdown heading below it, so the two read
+   as one lacquer chapter with two titles rather than two panels. */
+.flowHeading {
+  margin: 13px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(27px, 7.6cqw, 32px);
+  line-height: 1.26;
+  letter-spacing: 0.016em;
+  text-wrap: balance;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.flowRule {
+  display: block;
+  width: clamp(68px, 22cqw, 88px);
+  height: 1px;
+  margin: 18px auto 0;
+  background: linear-gradient(
+    90deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(228, 200, 138, 0.6) 50%,
+    rgba(228, 200, 138, 0) 100%
+  );
+}
+
+/* --- the thread and its knots ---------------------------------------- */
+
+/* The rail is a custom property so the hairline, the knots and the text
+   indent are all driven by ONE number: the thread cannot drift away from
+   the dots it is threaded through. */
+.flowList {
+  --sdp-flow-rail: 15px;
+  --sdp-flow-knot: 9px;
+
+  position: relative;
+  z-index: 2;
+  margin: 40px auto 0;
+  padding: 0;
+  max-width: 330px;
+  list-style: none;
+}
+
+/* The tơ hồng itself. It starts and ends INSIDE the list rather than at
+   its edges — faded away at both ends — so it reads as a thread drawn
+   through the moments, not as a ruled border beside them. */
+.flowList::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: var(--sdp-flow-rail);
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(214, 180, 114, 0.5) 12%,
+    rgba(214, 180, 114, 0.5) 86%,
+    rgba(228, 200, 138, 0) 100%
+  );
+  pointer-events: none;
+}
+
+.flowStep {
+  position: relative;
+  padding-left: calc(var(--sdp-flow-rail) + 24px);
+}
+
+/* Editorial spacing: the gap between moments is the composition. */
+.flowStep + .flowStep {
+  margin-top: 38px;
+}
+
+/* The knot. A small gilt point with a soft lacquer halo, centred on the
+   thread by the same --sdp-flow-rail the hairline uses. */
+.flowStep::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  left: var(--sdp-flow-rail);
+  width: var(--sdp-flow-knot);
+  height: var(--sdp-flow-knot);
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #fbf1d6 0%, #d6b472 54%, #a8822f 100%);
+  box-shadow: 0 0 0 4px rgba(64, 9, 12, 0.92), 0 0 12px rgba(228, 200, 138, 0.3);
+}
+
+/* The rite's knot is tied twice: the same gilt point, ringed by a gold
+   hairline. The one moment the invitation actually prints an hour for is
+   the one the eye should find first on the thread, and a concentric ring
+   says so at 9px where a shrunken medallion only reads as a smudge. */
+.flowStepRite::before {
+  background: radial-gradient(circle at 34% 30%, #fff8e6 0%, #e4c88a 52%, #c09a3e 100%);
+  box-shadow:
+    0 0 0 4px rgba(64, 9, 12, 0.92),
+    0 0 0 5px rgba(214, 180, 114, 0.62),
+    0 0 16px rgba(228, 200, 138, 0.42);
+}
+
+.flowStepBody {
+  position: relative;
+}
+
+/* Tabular lining figures so every hour on the list starts at the same
+   optical position down the column. */
+.flowTime {
+  margin: 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(17px, 5.2cqw, 20px);
+  line-height: 1.1;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0.2em;
+  text-indent: 0.1em;
+  color: rgba(228, 200, 138, 0.92);
+}
+
+.flowTitle {
+  margin: 9px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(20px, 6cqw, 23px);
+  line-height: 1.3;
+  letter-spacing: 0.012em;
+  text-wrap: balance;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.flowNote {
+  margin: 9px 0 0;
+  font-size: 12.5px;
+  font-weight: 300;
+  line-height: 1.82;
+  letter-spacing: 0.004em;
+  color: rgba(247, 240, 226, 0.7);
+  text-wrap: pretty;
+}
+
+/* Marks the canonical hour on the one step that carries it. */
+.flowRiteMark {
+  margin: 12px 0 0;
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-indent: 0.14em;
+  text-transform: uppercase;
+  color: rgba(214, 180, 114, 0.82);
+}
+
+/* Says on its face that the rest of the hours are fiction — the same
+   honesty the RSVP and gift demo badges carry. */
+.flowBadge {
+  position: relative;
+  z-index: 2;
+  margin: 36px auto 0;
+  max-width: 300px;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.7;
+  letter-spacing: 0.17em;
+  text-indent: 0.085em;
+  text-transform: uppercase;
+  text-align: center;
+  color: rgba(228, 200, 138, 0.52);
+}
+
+@container (max-width: 365px) {
+  .flow {
+    padding: 44px 16px 42px;
+  }
+
+  .flowList {
+    --sdp-flow-rail: 13px;
+  }
+
+  .flowStep {
+    padding-left: calc(var(--sdp-flow-rail) + 20px);
+  }
+
+  .flowStep + .flowStep {
+    margin-top: 34px;
+  }
+
+  .flowNote {
+    font-size: 12px;
+    line-height: 1.78;
+  }
+}
+
+/* ======================================================================
+   3b. Chờ Ngày Se Duyên / countdown
+   ====================================================================== */
+
+/* Opens and closes on the album's own top colour (--sdi-lacquer) so both
+   junctions are exactly the edges the approved layout already had: the
+   ivory ceremony card meets lacquer here instead of at the album, and the
+   album continues from the same value. Only the middle deepens. */
+.countdown {
+  position: relative;
+  /* Short foot on purpose: the album's own 64px head follows, and the two
+     together were leaving a dead band under the thread. */
+  padding: 54px 22px 32px;
+  text-align: center;
+  background: linear-gradient(
+    180deg,
+    var(--sdi-lacquer) 0%,
+    #350709 50%,
+    var(--sdi-lacquer) 100%
+  );
+  color: var(--sdi-ivory);
+  overflow: hidden;
+}
+
+.countdownGlow {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  width: min(400px, 118cqw);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle,
+    rgba(176, 140, 69, 0.16) 0%,
+    rgba(140, 40, 32, 0.09) 40%,
+    rgba(44, 6, 8, 0) 72%
+  );
+  pointer-events: none;
+}
+
+.countdownHead {
+  position: relative;
+  z-index: 2;
+}
+
+.countdownHeading {
+  margin: 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(25px, 7cqw, 29px);
+  line-height: 1.3;
+  letter-spacing: 0.016em;
+  text-wrap: balance;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.countdownRule {
+  display: block;
+  width: clamp(68px, 22cqw, 88px);
+  height: 1px;
+  margin: 16px auto 0;
+  background: linear-gradient(
+    90deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(228, 200, 138, 0.6) 50%,
+    rgba(228, 200, 138, 0) 100%
+  );
+}
+
+/* Four columns of equal width, so the hairlines between them stay evenly
+   spaced however many digits the day figure runs to. */
+.countdownDials {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 28px auto 0;
+  max-width: 320px;
+}
+
+.countdownDial {
+  position: relative;
+  /* Label is first in the DOM for the pairing; reversed here so the figure
+     still reads above it. */
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 9px;
+  padding: 0 2px;
+}
+
+/* A hairline between the columns rather than a box around each: faded at
+   both ends the way the slip's row rules are, and set in the gap so it
+   belongs to neither column. */
+.countdownDial + .countdownDial::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 0;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(228, 200, 138, 0.34) 50%,
+    rgba(228, 200, 138, 0) 100%
+  );
+}
+
+/* Tabular lining figures: the row must not move as the seconds turn. */
+.countdownDialValue {
+  margin: 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(30px, 8.6cqw, 36px);
+  line-height: 1.08;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0.01em;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.countdownDialLabel {
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-indent: 0.15em;
+  text-transform: uppercase;
+  color: rgba(228, 200, 138, 0.68);
+}
+
+/* The passed state takes the dials' place on the same line of the
+   composition, set in the same gilt so nothing else has to move. */
+.countdownArrived {
+  position: relative;
+  z-index: 2;
+  margin: 30px 0 4px;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(27px, 7.6cqw, 32px);
+  line-height: 1.24;
+  letter-spacing: 0.02em;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* A quieter, narrower cut of the tơ hồng than the closing's knot — a
+   thread drawn under the figures, not a second ornament. */
+.countdownThread {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: min(166px, 46cqw);
+  height: 32px;
+  margin: 20px auto 0;
+  background-image: url("/prototypes/invitation/demo/se-duyen/se-duyen-visual-pilot-v02/red-thread.webp");
+  background-size: 150% auto;
+  background-position: center 54%;
+  background-repeat: no-repeat;
+  opacity: 0.42;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 28%,
+    #000 72%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 28%,
+    #000 72%,
+    transparent 100%
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* P1. Music control + gallery lightbox.                                  */
+/*                                                                        */
+/* Both are additive: no approved composition is touched. The music disc   */
+/* is sticky inside the interior, so it rides the scroll from the first    */
+/* interior section onward and never covers the box on the cover.         */
+/* ---------------------------------------------------------------------- */
+
+.musicButton {
+  position: sticky;
+  top: 14px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin: 14px 16px -38px auto;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(228, 200, 138, 0.55);
+  background: radial-gradient(72% 72% at 50% 34%, rgba(90, 16, 20, 0.92) 0%, rgba(44, 6, 8, 0.92) 100%);
+  box-shadow:
+    0 0 0 1px rgba(8, 1, 2, 0.35),
+    0 10px 20px -12px rgba(8, 1, 2, 0.9);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Negative bottom margin above: the disc floats over the first section
+   rather than reserving a band of its own, so section 1 keeps its approved
+   top edge. */
+
+.musicIcon {
+  font-size: 15px;
+  line-height: 1;
+  color: var(--sdi-gold-hi, #e4c88a);
+}
+
+.musicButtonActive {
+  border-color: rgba(228, 200, 138, 0.9);
+}
+
+.musicButtonActive .musicIcon {
+  animation: sdp-music-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes sdp-music-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .musicButtonActive .musicIcon {
+    animation: none;
+  }
+}
+
+/* A frame that carries the Project's own photo becomes a button; this only
+   strips the button chrome, so the frame renders exactly as the div did. */
+.photoButton {
+  display: block;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  cursor: zoom-in;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightboxScrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(20, 3, 5, 0.94);
+  cursor: zoom-out;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.lightboxFrame {
+  position: relative;
+  width: 92vw;
+  max-width: 520px;
+  height: 78vh;
+}
+
+.lightboxStep,
+.lightboxClose {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(228, 200, 138, 0.5);
+  background: rgba(44, 6, 8, 0.72);
+  color: var(--sdi-gold-hi, #e4c88a);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.lightboxClose {
+  top: 16px;
+  right: 16px;
+  font-size: 14px;
+}
+
+.lightboxStep {
+  top: 50%;
+  margin-top: -20px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.lightboxPrev {
+  left: 12px;
+}
+
+.lightboxNext {
+  right: 12px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* 3b. Per-side receptions, inside the ceremony page.                     */
+/*                                                                        */
+/* Not a second section and not cards: the same ivory page, the same gold */
+/* hairline the ceremony rail and the countdown dials use, and the same   */
+/* type scale one step down from the rite above. COMMON prints two rows   */
+/* separated by that hairline; GROOM/BRIDE print one and no side label.   */
+/* ---------------------------------------------------------------------- */
+
+.riteParties {
+  display: flex;
+  flex-direction: column;
+  margin: 34px auto 0;
+  max-width: 310px;
+  text-align: center;
+}
+
+.ritePartyRow + .ritePartyRow {
+  margin-top: 26px;
+  padding-top: 26px;
+  border-top: 1px solid rgba(176, 140, 69, 0.34);
+}
+
+.ritePartySide {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-indent: 0.15em;
+  text-transform: uppercase;
+  color: var(--sdi-gold);
+}
+
+.ritePartyTitle {
+  margin: 8px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-style: italic;
+  font-size: 14.5px;
+  letter-spacing: 0.04em;
+  color: var(--sdi-ink-soft);
+}
+
+.ritePartyWhen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  margin: 9px 0 0;
+}
+
+.ritePartyTime {
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-variant-numeric: lining-nums;
+  font-size: clamp(17px, 5.1cqw, 20px);
+  letter-spacing: 0.2em;
+  text-indent: 0.1em;
+  color: var(--sdi-gold);
+}
+
+/* Only printed when the reception falls on another day than the rite. */
+.ritePartyDate {
+  font-size: 11.5px;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  color: var(--sdi-ink-soft);
+}
+
+.ritePartyVenue {
+  margin: 10px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(16px, 4.8cqw, 18px);
+  line-height: 1.42;
+  color: var(--sdi-ink);
+  text-wrap: balance;
+}
+
+.ritePartyAddress {
+  margin: 7px 0 0;
+  font-size: 12px;
+  font-weight: 300;
+  line-height: 1.8;
+  color: var(--sdi-ink-soft);
+  text-wrap: balance;
+}
+
+.ritePartyDirections {
+  display: inline-block;
+  margin: 14px 0 0;
+  padding: 0 2px 5px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.26em;
+  text-indent: 0.13em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: #8a6a2c;
+  border-bottom: 1px solid rgba(176, 140, 69, 0.45);
 }

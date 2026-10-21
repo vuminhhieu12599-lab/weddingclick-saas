@@ -21,9 +21,10 @@ import { SeDuyenPilotPrototype } from "./_directions/se-duyen-pilot/se-duyen-pil
 // still lives at ./_directions/elegant-editorial, intentionally unimported,
 // kept only for comparison/recovery until explicitly approved for removal.
 import { GreenIvoryEditorialPrototype } from "./_directions/green-ivory-editorial/green-ivory-editorial";
+import { CUSTOMER_PHOTOS, RATIO_TEST_PHOTOS } from "./_data/photo-ratio-fixtures";
 import { DEFAULT_SECTION_VISIBILITY, SECTION_KEYS, SECTION_LABELS } from "./_shared/sections";
 import type { SectionVisibility } from "./_shared/sections";
-import type { InvitationVariant } from "./_shared/types";
+import type { AlbumPhoto, InvitationVariant } from "./_shared/types";
 import styles from "./prototype.module.css";
 
 const DIRECTIONS = [
@@ -39,6 +40,44 @@ type DirectionKey = (typeof DIRECTIONS)[number]["key"];
 const VIEWPORT_WIDTHS = [360, 390, 430] as const;
 
 const VARIANTS: InvitationVariant[] = ["COMMON", "GROOM", "BRIDE"];
+
+/**
+ * Se Duyên P0-2 only: what media the direction receives, as a Project would
+ * supply it.
+ *
+ * "Chưa truyền ảnh" is the internal prototype with no Project media at all
+ * (`undefined`) — every frame keeps its demo photograph, which is the
+ * approved review appearance. Every other option is a real Project's own
+ * media, where a frame with no photo of its own is omitted instead of
+ * falling back to demo art.
+ *
+ * Se Duyên V1 requires at least one customer photograph (Product Owner
+ * decision, 2026-10-21), so there is no zero-photo customer option here.
+ */
+const PHOTO_SOURCES = [
+  { key: "none", label: "Chưa truyền ảnh (demo)" },
+  { key: "customer1", label: "Khách: 1 ảnh" },
+  { key: "customer3", label: "Khách: 3 ảnh" },
+  { key: "customer5", label: "Khách: 5 ảnh" },
+  { key: "customer8", label: "Khách: 8 ảnh" },
+  { key: "ratios", label: "Bộ thử tỉ lệ (8)" },
+] as const;
+
+type PhotoSourceKey = (typeof PHOTO_SOURCES)[number]["key"];
+
+const CUSTOMER_COUNTS: Record<string, number> = {
+  customer1: 1,
+  customer3: 3,
+  customer5: 5,
+  customer8: 8,
+};
+
+function photosFor(source: PhotoSourceKey): AlbumPhoto[] | undefined {
+  if (source === "ratios") return RATIO_TEST_PHOTOS;
+  const count = CUSTOMER_COUNTS[source];
+  // `undefined` is the demo prototype; a count is a Project's own media.
+  return count === undefined ? undefined : CUSTOMER_PHOTOS.slice(0, count);
+}
 
 // Sample data only — stands in for a customer's own guest list (checkpoint
 // V5 §B5: the bride/groom manage this themselves, an admin never types
@@ -62,6 +101,7 @@ export default function InvitationPrototypeReviewPage() {
   const [newGuestName, setNewGuestName] = useState("");
   const [sections, setSections] = useState<SectionVisibility>(DEFAULT_SECTION_VISIBILITY);
   const [replayKey, setReplayKey] = useState(0);
+  const [photoSource, setPhotoSource] = useState<PhotoSourceKey>("none");
   const phoneScreenRef = useRef<HTMLDivElement>(null);
 
   // Switching template/variant/replay remounts the invitation below, but the
@@ -243,6 +283,23 @@ export default function InvitationPrototypeReviewPage() {
         </div>
       </details>
 
+      {direction === "se-duyen-pilot" && (
+        <div className={styles.group}>
+          {PHOTO_SOURCES.map((source) => (
+            <button
+              key={source.key}
+              type="button"
+              className={`${styles.groupButton} ${
+                photoSource === source.key ? styles.groupButtonActive : ""
+              }`}
+              onClick={() => setPhotoSource(source.key)}
+            >
+              {source.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <p className={styles.shareCoverNote}>
         📌 Concept (not built here): social share cover — <strong>{PROTOTYPE_WEDDING_DATA.shareCover.imageLabel}</strong>.{" "}
         {PROTOTYPE_WEDDING_DATA.shareCover.note}
@@ -258,6 +315,7 @@ export default function InvitationPrototypeReviewPage() {
               guestDisplayName={guestDisplayName}
               sections={sections}
               replayKey={replayKey}
+              photoSource={photoSource}
             />
           </div>
         </div>
@@ -279,6 +337,7 @@ function PrototypeSurface({
   guestDisplayName,
   sections,
   replayKey,
+  photoSource,
 }: {
   direction: DirectionKey;
   variant: InvitationVariant;
@@ -286,6 +345,7 @@ function PrototypeSurface({
   guestDisplayName: string;
   sections: SectionVisibility;
   replayKey: number;
+  photoSource: PhotoSourceKey;
 }) {
   const key = `${direction}-${variant}-${replayKey}`;
   const props = { data: PROTOTYPE_WEDDING_DATA, variant, personalization, guestDisplayName, sections };
@@ -300,7 +360,9 @@ function PrototypeSurface({
     return <SeDuyenPrototype key={key} {...props} />;
   }
   if (direction === "se-duyen-pilot") {
-    return <SeDuyenPilotPrototype key={key} {...props} />;
+    // Only this direction takes Project photos so far; the others keep the
+    // exact props they had.
+    return <SeDuyenPilotPrototype key={key} {...props} projectPhotos={photosFor(photoSource)} />;
   }
   return <GreenIvoryEditorialPrototype key={key} {...props} />;
 }

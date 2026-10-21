@@ -23,3 +23,19 @@ portrait pair would have been correct for BRIDE and wrong for GROOM. Keeping
 the section variant-neutral avoids that. Swapping in
 `03-bride-portrait-ao-dai-do-quat-xep.webp` is a one-line change if the Product
 Owner prefers it for BRIDE.
+
+## Gallery photos (section 4)
+
+Same rule: byte-identical copies, showroom originals untouched.
+
+| File here | Copied from | SHA-256 | Size |
+|---|---|---|---|
+| `gallery-confetti.webp` | `showroom/demo/vietnamese-heritage/photos/02-couple-portrait-ao-dai-sac-do-le-hoi.webp` | `86c5db8259a10862eba4b74d4bf14d4a89845a5c1afd2649c55f294d94357a51` | 1086×1448, 87.4 KiB |
+| `gallery-bride.webp` | `showroom/demo/vietnamese-heritage/photos/03-bride-portrait-ao-dai-do-quat-xep.webp` | `160d9e49aad34440eb5e1b87bf14b3b4ab110af3bea90bf685fb6385138d27d9` | 1086×1448, 117.4 KiB |
+
+Only four of the ten approved Vietnamese-heritage photos are usable in this
+direction: `01`, `02`, `03` and `10`. The rest are excluded on sight —
+`05`, `06`, `08` and `09` carry a 囍 double-happiness glyph, which Se Duyên
+does not use, and `04` and `07` put the groom in a tuxedo rather than áo dài.
+The gallery therefore shows four photos, with `01` and `10` (already in the
+couple section) re-cropped so they do not read as repeats.

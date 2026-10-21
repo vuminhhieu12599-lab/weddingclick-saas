@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000">
+  <rect width="1000" height="1000" fill="#2f3b46" />
+  <g stroke="#6d7d8b" stroke-width="4" opacity="0.55">
+    <line x1="100" y1="0" x2="100" y2="1000" />
+    <line x1="0" y1="100" x2="1000" y2="100" />
+    <line x1="200" y1="0" x2="200" y2="1000" />
+    <line x1="0" y1="200" x2="1000" y2="200" />
+    <line x1="300" y1="0" x2="300" y2="1000" />
+    <line x1="0" y1="300" x2="1000" y2="300" />
+    <line x1="400" y1="0" x2="400" y2="1000" />
+    <line x1="0" y1="400" x2="1000" y2="400" />
+    <line x1="500" y1="0" x2="500" y2="1000" />
+    <line x1="0" y1="500" x2="1000" y2="500" />
+    <line x1="600" y1="0" x2="600" y2="1000" />
+    <line x1="0" y1="600" x2="1000" y2="600" />
+    <line x1="700" y1="0" x2="700" y2="1000" />
+    <line x1="0" y1="700" x2="1000" y2="700" />
+    <line x1="800" y1="0" x2="800" y2="1000" />
+    <line x1="0" y1="800" x2="1000" y2="800" />
+    <line x1="900" y1="0" x2="900" y2="1000" />
+    <line x1="0" y1="900" x2="1000" y2="900" />
+  </g>
+  <rect x="60" y="60" width="880" height="880"
+        fill="none" stroke="#9fb3c2" stroke-width="12" stroke-dasharray="48 36" />
+  <g fill="none" stroke="#f2c14e" stroke-width="24" stroke-linecap="square">
+    <path d="M60 180 L60 60 L180 60" />
+    <path d="M940 180 L940 60 L820 60" />
+    <path d="M60 820 L60 940 L180 940" />
+    <path d="M940 820 L940 940 L820 940" />
+  </g>
+  <g fill="#f2c14e" font-family="DejaVu Sans, Verdana, sans-serif" text-anchor="middle">
+    <text x="500" y="500" font-size="85" font-weight="bold">F5 · 1:1</text>
+    <text x="500" y="606" font-size="45">1000×1000</text>
+    <text x="500" y="150" font-size="45">TOP</text>
+    <text x="500" y="895" font-size="45">BOTTOM</text>
+    <text x="150" y="424" font-size="45">LEFT</text>
+    <text x="850" y="424" font-size="45">RIGHT</text>
+  </g>
+</svg>

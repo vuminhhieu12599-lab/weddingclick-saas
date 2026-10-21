@@ -1,8 +1,12 @@
 # Se Duyên — Vietnamese 3D visual pilot (v0.1)
 
-ART DIRECTION — prototype only, **not approved for Production**.
+## Rights
 
-These images were AI-generated on request for the WeddingClick Se Duyên direction, aiming at Vietnamese lacquer craftsmanship and lotus / Đông Sơn-inspired *visual motifs* with no Chinese-style characters or palace ornaments. They are design concepts, **not verified reproductions of specific historical Vietnamese artifacts**. Product Owner must visually review and approve before finalizing.
+**Product Owner authorization, 2026-10-20.** The Product Owner explicitly authorizes **public and commercial use** of the Se Duyên AI-generated decorative assets in WeddingClick — the lacquer background, the wedding box, the lid and the related ornaments, which is the set in this directory. This supersedes the earlier "prototype only, not approved for Production" status of these decorative files.
+
+The authorization is scoped to these Se Duyên decorative assets. It does **not** extend to unrelated photography (the fictional showroom demo photographs under `../interior/`, which carry their own separate approval) or to the demo payment-QR artwork under `../gift/`, which stays illustrative, deliberately non-scannable prototype material. See `../pilot-v03/PROVENANCE.md` for the opening layers' derivation and hashes.
+
+These images were AI-generated on request for the WeddingClick Se Duyên direction, aiming at Vietnamese lacquer craftsmanship and lotus / Đông Sơn-inspired *visual motifs* with no Chinese-style characters or palace ornaments. They are design concepts, **not verified reproductions of specific historical Vietnamese artifacts**.
 
 ## Assets / integration roles
 
