@@ -61,6 +61,20 @@ export const SE_DUYEN_V1_COPY = Object.freeze({
     eyebrow: "Trình Tự Ngày Vui",
     heading: "Lịch Trình Hôn Lễ",
   }),
+  music: Object.freeze({
+    play: "Bật nhạc nền",
+    pause: "Tắt nhạc nền",
+    /** Said only after an explicit tap, never on its own. */
+    failed: "Không phát được nhạc",
+  }),
+  countdown: Object.freeze({
+    heading: "Chờ Ngày Se Duyên",
+    /** Shown instead of the dials once the canonical instant has been reached. */
+    arrived: "Ngày Vui Đã Đến",
+    /** Accessible name of the live region. */
+    label: "Thời gian còn lại đến ngày cưới",
+    units: Object.freeze({ days: "Ngày", hours: "Giờ", minutes: "Phút", seconds: "Giây" }),
+  }),
   gallery: Object.freeze({
     eyebrow: "Album Cưới",
     heading: "Khoảnh Khắc Của Chúng Mình",

@@ -2,7 +2,9 @@ import { deriveEventDateTimePresentationV1 } from "../../../../lib/invitation-re
 import type { InvitationRendererPropsV1 } from "../../../../lib/invitation-rendering/renderer-component";
 import { SE_DUYEN_V1_COPY } from "./copy";
 import { SE_DUYEN_V1_FONT_VARIABLES_CLASS_NAME } from "./fonts";
+import { Countdown } from "./interactive/countdown";
 import { AlbumFrames } from "./interactive/gallery-viewer";
+import { MusicControl } from "./interactive/music-control";
 import { OpeningStage } from "./interactive/opening-stage";
 import styles from "./se-duyen-v1.module.css";
 import { Ceremony } from "./sections/ceremony";
@@ -46,16 +48,19 @@ const COPY = SE_DUYEN_V1_COPY;
  *
  * PAGE ORDER. Opening (box → hero) → the invitation introduction → the
  * couple → the two houses → the ceremony with its per-side rites → the
- * run-of-show → the album → the closing.
+ * run-of-show → the countdown → the album → the closing.
  *
  * WHAT THIS RENDERER DELIBERATELY DOES NOT DO YET. The approved direction
- * also has a countdown, a gift envelope, a music control and an RSVP form,
- * and the prototype shows all of them — with demo QR artwork, an inert music
- * button and a local, unpersisted RSVP. None of that is rendered here. A
- * guest is never shown a control that looks like working customer
- * functionality and is not: the manifest declares `music` and `gift` as
- * sections this renderer cannot do, no capability-backed island is mounted,
- * and SD-V1-02 connects them for real.
+ * also has a gift envelope and an RSVP form, and the prototype shows both —
+ * with illustrative QR artwork and a local, unpersisted RSVP. Neither is
+ * rendered here. A guest is never shown a control that looks like working
+ * customer functionality and is not: the manifest declares `gift` as a
+ * section this renderer cannot do, no capability-backed island is mounted,
+ * and SD-V1-02 connects it for real.
+ *
+ * The countdown is not a section capability at all: it exists exactly while
+ * the host supplies `capabilities.clock`, which it does only in the browser,
+ * so no current time ever reaches server markup.
  *
  * The scroll-reveal motion of the interior (the prototype's shared `Reveal`)
  * is also SD-V1-02 work: it belongs on the shared section-reveal controller
@@ -85,7 +90,7 @@ const COPY = SE_DUYEN_V1_COPY;
  * `openingPhoto` the box still opens onto the lacquer and the invitation
  * below it is complete.
  */
-export function SeDuyenV1({ viewModel, sections }: InvitationRendererPropsV1) {
+export function SeDuyenV1({ viewModel, sections, capabilities }: InvitationRendererPropsV1) {
   const { people, families, ceremony, content, media } = viewModel;
   const ceremonyDate = deriveEventDateTimePresentationV1(ceremony);
   const guestDisplayName = viewModel.guest?.displayName;
@@ -106,6 +111,9 @@ export function SeDuyenV1({ viewModel, sections }: InvitationRendererPropsV1) {
   // Each step keeps its own hour: nothing here is derived from, or compared
   // with, the ceremony or either side's reception (Product Owner rule).
   const timeline = sections.timeline ? content.timeline : [];
+  // The host builds a music capability only for `sections.music` plus a
+  // RESOLVED audio slot, so presence alone is the gate: no disabled disc.
+  const music = sections.music ? capabilities.music : undefined;
 
   return (
     <div
@@ -121,6 +129,7 @@ export function SeDuyenV1({ viewModel, sections }: InvitationRendererPropsV1) {
         photo={openingPhoto}
         photoAlt={photoAlt}
       >
+        {music === undefined ? null : <MusicControl music={music} />}
         <Invitation
           ceremonyTitle={ceremony.title}
           message={invitationMessage}
@@ -137,6 +146,7 @@ export function SeDuyenV1({ viewModel, sections }: InvitationRendererPropsV1) {
           cards={viewModel.ceremonyCards}
         />
         {timeline.length === 0 ? null : <Timeline items={timeline} />}
+        {capabilities.clock === undefined ? null : <Countdown ceremony={ceremony} clock={capabilities.clock} />}
         {showAlbum ? (
           <Gallery>
             <AlbumFrames gallery={slots?.gallery ?? []} />

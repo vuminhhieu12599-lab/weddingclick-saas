@@ -860,6 +860,116 @@
   font-family: var(--sdp-sans), "Segoe UI", system-ui, sans-serif;
 }
 
+/* ======================================================================
+   P1. Music control  (SD-V1-02C1)
+
+   Ported from the frozen pilot v03 control, unchanged: a gilt disc on the
+   lacquer, sticky INSIDE the interior, so it rides the scroll from the first
+   interior section onward and never covers the box a guest taps on the
+   cover. The negative bottom margin lets it float over the first section
+   instead of reserving a band of its own, so that section keeps its approved
+   top edge. Additive: no approved composition is touched.
+   ====================================================================== */
+
+.musicButton {
+  position: sticky;
+  top: 14px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin: 14px 16px -38px auto;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(228, 200, 138, 0.55);
+  background: radial-gradient(72% 72% at 50% 34%, rgba(90, 16, 20, 0.92) 0%, rgba(44, 6, 8, 0.92) 100%);
+  box-shadow:
+    0 0 0 1px rgba(8, 1, 2, 0.35),
+    0 10px 20px -12px rgba(8, 1, 2, 0.9);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Negative bottom margin above: the disc floats over the first section
+   rather than reserving a band of its own, so section 1 keeps its approved
+   top edge. */
+
+.musicIcon {
+  font-size: 15px;
+  line-height: 1;
+  color: var(--sdi-gold-hi, #e4c88a);
+}
+
+.musicButtonActive {
+  border-color: rgba(228, 200, 138, 0.9);
+}
+
+.musicButtonActive .musicIcon {
+  animation: sdp-music-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes sdp-music-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .musicButtonActive .musicIcon {
+    animation: none;
+  }
+}
+
+/* PRODUCTION ADDITION (SD-V1-02C1) — the failure note.
+
+   The prototype's control could not fail: it played no audio at all, so it
+   had nothing to report. A real one can be refused by the browser
+   (`BLOCKED`) or fail to load (`ERROR`), and CLAUDE.md §22 forbids a control
+   that silently does nothing. The note therefore appears only after an
+   explicit tap, in the direction's own gilt, under the disc and out of the
+   layout (absolute) so no approved section shifts when it appears.
+
+   `.srOnly` is the same note when there is nothing to report: the live
+   region stays mounted so assistive technology is not handed a new region
+   mid-interaction. */
+.musicNote {
+  position: absolute;
+  top: 56px;
+  right: 12px;
+  z-index: 8;
+  max-width: 190px;
+  margin: 0;
+  font-family: var(--sdp-sans), "Segoe UI", system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  line-height: 1.5;
+  text-align: right;
+  text-transform: uppercase;
+  color: var(--sdi-gold-hi, #e4c88a);
+  text-shadow: 0 1px 2px rgba(8, 1, 2, 0.9);
+}
+
+/* Present for assistive technology, absent from the page. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ---------------------------------------------------------------------- */
 /* 1. Invitation introduction — ivory silk plate on warm paper.           */
 /* ---------------------------------------------------------------------- */
@@ -2154,6 +2264,197 @@
   .flowStep + .flowStep {
     margin-top: 34px;
   }
+}
+
+/* ======================================================================
+   3b. Chờ Ngày Se Duyên / countdown  (SD-V1-02B3B)
+
+   Ported from the frozen pilot v03 countdown, unchanged. Four figures on one
+   line with gold hairlines between them, no boxes and no per-second motion:
+   the numerals are tabular so the row does not shift as the seconds turn.
+
+   Nothing in this section animates or transitions, which is exactly what
+   makes it correct under `prefers-reduced-motion: reduce` without a single
+   rule of its own — there is no motion to remove.
+   ====================================================================== */
+
+/* Opens and closes on the album's own top colour (--sdi-lacquer) so both
+   junctions are exactly the edges the approved layout already had: the
+   ivory ceremony card meets lacquer here instead of at the album, and the
+   album continues from the same value. Only the middle deepens. */
+.countdown {
+  position: relative;
+  /* Short foot on purpose: the album's own 64px head follows, and the two
+     together were leaving a dead band under the thread. */
+  padding: 54px 22px 32px;
+  text-align: center;
+  background: linear-gradient(
+    180deg,
+    var(--sdi-lacquer) 0%,
+    #350709 50%,
+    var(--sdi-lacquer) 100%
+  );
+  color: var(--sdi-ivory);
+  overflow: hidden;
+}
+
+.countdownGlow {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  width: min(400px, 118cqw);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle,
+    rgba(176, 140, 69, 0.16) 0%,
+    rgba(140, 40, 32, 0.09) 40%,
+    rgba(44, 6, 8, 0) 72%
+  );
+  pointer-events: none;
+}
+
+.countdownHead {
+  position: relative;
+  z-index: 2;
+}
+
+.countdownHeading {
+  margin: 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(25px, 7cqw, 29px);
+  line-height: 1.3;
+  letter-spacing: 0.016em;
+  text-wrap: balance;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.countdownRule {
+  display: block;
+  width: clamp(68px, 22cqw, 88px);
+  height: 1px;
+  margin: 16px auto 0;
+  background: linear-gradient(
+    90deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(228, 200, 138, 0.6) 50%,
+    rgba(228, 200, 138, 0) 100%
+  );
+}
+
+/* Four columns of equal width, so the hairlines between them stay evenly
+   spaced however many digits the day figure runs to. */
+.countdownDials {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 28px auto 0;
+  max-width: 320px;
+}
+
+.countdownDial {
+  position: relative;
+  /* Label is first in the DOM for the pairing; reversed here so the figure
+     still reads above it. */
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 9px;
+  padding: 0 2px;
+}
+
+/* A hairline between the columns rather than a box around each: faded at
+   both ends the way the slip's row rules are, and set in the gap so it
+   belongs to neither column. */
+.countdownDial + .countdownDial::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 0;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(228, 200, 138, 0.34) 50%,
+    rgba(228, 200, 138, 0) 100%
+  );
+}
+
+/* Tabular lining figures: the row must not move as the seconds turn. */
+.countdownDialValue {
+  margin: 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(30px, 8.6cqw, 36px);
+  line-height: 1.08;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0.01em;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.countdownDialLabel {
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-indent: 0.15em;
+  text-transform: uppercase;
+  color: rgba(228, 200, 138, 0.68);
+}
+
+/* The passed state takes the dials' place on the same line of the
+   composition, set in the same gilt so nothing else has to move. */
+.countdownArrived {
+  position: relative;
+  z-index: 2;
+  margin: 30px 0 4px;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(27px, 7.6cqw, 32px);
+  line-height: 1.24;
+  letter-spacing: 0.02em;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* A quieter, narrower cut of the tơ hồng than the closing's knot — a
+   thread drawn under the figures, not a second ornament. */
+.countdownThread {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: min(166px, 46cqw);
+  height: 32px;
+  margin: 20px auto 0;
+  background-image: url("/renderers/wedding/se-duyen/v1/red-thread.webp");
+  background-size: 150% auto;
+  background-position: center 54%;
+  background-repeat: no-repeat;
+  opacity: 0.42;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 28%,
+    #000 72%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 28%,
+    #000 72%,
+    transparent 100%
+  );
 }
 
 /* ======================================================================

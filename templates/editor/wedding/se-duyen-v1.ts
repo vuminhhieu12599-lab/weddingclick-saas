@@ -22,10 +22,11 @@ import type { TemplateEditorManifestV1 } from "../../core/editor-manifest";
  * frames (the lead frame is the direction's own 1086×1448, the aside and
  * closing frames are 4:5), never crop rules and never validation.
  *
- * No GIFT, MUSIC, TIMELINE or DRESS_CODE content item: those renderer
- * section capabilities are false in `wedding.se-duyen.v1` (SD-V1-01), and the
- * production editor registry rejects an item or slot naming an incapable
- * section. They arrive with the renderer capabilities in SD-V1-02.
+ * Content items follow the renderer's capabilities: the production editor
+ * registry rejects an item or slot naming an incapable section. TIMELINE
+ * needs no item (it is its own canonical table, configured on its own
+ * screen); MUSIC arrived with SD-V1-02C1. No GIFT or DRESS_CODE item: those
+ * capabilities are still false in `wedding.se-duyen.v1`.
  *
  * AT LEAST ONE REAL CUSTOMER PHOTOGRAPH IS REQUIRED BEFORE PUBLICATION
  * (Product Owner decision, 2026-10-21). The opening is built around a
@@ -79,6 +80,13 @@ export const SE_DUYEN_V1_EDITOR_MANIFEST: TemplateEditorManifestV1 = {
       hint: "Đoạn văn dưới tên cô dâu chú rể ở trang Uyên Ương. Để trống thì đoạn này được ẩn.",
       requirement: "OPTIONAL",
       sectionKey: "loveStory",
+    },
+    {
+      key: "MUSIC",
+      label: "Nhạc nền",
+      hint: "Một bản nhạc MP3 hoặc M4A. Không tự phát: khách tự bấm vào nút nhạc trong thiệp. Không có nhạc thì không hiện nút.",
+      requirement: "OPTIONAL",
+      sectionKey: "music",
     },
   ],
   mediaSlots: [

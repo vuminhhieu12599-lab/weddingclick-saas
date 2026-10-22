@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -8,7 +11,10 @@ import type {
   MediaResolution,
   ResolvedMedia,
 } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
-import type { InvitationRendererCapabilitiesV1 } from "../../../../../lib/invitation-rendering/renderer-capabilities";
+import type {
+  InvitationRendererCapabilitiesV1,
+  MusicCapabilityV1,
+} from "../../../../../lib/invitation-rendering/renderer-capabilities";
 import type { RendererEffectiveSections } from "../../../../../lib/invitation-rendering/renderer-selection";
 import type { BuildSnapshotPayloadInput, SnapshotMediaSource } from "../../../../../lib/invitation-rendering/snapshot-payload-types";
 import { buildTemplateMediaSource } from "../../../../../lib/server/invitation-snapshot/build-template-media-source";
@@ -43,6 +49,8 @@ const { SE_DUYEN_V1_COPY: COPY } = await import("../copy");
 const { buildInvitationWording } = await import("../sections/invitation-wording");
 const { albumPhotos, stepAlbum, SE_DUYEN_ALBUM_FRAMES } = await import("../sections/gallery-frames");
 const { albumAlt } = await import("../interactive/gallery-viewer");
+const { countdownDials, SE_DUYEN_COUNTDOWN_UNITS } = await import("../interactive/countdown");
+const { musicFailureVisible } = await import("../interactive/music-control");
 
 /**
  * SD-V1-01 — Se Duyên v1 production renderer foundation.
@@ -154,6 +162,45 @@ async function renderSd(options: SdOptions): Promise<{ html: string; fixture: Re
   return { html: render(fixture.viewModel, fixture.selection.effectiveSections), fixture };
 }
 
+/** A music capability with a chosen status; the commands only record calls. */
+function stubMusic(status: MusicCapabilityV1["status"]): MusicCapabilityV1 & { calls: string[] } {
+  const calls: string[] = [];
+  return {
+    status,
+    calls,
+    play: async () => {
+      calls.push("play");
+    },
+    pause: async () => {
+      calls.push("pause");
+    },
+  };
+}
+
+/** The same render, with a music capability so the disc is present. */
+async function renderSdWithMusic(
+  options: SdOptions,
+  music: MusicCapabilityV1,
+): Promise<{ html: string; fixture: RendererFixture }> {
+  const fixture = await sdFixture(options);
+  const html = renderToStaticMarkup(
+    <SeDuyenV1 viewModel={fixture.viewModel} sections={fixture.selection.effectiveSections} capabilities={{ music }} />,
+  );
+  return { html, fixture };
+}
+
+/** The same render, with an explicit clock so the countdown is present. */
+async function renderSdWithClock(
+  options: SdOptions,
+  nowEpochMs: number,
+): Promise<{ html: string; fixture: RendererFixture }> {
+  const fixture = await sdFixture(options);
+  const html = renderToStaticMarkup(
+    <SeDuyenV1 viewModel={fixture.viewModel} sections={fixture.selection.effectiveSections} capabilities={{ clock: { nowEpochMs } }} />,
+  );
+  return { html, fixture };
+}
+
 function textOf(html: string): string {
   return html
     .replace(/<[^>]+>/g, " ")
@@ -204,15 +251,16 @@ describe("A. production contract", () => {
   it("the sections this renderer cannot render are never effective, whatever the staff settings say", async () => {
     const fixture = await sdFixture({
       variant: "COMMON",
-      sectionSettings: { gallery: true, music: true, gift: true, timeline: true, dressCode: true },
+      sectionSettings: { gallery: true, music: true, gift: true, timeline: true, dressCode: true, photoStory: true },
     });
     const effective = fixture.selection.effectiveSections;
-    for (const key of ["music", "gift", "dressCode", "photoStory"] as const) {
+    for (const key of ["gift", "dressCode", "photoStory"] as const) {
       expect(effective[key], key).toBe(false);
     }
-    // SD-V1-02B2 and B3A: the album and the run-of-show are real.
+    // B2, B3A and C1: the album, the run-of-show and the music are real.
     expect(effective.gallery).toBe(true);
     expect(effective.timeline).toBe(true);
+    expect(effective.music).toBe(true);
   });
 });
 
@@ -639,6 +687,8 @@ describe("G. editor manifest", () => {
       "FAMILIES",
       "INVITATION_MESSAGE",
       "LOVE_STORY",
+      // SD-V1-02C1: the staff affordance for the track.
+      "MUSIC",
     ]);
     for (const item of editor.contentItems) {
       if (item.sectionKey !== null) expect(capabilities[item.sectionKey], item.key).toBe(true);
@@ -953,5 +1003,263 @@ describe("I. timeline", () => {
     expect(flow).toMatch(/<li class="[^"]*_flowStep_/);
     expect(flow).toMatch(/_flowWatermark_[^"]*" aria-hidden="true"/);
     expect(flow).toMatch(/_flowRule_[^"]*" aria-hidden="true"/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// J. Countdown (SD-V1-02B3B)
+// ---------------------------------------------------------------------------
+
+describe("J. countdown", () => {
+  const CD = COPY.countdown;
+  const SECOND = 1000;
+  const MINUTE = 60 * SECOND;
+  const HOUR = 60 * MINUTE;
+  const DAY = 24 * HOUR;
+
+  /** The countdown section's markup only. */
+  function cdOf(html: string): string {
+    const start = html.indexOf('aria-labelledby="sd-countdown-heading"');
+    expect(start).toBeGreaterThan(0);
+    return html.slice(start, html.indexOf("</section>", start));
+  }
+
+  /** Each dial as `label|value`, in document order. */
+  function dials(html: string): string[] {
+    return [...cdOf(html).matchAll(/<dt[^>]*>([^<]+)<\/dt><dd[^>]*>([^<]+)</g)].map(
+      (match) => `${match[1] as string}|${match[2] as string}`,
+    );
+  }
+
+  async function ceremonyEpochMs(): Promise<number> {
+    const fixture = await sdFixture({ variant: "COMMON" });
+    return Date.parse(fixture.viewModel.ceremony.startsAt);
+  }
+
+  it("is absent without a clock, so no current time enters server markup", async () => {
+    const { html } = await renderSd({ variant: "COMMON" });
+    expect(html).not.toContain("sd-countdown-heading");
+    expect(html).not.toContain(CD.heading);
+  });
+
+  it("a future ceremony shows the four approved dials, days unpadded and the rest to two digits", async () => {
+    const target = await ceremonyEpochMs();
+    const { html } = await renderSdWithClock({ variant: "COMMON" }, target - (3 * DAY + 4 * HOUR + 5 * MINUTE + 6 * SECOND));
+    expect(dials(html)).toStrictEqual([
+      `${CD.units.days}|3`,
+      `${CD.units.hours}|04`,
+      `${CD.units.minutes}|05`,
+      `${CD.units.seconds}|06`,
+    ]);
+    expect(html).toContain('data-countdown="upcoming"');
+    expect(html).toContain(CD.heading);
+    expect(cdOf(html)).not.toContain(CD.arrived);
+  });
+
+  it("the days are left as they fall, however many there are", async () => {
+    const target = await ceremonyEpochMs();
+    const parts = countdownDials({ startsAt: new Date(target).toISOString(), timezone: "Asia/Ho_Chi_Minh", lunarDateDisplay: null, eventId: "x", occasionType: "THANH_HON", title: "Lễ Thành Hôn" }, { nowEpochMs: target - 123 * DAY });
+    expect(parts?.[0]).toStrictEqual({ unit: "days", value: "123" });
+  });
+
+  it("the exact moment the ceremony is reached shows the arrival line, not a row of zeroes", async () => {
+    const target = await ceremonyEpochMs();
+    const { html } = await renderSdWithClock({ variant: "COMMON" }, target);
+    expect(cdOf(html)).toContain(CD.arrived);
+    expect(html).toContain('data-countdown="passed"');
+    expect(dials(html)).toStrictEqual([]);
+  });
+
+  it("a past ceremony shows the same arrival line", async () => {
+    const target = await ceremonyEpochMs();
+    const { html } = await renderSdWithClock({ variant: "COMMON" }, target + 400 * DAY);
+    expect(cdOf(html)).toContain(CD.arrived);
+    expect(html).toContain('data-countdown="passed"');
+    expect(dials(html)).toStrictEqual([]);
+  });
+
+  it("one second before the ceremony still counts, so the boundary is not off by one", async () => {
+    const target = await ceremonyEpochMs();
+    const { html } = await renderSdWithClock({ variant: "COMMON" }, target - SECOND);
+    expect(dials(html)).toStrictEqual([
+      `${CD.units.days}|0`,
+      `${CD.units.hours}|00`,
+      `${CD.units.minutes}|00`,
+      `${CD.units.seconds}|01`,
+    ]);
+  });
+
+  it("counts to the one canonical instant, whatever the event timezone", async () => {
+    const target = await ceremonyEpochMs();
+    const nowEpochMs = target - 2 * DAY;
+    // The derivation is absolute-duration arithmetic on the canonical
+    // instant, so the stored timezone cannot shift the remaining time.
+    for (const timezone of ["Asia/Ho_Chi_Minh", "UTC", "America/New_York"]) {
+      const parts = countdownDials(
+        { startsAt: new Date(target).toISOString(), timezone, lunarDateDisplay: null, eventId: "x", occasionType: "THANH_HON", title: "Lễ Thành Hôn" },
+        { nowEpochMs },
+      );
+      expect(parts, timezone).toStrictEqual([
+        { unit: "days", value: "2" },
+        { unit: "hours", value: "00" },
+        { unit: "minutes", value: "00" },
+        { unit: "seconds", value: "00" },
+      ]);
+    }
+  });
+
+  it("the dials are label-then-value pairs in a named live region, with the ornaments hidden", async () => {
+    const target = await ceremonyEpochMs();
+    const { html } = await renderSdWithClock({ variant: "COMMON" }, target - DAY);
+    const cd = cdOf(html);
+    expect(cd).toMatch(/<dl class="[^"]*_countdownDials_[^"]*" role="timer" aria-label="/);
+    expect(cd).toContain(`aria-label="${CD.label}"`);
+    expect(cd).toMatch(/<dt class="[^"]*_countdownDialLabel_/);
+    expect(cd).toMatch(/_countdownGlow_[^"]*" aria-hidden="true"/);
+    expect(cd).toMatch(/_countdownThread_[^"]*" aria-hidden="true"/);
+    expect(SE_DUYEN_COUNTDOWN_UNITS).toStrictEqual(["days", "hours", "minutes", "seconds"]);
+  });
+
+  it("sits between the run-of-show and the album, and carries no variant rule", async () => {
+    for (const variant of VARIANTS) {
+      // Each variant resolves its own rite, so the target instant differs.
+      const own = await sdFixture({ variant });
+      const target = Date.parse(own.viewModel.ceremony.startsAt);
+      const { html } = await renderSdWithClock({ variant, timeline: "PRESENT" }, target - 5 * DAY);
+      expect(html.indexOf("sd-flow-heading"), variant).toBeLessThan(html.indexOf("sd-countdown-heading"));
+      expect(html.indexOf("sd-countdown-heading"), variant).toBeLessThan(html.indexOf("sd-album-heading"));
+      expect(dials(html), variant).toStrictEqual([
+        `${CD.units.days}|5`,
+        `${CD.units.hours}|00`,
+        `${CD.units.minutes}|00`,
+        `${CD.units.seconds}|00`,
+      ]);
+    }
+  });
+
+  it("the countdown section declares no motion at all, so reduced motion needs no rule", () => {
+    // Comments are stripped first, because the section's own provenance note
+    // talks about motion; only real declarations are checked.
+    const rules = readFileSync(join(__dirname, "..", "se-duyen-v1.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const region = rules.slice(rules.indexOf(".countdown {"), rules.indexOf(".album {"));
+    expect(region).toContain(".countdownDials");
+    expect(/animation|transition/.test(region)).toBe(false);
+  });
+
+  it("the island owns no timer and reads no clock of its own", () => {
+    const code = readFileSync(join(__dirname, "..", "interactive", "countdown.tsx"), "utf8");
+    expect(/setInterval|setTimeout|requestAnimationFrame|Date\.now|new Date\b/.test(code)).toBe(false);
+    expect(code).toContain("deriveCeremonyCountdownV1");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// K. Music control (SD-V1-02C1)
+// ---------------------------------------------------------------------------
+
+describe("K. music", () => {
+  const MUSIC = COPY.music;
+
+  /** The disc's own attributes. */
+  function disc(html: string): string {
+    const start = html.indexOf("musicButton");
+    expect(start).toBeGreaterThan(0);
+    return html.slice(html.lastIndexOf("<button", start), html.indexOf("</button>", start));
+  }
+
+  it("is hidden entirely when the host built no music capability", async () => {
+    const { html } = await renderSd({ variant: "COMMON" });
+    expect(html).not.toContain("musicButton");
+    expect(html).not.toContain(MUSIC.play);
+    // Not a disabled disc, not a placeholder: no control at all.
+    expect(html).not.toContain("musicIcon");
+  });
+
+  it("appears with the invitation, inside the interior, never over the box on the cover", async () => {
+    const { html } = await renderSdWithMusic({ variant: "COMMON" }, stubMusic("PAUSED"));
+    const interior = html.indexOf("_interior_");
+    expect(interior).toBeGreaterThan(0);
+    // The disc is inside the interior, which the opening holds back until the
+    // box has been opened; the cover and the box come before it.
+    expect(html.indexOf("musicButton")).toBeGreaterThan(interior);
+    expect(html.indexOf("boxButton")).toBeLessThan(interior);
+  });
+
+  it("a paused capability shows the play label and is not pressed", async () => {
+    const { html } = await renderSdWithMusic({ variant: "COMMON" }, stubMusic("PAUSED"));
+    const button = disc(html);
+    expect(button).toContain(`aria-label="${MUSIC.play}"`);
+    expect(button).toContain('aria-pressed="false"');
+    expect(button).toContain('data-music-status="paused"');
+    expect(button).toContain("♪");
+  });
+
+  it("only a PLAYING status is shown as playing", async () => {
+    const playing = await renderSdWithMusic({ variant: "COMMON" }, stubMusic("PLAYING"));
+    const button = disc(playing.html);
+    expect(button).toContain(`aria-label="${MUSIC.pause}"`);
+    expect(button).toContain('aria-pressed="true"');
+    expect(button).toContain("♫");
+    expect(playing.html).toContain("musicButtonActive");
+
+    // Every other status, including the two failure ones, is NOT playing.
+    for (const status of ["PAUSED", "BLOCKED", "ERROR"] as const) {
+      const other = await renderSdWithMusic({ variant: "COMMON" }, stubMusic(status));
+      const otherButton = disc(other.html);
+      expect(otherButton, status).toContain('aria-pressed="false"');
+      expect(otherButton, status).toContain(`aria-label="${MUSIC.play}"`);
+      expect(otherButton, status).toContain(`data-music-status="${status.toLowerCase()}"`);
+      expect(other.html, status).not.toContain("musicButtonActive");
+    }
+  });
+
+  it("nothing plays on render: the capability is never commanded without a tap", async () => {
+    const music = stubMusic("PAUSED");
+    await renderSdWithMusic({ variant: "COMMON" }, music);
+    expect(music.calls).toStrictEqual([]);
+  });
+
+  it("the failure note stays silent until an explicit tap, then reports blocked, errored or faulted", () => {
+    // Before any tap there is nothing to report, whatever the status says.
+    for (const status of ["PAUSED", "PLAYING", "BLOCKED", "ERROR"] as const) {
+      expect(musicFailureVisible(status, false, false), status).toBe(false);
+    }
+    // After a tap, the two failure statuses and a faulted command report.
+    expect(musicFailureVisible("BLOCKED", true, false)).toBe(true);
+    expect(musicFailureVisible("ERROR", true, false)).toBe(true);
+    expect(musicFailureVisible("PAUSED", true, true)).toBe(true);
+    // A tap that simply paused the track is not a failure.
+    expect(musicFailureVisible("PAUSED", true, false)).toBe(false);
+    expect(musicFailureVisible("PLAYING", true, false)).toBe(false);
+  });
+
+  it("the live region is mounted but silent in server markup, so nothing claims a fault", async () => {
+    const { html } = await renderSdWithMusic({ variant: "COMMON" }, stubMusic("BLOCKED"));
+    expect(html).toMatch(/<p class="[^"]*_srOnly_[^"]*" role="status">/);
+    expect(html).not.toContain(MUSIC.failed);
+    expect(html).not.toContain("musicNote");
+  });
+
+  it("the island holds no player, no audio element and no timer of its own", () => {
+    const code = readFileSync(join(__dirname, "..", "interactive", "music-control.tsx"), "utf8");
+    expect(/\bnew Audio\b|HTMLAudioElement|<audio|createMusicController|\.src\s*=/.test(code)).toBe(false);
+    expect(/setInterval|setTimeout|requestAnimationFrame/.test(code)).toBe(false);
+    // Playback goes through the one shared command model.
+    expect(code).toContain("runMusicToggle");
+  });
+
+  it("the disc's pulse is the only motion, and it is removed under reduced motion", () => {
+    const rules = readFileSync(join(__dirname, "..", "se-duyen-v1.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(rules).toContain("animation: sdp-music-pulse");
+    const reduce = rules.slice(rules.indexOf("@media (prefers-reduced-motion: reduce)", rules.indexOf("sdp-music-pulse")));
+    expect(reduce).toMatch(/\.musicButtonActive \.musicIcon \{\s*animation: none;/);
+  });
+
+  it("the editor manifest offers the track, and says it does not autoplay", () => {
+    const item = SE_DUYEN_V1_EDITOR_MANIFEST.contentItems.find((entry) => entry.key === "MUSIC");
+    expect(item?.sectionKey).toBe("music");
+    expect(item?.requirement).toBe("OPTIONAL");
+    expect(item?.hint).toContain("Không tự phát");
+    expect(SE_DUYEN_V1_MANIFEST.compatibility.sectionCapabilities.music).toBe(true);
   });
 });

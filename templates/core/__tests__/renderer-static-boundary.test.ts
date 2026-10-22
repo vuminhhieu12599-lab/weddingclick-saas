@@ -3523,7 +3523,14 @@ const SD1_CODE_FILES = [
   `${SD1}/sections/timeline.tsx`,
 ] as const;
 /** The interactive islands: the approved box opening and the album viewer. */
-const SD1_ISLAND_FILES = [`${SD1}/interactive/opening-stage.tsx`, `${SD1}/interactive/gallery-viewer.tsx`] as const;
+const SD1_ISLAND_FILES = [
+  `${SD1}/interactive/opening-stage.tsx`,
+  `${SD1}/interactive/gallery-viewer.tsx`,
+  // SD-V1-02B3B: the approved countdown, on the shared RF-05C derivation.
+  `${SD1}/interactive/countdown.tsx`,
+  // SD-V1-02C1: the approved gilt disc, on the shared RF-06C capability.
+  `${SD1}/interactive/music-control.tsx`,
+] as const;
 /** Pure state model behind the island. */
 const SD1_MODEL_FILES = [`${SD1}/interactive/opening-state.ts`] as const;
 /** Everything inside the renderer-version directory. */
@@ -3556,11 +3563,11 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
     const code = codeOf(SD1_MANIFEST_FILE);
     expect(/["']use (client|server)["']|\bReact\b|next\/|\.css["']/.test(code)).toBe(false);
     // The uncapable sections stay false until SD-V1-02 connects them for real.
-    for (const key of ["music", "gift", "dressCode", "photoStory"]) {
+    for (const key of ["gift", "dressCode", "photoStory"]) {
       expect(code, key).toMatch(new RegExp(`${key}: false`));
     }
-    // SD-V1-02B2 added `gallery` and B3A added `timeline`, both really rendered.
-    for (const key of ["invitationMessage", "loveStory", "gallery", "timeline"]) {
+    // B2 added `gallery`, B3A `timeline` and C1 `music`: all really rendered.
+    for (const key of ["invitationMessage", "loveStory", "gallery", "timeline", "music"]) {
       expect(code, key).toMatch(new RegExp(`${key}: true`));
     }
   });
@@ -3626,6 +3633,12 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
     expect(/ResizeObserver/.test(code), file).toBe(file === `${SD1}/interactive/opening-stage.tsx`);
     // The phase ends on the CSS sequence's own event, never on a timer.
     expect(/\bset(Timeout|Interval)\b/.test(code), file).toBe(false);
+    // Only the music control commands playback, and it does so through the
+    // shared model: no island owns an audio element or a second player.
+    expect(/runMusicToggle/.test(code), file).toBe(file === `${SD1}/interactive/music-control.tsx`);
+    // Only the countdown reads the clock, and it reads it through the shared
+    // RF-05C derivation: no island owns a refresh cadence of its own.
+    expect(/nowEpochMs|deriveCeremonyCountdownV1/.test(code), file).toBe(file === `${SD1}/interactive/countdown.tsx`);
     // Only the album viewer opens a modal, and it is a native <dialog>:
     // Escape, the focus trap and the inert page come from the platform, so no
     // island listens on `window` (which RF06D_FORBIDDEN already proved).
