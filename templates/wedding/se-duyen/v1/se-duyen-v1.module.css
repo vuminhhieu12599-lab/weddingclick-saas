@@ -2642,6 +2642,776 @@
 }
 
 /* ======================================================================
+   6. Mừng Cưới / wedding gift  (SD-V1-02C2)
+
+   Ported from the frozen pilot v03 envelope, unchanged but for the port
+   rules at the top of this file. A lacquer-red envelope with gold hairline
+   edges, a folded flap over a darker mouth and the lotus medallion as its
+   seal; one tap lays the flap back and an ivory slip rises out from behind
+   it. The envelope itself is the control, as the wedding box is on the cover.
+
+   Two prototype-only rules are NOT carried over, because both exist to
+   disclaim fiction that a production invitation never shows:
+
+   - `.giftQrCaption`, the "QR minh hoạ" caption under the slip's QR. The
+     prototype's QR was drawn artwork encoding nothing; here the QR is the
+     Project's own RESOLVED `media.qr.<side>` image or there is none.
+   - `.giftDemo`, the slip's "these are not real account details" badge. The
+     rows here are the Project's own canonical bank fields.
+   ====================================================================== */
+
+.gift {
+  position: relative;
+  /* The RSVP section is approved, so its own 92px foot stays as it is;
+     this section slides up over that empty padding instead. Both sides of
+     the junction are flat #230406, so nothing shows — only the dead band
+     between the response card and this heading is taken back. */
+  margin-top: -44px;
+  /* Foot cut from 100px to 72px. Closed, the envelope is the last object
+     on the page, and the old padding left a band of empty lacquer beneath
+     the hint that read as the composition having lost its footing. */
+  padding: 28px 22px 72px;
+  background: linear-gradient(180deg, #230406 0%, #2c0608 38%, #380a0c 100%);
+  overflow: hidden;
+}
+
+/* A single warm pool of light behind the envelope so the object sits in
+   the lacquer rather than on it. Cheaper and quieter than more artwork.
+   Dropped to sit on the envelope itself rather than between it and the
+   heading, so the closed object is what the light picks out. */
+.giftGlow {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  width: min(470px, 132cqw);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle,
+    rgba(176, 140, 69, 0.2) 0%,
+    rgba(140, 40, 32, 0.13) 36%,
+    rgba(56, 10, 12, 0) 68%
+  );
+  pointer-events: none;
+}
+
+.giftHead {
+  position: relative;
+  z-index: 3;
+  text-align: center;
+}
+
+.giftEyebrow {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.46em;
+  text-indent: 0.23em;
+  text-transform: uppercase;
+  color: var(--sdi-gold-hi);
+}
+
+.giftHeading {
+  margin: 13px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(31px, 9.6cqw, 39px);
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--sdi-ivory);
+}
+
+.giftRule {
+  display: block;
+  width: clamp(68px, 22cqw, 88px);
+  height: 1px;
+  margin: 18px auto 0;
+  background: linear-gradient(
+    90deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(228, 200, 138, 0.6) 50%,
+    rgba(228, 200, 138, 0) 100%
+  );
+}
+
+/* The thank-you line. Existing editable wording from the shared dataset.
+   Measure pulled in and the leading closed a notch: three short lines of
+   Vietnamese set this tight read as one spoken sentence rather than as a
+   loose paragraph, and the block stops competing with the heading. */
+.giftNote {
+  max-width: 292px;
+  margin: 17px auto 0;
+  font-size: 12.8px;
+  font-weight: 300;
+  line-height: 1.86;
+  color: rgba(247, 240, 226, 0.8);
+  text-wrap: pretty;
+}
+
+/* ---- The envelope ---- */
+
+.giftStage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Tightened from 54px: the thank-you line and the envelope now read as
+     one gesture instead of two blocks separated by dead lacquer. The
+     opened flap's tip rises into what is left of this gap. */
+  margin: 30px 0 0;
+}
+
+/* The whole envelope is the control; no visible button chrome. */
+.giftEnvelope {
+  position: relative;
+  z-index: 2;
+  display: block;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.giftEnvelope:focus-visible {
+  outline: 2px solid rgba(228, 200, 138, 0.9);
+  outline-offset: 10px;
+}
+
+/* Cut narrower and a little taller than a landscape card, closer to the
+   proportions of a real premium wedding envelope. The body carries three
+   shadow families: the stock's own cut edge and depth, one tight contact
+   shadow that pins it to the lacquer, and wide soft ambient layers that
+   give it air underneath. */
+.giftPaper {
+  position: relative;
+  display: block;
+  /* 82cqw rather than a tighter percentage so the envelope is cut at its
+     full 268px at 390px and 430px and gives up only a pixel or two at
+     360px: the object should be the same object at every width. */
+  width: min(268px, 82cqw);
+  aspect-ratio: 1.4;
+  perspective: 1100px;
+  background:
+    /* Specular sweep across the stock, lit from the upper left. */
+    linear-gradient(
+      104deg,
+      rgba(0, 0, 0, 0.18) 0%,
+      rgba(255, 232, 196, 0.07) 44%,
+      rgba(0, 0, 0, 0.22) 100%
+    ),
+    linear-gradient(168deg, #932726 0%, #6d1518 46%, #480b0e 100%);
+  box-shadow:
+    0 0 0 1px rgba(176, 140, 69, 0.52),
+    inset 0 1px 0 rgba(246, 220, 168, 0.24),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    inset 0 -20px 26px -20px rgba(0, 0, 0, 0.52),
+    /* The sheet darkening in from its own left and right folds. */
+    inset 16px 0 26px -22px rgba(0, 0, 0, 0.45),
+    inset -16px 0 26px -22px rgba(0, 0, 0, 0.45),
+    /* Real thickness, in two parts: the lit cut edge of the stock, then
+       the dark sliver of the sheet's depth beneath it. Spread pulls both
+       off the sides so they only show along the bottom, which is the one
+       edge this slightly-from-above view would expose. */
+    0 1px 0 rgba(255, 228, 184, 0.14),
+    0 4px 0 -1px rgba(42, 7, 9, 0.92),
+    0 5px 1px -1px rgba(10, 2, 3, 0.55),
+    0 3px 4px rgba(8, 1, 2, 0.46),
+    0 14px 20px -8px rgba(8, 1, 2, 0.54),
+    0 32px 46px -22px rgba(6, 1, 2, 0.62),
+    0 56px 78px -40px rgba(6, 1, 2, 0.72);
+}
+
+/* Handmade-paper tooth. Deliberately at the edge of visibility: anything
+   stronger reads as a printed grid rather than as material, so the two
+   grains are set at different periods and well under 2% alpha. */
+.giftPaper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+      94deg,
+      rgba(255, 236, 206, 0.011) 0 1px,
+      rgba(0, 0, 0, 0) 1px 9px
+    ),
+    repeating-linear-gradient(
+      4deg,
+      rgba(0, 0, 0, 0.013) 0 1px,
+      rgba(0, 0, 0, 0) 1px 13px
+    );
+  pointer-events: none;
+}
+
+/* Lotus pressed into the paper, not printed on it: the medallion at a
+   whisper of opacity, masked soft at the edges so it reads as an emboss.
+   Smaller and fainter than before — at 7% it had started to read as a
+   smudge on the lower half rather than as a blind deboss. z-index lifts
+   it over the bottom flap below, which is the sheet it would be pressed
+   into. */
+.giftPaper::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 74%;
+  left: 50%;
+  width: 37%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background-image: url("/renderers/wedding/se-duyen/v1/lotus-fate-medallion.webp");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.055;
+  -webkit-mask-image: radial-gradient(circle, #000 38%, transparent 68%);
+  mask-image: radial-gradient(circle, #000 38%, transparent 68%);
+  pointer-events: none;
+}
+
+/* The envelope's mouth: what lifting the flap uncovers. It has to read as
+   a cavity, so it is kept decisively darker than any face of the paper —
+   a lit hairline along the fold, light falling a short way in from the
+   opening, then the V deepening to near-black at its point. */
+.giftMouth {
+  position: absolute;
+  z-index: 1;
+  inset: 0 0 auto;
+  height: 53%;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  background: linear-gradient(
+      180deg,
+      rgba(250, 226, 180, 0.16) 0 1px,
+      rgba(0, 0, 0, 0) 1px
+    ),
+    radial-gradient(
+      118% 92% at 50% -4%,
+      rgba(118, 32, 26, 0.5) 0%,
+      rgba(118, 32, 26, 0) 58%
+    ),
+    linear-gradient(178deg, #150203 0%, #1d0405 34%, #290608 70%, #330809 100%);
+  pointer-events: none;
+}
+
+/* The bottom flap, folded up over the side flaps the way a pointed-flap
+   wedding envelope is made. Only its crease is drawn — a gold-lit edge
+   and the shadow it throws back onto the sheet behind it — so the paper
+   reads as folded construction, not as a printed panel. Its peak rises
+   behind the seal, which is where the two folds meet. */
+.giftFold {
+  position: absolute;
+  z-index: 1;
+  inset: auto 0 0;
+  height: 38%;
+  clip-path: polygon(0 100%, 0 22%, 50% 0, 100% 22%, 100% 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 228, 186, 0.055) 0%,
+    rgba(255, 228, 186, 0.012) 24%,
+    rgba(0, 0, 0, 0.05) 100%
+  );
+  filter: drop-shadow(0 -1px 0 rgba(248, 224, 178, 0.16))
+    drop-shadow(0 -3px 6px rgba(12, 2, 3, 0.34));
+  pointer-events: none;
+}
+
+/* A shallow flap, so the lifted point stays inside the gap above the
+   envelope. `drop-shadow` follows the clipped triangle, which is how the
+   fold gets a true gold hairline edge and casts onto the mouth. The faint
+   centre crease keeps the folded triangle from reading as one flat field
+   of colour. */
+.giftFlap {
+  position: absolute;
+  z-index: 2;
+  inset: 0 0 auto;
+  height: 53%;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  background: linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.07) 0%,
+      rgba(0, 0, 0, 0) 45%,
+      rgba(255, 232, 196, 0.045) 50%,
+      rgba(0, 0, 0, 0) 55%,
+      rgba(0, 0, 0, 0.07) 100%
+    ),
+    linear-gradient(
+      104deg,
+      rgba(255, 232, 196, 0.07) 0%,
+      rgba(0, 0, 0, 0.1) 58%,
+      rgba(0, 0, 0, 0.2) 100%
+    ),
+    linear-gradient(176deg, #a22f2b 0%, #7e1c1e 58%, #5d1012 100%);
+  transform-origin: top center;
+  transform: rotateX(0deg);
+  /* Same filter function list as the open state below, so the transition
+     interpolates instead of snapping. */
+  filter: drop-shadow(0 1px 0 rgba(246, 222, 172, 0.34))
+    drop-shadow(0 7px 9px rgba(10, 2, 3, 0.5)) brightness(1);
+}
+
+/* The medallion doubles as the wax seal, seated where the two folds meet.
+   It is the same asset the couple section uses — no new artwork. Smaller
+   again in this pass: at 66px it had begun to read as an applied coin. */
+.giftSeal {
+  position: absolute;
+  z-index: 3;
+  top: 53%;
+  left: 50%;
+  width: clamp(48px, 14.5cqw, 58px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background-image: url("/renderers/wedding/se-duyen/v1/lotus-fate-medallion.webp");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 2px 3px rgba(6, 1, 2, 0.6));
+}
+
+/* The stock pressed in under the seal: a soft well of shadow behind the
+   medallion plus one concentric hairline, so it sits in the paper rather
+   than on top of it. Negative z-index keeps the well behind the lotus and
+   inside the seal's own stacking context. */
+.giftSeal::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -9px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(16, 2, 3, 0.34) 0%,
+    rgba(16, 2, 3, 0) 70%
+  );
+  box-shadow: inset 0 0 0 1px rgba(228, 200, 138, 0.2);
+}
+
+/* ---- The ivory slip ---- */
+
+/* Tucked up behind the envelope's lower half, so it reads as paper drawn
+   out of it rather than a card stacked underneath. A gilt hairline outside
+   and a lit hairline inside give it a printed edge instead of a UI border. */
+.giftSlip {
+  position: relative;
+  z-index: 1;
+  /* Closed, the slip stays in the document but is not rendered. Keeping it
+     mounted in both states — rather than adding and removing it — is what
+     lets the paper slide back down into the envelope on close instead of
+     vanishing under a flap that is still falling. */
+  display: none;
+  width: min(240px, 70cqw);
+  margin: -96px 0 0;
+  /* Side padding kept tight so the longest demo bank name still sets on
+     one line at every supported width. 96px of the head is behind the
+     envelope, so the top padding also buys the band of bare ivory that
+     makes the slip read as an insert with a margin, not as a panel whose
+     content starts at its edge. */
+  padding: 126px 22px 28px;
+  text-align: center;
+  color: var(--sdi-ink);
+  /* A wide, shallow fall-off: the ivory warms toward the middle without
+     the edges darkening into a vignette. */
+  background: radial-gradient(
+    150% 94% at 50% 34%,
+    #fdf6e8 0%,
+    var(--sdi-paper) 60%,
+    var(--sdi-paper-deep) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(176, 140, 69, 0.34),
+    inset 0 0 0 1px rgba(255, 250, 240, 0.58),
+    0 3px 5px rgba(6, 1, 2, 0.34),
+    0 26px 40px -22px rgba(6, 1, 2, 0.72),
+    0 48px 66px -40px rgba(6, 1, 2, 0.62);
+}
+
+.giftStage[data-open] .giftSlip {
+  display: block;
+}
+
+/* The envelope's own edge laid across the slip's shoulders at the line
+   where the paper leaves it (that line is exactly the 96px of negative
+   margin above), falling away over the 80px below, plus a whisper of laid
+   texture on the ivory. */
+.giftSlip::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+      180deg,
+      rgba(58, 22, 10, 0) 0 92px,
+      rgba(58, 22, 10, 0.42) 97px,
+      rgba(58, 22, 10, 0.2) 112px,
+      rgba(58, 22, 10, 0.07) 142px,
+      rgba(58, 22, 10, 0) 178px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(123, 98, 69, 0.017) 0 1px,
+      rgba(0, 0, 0, 0) 1px 13px
+    );
+  pointer-events: none;
+}
+
+/* COMMON only: both families, set on the slip as two written choices with
+   a printed divider between them — not a pill group. */
+.giftTabs {
+  display: flex;
+  justify-content: center;
+  gap: 26px;
+}
+
+.giftTab {
+  position: relative;
+  padding: 0 1px 7px;
+  font-family: var(--sdp-sans), "Segoe UI", system-ui, sans-serif;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-indent: 0.12em;
+  text-transform: uppercase;
+  color: rgba(123, 98, 69, 0.68);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: color 200ms ease;
+}
+
+/* Hairline divider, set in the gap so it is outside both hit areas. */
+.giftTab + .giftTab::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: -13px;
+  width: 1px;
+  height: 9px;
+  background: rgba(123, 98, 69, 0.3);
+}
+
+/* The chosen side is marked with a short gilt rule, the way a printed
+   programme marks its current page. */
+.giftTabActive {
+  color: #8a6a2c;
+}
+
+.giftTabActive::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 18px;
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    90deg,
+    rgba(176, 140, 69, 0) 0%,
+    rgba(176, 140, 69, 0.85) 50%,
+    rgba(176, 140, 69, 0) 100%
+  );
+}
+
+.giftTab:focus-visible {
+  outline: 2px solid rgba(176, 140, 69, 0.85);
+  outline-offset: 3px;
+}
+
+/* GROOM / BRIDE: one side, so it is stated, not chosen. Same type as the
+   tabs above, with the same gilt rule beneath it. */
+.giftSideLabel {
+  position: relative;
+  margin: 0;
+  padding-bottom: 7px;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-indent: 0.12em;
+  text-transform: uppercase;
+  color: #8a6a2c;
+}
+
+.giftSideLabel::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 18px;
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    90deg,
+    rgba(176, 140, 69, 0) 0%,
+    rgba(176, 140, 69, 0.85) 50%,
+    rgba(176, 140, 69, 0) 100%
+  );
+}
+
+/* ---- Transfer QR ----
+
+   Printed on the slip between the side choice and the account rows: the
+   guest's eye lands on the code first and reads the numbers under it, which
+   is the order the code is actually used in. The artwork is a demo block
+   (see the asset README) and the caption under it says so, so the slip
+   carries the disclaimer twice -- here and in the badge at its foot.
+
+   Sized against the slip's own measure rather than the viewport: 148px
+   inside a 196px measure leaves ~24px of bare ivory either side, the same
+   breathing room the hairline row rules are inset by, so the code sits in
+   the paper's margin instead of filling it. */
+.giftQr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 26px 0 0;
+}
+
+/* PRODUCTION ADDITION (SD-V1-02C2) — the QR figure needs no caption now, so
+   the image carries the whole figure. The prototype sized it through
+   `next/image`'s own wrapper; a production renderer paints the Project's
+   runtime URL into a plain `<img>`, so the fit is declared here. */
+.giftQrImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.giftRows {
+  margin: 25px 0 0;
+}
+
+.giftRow {
+  position: relative;
+  padding: 15px 0;
+}
+
+.giftRow:first-child {
+  padding-top: 0;
+}
+
+/* Hairline separators set inside the paper's margin and faded at both
+   ends, the way a letterpress rule is, rather than edge-to-edge borders. */
+.giftRow + .giftRow::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(123, 98, 69, 0) 0%,
+    rgba(123, 98, 69, 0.3) 50%,
+    rgba(123, 98, 69, 0) 100%
+  );
+}
+
+/* Small and widely tracked: the label recedes and the value carries the
+   row. Deeper gold than --sdi-gold so 8.5px uppercase still reads on the
+   ivory, and now held just off full strength so it sits under the value
+   instead of beside it. */
+.giftRowLabel {
+  margin: 0;
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-indent: 0.15em;
+  text-transform: uppercase;
+  color: rgba(138, 106, 44, 0.88);
+}
+
+.giftRowValue {
+  margin: 8px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-size: 18.5px;
+  line-height: 1.4;
+  letter-spacing: 0.012em;
+  color: var(--sdi-ink);
+  text-wrap: pretty;
+}
+
+/* Read aloud off a phone, so it gets lining numerals and room to breathe. */
+.giftAccountNumber {
+  font-variant-numeric: lining-nums tabular-nums;
+  font-size: 20.5px;
+  letter-spacing: 0.15em;
+  text-indent: 0.075em;
+}
+
+/* ---- Copy the account number ----
+
+   The control is set in the slip's right margin rather than in the line, so
+   the number stays optically centred exactly where it was approved -- a
+   centred flex row would have pushed the figures off-axis by half the
+   glyph. The dd keeps its own type and its 8px top margin. */
+.giftAccountRow {
+  position: relative;
+}
+
+/* A mark in the margin of the slip rather than a button on a panel: no fill,
+   no border, no hit-area box -- just the glyph in the same gilt the row
+   label is set in. The 8px of padding keeps the touch target at ~30px while
+   the glyph itself stays small (CLAUDE.md §21). */
+.giftCopy {
+  position: absolute;
+  right: -7px;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  color: rgba(138, 106, 44, 0.9);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: color 200ms ease, opacity 200ms ease;
+}
+
+.giftCopy svg {
+  width: 13px;
+  height: 13px;
+}
+
+.giftCopy:hover {
+  color: #8a6a2c;
+}
+
+/* A press reads as the mark being inked, not as a button depressing. */
+.giftCopy:active {
+  opacity: 0.6;
+}
+
+.giftCopy:focus-visible {
+  outline: 2px solid rgba(176, 140, 69, 0.85);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* The label line while it is carrying the copy feedback: the same footnote
+   type, held on one line so a long message cannot reflow the row, and a
+   shade deeper so the change registers without a colour that announces
+   itself as UI. */
+.giftRowLabelStatus {
+  white-space: nowrap;
+  color: #8a6a2c;
+}
+
+/* A quiet caption for the stage, not a second control: the envelope itself
+   carries the accessible name. Sits close under the paper. */
+.giftHint {
+  margin: 15px 0 0;
+  font-size: 8.5px;
+  font-weight: 400;
+  letter-spacing: 0.34em;
+  text-indent: 0.17em;
+  text-transform: uppercase;
+  color: rgba(228, 200, 138, 0.56);
+}
+
+/* Once the slip is out, the caption has done its work and steps back so
+   the eye stays on the paper. */
+.giftStage[data-open] .giftHint {
+  color: rgba(228, 200, 138, 0.4);
+}
+
+/* ---- Motion ---- */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Slow, soft and single-direction: a heavy paper flap being laid back by
+     hand, not a UI panel snapping open. */
+  .giftFlap {
+    transition: transform 1120ms cubic-bezier(0.24, 0.7, 0.14, 1),
+      filter 1120ms ease;
+  }
+
+  .giftSeal {
+    transition: opacity 420ms ease, transform 620ms cubic-bezier(0.3, 0.9, 0.3, 1);
+  }
+
+  /* The slip is drawn up out of the envelope once the flap has begun to
+     move, and slides back down into it when the flap closes. `display` is
+     in both transition lists with `allow-discrete`, which is what lets the
+     closed state stay `display: none` without the exit snapping; the
+     `@starting-style` rule gives the entry a frame to start from, since an
+     element coming out of `display: none` has no previous rendered state.
+     Browsers without the two features simply switch, exactly as before. */
+  .giftSlip {
+    opacity: 0;
+    transform: translateY(-34px);
+    /* Closing accelerates: the paper starts back slowly and is gone into
+       the envelope before the flap finishes falling over it. */
+    transition: opacity 520ms ease 60ms,
+      transform 660ms cubic-bezier(0.42, 0, 0.86, 0.3),
+      display 680ms allow-discrete;
+  }
+
+  .giftStage[data-open] .giftSlip {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 620ms ease 300ms,
+      transform 1020ms cubic-bezier(0.16, 0.84, 0.24, 1) 300ms,
+      display 1320ms allow-discrete;
+  }
+
+  @starting-style {
+    .giftStage[data-open] .giftSlip {
+      opacity: 0;
+      transform: translateY(-34px);
+    }
+  }
+
+  .giftHint {
+    transition: color 240ms ease;
+  }
+}
+
+/* Laid back far enough to clear the mouth, and darkened almost to the
+   lacquer so the lifted flap recedes instead of becoming a second shape
+   competing with the slip. */
+.giftStage[data-open] .giftFlap {
+  transform: rotateX(-124deg);
+  filter: drop-shadow(0 1px 0 rgba(246, 222, 172, 0.1))
+    drop-shadow(0 6px 8px rgba(10, 2, 3, 0.24)) brightness(0.42);
+}
+
+.giftStage[data-open] .giftSeal {
+  opacity: 0;
+  transform: translate(-50%, -62%) scale(0.86);
+}
+
+/* ---- Narrow phones ---- */
+
+@container (max-width: 365px) {
+  .gift {
+    padding: 26px 14px 66px;
+  }
+
+  .giftSlip {
+    /* Tracked to the same container width the envelope is cut from, so the
+       shoulder of red paper either side of the slip holds at ~20px down to
+       360px while the measure stays wide enough for the longest demo bank
+       name to set on one line. */
+    width: min(228px, 72cqw);
+    padding: 122px 17px 26px;
+  }
+
+  .giftTabs {
+    gap: 20px;
+  }
+
+  /* The slip narrows to a 194px measure here, so the code comes in with it
+     and keeps the same shoulder of bare ivory either side. */
+  .giftQrImage {
+    width: 138px;
+    height: 138px;
+  }
+
+  .giftRowValue {
+    font-size: 17.5px;
+  }
+
+  .giftAccountNumber {
+    font-size: 19px;
+  }
+}
+
+/* ======================================================================
    7. Lời cảm ơn / Thank you
    ====================================================================== */
 

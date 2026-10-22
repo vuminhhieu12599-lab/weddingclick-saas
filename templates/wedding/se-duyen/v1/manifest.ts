@@ -7,14 +7,13 @@ import type { RendererProductionManifestV1 } from "../../../core/renderer-manife
  * Data only: no React, no `"use client"`, no browser globals, no
  * `lib/server/**` import (P17), no fonts, CSS or assets.
  *
- * SECTION CAPABILITIES DECLARE ONLY WHAT THE RENDERER ACTUALLY RENDERS. The
- * approved Se Duyên direction also has a gift envelope, which the prototype
- * shows with illustrative QR artwork. It has no production capability
- * connected yet, so
- * declaring them here would let the Template Editor offer a customer
- * settings that change nothing and would let `sections.*` promise a renderer
- * section that does not exist (CLAUDE.md §22 — never report a capability the
- * system does not have). SD-V1-02 connects them and widens this manifest.
+ * SECTION CAPABILITIES DECLARE ONLY WHAT THE RENDERER ACTUALLY RENDERS.
+ * Declaring a section the renderer cannot draw would let the Template Editor
+ * offer a customer settings that change nothing, and would let `sections.*`
+ * promise a renderer section that does not exist (CLAUDE.md §22 — never
+ * report a capability the system does not have). `dressCode` and
+ * `photoStory` are false by art direction: the approved composition has
+ * neither. Every other section is now connected.
  *
  * Widening it then is legitimate: P22 / CLAUDE.md §9 freeze a manifest once
  * a catalog TemplateVersion row has been seeded on it, and Se Duyên has no
@@ -45,8 +44,9 @@ export const SE_DUYEN_V1_MANIFEST: RendererProductionManifestV1 = {
       gallery: true,
       // SD-V1-02C1: the approved gilt disc, on the shared RF-06C capability.
       music: true,
-      // SD-V1-02: gift.
-      gift: false,
+      // SD-V1-02C2: the approved envelope, on the canonical per-side gift
+      // fields and each side's own semantic QR.
+      gift: true,
       // SD-V1-02B3A: the approved run-of-show, on the RF7 Timeline contract.
       timeline: true,
       // Not in the approved direction.
@@ -66,6 +66,7 @@ export const SE_DUYEN_V1_MANIFEST: RendererProductionManifestV1 = {
       gallery: { type: "boolean" },
       timeline: { type: "boolean" },
       music: { type: "boolean" },
+      gift: { type: "boolean" },
     },
     designSettingsSchema: {},
   },

@@ -6,12 +6,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { InvitationVariant } from "../../../../../lib/domain";
 import { deriveEventDateTimePresentationV1 } from "../../../../../lib/invitation-rendering/event-date-time-presentation";
+import type { InvitationViewModel, ResolvedMedia } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
 import type {
-  InvitationViewModel,
-  MediaResolution,
-  ResolvedMedia,
-} from "../../../../../lib/invitation-rendering/invitation-view-model-types";
-import type {
+  ClipboardCapabilityV1,
   InvitationRendererCapabilitiesV1,
   MusicCapabilityV1,
 } from "../../../../../lib/invitation-rendering/renderer-capabilities";
@@ -51,6 +48,9 @@ const { albumPhotos, stepAlbum, SE_DUYEN_ALBUM_FRAMES } = await import("../secti
 const { albumAlt } = await import("../interactive/gallery-viewer");
 const { countdownDials, SE_DUYEN_COUNTDOWN_UNITS } = await import("../interactive/countdown");
 const { musicFailureVisible } = await import("../interactive/music-control");
+const { giftPanels, giftRows, accountNumberOf } = await import("../sections/gift-panels");
+type GiftPanelShape = Parameters<typeof accountNumberOf>[0];
+const { copyLabel } = await import("../interactive/gift-envelope");
 
 /**
  * SD-V1-01 — Se Duyên v1 production renderer foundation.
@@ -110,12 +110,27 @@ interface SdOptions extends RendererFixtureSourceOptions {
   unavailableMediaIds?: readonly string[];
   /** Template media slot assignments; defaults to all four SINGLE slots filled. */
   slots?: SlotAssignments;
+  /** Blanks every canonical gift field and QR, as a Project with no gift info. */
+  giftless?: boolean;
 }
+
+/** Every canonical gift field the Snapshot builder reads, blanked. */
+const GIFTLESS_DETAILS = Object.freeze({
+  groomBankName: null,
+  groomBankAccountName: null,
+  groomBankAccountNumber: null,
+  groomBankQrMediaId: null,
+  brideBankName: null,
+  brideBankAccountName: null,
+  brideBankAccountNumber: null,
+  brideBankQrMediaId: null,
+});
 
 function sdSource(
   options: RendererFixtureSourceOptions,
   invitationMessage: string | null | undefined,
   slots: SlotAssignments,
+  giftless: boolean,
 ): BuildSnapshotPayloadInput {
   const input = buildRendererFixtureSourceInput(options);
   const { design, compatibility } = SE_DUYEN_V1_MANIFEST;
@@ -129,7 +144,11 @@ function sdSource(
   const media = [...input.media, ...photos];
   return {
     ...input,
-    ...(invitationMessage === undefined ? {} : { weddingDetails: { ...details, invitationMessage } }),
+    weddingDetails: {
+      ...details,
+      ...(invitationMessage === undefined ? {} : { invitationMessage }),
+      ...(giftless ? GIFTLESS_DETAILS : {}),
+    },
     media,
     design: {
       ...input.design,
@@ -145,8 +164,8 @@ function sdSource(
 }
 
 async function sdFixture(options: SdOptions): Promise<RendererFixture> {
-  const { guest, invitationMessage, unavailableMediaIds, slots, ...sourceOptions } = options;
-  return runRendererFixturePipeline(sdSource(sourceOptions, invitationMessage, slots ?? ALL_SLOTS), {
+  const { guest, invitationMessage, unavailableMediaIds, slots, giftless, ...sourceOptions } = options;
+  return runRendererFixturePipeline(sdSource(sourceOptions, invitationMessage, slots ?? ALL_SLOTS, giftless === true), {
     resolver: createFixtureMediaResolver(unavailableMediaIds === undefined ? {} : { unavailableMediaIds }),
     registry: SD_REGISTRY,
     ...(guest === undefined ? {} : { guest }),
@@ -185,6 +204,18 @@ async function renderSdWithMusic(
   const fixture = await sdFixture(options);
   const html = renderToStaticMarkup(
     <SeDuyenV1 viewModel={fixture.viewModel} sections={fixture.selection.effectiveSections} capabilities={{ music }} />,
+  );
+  return { html, fixture };
+}
+
+/** The same render, with a clipboard capability so the copy control exists. */
+async function renderSdWithClipboard(
+  options: SdOptions,
+  clipboard: ClipboardCapabilityV1,
+): Promise<{ html: string; fixture: RendererFixture }> {
+  const fixture = await sdFixture(options);
+  const html = renderToStaticMarkup(
+    <SeDuyenV1 viewModel={fixture.viewModel} sections={fixture.selection.effectiveSections} capabilities={{ clipboard }} />,
   );
   return { html, fixture };
 }
@@ -254,13 +285,14 @@ describe("A. production contract", () => {
       sectionSettings: { gallery: true, music: true, gift: true, timeline: true, dressCode: true, photoStory: true },
     });
     const effective = fixture.selection.effectiveSections;
-    for (const key of ["gift", "dressCode", "photoStory"] as const) {
+    for (const key of ["dressCode", "photoStory"] as const) {
       expect(effective[key], key).toBe(false);
     }
-    // B2, B3A and C1: the album, the run-of-show and the music are real.
+    // B2, B3A, C1 and C2 are all real sections now.
     expect(effective.gallery).toBe(true);
     expect(effective.timeline).toBe(true);
     expect(effective.music).toBe(true);
+    expect(effective.gift).toBe(true);
   });
 });
 
@@ -573,7 +605,7 @@ describe("E. media", () => {
     }
   });
 
-  it("no legacy media role is read: under TEMPLATE_SLOTS every one is empty, and the QR that remains is not rendered", async () => {
+  it("no legacy LAYOUT media role is read: under TEMPLATE_SLOTS every one is empty", async () => {
     const { html, fixture } = await renderSd({ variant: "COMMON", galleryCount: 3, portraits: "PRESENT", loveStoryPhoto: "PRESENT" });
     const { media } = fixture.viewModel;
     // A TEMPLATE_SLOTS Snapshot carries no legacy media refs at all, so these
@@ -583,13 +615,11 @@ describe("E. media", () => {
     expect(media.gallery).toStrictEqual([]);
     expect(media.photoStory).toStrictEqual([]);
     expect(media.portrait).toStrictEqual({});
-    // `audio` and `qr` are the semantic roles the slot model keeps, for the
-    // music and gift capabilities this renderer does not have yet; neither
-    // reaches the markup.
-    const semantic: readonly (MediaResolution | undefined)[] = [media.audio, media.qr.groom, media.qr.bride];
-    const resolved = semantic.filter((item): item is ResolvedMedia => item?.status === "RESOLVED");
-    expect(resolved.length).toBeGreaterThan(0);
-    for (const item of resolved) expect(html, item.url).not.toContain(item.url);
+    // `audio` and `qr` are the two semantic roles the slot model keeps. The
+    // gift slip legitimately shows each side's own QR (section L); the audio
+    // URL belongs to the host's controller and never to the markup.
+    expect(media.audio?.status).toBe("RESOLVED");
+    expect(html).not.toContain((media.audio as ResolvedMedia).url);
   });
 
   it("frames keep their approved tuned focal point; only a landscape photograph is re-centred", async () => {
@@ -625,12 +655,15 @@ describe("F. opening", () => {
   });
 
   it("the box itself is the only control of the opening, and it carries an accessible name", async () => {
-    // With no album there is nothing else to press anywhere in the invitation.
     const { html } = await renderSd({ variant: "COMMON", slots: {} });
-    expect(count(html, "<button")).toBe(1);
     expect(html).toContain(`aria-label="${COPY.cover.openHint}"`);
     expect(html).not.toContain("<form");
     expect(html).not.toContain("<input");
+    // The opening screen has exactly one control, and never gains one from a
+    // later section: the box is the whole of it.
+    const opening = html.slice(0, html.indexOf("interior"));
+    expect(count(opening, "<button")).toBe(1);
+    expect(opening).toContain("boxButton");
   });
 
   it("the cover text is in the accessibility tree while closed and the hero is not", async () => {
@@ -687,7 +720,8 @@ describe("G. editor manifest", () => {
       "FAMILIES",
       "INVITATION_MESSAGE",
       "LOVE_STORY",
-      // SD-V1-02C1: the staff affordance for the track.
+      // SD-V1-02C2 and C1: the staff affordances for the gift and the track.
+      "GIFT",
       "MUSIC",
     ]);
     for (const item of editor.contentItems) {
@@ -1261,5 +1295,196 @@ describe("K. music", () => {
     expect(item?.requirement).toBe("OPTIONAL");
     expect(item?.hint).toContain("Không tự phát");
     expect(SE_DUYEN_V1_MANIFEST.compatibility.sectionCapabilities.music).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// L. Wedding gift / Mừng Cưới (SD-V1-02C2)
+// ---------------------------------------------------------------------------
+
+describe("L. gift", () => {
+  const GIFT = COPY.gift;
+
+  /** The gift section's markup only. */
+  function giftOf(html: string): string {
+    const start = html.indexOf('aria-labelledby="sd-gift-heading"');
+    expect(start).toBeGreaterThan(0);
+    return html.slice(start, html.indexOf("</section>", start));
+  }
+
+  /** Each printed row as `label|value`, in document order. */
+  function rows(html: string): string[] {
+    return [...giftOf(html).matchAll(/<dt[^>]*>([^<]+)<\/dt><dd[^>]*>(?:<span>)?([^<]+)</g)].map(
+      (match) => `${match[1] as string}|${match[2] as string}`,
+    );
+  }
+
+  function sideOf(fixture: RendererFixture, side: "GROOM" | "BRIDE") {
+    return side === "GROOM" ? fixture.viewModel.gift.groom : fixture.viewModel.gift.bride;
+  }
+
+  it("COMMON offers both houses behind a tab each, the primary side first", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON" });
+    expect(fixture.viewModel.operationalSides).toStrictEqual(["GROOM", "BRIDE"]);
+    const gift = giftOf(html);
+    expect(gift).toContain('role="tablist"');
+    expect(gift).toContain(`aria-label="${GIFT.sideLegend}"`);
+    expect(gift.indexOf(COPY.sideLabel.GROOM)).toBeLessThan(gift.indexOf(COPY.sideLabel.BRIDE));
+    // The first tab is selected and its panel is the one described.
+    expect(gift).toMatch(/id="[^"]*-tab-GROOM" aria-selected="true"/);
+    expect(gift).toMatch(/id="[^"]*-tab-BRIDE" aria-selected="false"/);
+    expect(gift).toContain('role="tabpanel"');
+  });
+
+  it.each(["GROOM", "BRIDE"] as const)("%s offers only its own side, with no tabs at all", async (variant) => {
+    const { html, fixture } = await renderSd({ variant });
+    expect(fixture.viewModel.operationalSides).toStrictEqual([variant]);
+    const gift = giftOf(html);
+    expect(gift).not.toContain('role="tablist"');
+    expect(gift).not.toContain('role="tabpanel"');
+    expect(gift).toContain(COPY.sideLabel[variant]);
+    expect(gift).not.toContain(COPY.sideLabel[variant === "GROOM" ? "BRIDE" : "GROOM"]);
+    // And only that side's own canonical details.
+    const own = sideOf(fixture, variant);
+    expect(gift, variant).toContain(own?.bankAccountNumber as string);
+    const other = sideOf(fixture, variant === "GROOM" ? "BRIDE" : "GROOM");
+    expect(other).toBeUndefined();
+  });
+
+  it("shows the Project's own canonical bank fields, in the approved row order", async () => {
+    const { html, fixture } = await renderSd({ variant: "GROOM" });
+    const own = sideOf(fixture, "GROOM");
+    expect(rows(html)).toStrictEqual([
+      `${GIFT.bankLabel}|${own?.bankName as string}`,
+      `${GIFT.holderLabel}|${own?.bankAccountName as string}`,
+      `${GIFT.accountLabel}|${own?.bankAccountNumber as string}`,
+    ]);
+  });
+
+  it("shows each side's own RESOLVED QR and no other", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON" });
+    const groomQr = fixture.viewModel.media.qr.groom;
+    const brideQr = fixture.viewModel.media.qr.bride;
+    expect(groomQr?.status).toBe("RESOLVED");
+    const gift = giftOf(html);
+    // The open tab is the groom's, so his QR is the one on the slip.
+    expect(gift).toContain((groomQr as ResolvedMedia).url);
+    expect(gift).toContain(`alt="${GIFT.qrAlt} ${COPY.sideLabel.GROOM}"`);
+    if (brideQr?.status === "RESOLVED") expect(gift).not.toContain(brideQr.url);
+  });
+
+  it("an UNAVAILABLE QR omits the figure but keeps the side's rows", async () => {
+    const base = await sdFixture({ variant: "GROOM" });
+    const qrId = (base.viewModel.media.qr.groom as { mediaId: string }).mediaId;
+    const { html, fixture } = await renderSd({ variant: "GROOM", unavailableMediaIds: [qrId] });
+    expect(fixture.viewModel.media.qr.groom?.status).toBe("UNAVAILABLE");
+    const gift = giftOf(html);
+    expect(gift).not.toContain("giftQrImage");
+    expect(gift).toContain(sideOf(fixture, "GROOM")?.bankAccountNumber as string);
+  });
+
+  it("the copy control exists only with the clipboard capability, and the number stays readable without it", async () => {
+    const without = await renderSd({ variant: "GROOM" });
+    expect(giftOf(without.html)).not.toContain("giftCopy");
+    expect(giftOf(without.html)).toContain(sideOf(without.fixture, "GROOM")?.bankAccountNumber as string);
+
+    const clipboard: ClipboardCapabilityV1 = { copyText: async () => ({ status: "SUCCESS" }) };
+    const withIt = await renderSdWithClipboard({ variant: "GROOM" }, clipboard);
+    const gift = giftOf(withIt.html);
+    expect(gift).toContain("giftCopy");
+    expect(gift).toContain(`aria-label="${GIFT.copyLabel} ${COPY.sideLabel.GROOM}"`);
+    expect(gift).toContain('data-copy-feedback="idle"');
+  });
+
+  it("the copy control is wired to the canonical number of the side on the slip", async () => {
+    const copied: string[] = [];
+    const clipboard: ClipboardCapabilityV1 = {
+      copyText: async (text) => {
+        copied.push(text);
+        return { status: "SUCCESS" };
+      },
+    };
+    const { fixture } = await renderSdWithClipboard({ variant: "COMMON" }, clipboard);
+    const panels = giftPanels(fixture.viewModel.operationalSides, fixture.viewModel.gift, fixture.viewModel.media.qr);
+    // The value the control is given is the panel's own account number.
+    expect(accountNumberOf(panels[0] as GiftPanelShape)).toBe(sideOf(fixture, "GROOM")?.bankAccountNumber);
+    expect(accountNumberOf(panels[1] as GiftPanelShape)).toBe(sideOf(fixture, "BRIDE")?.bankAccountNumber);
+    // Nothing is copied without a press.
+    expect(copied).toStrictEqual([]);
+  });
+
+  it("the copy feedback is truthful: only a resolved SUCCESS says copied", () => {
+    expect(copyLabel("IDLE")).toBeNull();
+    expect(copyLabel("PENDING")).toBeNull();
+    expect(copyLabel("SUCCESS")).toBe(GIFT.copyDone);
+    expect(copyLabel("FAILED")).toBe(GIFT.copyFailed);
+    expect(copyLabel("UNAVAILABLE")).toBe(GIFT.copyUnavailable);
+  });
+
+  it("a side with no bank field and no QR is dropped; with none left the envelope is hidden", async () => {
+    const resolved = (id: string) => ({ status: "RESOLVED" as const, mediaId: id, url: `u:${id}`, width: null, height: null });
+    const blank = { side: "GROOM" as const, bankName: null, bankAccountName: null, bankAccountNumber: null, bankQrMediaId: null };
+
+    // Blank fields and no QR: nothing to show for that side.
+    expect(giftPanels(["GROOM"], { groom: blank }, {})).toStrictEqual([]);
+    // A QR alone is honest content.
+    expect(giftPanels(["GROOM"], { groom: blank }, { groom: resolved("q") }).map((panel) => panel.side)).toStrictEqual(["GROOM"]);
+    // One side blank on COMMON leaves the other.
+    const bride = { side: "BRIDE" as const, bankName: " Ngân hàng X ", bankAccountName: null, bankAccountNumber: null, bankQrMediaId: null };
+    expect(giftPanels(["GROOM", "BRIDE"], { groom: blank, bride }, {}).map((panel) => panel.side)).toStrictEqual(["BRIDE"]);
+    // Blank-but-whitespace is not a row.
+    expect(giftRows({ ...blank, bankName: "   " })).toStrictEqual([]);
+  });
+
+  it("the whole section disappears when the Project has no gift information", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON", giftless: true });
+    expect(giftPanels(fixture.viewModel.operationalSides, fixture.viewModel.gift, fixture.viewModel.media.qr)).toStrictEqual([]);
+    expect(html).not.toContain("sd-gift-heading");
+    expect(html).not.toContain(GIFT.heading);
+    expect(html).not.toContain("giftEnvelope");
+  });
+
+  it("switching the gift section off hides it even with bank details configured", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON", sectionSettings: { gift: false } });
+    expect(fixture.selection.effectiveSections.gift).toBe(false);
+    expect(html).not.toContain("sd-gift-heading");
+    expect(html).not.toContain("giftEnvelope");
+  });
+
+  it("the envelope is the control, closed and inert in server markup", async () => {
+    const { html } = await renderSd({ variant: "COMMON" });
+    const gift = giftOf(html);
+    expect(gift).toMatch(/class="[^"]*_giftEnvelope_[^"]*" aria-expanded="false"/);
+    expect(gift).toContain(`aria-label="${GIFT.openHint}"`);
+    // The slip is mounted but out of the tree and the tab order while closed.
+    expect(gift).toMatch(/class="[^"]*_giftSlip_[^"]*" inert=""/);
+    expect(gift).not.toContain("data-open");
+    // The hint is a caption, not a second control.
+    expect(gift).toMatch(/_giftHint_[^"]*" aria-hidden="true"/);
+  });
+
+  it("no demo account, drawn QR or generated payment data reaches the markup", async () => {
+    const { html } = await renderSd({ variant: "COMMON" });
+    expect(html).not.toContain("qr-demo");
+    expect(html).not.toContain("minh hoạ");
+    expect(html).not.toContain("giftDemo");
+    expect(html).not.toContain("giftQrCaption");
+    // Every QR url is a runtime MediaResolver url, never a bundled asset.
+    for (const url of [...html.matchAll(/_giftQrImage_[^"]*" src="([^"]+)"/g)].map((match) => match[1] as string)) {
+      expect(url.startsWith("/renderers/"), url).toBe(false);
+    }
+  });
+
+  it("sits after the album and before the closing, as the frozen order has it", async () => {
+    const { html } = await renderSd({ variant: "COMMON" });
+    expect(html.indexOf("sd-album-heading")).toBeLessThan(html.indexOf("sd-gift-heading"));
+    expect(html.indexOf("sd-gift-heading")).toBeLessThan(html.indexOf("sd-closing-eyebrow"));
+  });
+
+  it("the editor manifest offers the gift, bound to the capable section", () => {
+    const item = SE_DUYEN_V1_EDITOR_MANIFEST.contentItems.find((entry) => entry.key === "GIFT");
+    expect(item?.sectionKey).toBe("gift");
+    expect(item?.requirement).toBe("OPTIONAL");
+    expect(SE_DUYEN_V1_MANIFEST.compatibility.sectionCapabilities.gift).toBe(true);
   });
 });

@@ -3521,6 +3521,9 @@ const SD1_CODE_FILES = [
   `${SD1}/sections/photo-frame.ts`,
   // SD-V1-02B3A: the approved run-of-show.
   `${SD1}/sections/timeline.tsx`,
+  // SD-V1-02C2: the gift head and its pure per-side panel model.
+  `${SD1}/sections/gift.tsx`,
+  `${SD1}/sections/gift-panels.ts`,
 ] as const;
 /** The interactive islands: the approved box opening and the album viewer. */
 const SD1_ISLAND_FILES = [
@@ -3530,6 +3533,8 @@ const SD1_ISLAND_FILES = [
   `${SD1}/interactive/countdown.tsx`,
   // SD-V1-02C1: the approved gilt disc, on the shared RF-06C capability.
   `${SD1}/interactive/music-control.tsx`,
+  // SD-V1-02C2: the approved envelope, its slip and the copy control.
+  `${SD1}/interactive/gift-envelope.tsx`,
 ] as const;
 /** Pure state model behind the island. */
 const SD1_MODEL_FILES = [`${SD1}/interactive/opening-state.ts`] as const;
@@ -3563,11 +3568,12 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
     const code = codeOf(SD1_MANIFEST_FILE);
     expect(/["']use (client|server)["']|\bReact\b|next\/|\.css["']/.test(code)).toBe(false);
     // The uncapable sections stay false until SD-V1-02 connects them for real.
-    for (const key of ["gift", "dressCode", "photoStory"]) {
+    // False by art direction only: the approved composition has neither.
+    for (const key of ["dressCode", "photoStory"]) {
       expect(code, key).toMatch(new RegExp(`${key}: false`));
     }
-    // B2 added `gallery`, B3A `timeline` and C1 `music`: all really rendered.
-    for (const key of ["invitationMessage", "loveStory", "gallery", "timeline", "music"]) {
+    // B2 `gallery`, B3A `timeline`, C1 `music`, C2 `gift`: all really rendered.
+    for (const key of ["invitationMessage", "loveStory", "gallery", "timeline", "music", "gift"]) {
       expect(code, key).toMatch(new RegExp(`${key}: true`));
     }
   });
@@ -3633,6 +3639,9 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
     expect(/ResizeObserver/.test(code), file).toBe(file === `${SD1}/interactive/opening-stage.tsx`);
     // The phase ends on the CSS sequence's own event, never on a timer.
     expect(/\bset(Timeout|Interval)\b/.test(code), file).toBe(false);
+    // Only the gift envelope copies, and only through the shared model: no
+    // island touches `navigator.clipboard` itself.
+    expect(/copyWithFeedback/.test(code), file).toBe(file === `${SD1}/interactive/gift-envelope.tsx`);
     // Only the music control commands playback, and it does so through the
     // shared model: no island owns an audio element or a second player.
     expect(/runMusicToggle/.test(code), file).toBe(file === `${SD1}/interactive/music-control.tsx`);
@@ -3643,7 +3652,12 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
     // Escape, the focus trap and the inert page come from the platform, so no
     // island listens on `window` (which RF06D_FORBIDDEN already proved).
     expect(/showModal|<dialog\b/.test(code), file).toBe(file === `${SD1}/interactive/gallery-viewer.tsx`);
-    expect(/<img\b/.test(code), file).toBe(file === `${SD1}/interactive/gallery-viewer.tsx`);
+    // The two islands that show a photograph at its own size: the album's
+    // viewer and the gift slip's per-side QR. Every other frame is painted
+    // as a background, so no other island has an <img> of its own.
+    expect(/<img\b/.test(code), file).toBe(
+      file === `${SD1}/interactive/gallery-viewer.tsx` || file === `${SD1}/interactive/gift-envelope.tsx`,
+    );
   });
 
   it("no Se Duyên file declares a client or server boundary; only the fonts module touches next/font", () => {
@@ -3662,6 +3676,17 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
     for (const file of SD1_CODE_FILES) {
       expect(/data-phase|--sdp-expand/.test(codeOf(file)), file).toBe(false);
     }
+  });
+
+  it("the gift's envelope and slip are the island's, and its section head is static", () => {
+    const envelope = codeOf(`${SD1}/interactive/gift-envelope.tsx`);
+    expect(envelope).toMatch(/giftEnvelope|giftSlip/);
+    expect(envelope).toMatch(/<button/);
+    const head = codeOf(`${SD1}/sections/gift.tsx`);
+    expect(/<button|onClick|useState/.test(head)).toBe(false);
+    // The panel model is pure: no React, no hook, no DOM, no clipboard.
+    const panels = codeOf(`${SD1}/sections/gift-panels.ts`);
+    expect(/\bReact\b|jsx|useState|document|window|clipboard/i.test(panels)).toBe(false);
   });
 
   it("the album's frames are the island's, and its section head is static", () => {

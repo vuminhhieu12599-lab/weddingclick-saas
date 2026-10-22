@@ -88,6 +88,24 @@ export const SE_DUYEN_V1_COPY = Object.freeze({
     previous: "Ảnh trước",
     next: "Ảnh tiếp theo",
   }),
+  gift: Object.freeze({
+    eyebrow: "Tấm Lòng",
+    heading: "Mừng Cưới",
+    note: "Sự hiện diện của quý vị đã là món quà quý nhất. Nếu quý vị ở xa và muốn gửi lời chúc, xin dùng thông tin dưới đây.",
+    openHint: "Chạm vào phong bì",
+    closeHint: "Gấp phong bì lại",
+    sideLegend: "Chọn nhà",
+    bankLabel: "Ngân hàng",
+    holderLabel: "Chủ tài khoản",
+    accountLabel: "Số tài khoản",
+    /** Accessible name of the copy control, completed with the family. */
+    copyLabel: "Sao chép số tài khoản",
+    copyDone: "Đã sao chép",
+    copyFailed: "Không sao chép được",
+    copyUnavailable: "Thiết bị không cho sao chép",
+    /** Alt text of a side's own transfer QR, completed with the family. */
+    qrAlt: "Mã QR chuyển khoản",
+  }),
   closing: Object.freeze({
     eyebrow: "Lời Cảm Ơn",
     message: "Sự hiện diện của quý vị là niềm vinh hạnh cho gia đình chúng tôi.",

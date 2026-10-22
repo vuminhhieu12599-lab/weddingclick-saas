@@ -11,6 +11,8 @@ import { Ceremony } from "./sections/ceremony";
 import { Closing } from "./sections/closing";
 import { Couple } from "./sections/couple";
 import { Families } from "./sections/families";
+import { Gift } from "./sections/gift";
+import { giftPanels } from "./sections/gift-panels";
 import { Gallery } from "./sections/gallery";
 import { albumPhotos } from "./sections/gallery-frames";
 import { Invitation } from "./sections/invitation";
@@ -48,15 +50,14 @@ const COPY = SE_DUYEN_V1_COPY;
  *
  * PAGE ORDER. Opening (box → hero) → the invitation introduction → the
  * couple → the two houses → the ceremony with its per-side rites → the
- * run-of-show → the countdown → the album → the closing.
+ * run-of-show → the countdown → the album → the wedding gift → the closing.
+ * RSVP belongs between the album and the gift and is the next checkpoint.
  *
  * WHAT THIS RENDERER DELIBERATELY DOES NOT DO YET. The approved direction
- * also has a gift envelope and an RSVP form, and the prototype shows both —
- * with illustrative QR artwork and a local, unpersisted RSVP. Neither is
- * rendered here. A guest is never shown a control that looks like working
- * customer functionality and is not: the manifest declares `gift` as a
- * section this renderer cannot do, no capability-backed island is mounted,
- * and SD-V1-02 connects it for real.
+ * also has an RSVP form, which the prototype shows as a local, unpersisted
+ * one. It is not rendered here: a guest is never shown a control that looks
+ * like working customer functionality and is not, so no RSVP island is
+ * mounted until the domain service behind it is connected.
  *
  * The countdown is not a section capability at all: it exists exactly while
  * the host supplies `capabilities.clock`, which it does only in the browser,
@@ -91,7 +92,7 @@ const COPY = SE_DUYEN_V1_COPY;
  * below it is complete.
  */
 export function SeDuyenV1({ viewModel, sections, capabilities }: InvitationRendererPropsV1) {
-  const { people, families, ceremony, content, media } = viewModel;
+  const { people, families, ceremony, content, gift, media, operationalSides } = viewModel;
   const ceremonyDate = deriveEventDateTimePresentationV1(ceremony);
   const guestDisplayName = viewModel.guest?.displayName;
 
@@ -114,6 +115,9 @@ export function SeDuyenV1({ viewModel, sections, capabilities }: InvitationRende
   // The host builds a music capability only for `sections.music` plus a
   // RESOLVED audio slot, so presence alone is the gate: no disabled disc.
   const music = sections.music ? capabilities.music : undefined;
+  // Which families may appear, and whether any may at all, is the pure
+  // model's answer over the resolver's own operational sides.
+  const panels = sections.gift ? giftPanels(operationalSides, gift, media.qr) : [];
 
   return (
     <div
@@ -152,6 +156,7 @@ export function SeDuyenV1({ viewModel, sections, capabilities }: InvitationRende
             <AlbumFrames gallery={slots?.gallery ?? []} />
           </Gallery>
         ) : null}
+        {panels.length === 0 ? null : <Gift panels={panels} clipboard={capabilities.clipboard} />}
         <Closing people={people} photo={closingPhoto} photoAlt={photoAlt} />
       </OpeningStage>
     </div>
