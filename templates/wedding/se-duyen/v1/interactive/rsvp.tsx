@@ -1,12 +1,9 @@
 import { useId, useReducer, useRef, useState } from "react";
 
 import {
-  RSVP_ATTENDING_PARTY_SIZE_MAX,
-  RSVP_ATTENDING_PARTY_SIZE_MIN,
-} from "../../../../../lib/invitation-rendering/rsvp-capability";
-import {
   INITIAL_RSVP_DRAFT,
   RSVP_MESSAGE_MAX_LENGTH,
+  RSVP_PARTY_SIZE_CHOICES,
   buildRsvpSubmitInput,
   createRsvpSubmissionGate,
   rsvpPhaseReducer,
@@ -21,6 +18,14 @@ import { SE_DUYEN_V1_COPY } from "../copy";
 import styles from "../se-duyen-v1.module.css";
 
 const COPY = SE_DUYEN_V1_COPY.rsvp;
+
+/**
+ * The canonical party-size bounds, read off the shared choice list rather
+ * than imported from the contract module, so this card's import graph stays
+ * exactly the other templates': the shared form model and nothing else.
+ */
+const PARTY_SIZE_MIN = RSVP_PARTY_SIZE_CHOICES[0] as number;
+const PARTY_SIZE_MAX = RSVP_PARTY_SIZE_CHOICES[RSVP_PARTY_SIZE_CHOICES.length - 1] as number;
 
 /** The approved three choices, each bound to a canonical attendance status. */
 export const SE_DUYEN_RSVP_CHOICES: readonly { readonly value: RsvpAttendanceStatus; readonly label: string }[] =
@@ -200,9 +205,9 @@ export function Rsvp({ rsvp }: { readonly rsvp: RsvpCapabilityV1 }) {
                   type="button"
                   className={styles.rsvpStep}
                   aria-label={COPY.countDown}
-                  disabled={draft.partySize <= RSVP_ATTENDING_PARTY_SIZE_MIN}
+                  disabled={draft.partySize <= PARTY_SIZE_MIN}
                   onClick={() => {
-                    patch({ partySize: Math.max(RSVP_ATTENDING_PARTY_SIZE_MIN, draft.partySize - 1) });
+                    patch({ partySize: Math.max(PARTY_SIZE_MIN, draft.partySize - 1) });
                   }}
                 >
                   −
@@ -215,9 +220,9 @@ export function Rsvp({ rsvp }: { readonly rsvp: RsvpCapabilityV1 }) {
                   type="button"
                   className={styles.rsvpStep}
                   aria-label={COPY.countUp}
-                  disabled={draft.partySize >= RSVP_ATTENDING_PARTY_SIZE_MAX}
+                  disabled={draft.partySize >= PARTY_SIZE_MAX}
                   onClick={() => {
-                    patch({ partySize: Math.min(RSVP_ATTENDING_PARTY_SIZE_MAX, draft.partySize + 1) });
+                    patch({ partySize: Math.min(PARTY_SIZE_MAX, draft.partySize + 1) });
                   }}
                 >
                   +

@@ -389,6 +389,8 @@ describe("C. registry coexistence", () => {
       VH_KEY,
       // OWS-V2-01: Our Wedding Story v2 is appended sixth; VH v2 keeps its fifth position.
       "wedding.our-wedding-story.v2",
+      // SD-V1: Se Duyên v1 is appended seventh; VH v2 keeps its fifth position.
+      "wedding.se-duyen.v1",
     ]);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(EE_KEY)).toStrictEqual(ELEGANT_EDITORIAL_V1_MANIFEST);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(VH_KEY)).toStrictEqual(VIETNAMESE_HERITAGE_V2_MANIFEST);

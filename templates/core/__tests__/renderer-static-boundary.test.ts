@@ -53,6 +53,8 @@ const ALLOWED_IMPORTS: Readonly<Record<(typeof RF06A_FILES)[number], readonly st
     "templates/wedding/vietnamese-heritage/v2/manifest",
     // OWS-V2-01: the sixth explicit production manifest.
     "templates/wedding/our-wedding-story/v2/manifest",
+    // SD-V1: the seventh explicit production manifest.
+    "templates/wedding/se-duyen/v1/manifest",
     "templates/core/renderer-manifest",
   ],
   "templates/wedding/elegant-editorial/v1/manifest.ts": ["templates/core/renderer-manifest"],
@@ -130,6 +132,8 @@ const RS01_LAZY_ROOTS = [
   "templates/wedding/vietnamese-heritage/v2/vietnamese-heritage-v2",
   // OWS-V2-01: the sixth production renderer root.
   "templates/wedding/our-wedding-story/v2/our-wedding-story-v2",
+  // SD-V1: the seventh production renderer root.
+  "templates/wedding/se-duyen/v1/se-duyen-v1",
 ] as const;
 
 /** Resolves a relative specifier from `file` to a repository-relative module path. */
@@ -250,7 +254,7 @@ describe("RF-06A files", () => {
     const code = stripComments(readRepoFile("templates/core/production-renderer-manifests.ts"));
     // VH-01: still one explicit, ordered literal list, now with the second manifest; RM-02: and the third; OWS-01: and the fourth.
     expect(code).toMatch(
-      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*OUR_WEDDING_STORY_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V2_MANIFEST,\s*OUR_WEDDING_STORY_V2_MANIFEST,\s*\]\)/,
+      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*OUR_WEDDING_STORY_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V2_MANIFEST,\s*OUR_WEDDING_STORY_V2_MANIFEST,\s*SE_DUYEN_V1_MANIFEST,\s*\]\)/,
     );
     expect(/["'`]wedding\.[\w-]+\.v\d+/.test(code)).toBe(false);
   });
@@ -1359,6 +1363,8 @@ describe("client import graph from the host (P26, P45)", () => {
         ),
     );
     // VH-02B-E1: plus the shared renderer RSVP form model (Vietnamese Heritage imports the contract type-only).
+    // SD-V1: Se Duyên's card imports the contract type-only and the shared
+    // form model by value, so the model is the only new value importer.
     expect(valueImporters.sort()).toStrictEqual([RF06D_RSVP, RF06D_RSVP_MODEL, VH02B_SHARED_RSVP_MODEL].sort());
   });
 
@@ -1378,13 +1384,13 @@ describe("RS-01 renderer-key lazy loading", () => {
 
   it("the binding module owns exactly one literal import() per production renderer root, nothing else", () => {
     const { specifiers, total } = dynamicImportsOf(readRepoFile(BINDINGS_MODULE));
-    expect(total).toBe(6);
+    expect(total).toBe(7);
     expect(specifiers.map((specifier) => resolveSpecifier(BINDINGS_MODULE, specifier))).toStrictEqual([...RS01_LAZY_ROOTS]);
     const code = codeOf(BINDINGS_MODULE);
     // No template literal, concatenation, variable or discovery in a specifier.
     expect(code).not.toMatch(/import\(\s*[^"'\s]|import\(`|import\([^)]*\+|readdir|glob|require\(/);
     // next/dynamic with no options: SSR on, no `loading` (no Suspense boundary, no placeholder content).
-    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(6);
+    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(7);
     expect(code).not.toMatch(/ssr:|loading:|suspense/i);
     // Each lazy root binds its own export only.
     expect(code).toMatch(/import\("\.\.\/wedding\/elegant-editorial\/v1\/elegant-editorial-v1"\)\.then\(\(module\) => module\.ElegantEditorialV1\)/);
@@ -1409,6 +1415,7 @@ describe("RS-01 renderer-key lazy loading", () => {
       "templates/wedding/our-wedding-story/v1/manifest.ts",
       "templates/wedding/our-wedding-story/v2/manifest.ts",
       "templates/wedding/romantic-minimal/v1/manifest.ts",
+      "templates/wedding/se-duyen/v1/manifest.ts",
       "templates/wedding/vietnamese-heritage/v1/manifest.ts",
       "templates/wedding/vietnamese-heritage/v2/manifest.ts",
     ]);
@@ -3580,24 +3587,23 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
     }
   });
 
-  it("the renderer key literal appears only in its own two manifests (nothing registers it)", () => {
+  it("the renderer key literal appears only in its own two manifests and the binding table", () => {
     const withLiteral = productionSources().filter((file) => /["'`]wedding\.se-duyen\.v1["'`]/.test(codeOf(file)));
-    expect(withLiteral.sort()).toStrictEqual([SD1_MANIFEST_FILE, SD1_EDITOR_FILE].sort());
+    expect(withLiteral.sort()).toStrictEqual([SD1_MANIFEST_FILE, SD1_EDITOR_FILE, BINDINGS_MODULE].sort());
   });
 
-  it("SD-V1-01 is not yet wired in: nothing imports either manifest and nothing loads the root", () => {
+  it("SD-V1: exactly the two production lists import its manifests, and only the binding module loads the root (lazily)", () => {
     const importersOf = (target: string) =>
       productionSources().filter((file) => importsOf(readRepoFile(file)).some((statement) => resolveSpecifier(file, statement.specifier) === target));
-    expect(importersOf(`${SD1}/manifest`)).toStrictEqual([]);
+    expect(importersOf(`${SD1}/manifest`)).toStrictEqual(["templates/core/production-renderer-manifests.ts"]);
+    expect(importersOf("templates/editor/wedding/se-duyen-v1")).toStrictEqual(["templates/core/production-editor-manifests.ts"]);
+    // The root is never a static import, only the binding module's one
+    // literal `import()` — so its chunk loads only when its key is selected.
     expect(importersOf(`${SD1}/se-duyen-v1`)).toStrictEqual([]);
     const lazyLoaders = productionSources().filter((file) =>
       dynamicImportsOf(readRepoFile(file)).specifiers.some((specifier) => resolveSpecifier(file, specifier) === `${SD1}/se-duyen-v1`),
     );
-    expect(lazyLoaders).toStrictEqual([]);
-    // SD-V1-02A: the editor manifest exists, but the production editor list
-    // does not import it, so the Template Editor cannot offer Se Duyên.
-    expect(() => readRepoFile(SD1_EDITOR_FILE)).not.toThrow();
-    expect(importersOf("templates/editor/wedding/se-duyen-v1")).toStrictEqual([]);
+    expect(lazyLoaders).toStrictEqual([BINDINGS_MODULE]);
   });
 
   it("imports only its own tree, the shared lib/ contracts, react and (fonts only) next/font/google", () => {

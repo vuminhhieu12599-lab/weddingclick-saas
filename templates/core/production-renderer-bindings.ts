@@ -64,6 +64,8 @@ const OurWeddingStoryV2 = dynamic(() =>
   import("../wedding/our-wedding-story/v2/our-wedding-story-v2").then((module) => module.OurWeddingStoryV2),
 );
 
+const SeDuyenV1 = dynamic(() => import("../wedding/se-duyen/v1/se-duyen-v1").then((module) => module.SeDuyenV1));
+
 /** P27 B: explicit, closed rendererKey → component table (RS-01: one literal dynamic import per key). */
 const PRODUCTION_RENDERER_COMPONENTS: ReadonlyMap<string, InvitationRendererComponentV1> = new Map<string, InvitationRendererComponentV1>([
   ["wedding.elegant-editorial.v1", ElegantEditorialV1],
@@ -72,6 +74,7 @@ const PRODUCTION_RENDERER_COMPONENTS: ReadonlyMap<string, InvitationRendererComp
   ["wedding.our-wedding-story.v1", OurWeddingStoryV1],
   ["wedding.vietnamese-heritage.v2", VietnameseHeritageV2],
   ["wedding.our-wedding-story.v2", OurWeddingStoryV2],
+  ["wedding.se-duyen.v1", SeDuyenV1],
 ]);
 
 /** Fixed messages (docs/SECURITY.md): never a key or other manifest content. */

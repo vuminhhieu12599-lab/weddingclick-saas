@@ -14,6 +14,7 @@ import { ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST } from "../../editor/wedding/elega
 import { OUR_WEDDING_STORY_V1_EDITOR_MANIFEST } from "../../editor/wedding/our-wedding-story-v1";
 import { OUR_WEDDING_STORY_V2_EDITOR_MANIFEST } from "../../editor/wedding/our-wedding-story-v2";
 import { ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST } from "../../editor/wedding/romantic-minimal-v1";
+import { SE_DUYEN_V1_EDITOR_MANIFEST } from "../../editor/wedding/se-duyen-v1";
 import { VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST } from "../../editor/wedding/vietnamese-heritage-v1";
 import { VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST } from "../../editor/wedding/vietnamese-heritage-v2";
 
@@ -25,6 +26,7 @@ const RM_KEY = "wedding.romantic-minimal.v1";
 const OWS_KEY = "wedding.our-wedding-story.v1";
 const VH2_KEY = "wedding.vietnamese-heritage.v2";
 const OWS2_KEY = "wedding.our-wedding-story.v2";
+const SD_KEY = "wedding.se-duyen.v1";
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -60,12 +62,13 @@ const EDITORS = [
   OUR_WEDDING_STORY_V1_EDITOR_MANIFEST,
   VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST,
   OUR_WEDDING_STORY_V2_EDITOR_MANIFEST,
+  SE_DUYEN_V1_EDITOR_MANIFEST,
 ];
 
 describe("E. production editor registry / cross-manifest validation", () => {
   it("editor key list equals the production renderer key list, in order", () => {
     expect(PRODUCTION_EDITOR_MANIFESTS.map((manifest) => manifest.rendererKey)).toStrictEqual([...PRODUCTION_RENDERER_KEYS]);
-    expect([...PRODUCTION_RENDERER_KEYS]).toStrictEqual([EE_KEY, VH_KEY, RM_KEY, OWS_KEY, VH2_KEY, OWS2_KEY]);
+    expect([...PRODUCTION_RENDERER_KEYS]).toStrictEqual([EE_KEY, VH_KEY, RM_KEY, OWS_KEY, VH2_KEY, OWS2_KEY, SD_KEY]);
   });
 
   it("the production list is frozen and holds fresh validated copies", () => {
@@ -119,7 +122,7 @@ describe("E. production editor registry / cross-manifest validation", () => {
 
   it("rejects a malformed editor manifest with the validator's own error", () => {
     const broken = { ...clone(VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST), mediaSlots: [] };
-    expect(() => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, broken, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST, OUR_WEDDING_STORY_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST, OUR_WEDDING_STORY_V2_EDITOR_MANIFEST], PRODUCTION_RENDERER_MANIFESTS)).toThrow(
+    expect(() => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, broken, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST, OUR_WEDDING_STORY_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST, OUR_WEDDING_STORY_V2_EDITOR_MANIFEST, SE_DUYEN_V1_EDITOR_MANIFEST], PRODUCTION_RENDERER_MANIFESTS)).toThrow(
       TemplateEditorManifestInvariantError,
     );
   });
@@ -130,7 +133,7 @@ describe("E. production editor registry / cross-manifest validation", () => {
     const withMessage = clone(VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST) as unknown as { contentItems: unknown[] };
     withMessage.contentItems.push({ key: "INVITATION_MESSAGE", label: "Lời mời", hint: "Lời mời.", requirement: "OPTIONAL", sectionKey: "invitationMessage" });
     expectFail(
-      () => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, withMessage, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST, OUR_WEDDING_STORY_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST, OUR_WEDDING_STORY_V2_EDITOR_MANIFEST], PRODUCTION_RENDERER_MANIFESTS),
+      () => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, withMessage, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST, OUR_WEDDING_STORY_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST, OUR_WEDDING_STORY_V2_EDITOR_MANIFEST, SE_DUYEN_V1_EDITOR_MANIFEST], PRODUCTION_RENDERER_MANIFESTS),
       M.CONTENT_SECTION_NOT_CAPABLE,
     );
   });
@@ -140,7 +143,7 @@ describe("E. production editor registry / cross-manifest validation", () => {
     const photoStorySlot = clone(VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST) as unknown as { mediaSlots: Record<string, unknown>[] };
     photoStorySlot.mediaSlots.push({ ...photoStorySlot.mediaSlots[3], key: "storyStrip", sectionKey: "photoStory" });
     expectFail(
-      () => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, photoStorySlot, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST, OUR_WEDDING_STORY_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST, OUR_WEDDING_STORY_V2_EDITOR_MANIFEST], PRODUCTION_RENDERER_MANIFESTS),
+      () => validateProductionEditorManifests([ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST, photoStorySlot, ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST, OUR_WEDDING_STORY_V1_EDITOR_MANIFEST, VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST, OUR_WEDDING_STORY_V2_EDITOR_MANIFEST, SE_DUYEN_V1_EDITOR_MANIFEST], PRODUCTION_RENDERER_MANIFESTS),
       M.SLOT_SECTION_NOT_CAPABLE,
     );
   });
@@ -152,6 +155,7 @@ describe("E. production editor registry / cross-manifest validation", () => {
     expect(lookupTemplateEditorManifest(OWS_KEY)).toStrictEqual(PRODUCTION_EDITOR_MANIFESTS[3]);
     expect(lookupTemplateEditorManifest(VH2_KEY)).toStrictEqual(PRODUCTION_EDITOR_MANIFESTS[4]);
     expect(lookupTemplateEditorManifest(OWS2_KEY)).toStrictEqual(PRODUCTION_EDITOR_MANIFESTS[5]);
+    expect(lookupTemplateEditorManifest(SD_KEY)).toStrictEqual(PRODUCTION_EDITOR_MANIFESTS[6]);
     expect(Object.isFrozen(lookupTemplateEditorManifest(VH_KEY)?.mediaSlots[0])).toBe(true);
     expect(lookupTemplateEditorManifest(VH_KEY)).toBe(lookupTemplateEditorManifest(VH_KEY));
     for (const key of ["", "wedding.vietnamese-heritage", "wedding.vietnamese-heritage.v3", ` ${VH_KEY}`, VH_KEY.toUpperCase(), "wedding.romantic-minimal", `${RM_KEY} `, "latest", "wedding.our-wedding-story.v3", "wedding.our-wedding-story"]) {
@@ -244,11 +248,24 @@ describe("F. exact production editor manifests", () => {
     }
   });
 
-  it("no current renderer has an INVITATION_MESSAGE item (capability false)", () => {
+  // SD-V1: Se Duyên v1 is the first renderer that really draws the customer's
+  // invitation message, so the blanket "nobody has one" rule becomes the real
+  // invariant: an INVITATION_MESSAGE item exists exactly where the capability
+  // is true, and only there.
+  it("an INVITATION_MESSAGE item exists exactly where the renderer capability is true", () => {
+    const capableKeys = PRODUCTION_RENDERER_MANIFESTS.filter(
+      (renderer) => renderer.compatibility.sectionCapabilities.invitationMessage,
+    ).map((renderer) => renderer.compatibility.rendererKey);
+    expect(capableKeys).toStrictEqual([SD_KEY]);
     for (const manifest of PRODUCTION_EDITOR_MANIFESTS) {
-      expect(manifest.contentItems.some((item) => item.key === "INVITATION_MESSAGE")).toBe(false);
+      expect(
+        manifest.contentItems.some((item) => item.key === "INVITATION_MESSAGE"),
+        manifest.rendererKey,
+      ).toBe(capableKeys.includes(manifest.rendererKey));
     }
-    for (const renderer of PRODUCTION_RENDERER_MANIFESTS) {
+    for (const renderer of PRODUCTION_RENDERER_MANIFESTS.filter(
+      (entry) => entry.compatibility.rendererKey !== SD_KEY,
+    )) {
       expect(renderer.compatibility.sectionCapabilities.invitationMessage).toBe(false);
     }
   });
