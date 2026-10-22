@@ -3513,12 +3513,17 @@ const SD1_CODE_FILES = [
   `${SD1}/sections/couple.tsx`,
   `${SD1}/sections/date-text.ts`,
   `${SD1}/sections/families.tsx`,
+  // SD-V1-02B2: the album's section head and its pure frame assignment.
+  `${SD1}/sections/gallery.tsx`,
+  `${SD1}/sections/gallery-frames.ts`,
   `${SD1}/sections/invitation.tsx`,
   `${SD1}/sections/invitation-wording.ts`,
   `${SD1}/sections/photo-frame.ts`,
+  // SD-V1-02B3A: the approved run-of-show.
+  `${SD1}/sections/timeline.tsx`,
 ] as const;
-/** The one interactive island: the approved box opening. */
-const SD1_ISLAND_FILES = [`${SD1}/interactive/opening-stage.tsx`] as const;
+/** The interactive islands: the approved box opening and the album viewer. */
+const SD1_ISLAND_FILES = [`${SD1}/interactive/opening-stage.tsx`, `${SD1}/interactive/gallery-viewer.tsx`] as const;
 /** Pure state model behind the island. */
 const SD1_MODEL_FILES = [`${SD1}/interactive/opening-state.ts`] as const;
 /** Everything inside the renderer-version directory. */
@@ -3546,15 +3551,16 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
     expect(listSources(join(TEMPLATES_ROOT, "wedding", "se-duyen")).sort()).toStrictEqual([...SD1_RENDERER_TREE].sort());
   });
 
-  it("the manifest is data only, imports its type only, and declares exactly the sections SD-V1-01 renders", () => {
+  it("the manifest is data only, imports its type only, and declares exactly the sections the renderer renders", () => {
     expect(importsOf(readRepoFile(SD1_MANIFEST_FILE))).toStrictEqual([{ specifier: "../../../core/renderer-manifest", typeOnly: true }]);
     const code = codeOf(SD1_MANIFEST_FILE);
     expect(/["']use (client|server)["']|\bReact\b|next\/|\.css["']/.test(code)).toBe(false);
     // The uncapable sections stay false until SD-V1-02 connects them for real.
-    for (const key of ["gallery", "music", "gift", "timeline", "dressCode", "photoStory"]) {
+    for (const key of ["music", "gift", "dressCode", "photoStory"]) {
       expect(code, key).toMatch(new RegExp(`${key}: false`));
     }
-    for (const key of ["invitationMessage", "loveStory"]) {
+    // SD-V1-02B2 added `gallery` and B3A added `timeline`, both really rendered.
+    for (const key of ["invitationMessage", "loveStory", "gallery", "timeline"]) {
       expect(code, key).toMatch(new RegExp(`${key}: true`));
     }
   });
@@ -3620,6 +3626,11 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
     expect(/ResizeObserver/.test(code), file).toBe(file === `${SD1}/interactive/opening-stage.tsx`);
     // The phase ends on the CSS sequence's own event, never on a timer.
     expect(/\bset(Timeout|Interval)\b/.test(code), file).toBe(false);
+    // Only the album viewer opens a modal, and it is a native <dialog>:
+    // Escape, the focus trap and the inert page come from the platform, so no
+    // island listens on `window` (which RF06D_FORBIDDEN already proved).
+    expect(/showModal|<dialog\b/.test(code), file).toBe(file === `${SD1}/interactive/gallery-viewer.tsx`);
+    expect(/<img\b/.test(code), file).toBe(file === `${SD1}/interactive/gallery-viewer.tsx`);
   });
 
   it("no Se Duyên file declares a client or server boundary; only the fonts module touches next/font", () => {
@@ -3638,6 +3649,17 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
     for (const file of SD1_CODE_FILES) {
       expect(/data-phase|--sdp-expand/.test(codeOf(file)), file).toBe(false);
     }
+  });
+
+  it("the album's frames are the island's, and its section head is static", () => {
+    const viewer = codeOf(`${SD1}/interactive/gallery-viewer.tsx`);
+    expect(viewer).toMatch(/albumLeadRow|albumPair|albumFootRow/);
+    expect(viewer).toMatch(/<dialog/);
+    const head = codeOf(`${SD1}/sections/gallery.tsx`);
+    expect(/<button|onClick|<dialog/.test(head)).toBe(false);
+    // The frame assignment is pure: no React, no hook, no DOM.
+    const frames = codeOf(`${SD1}/sections/gallery-frames.ts`);
+    expect(/\bReact\b|jsx|<dialog|document|window/.test(frames)).toBe(false);
   });
 
   it("the stylesheet names only this renderer's own immutable asset path, and no demo photograph", () => {

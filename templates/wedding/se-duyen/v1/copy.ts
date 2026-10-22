@@ -57,6 +57,23 @@ export const SE_DUYEN_V1_COPY = Object.freeze({
     directions: "Xem chỉ đường",
     directionsTo: "Xem chỉ đường —",
   }),
+  timeline: Object.freeze({
+    eyebrow: "Trình Tự Ngày Vui",
+    heading: "Lịch Trình Hôn Lễ",
+  }),
+  gallery: Object.freeze({
+    eyebrow: "Album Cưới",
+    heading: "Khoảnh Khắc Của Chúng Mình",
+    /** Accessible name of a frame, completed with its position at render time. */
+    open: "Xem ảnh lớn",
+    /** Alt text pattern, completed with the photograph's position. */
+    imageAlt: "Ảnh cưới",
+    of: "trên",
+    viewerLabel: "Ảnh cưới phóng to",
+    close: "Đóng",
+    previous: "Ảnh trước",
+    next: "Ảnh tiếp theo",
+  }),
   closing: Object.freeze({
     eyebrow: "Lời Cảm Ơn",
     message: "Sự hiện diện của quý vị là niềm vinh hạnh cho gia đình chúng tôi.",

@@ -31,12 +31,23 @@ import type { MediaResolution, ResolvedMedia } from "../../../../../lib/invitati
  *   portraitAside  →  coupleAside
  *   closingPhoto   →  closing
  *
+ * The album's four frames (SD-V1-02B2) are stems of the same kind, fed from
+ * the one unbounded `gallery` slot rather than from a slot each:
+ * `albumLead`, `albumTall`, `albumSmall`, `albumFoot`.
+ *
  * The stems are the approved prototype's and are deliberately left alone, so
  * the ported stylesheet stays diffable against the visual freeze. The
- * renderer root owns the mapping, in one place. The album's four frames are
- * SD-V1-02's gallery work.
+ * renderer root owns the slot-key mapping, in one place.
  */
-export type SeDuyenPhotoSlot = "hero" | "coupleMain" | "coupleAside" | "closing";
+export type SeDuyenPhotoSlot =
+  | "hero"
+  | "coupleMain"
+  | "coupleAside"
+  | "closing"
+  | "albumLead"
+  | "albumTall"
+  | "albumSmall"
+  | "albumFoot";
 
 /**
  * A supplied photograph always covers its frame: it is the only crop that

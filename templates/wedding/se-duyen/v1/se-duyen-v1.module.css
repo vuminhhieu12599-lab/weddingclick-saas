@@ -1930,6 +1930,417 @@
 }
 
 /* ======================================================================
+   3a. Lịch Trình Hôn Lễ / wedding-day timeline  (SD-V1-02B3A)
+
+   Ported from the frozen pilot v03 timeline. Three prototype-only rules are
+   deliberately NOT carried over, because the production contract has no
+   data behind them and inventing it is out of scope:
+
+   - `.flowNote`, the explanatory line under a step. In the prototype it came
+     from a hard-coded map keyed by the step's Vietnamese label; RF7 gives a
+     Timeline step exactly `id`, `time` and `label`, with no note field.
+   - `.flowRiteMark` and `.flowStepRite::before`, which marked the one step
+     whose canonical INSTANT was the ceremony's and swapped its knot for the
+     lotus medallion. RF7 stores a step's `time` as wall-clock `HH:mm` text
+     with no date, so that step cannot be identified without comparing the
+     timeline's hours against the ceremony's — exactly the synchronisation
+     the Product Owner forbids. Every knot is therefore the plain one.
+   - `.flowBadge`, the prototype's "these hours are illustrative" notice,
+     which has no place on a customer's invitation.
+   ====================================================================== */
+/* ======================================================================
+   3a. Lịch Trình Hôn Lễ / wedding-day timeline
+   ======================================================================
+
+   A thread, not a table. One gold hairline runs down a fixed left rail
+   with a small knot per moment; the hour, the title and the line sit in
+   the room to its right, each block on its own baseline rhythm. Nothing
+   is boxed, nothing is bordered, and the steps are spaced like stationery
+   rather than packed like a dashboard.
+
+   Colour contract with the neighbours: the ceremony card closes down into
+   exactly --sdi-lacquer and the countdown opens on exactly --sdi-lacquer,
+   so this section opens AND closes on that same value and only deepens
+   through the middle. Both junctions stay the two identical pixels the
+   approved layout already had, and neither neighbour is modified.        */
+
+.flow {
+  position: relative;
+  padding: 48px 22px 46px;
+  background: linear-gradient(
+    180deg,
+    var(--sdi-lacquer) 0%,
+    #390709 18%,
+    #320609 50%,
+    #390709 82%,
+    var(--sdi-lacquer) 100%
+  );
+  color: var(--sdi-ivory);
+  overflow: hidden;
+}
+
+/* The section's single lotus: the same medallion the ceremony and couple
+   sections emboss, set low behind the list and barely there, so it reads
+   as lacquer depth rather than as an ornament placed beside the text. */
+.flowWatermark {
+  position: absolute;
+  top: 64%;
+  left: 76%;
+  width: clamp(190px, 58cqw, 240px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background-image: url("/renderers/wedding/se-duyen/v1/lotus-fate-medallion.webp");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.045;
+  -webkit-mask-image: radial-gradient(circle, #000 30%, transparent 70%);
+  mask-image: radial-gradient(circle, #000 30%, transparent 70%);
+  pointer-events: none;
+}
+
+.flowHead {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+
+.flowEyebrow {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.46em;
+  text-indent: 0.23em;
+  text-transform: uppercase;
+  color: rgba(228, 200, 138, 0.74);
+}
+
+/* Set in the same gilt as the countdown heading below it, so the two read
+   as one lacquer chapter with two titles rather than two panels. */
+.flowHeading {
+  margin: 13px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(27px, 7.6cqw, 32px);
+  line-height: 1.26;
+  letter-spacing: 0.016em;
+  text-wrap: balance;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.flowRule {
+  display: block;
+  width: clamp(68px, 22cqw, 88px);
+  height: 1px;
+  margin: 18px auto 0;
+  background: linear-gradient(
+    90deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(228, 200, 138, 0.6) 50%,
+    rgba(228, 200, 138, 0) 100%
+  );
+}
+
+/* --- the thread and its knots ---------------------------------------- */
+
+/* The rail is a custom property so the hairline, the knots and the text
+   indent are all driven by ONE number: the thread cannot drift away from
+   the dots it is threaded through. */
+.flowList {
+  --sdp-flow-rail: 15px;
+  --sdp-flow-knot: 9px;
+
+  position: relative;
+  z-index: 2;
+  margin: 40px auto 0;
+  padding: 0;
+  max-width: 330px;
+  list-style: none;
+}
+
+/* The tơ hồng itself. It starts and ends INSIDE the list rather than at
+   its edges — faded away at both ends — so it reads as a thread drawn
+   through the moments, not as a ruled border beside them. */
+.flowList::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: var(--sdp-flow-rail);
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(214, 180, 114, 0.5) 12%,
+    rgba(214, 180, 114, 0.5) 86%,
+    rgba(228, 200, 138, 0) 100%
+  );
+  pointer-events: none;
+}
+
+.flowStep {
+  position: relative;
+  padding-left: calc(var(--sdp-flow-rail) + 24px);
+}
+
+/* Editorial spacing: the gap between moments is the composition. */
+.flowStep + .flowStep {
+  margin-top: 38px;
+}
+
+/* The knot. A small gilt point with a soft lacquer halo, centred on the
+   thread by the same --sdp-flow-rail the hairline uses. */
+.flowStep::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  left: var(--sdp-flow-rail);
+  width: var(--sdp-flow-knot);
+  height: var(--sdp-flow-knot);
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #fbf1d6 0%, #d6b472 54%, #a8822f 100%);
+  box-shadow: 0 0 0 4px rgba(64, 9, 12, 0.92), 0 0 12px rgba(228, 200, 138, 0.3);
+}
+
+.flowStepBody {
+  position: relative;
+}
+
+/* Tabular lining figures so every hour on the list starts at the same
+   optical position down the column. */
+.flowTime {
+  margin: 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(17px, 5.2cqw, 20px);
+  line-height: 1.1;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0.2em;
+  text-indent: 0.1em;
+  color: rgba(228, 200, 138, 0.92);
+}
+
+.flowTitle {
+  margin: 9px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(20px, 6cqw, 23px);
+  line-height: 1.3;
+  letter-spacing: 0.012em;
+  text-wrap: balance;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@container (max-width: 365px) {
+  .flow {
+    padding: 44px 16px 42px;
+  }
+
+  .flowList {
+    --sdp-flow-rail: 13px;
+  }
+
+  .flowStep {
+    padding-left: calc(var(--sdp-flow-rail) + 20px);
+  }
+
+  .flowStep + .flowStep {
+    margin-top: 34px;
+  }
+}
+
+/* ======================================================================
+   4. Album Cưới / wedding gallery  (SD-V1-02B2)
+
+   Ported from the frozen pilot v03 album, unchanged but for the three kinds
+   of change recorded at the top of this file: the demo-photo fallbacks are
+   gone, so a frame with no photograph of the Project's own is omitted by the
+   renderer rather than filled with demo art.
+
+   Four photos, not a grid: one full-width lead, a staggered pair, then a
+   square crop set against the right margin. Each frame is a different shape
+   and no two baselines agree, which is what keeps it editorial rather than a
+   contact sheet. Four is the layout, not a limit on the slot: the `gallery`
+   slot is unbounded and the renderer fills these four frames from the first
+   four RESOLVED photographs, in the customer's own order.
+   ====================================================================== */
+
+/* ---------------------------------------------------------------------- */
+/* 4. Wedding gallery — photography on lacquer, nothing framed.           */
+/*                                                                        */
+/* The ceremony section closes on exactly --sdi-lacquer, so this one opens */
+/* on the same value and the junction is two identical pixels: no seam     */
+/* layer is needed here at all.                                           */
+/* ---------------------------------------------------------------------- */
+
+.album {
+  position: relative;
+  padding: 64px 22px 86px;
+  background: linear-gradient(180deg, var(--sdi-lacquer) 0%, var(--sdi-lacquer-deep) 100%);
+  color: var(--sdi-ivory);
+}
+
+.albumHead {
+  text-align: center;
+  margin: 0 0 26px;
+}
+
+.albumEyebrow {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.46em;
+  text-indent: 0.23em;
+  text-transform: uppercase;
+  color: rgba(228, 200, 138, 0.76);
+}
+
+.albumHeading {
+  margin: 12px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(26px, 8cqw, 32px);
+  line-height: 1.26;
+  letter-spacing: 0.015em;
+  text-wrap: balance;
+  background: linear-gradient(174deg, #fbf1d6 0%, #e7cc96 52%, #c9a761 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.albumRule {
+  display: block;
+  width: clamp(74px, 24cqw, 96px);
+  height: 1px;
+  margin: 20px auto 0;
+  background: linear-gradient(
+    90deg,
+    rgba(228, 200, 138, 0) 0%,
+    rgba(228, 200, 138, 0.55) 50%,
+    rgba(228, 200, 138, 0) 100%
+  );
+}
+
+/* One hairline and one shadow separate every frame from the lacquer —
+   the same treatment the couple section uses, never a gilded border. */
+.albumLead,
+.albumPairTall,
+.albumPairSmall,
+.albumFoot {
+  background-size: cover;
+  background-repeat: no-repeat;
+  box-shadow:
+    0 0 0 1px rgba(228, 200, 138, 0.38),
+    0 24px 40px -20px rgba(8, 1, 2, 0.9);
+}
+
+/* Beat one: held off the right margin, so the drift across the three beats
+   runs left -> both -> right instead of settling into a centred column. */
+.albumLeadRow {
+  width: 100%;
+  max-width: 330px;
+  margin: 0 auto;
+}
+
+.albumLead {
+  width: 86%;
+  margin: 0 auto 0 0;
+  aspect-ratio: 4 / 5;
+  background-image: var(--sdp-albumLead-image);
+  background-size: var(--sdp-albumLead-size, cover);
+  background-position: var(--sdp-albumLead-pos, center 26%);
+}
+
+/* Beat two: a tall frame and a small one, deliberately out of step — the
+   small frame starts below the tall one's top and ends above its foot. */
+.albumPair {
+  position: relative;
+  width: 100%;
+  max-width: 330px;
+  margin: 18px auto 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 4.5%;
+}
+
+/* Only when one of the pair has no photo: the remaining frame keeps its own
+   width and sits centred instead of against the gap the other one left. */
+.albumPairSolo {
+  justify-content: center;
+}
+
+.albumPairTall {
+  width: 55.5%;
+  aspect-ratio: 3 / 4;
+  background-image: var(--sdp-albumTall-image);
+  background-size: var(--sdp-albumTall-size, cover);
+  background-position: var(--sdp-albumTall-pos, center 18%);
+}
+
+.albumPairSmall {
+  width: 40%;
+  margin-top: 46px;
+  aspect-ratio: 4 / 5;
+  background-image: var(--sdp-albumSmall-image);
+  /* Zoomed well past cover: this photo also carries the couple section, and
+     a tight crop of the two of them is a different picture from the
+     full-length frame there. */
+  background-size: var(--sdp-albumSmall-size, 182%);
+  background-position: var(--sdp-albumSmall-pos, 50% 16%);
+}
+
+/* Beat three: a square, set against the right margin so the column of
+   frames never settles into a centred stack. The row carries the same
+   measure as the frames above it, so "right" means the same edge. */
+.albumFootRow {
+  width: 100%;
+  max-width: 330px;
+  margin: 0 auto;
+}
+
+.albumFoot {
+  width: 68%;
+  margin: 18px 0 0 auto;
+  aspect-ratio: 1;
+  background-image: var(--sdp-albumFoot-image);
+  background-size: var(--sdp-albumFoot-size, 134%);
+  background-position: var(--sdp-albumFoot-pos, 50% 22%);
+}
+
+@container (max-width: 365px) {
+  .album {
+    padding: 64px 16px 76px;
+  }
+
+  .albumPairSmall {
+    margin-top: 38px;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* 5. RSVP — a response card, not a web form.                             */
+
+/* A frame that carries the Project's own photo becomes a button; this only
+   strips the button chrome, so the frame renders exactly as the div did. */
+.photoButton {
+  display: block;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  cursor: zoom-in;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* ======================================================================
    7. Lời cảm ơn / Thank you
    ====================================================================== */
 
@@ -2112,4 +2523,110 @@
   margin: 2px 0;
   font-size: 0.44em;
   color: rgba(214, 180, 114, 0.9);
+}
+/* PRODUCTION ADAPTATION (SD-V1-02B2) — the overlay is a native modal
+   `<dialog>`, as every other production renderer's viewer is.
+
+   The prototype drew a `div[role="dialog"]` over a full-screen scrim button
+   and listened on `window` for Escape and the arrow keys. A real `<dialog>`
+   opened with `showModal()` gives Escape, the focus trap and the inert page
+   for free, and keeps the island off `window` entirely — which is what the
+   shared island boundary requires. So the scrim button is gone and its exact
+   colour moves to the dialog's own `::backdrop`; nothing else about the
+   approved overlay changes.
+
+   A `<dialog>` carries UA chrome (border, padding, background, max-width and
+   max-height) and is centred by `margin: auto`, all of which is cleared here
+   so the frozen frame sits exactly where it sat. `display` must stay with
+   the `[open]` state: a bare `display: flex` would defeat the UA's
+   `display: none` and paint the overlay over a closed invitation. */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: hidden;
+  /* The whole field around the photograph closes, as the scrim did. */
+  cursor: zoom-out;
+}
+
+.lightbox:not([open]) {
+  display: none;
+}
+
+.lightbox[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The frozen scrim's exact colour. */
+.lightbox::backdrop {
+  background: rgba(20, 3, 5, 0.94);
+}
+
+
+.lightboxFrame {
+  position: relative;
+  width: 92vw;
+  max-width: 520px;
+  height: 78vh;
+  /* The photograph is the one thing in here that is not a close target. */
+  cursor: default;
+}
+
+/* The prototype filled this frame with a `next/image` in `fill` mode; a
+   production renderer paints the Project's own runtime URL into a plain
+   `<img>`, so the contained fit is declared here instead. */
+.lightboxImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lightboxStep,
+.lightboxClose {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(228, 200, 138, 0.5);
+  background: rgba(44, 6, 8, 0.72);
+  color: var(--sdi-gold-hi, #e4c88a);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.lightboxClose {
+  top: 16px;
+  right: 16px;
+  font-size: 14px;
+}
+
+.lightboxStep {
+  top: 50%;
+  margin-top: -20px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.lightboxPrev {
+  left: 12px;
+}
+
+.lightboxNext {
+  right: 12px;
 }

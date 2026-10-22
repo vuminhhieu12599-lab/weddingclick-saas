@@ -26,10 +26,7 @@ import {
   TEMPLATE_EDITOR_SLOT_KEY_FORBIDDEN_WORDS,
   validateTemplateEditorManifest,
 } from "../../../../core/editor-manifest";
-import {
-  PRODUCTION_EDITOR_MANIFEST_ERROR_MESSAGES,
-  validateProductionEditorManifests,
-} from "../../../../core/production-editor-manifests";
+import { validateProductionEditorManifests } from "../../../../core/production-editor-manifests";
 import {
   createProductionCompatibilityRegistry,
   type ProductionCompatibilityRegistryV1,
@@ -44,6 +41,8 @@ vi.mock("../fonts", () => ({ SE_DUYEN_V1_FONT_VARIABLES_CLASS_NAME: "sd-test-fon
 const { SeDuyenV1 } = await import("../se-duyen-v1");
 const { SE_DUYEN_V1_COPY: COPY } = await import("../copy");
 const { buildInvitationWording } = await import("../sections/invitation-wording");
+const { albumPhotos, stepAlbum, SE_DUYEN_ALBUM_FRAMES } = await import("../sections/gallery-frames");
+const { albumAlt } = await import("../interactive/gallery-viewer");
 
 /**
  * SD-V1-01 — Se Duyên v1 production renderer foundation.
@@ -57,15 +56,23 @@ const { buildInvitationWording } = await import("../sections/invitation-wording"
 
 const EMPTY: InvitationRendererCapabilitiesV1 = Object.freeze({});
 
-/** Fixture PHOTO ids for the four SINGLE slots; distinct, so a repeat is visible. */
+/** Fixture PHOTO ids; all distinct, so a repeat or a reorder is visible. */
 const PHOTO = Object.freeze({
   OPENING: "00000000-0000-4000-8000-0000000007d1",
   LEAD: "00000000-0000-4000-8000-0000000007d2",
   ASIDE: "00000000-0000-4000-8000-0000000007d3",
   CLOSING: "00000000-0000-4000-8000-0000000007d4",
+  G1: "00000000-0000-4000-8000-0000000007e1",
+  G2: "00000000-0000-4000-8000-0000000007e2",
+  G3: "00000000-0000-4000-8000-0000000007e3",
+  G4: "00000000-0000-4000-8000-0000000007e4",
+  G5: "00000000-0000-4000-8000-0000000007e5",
 });
 
-type SlotKey = "openingPhoto" | "portraitLead" | "portraitAside" | "closingPhoto";
+/** The album's slot order, as a customer would arrange it. */
+const ALBUM_IDS = [PHOTO.G1, PHOTO.G2, PHOTO.G3, PHOTO.G4] as const;
+
+type SlotKey = "openingPhoto" | "portraitLead" | "portraitAside" | "closingPhoto" | "gallery";
 type SlotAssignments = Partial<Record<SlotKey, readonly string[]>>;
 
 const ALL_SLOTS: SlotAssignments = Object.freeze({
@@ -73,6 +80,7 @@ const ALL_SLOTS: SlotAssignments = Object.freeze({
   portraitLead: [PHOTO.LEAD],
   portraitAside: [PHOTO.ASIDE],
   closingPhoto: [PHOTO.CLOSING],
+  gallery: ALBUM_IDS,
 });
 
 function slotRows(assignments: SlotAssignments): TemplateMediaSlotItem[] {
@@ -193,15 +201,18 @@ describe("A. production contract", () => {
     }
   });
 
-  it("the sections SD-V1-01 cannot render are never effective, whatever the staff settings say", async () => {
+  it("the sections this renderer cannot render are never effective, whatever the staff settings say", async () => {
     const fixture = await sdFixture({
       variant: "COMMON",
-      sectionSettings: { gallery: true, music: true, gift: true, timeline: true },
+      sectionSettings: { gallery: true, music: true, gift: true, timeline: true, dressCode: true },
     });
     const effective = fixture.selection.effectiveSections;
-    for (const key of ["gallery", "music", "gift", "timeline", "dressCode", "photoStory"] as const) {
+    for (const key of ["music", "gift", "dressCode", "photoStory"] as const) {
       expect(effective[key], key).toBe(false);
     }
+    // SD-V1-02B2 and B3A: the album and the run-of-show are real.
+    expect(effective.gallery).toBe(true);
+    expect(effective.timeline).toBe(true);
   });
 });
 
@@ -427,9 +438,9 @@ describe("D. guest and wording", () => {
 // ---------------------------------------------------------------------------
 
 describe("E. media", () => {
-  /** Every `--sdp-<stem>-image` url in the markup, in document order. */
+  /** The four SINGLE frames' urls, in document order; the album has its own section. */
   function frameUrls(html: string): string[] {
-    return [...html.matchAll(/--sdp-([A-Za-z]+)-image:url\(&quot;([^&]+)&quot;\)/g)].map(
+    return [...html.matchAll(/--sdp-(hero|coupleMain|coupleAside|closing)-image:url\(&quot;([^&]+)&quot;\)/g)].map(
       (match) => `${match[1] as string}=${match[2] as string}`,
     );
   }
@@ -505,7 +516,7 @@ describe("E. media", () => {
 
   it("a Project with no photograph at all still renders a complete invitation", async () => {
     const { html, fixture } = await renderSd({ variant: "COMMON", slots: {} });
-    for (const slotKey of ["openingPhoto", "portraitLead", "portraitAside", "closingPhoto"] as const) {
+    for (const slotKey of ["openingPhoto", "portraitLead", "portraitAside", "closingPhoto", "gallery"] as const) {
       expect(fixture.viewModel.media.templateSlots?.[slotKey], slotKey).toStrictEqual([]);
     }
     expect(frameUrls(html)).toStrictEqual([]);
@@ -514,21 +525,21 @@ describe("E. media", () => {
     }
   });
 
-  it("no legacy media role is read: not cover, love-story, portrait, gallery, QR or audio", async () => {
+  it("no legacy media role is read: under TEMPLATE_SLOTS every one is empty, and the QR that remains is not rendered", async () => {
     const { html, fixture } = await renderSd({ variant: "COMMON", galleryCount: 3, portraits: "PRESENT", loveStoryPhoto: "PRESENT" });
     const { media } = fixture.viewModel;
-    const legacy: readonly (MediaResolution | undefined)[] = [
-      media.cover,
-      media.loveStoryPhoto,
-      ...media.gallery,
-      ...media.photoStory,
-      media.portrait.groom,
-      media.portrait.bride,
-      media.qr.groom,
-      media.qr.bride,
-      media.audio,
-    ];
-    const resolved = legacy.filter((item): item is ResolvedMedia => item?.status === "RESOLVED");
+    // A TEMPLATE_SLOTS Snapshot carries no legacy media refs at all, so these
+    // roles cannot leak into a frame even by mistake.
+    expect(media.cover).toBeUndefined();
+    expect(media.loveStoryPhoto).toBeUndefined();
+    expect(media.gallery).toStrictEqual([]);
+    expect(media.photoStory).toStrictEqual([]);
+    expect(media.portrait).toStrictEqual({});
+    // `audio` and `qr` are the semantic roles the slot model keeps, for the
+    // music and gift capabilities this renderer does not have yet; neither
+    // reaches the markup.
+    const semantic: readonly (MediaResolution | undefined)[] = [media.audio, media.qr.groom, media.qr.bride];
+    const resolved = semantic.filter((item): item is ResolvedMedia => item?.status === "RESOLVED");
     expect(resolved.length).toBeGreaterThan(0);
     for (const item of resolved) expect(html, item.url).not.toContain(item.url);
   });
@@ -565,8 +576,9 @@ describe("F. opening", () => {
     expect(html).toContain('aria-labelledby="sd-closing-eyebrow"');
   });
 
-  it("the box itself is the only control, and it carries an accessible name", async () => {
-    const { html } = await renderSd({ variant: "COMMON" });
+  it("the box itself is the only control of the opening, and it carries an accessible name", async () => {
+    // With no album there is nothing else to press anywhere in the invitation.
+    const { html } = await renderSd({ variant: "COMMON", slots: {} });
     expect(count(html, "<button")).toBe(1);
     expect(html).toContain(`aria-label="${COPY.cover.openHint}"`);
     expect(html).not.toContain("<form");
@@ -651,10 +663,295 @@ describe("G. editor manifest", () => {
     expect(opening?.recommendedCount).toBe(1);
   });
 
-  it("registration is still gated: the gallery slot names a section this renderer is not capable of", () => {
-    expect(SE_DUYEN_V1_MANIFEST.compatibility.sectionCapabilities.gallery).toBe(false);
-    expect(() => validateProductionEditorManifests([SE_DUYEN_V1_EDITOR_MANIFEST], [SE_DUYEN_V1_MANIFEST])).toThrow(
-      PRODUCTION_EDITOR_MANIFEST_ERROR_MESSAGES.SLOT_SECTION_NOT_CAPABLE,
+  it("SD-V1-02B2: the gallery capability is real, so the editor manifest now cross-validates", () => {
+    expect(SE_DUYEN_V1_MANIFEST.compatibility.sectionCapabilities.gallery).toBe(true);
+    const validated = validateProductionEditorManifests([SE_DUYEN_V1_EDITOR_MANIFEST], [SE_DUYEN_V1_MANIFEST]);
+    expect(validated.map((manifest) => manifest.rendererKey)).toStrictEqual(["wedding.se-duyen.v1"]);
+    // Every section-linked slot and item now names a capable section.
+    const capabilities = SE_DUYEN_V1_MANIFEST.compatibility.sectionCapabilities;
+    for (const slot of SE_DUYEN_V1_EDITOR_MANIFEST.mediaSlots) {
+      if (slot.sectionKey !== null) expect(capabilities[slot.sectionKey], slot.key).toBe(true);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// H. Album and its viewer (SD-V1-02B2)
+// ---------------------------------------------------------------------------
+
+describe("H. album", () => {
+  const ALBUM = COPY.gallery;
+
+  /** `--sdp-album<Frame>-image` urls in the markup, in document order. */
+  function albumUrls(html: string): string[] {
+    return [...html.matchAll(/--sdp-(album[A-Za-z]+)-image:url\(&quot;([^&]+)&quot;\)/g)].map(
+      (match) => `${match[1] as string}=${match[2] as string}`,
     );
+  }
+
+  function galleryUrls(fixture: RendererFixture): string[] {
+    return (fixture.viewModel.media.templateSlots?.gallery ?? []).map((item) =>
+      item.status === "RESOLVED" ? item.url : `UNAVAILABLE:${item.mediaId}`,
+    );
+  }
+
+  it("four photographs fill the four approved frames in the customer's own order", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON" });
+    const urls = galleryUrls(fixture);
+    expect(urls).toHaveLength(4);
+    expect(albumUrls(html)).toStrictEqual([
+      `albumLead=${urls[0] as string}`,
+      `albumTall=${urls[1] as string}`,
+      `albumSmall=${urls[2] as string}`,
+      `albumFoot=${urls[3] as string}`,
+    ]);
+    expect(html).toContain(ALBUM.heading);
+    expect(html).toContain('aria-labelledby="sd-album-heading"');
+  });
+
+  it("no photograph is repeated, and the album never borrows another frame's photo", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON" });
+    const urls = albumUrls(html).map((entry) => entry.split("=")[1] as string);
+    expect(new Set(urls).size).toBe(urls.length);
+    // The four SINGLE slots' photographs are not among them.
+    for (const slotKey of ["openingPhoto", "portraitLead", "portraitAside", "closingPhoto"] as const) {
+      const single = fixture.viewModel.media.templateSlots?.[slotKey]?.[0];
+      if (single?.status === "RESOLVED") expect(urls, slotKey).not.toContain(single.url);
+    }
+  });
+
+  it("one photograph draws one frame, and the pair is centred on its own", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON", slots: { gallery: [PHOTO.G1] } });
+    expect(albumUrls(html)).toStrictEqual([`albumLead=${galleryUrls(fixture)[0] as string}`]);
+    expect(html).not.toContain("--sdp-albumTall-image");
+    expect(html).not.toContain("albumPair");
+    // One photograph is not navigable: no stepping controls at all.
+    expect(html).not.toContain("lightboxPrev");
+    expect(html).not.toContain("lightboxNext");
+  });
+
+  it("two photographs draw the lead and one of the pair, which is then the solo composition", async () => {
+    const { html } = await renderSd({ variant: "COMMON", slots: { gallery: [PHOTO.G1, PHOTO.G2] } });
+    expect(albumUrls(html)).toHaveLength(2);
+    expect(html).toContain("albumPairSolo");
+    expect(html).not.toContain("--sdp-albumSmall-image");
+  });
+
+  it("an empty gallery hides the whole section", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON", slots: {} });
+    expect(fixture.viewModel.media.templateSlots?.gallery).toStrictEqual([]);
+    expect(html).not.toContain("sd-album-heading");
+    expect(html).not.toContain(ALBUM.heading);
+    expect(albumUrls(html)).toStrictEqual([]);
+    // And no viewer is mounted for an album that does not exist.
+    expect(html).not.toContain("<dialog");
+  });
+
+  it("switching the gallery section off hides it even with photographs assigned", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON", sectionSettings: { gallery: false } });
+    expect(fixture.selection.effectiveSections.gallery).toBe(false);
+    expect(html).not.toContain("sd-album-heading");
+    expect(albumUrls(html)).toStrictEqual([]);
+  });
+
+  it("an UNAVAILABLE photograph is skipped and the frames close up: never a blank frame", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON", unavailableMediaIds: [PHOTO.G2] });
+    const slot = fixture.viewModel.media.templateSlots?.gallery ?? [];
+    expect(slot[1]?.status).toBe("UNAVAILABLE");
+    // Three photographs remain, in order, and they fill the first three frames.
+    const resolved = slot.filter((item) => item.status === "RESOLVED").map((item) => (item as { url: string }).url);
+    expect(albumUrls(html)).toStrictEqual([
+      `albumLead=${resolved[0] as string}`,
+      `albumTall=${resolved[1] as string}`,
+      `albumSmall=${resolved[2] as string}`,
+    ]);
+    expect(html).not.toContain("--sdp-albumFoot-image");
+  });
+
+  it("the slot is unbounded: a fifth photograph is simply not drawn, and none is dropped from the order", async () => {
+    const { html, fixture } = await renderSd({
+      variant: "COMMON",
+      slots: { gallery: [...ALBUM_IDS, PHOTO.G5] },
+    });
+    expect(fixture.viewModel.media.templateSlots?.gallery).toHaveLength(5);
+    const urls = galleryUrls(fixture);
+    expect(albumUrls(html).map((entry) => entry.split("=")[1] as string)).toStrictEqual(urls.slice(0, 4));
+    expect(html).not.toContain(urls[4] as string);
+  });
+
+  it("every frame carrying a photograph is itself the control that opens it", async () => {
+    const { html } = await renderSd({ variant: "COMMON" });
+    // One box button plus one button per drawn frame, and the viewer's three.
+    expect(count(html, 'aria-haspopup="dialog"')).toBe(4);
+    for (const position of [1, 2, 3, 4]) {
+      expect(html, `frame ${String(position)}`).toContain(
+        `aria-label="${ALBUM.open}: ${ALBUM.imageAlt} ${String(position)} ${ALBUM.of} 4"`,
+      );
+    }
+    expect(count(html, "photoButton")).toBe(4);
+  });
+
+  it("the viewer is a native modal dialog with an accessible name", async () => {
+    const { html } = await renderSd({ variant: "COMMON" });
+    expect(html).toMatch(/<dialog class="[^"]*_lightbox_[^"]*" aria-label="/);
+    expect(html).toContain(`aria-label="${ALBUM.viewerLabel}"`);
+    // Closed in server markup: nothing is shown over an unopened invitation.
+    expect(html).not.toContain("<dialog open");
+  });
+
+  it("the pure frame assignment takes the first four RESOLVED photographs, in order", () => {
+    const resolved = (id: string) => ({ status: "RESOLVED" as const, mediaId: id, url: `u:${id}`, width: null, height: null });
+    const unavailable = (id: string) => ({ status: "UNAVAILABLE" as const, mediaId: id });
+
+    expect(albumPhotos([])).toStrictEqual([]);
+    expect(albumPhotos([unavailable("a"), unavailable("b")])).toStrictEqual([]);
+    expect(albumPhotos([resolved("a")]).map((photo) => [photo.frame, photo.position, photo.media.mediaId])).toStrictEqual([
+      ["albumLead", 1, "a"],
+    ]);
+    // The UNAVAILABLE one is skipped, not counted, and the rest close up.
+    expect(
+      albumPhotos([resolved("a"), unavailable("x"), resolved("b"), resolved("c"), resolved("d"), resolved("e")]).map(
+        (photo) => [photo.frame, photo.position, photo.media.mediaId],
+      ),
+    ).toStrictEqual([
+      ["albumLead", 1, "a"],
+      ["albumTall", 2, "b"],
+      ["albumSmall", 3, "c"],
+      ["albumFoot", 4, "d"],
+    ]);
+    expect(SE_DUYEN_ALBUM_FRAMES).toStrictEqual(["albumLead", "albumTall", "albumSmall", "albumFoot"]);
+  });
+
+  it("stepping through the album wraps both ways", () => {
+    expect(stepAlbum(0, 1, 4)).toBe(1);
+    expect(stepAlbum(3, 1, 4)).toBe(0);
+    expect(stepAlbum(0, -1, 4)).toBe(3);
+    expect(stepAlbum(2, -1, 4)).toBe(1);
+    // A single photograph has nowhere to step.
+    expect(stepAlbum(0, 1, 1)).toBe(0);
+    expect(stepAlbum(0, -1, 1)).toBe(0);
+  });
+
+  it("alt text numbers the photograph by its position in the album", () => {
+    expect(albumAlt(1)).toBe(`${ALBUM.imageAlt} 1`);
+    expect(albumAlt(4)).toBe(`${ALBUM.imageAlt} 4`);
+  });
+
+  it("the album comes from the slot, never from the legacy gallery role", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON", galleryCount: 3 });
+    // The fixture asks for legacy GALLERY rows; a TEMPLATE_SLOTS Snapshot
+    // carries none, so the album can only be the slot's own photographs.
+    expect(fixture.viewModel.media.gallery).toStrictEqual([]);
+    expect(albumUrls(html)).toHaveLength(4);
+    for (const entry of albumUrls(html)) expect(galleryUrls(fixture)).toContain(entry.split("=")[1] as string);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// I. Run-of-show / timeline (SD-V1-02B3A)
+// ---------------------------------------------------------------------------
+
+describe("I. timeline", () => {
+  const FLOW = COPY.timeline;
+
+  /** The timeline section's markup only. */
+  function flowOf(html: string): string {
+    const start = html.indexOf('aria-labelledby="sd-flow-heading"');
+    expect(start).toBeGreaterThan(0);
+    return html.slice(start, html.indexOf("</section>", start));
+  }
+
+  /** Each step as `HH:mm|label`, in document order. */
+  function steps(html: string): string[] {
+    return [...flowOf(html).matchAll(/<time dateTime="([^"]+)">[^<]*<\/time><\/p><h3[^>]*>([^<]+)</g)].map(
+      (match) => `${match[1] as string}|${match[2] as string}`,
+    );
+  }
+
+  it("renders every configured milestone, in the builder's order, with its own hour and wording", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON", timeline: "PRESENT" });
+    const items = fixture.viewModel.content.timeline;
+    expect(items.length).toBeGreaterThan(0);
+    // The fixture supplies the rows out of order on purpose; the Snapshot
+    // builder orders them and the renderer prints them exactly as given.
+    expect(steps(html)).toStrictEqual(items.map((item) => `${item.time}|${item.label}`));
+    expect(html).toContain(FLOW.heading);
+    expect(html).toContain(FLOW.eyebrow);
+  });
+
+  it("the hour is the canonical HH:mm text, never reformatted or re-derived", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON", timeline: "PRESENT" });
+    const flow = flowOf(html);
+    for (const item of fixture.viewModel.content.timeline) {
+      expect(item.time, item.label).toMatch(/^([01]\d|2[0-3]):[0-5]\d$/);
+      // Printed, and carried in `dateTime`, as the one stored value.
+      expect(flow, item.label).toContain(`<time dateTime="${item.time}">${item.time}</time>`);
+    }
+  });
+
+  it("no timeline hour is synchronised with the ceremony or either reception", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON", timeline: "PRESENT" });
+    const ceremonyTime = deriveEventDateTimePresentationV1(fixture.viewModel.ceremony).time;
+    const matching = fixture.viewModel.content.timeline.filter((item) => item.time === ceremonyTime);
+    // The fixture deliberately has a step at the ceremony's own hour.
+    expect(matching.length).toBeGreaterThan(0);
+    const flow = flowOf(html);
+    // It gets no mark, no rite title and no special knot: a timeline hour and
+    // an invitation hour are independent by Product Owner rule.
+    expect(flow).not.toContain("flowStepRite");
+    expect(flow).not.toContain("flowRiteMark");
+    expect(flow).not.toContain(fixture.viewModel.ceremony.title);
+    // It is printed with the customer's own wording, like every other step.
+    for (const item of matching) expect(flow, item.label).toContain(item.label);
+  });
+
+  it("the step wording is the customer's own, never replaced by a template note", async () => {
+    const { html } = await renderSd({ variant: "COMMON", timeline: "PRESENT" });
+    const flow = flowOf(html);
+    // The prototype's hard-coded per-step notes are not part of the contract.
+    expect(flow).not.toContain("flowNote");
+    expect(flow).not.toContain("Nghi thức chính của ngày vui");
+    // Nor is the prototype's "these hours are illustrative" badge.
+    expect(flow).not.toContain("flowBadge");
+    expect(flow).not.toContain("minh hoạ");
+  });
+
+  it("an empty timeline omits the section entirely", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON", timeline: "ABSENT" });
+    expect(fixture.viewModel.content.timeline).toStrictEqual([]);
+    expect(fixture.selection.effectiveSections.timeline).toBe(false);
+    expect(html).not.toContain("sd-flow-heading");
+    expect(html).not.toContain(FLOW.heading);
+  });
+
+  it("switching the timeline section off hides it even with milestones configured", async () => {
+    const { html, fixture } = await renderSd({
+      variant: "COMMON",
+      timeline: "PRESENT",
+      sectionSettings: { timeline: false },
+    });
+    expect(fixture.viewModel.content.timeline.length).toBeGreaterThan(0);
+    expect(fixture.selection.effectiveSections.timeline).toBe(false);
+    expect(html).not.toContain("sd-flow-heading");
+  });
+
+  it.each(VARIANTS)("%s shows the same run-of-show: it carries no variant rule of its own", async (variant) => {
+    const { html, fixture } = await renderSd({ variant, timeline: "PRESENT" });
+    expect(steps(html), variant).toStrictEqual(fixture.viewModel.content.timeline.map((item) => `${item.time}|${item.label}`));
+  });
+
+  it("the run-of-show sits between the ceremony and the album", async () => {
+    const { html } = await renderSd({ variant: "COMMON", timeline: "PRESENT" });
+    expect(html.indexOf("sd-rite-title")).toBeLessThan(html.indexOf("sd-flow-heading"));
+    expect(html.indexOf("sd-flow-heading")).toBeLessThan(html.indexOf("sd-album-heading"));
+  });
+
+  it("the ordered list is a real list, and the ornaments are hidden from assistive technology", async () => {
+    const { html } = await renderSd({ variant: "COMMON", timeline: "PRESENT" });
+    const flow = flowOf(html);
+    expect(flow).toMatch(/<ol class="[^"]*_flowList_/);
+    expect(flow).toMatch(/<li class="[^"]*_flowStep_/);
+    expect(flow).toMatch(/_flowWatermark_[^"]*" aria-hidden="true"/);
+    expect(flow).toMatch(/_flowRule_[^"]*" aria-hidden="true"/);
   });
 });

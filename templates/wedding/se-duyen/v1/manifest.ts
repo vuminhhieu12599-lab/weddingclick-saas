@@ -7,10 +7,10 @@ import type { RendererProductionManifestV1 } from "../../../core/renderer-manife
  * Data only: no React, no `"use client"`, no browser globals, no
  * `lib/server/**` import (P17), no fonts, CSS or assets.
  *
- * SECTION CAPABILITIES DECLARE ONLY WHAT SD-V1-01 ACTUALLY RENDERS. The
- * approved Se Duyên direction also has a wedding gallery, a wedding-day
- * timeline, a gift envelope and a music control, and the prototype shows all
- * four. None of them has its production capability connected yet, so
+ * SECTION CAPABILITIES DECLARE ONLY WHAT THE RENDERER ACTUALLY RENDERS. The
+ * approved Se Duyên direction also has a gift envelope and a music control,
+ * and the prototype shows both. Neither has its production capability
+ * connected yet, so
  * declaring them here would let the Template Editor offer a customer
  * settings that change nothing and would let `sections.*` promise a renderer
  * section that does not exist (CLAUDE.md §22 — never report a capability the
@@ -41,11 +41,13 @@ export const SE_DUYEN_V1_MANIFEST: RendererProductionManifestV1 = {
       // wording; it is the point of the section, not an extra.
       invitationMessage: true,
       loveStory: true,
-      // SD-V1-02: gallery, music and gift.
-      gallery: false,
+      // SD-V1-02B2: the approved album, on the unbounded `gallery` slot.
+      gallery: true,
+      // SD-V1-02: music and gift.
       music: false,
       gift: false,
-      timeline: false,
+      // SD-V1-02B3A: the approved run-of-show, on the RF7 Timeline contract.
+      timeline: true,
       // Not in the approved direction.
       dressCode: false,
       photoStory: false,
@@ -60,6 +62,8 @@ export const SE_DUYEN_V1_MANIFEST: RendererProductionManifestV1 = {
     sectionSettingsSchema: {
       invitationMessage: { type: "boolean" },
       loveStory: { type: "boolean" },
+      gallery: { type: "boolean" },
+      timeline: { type: "boolean" },
     },
     designSettingsSchema: {},
   },
