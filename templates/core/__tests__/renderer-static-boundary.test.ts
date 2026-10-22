@@ -335,6 +335,7 @@ describe("templates/** production tree (P39)", () => {
   // RM-01 extension: plus exactly the two Romantic Minimal v1 manifests.
   // RM-02 extension: plus exactly the Romantic Minimal v1 renderer files (rules at the end of this file).
   // OWS-01 extension: plus exactly the Our Wedding Story v1 manifests and renderer files (rules at the end of this file).
+  // SD-V1-01 extension: plus exactly the Se Duyên v1 renderer files (rules at the end of this file).
   it("templates/** contains exactly the RF-06A, RF-06B, RF-06C, RF-06D, VH-01, TE-02, RM-01, RM-02 and OWS-01 files", () => {
     expect([...sources].sort()).toStrictEqual(
       [
@@ -351,6 +352,7 @@ describe("templates/** production tree (P39)", () => {
         ...OWS01_FILES,
         ...VH2_FILES,
         ...OWS2_FILES,
+        ...SD1_FILES,
       ].sort(),
     );
   });
@@ -652,12 +654,14 @@ describe("RF-06B template files", () => {
           ...VH2_TSX_FILES,
           OWS2_CSS_FILE,
           ...OWS2_TSX_FILES,
+          SD1_CSS_FILE,
+          ...SD1_TSX_FILES,
         ],
         file,
       ).toContain(file);
     }
     expect(sources.filter((source) => source.endsWith(".css")).sort()).toStrictEqual(
-      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE, VH2_CSS_FILE, OWS2_CSS_FILE].sort(),
+      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE, VH2_CSS_FILE, OWS2_CSS_FILE, SD1_CSS_FILE].sort(),
     );
   });
 
@@ -976,8 +980,14 @@ describe("RF-06B decor and provenance (P4–P6)", () => {
 
   it("the production asset path holds exactly the recorded decor set", () => {
     expect(readdirSync(join(REPO_ROOT, "public", "renderers"))).toEqual(["wedding"]);
-    // VH-02A: the Vietnamese Heritage v1 sibling directory is verified in the VH section below (RM-02: Romantic Minimal likewise).
-    expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding")).sort()).toEqual(["elegant-editorial", "romantic-minimal", "vietnamese-heritage"]);
+    // VH-02A: the Vietnamese Heritage v1 sibling directory is verified in the VH section below (RM-02: Romantic Minimal likewise;
+    // SD-V1-01: Se Duyên's own set is verified in the SD-V1-01 section at the end of this file).
+    expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding")).sort()).toEqual([
+      "elegant-editorial",
+      "romantic-minimal",
+      "se-duyen",
+      "vietnamese-heritage",
+    ]);
     expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding", "elegant-editorial"))).toEqual(["v1"]);
     expect(decorFiles()).toEqual([...DECOR_SVG_FILES, ...DECOR_RASTER_MAX_PIXELS.keys()].sort());
   });
@@ -3466,5 +3476,191 @@ describe("OWS-V2-01 renderer CSS motion", () => {
     expect(note).toMatch(/font-size: clamp\(19px, [\d.]+cqi, 20\.5px\);/);
     expect(note).toMatch(/color: var\(--brown\);/);
     expect(note).toMatch(/line-height: 1\.6\d?;/);
+  });
+});
+
+// ===========================================================================
+// SD-V1-01 extension — Se Duyên v1 (`wedding.se-duyen.v1`).
+//
+// The production renderer foundation ported from the Product-Owner-approved
+// "Se Duyên — Hộp Cưới" pilot v03 visual freeze (commit 79971e3). Every rule
+// above stays as is; Se Duyên gets the same boundary with its own tree.
+//
+// SD-V1-01 is DELIBERATELY NOT REGISTERED: the renderer is contract-complete
+// but absent from PRODUCTION_RENDERER_MANIFESTS, the binding table and the
+// editor manifest list, because the approved direction's gallery, music,
+// gift, timeline and RSVP capabilities are not connected yet. The "not yet
+// wired in" test below pins that state, so SD-V1-02 cannot register the
+// renderer without coming back here and saying so.
+// ===========================================================================
+
+const SD1 = "templates/wedding/se-duyen/v1";
+const SD1_MANIFEST_FILE = `${SD1}/manifest.ts`;
+const SD1_ROOT = `${SD1}/se-duyen-v1.tsx`;
+const SD1_FONTS = `${SD1}/fonts.ts`;
+const SD1_CSS_FILE = `${SD1}/se-duyen-v1.module.css`;
+const SD1_PROVENANCE_FILE = `${SD1}/PROVENANCE.md`;
+/** Static modules: no hooks, no interaction, no capability. */
+const SD1_CODE_FILES = [
+  SD1_MANIFEST_FILE,
+  SD1_ROOT,
+  `${SD1}/copy.ts`,
+  SD1_FONTS,
+  `${SD1}/sections/ceremony.tsx`,
+  `${SD1}/sections/closing.tsx`,
+  `${SD1}/sections/couple.tsx`,
+  `${SD1}/sections/date-text.ts`,
+  `${SD1}/sections/families.tsx`,
+  `${SD1}/sections/invitation.tsx`,
+  `${SD1}/sections/invitation-wording.ts`,
+  `${SD1}/sections/photo-frame.ts`,
+] as const;
+/** The one interactive island: the approved box opening. */
+const SD1_ISLAND_FILES = [`${SD1}/interactive/opening-stage.tsx`] as const;
+/** Pure state model behind the island. */
+const SD1_MODEL_FILES = [`${SD1}/interactive/opening-state.ts`] as const;
+const SD1_FILES = [...SD1_CODE_FILES, ...SD1_ISLAND_FILES, ...SD1_MODEL_FILES, SD1_CSS_FILE, SD1_PROVENANCE_FILE];
+const SD1_TSX_FILES = SD1_FILES.filter((file) => file.endsWith(".tsx"));
+
+/** The approved decorative artwork, under the renderer's own immutable version path. */
+const SD1_ASSET_DIR = "public/renderers/wedding/se-duyen/v1";
+const SD1_ASSET_FILES = [
+  "bg-red-lacquer.webp",
+  "box-lid.webp",
+  "box-open-base.webp",
+  "ivory-invitation-card.webp",
+  "lotus-fate-medallion.webp",
+  "red-thread.webp",
+] as const;
+
+describe("SD-V1-01 Se Duyên v1 files", () => {
+  const productionSources = () =>
+    [...listSources(TEMPLATES_ROOT), ...nonTestSources("app"), ...nonTestSources("lib")].filter((file) => /\.(ts|tsx)$/.test(file));
+
+  it("every listed file exists, and the tree holds nothing else", () => {
+    for (const file of SD1_FILES) expect(() => readRepoFile(file), file).not.toThrow();
+    expect(listSources(join(TEMPLATES_ROOT, "wedding", "se-duyen")).sort()).toStrictEqual([...SD1_FILES].sort());
+  });
+
+  it("the manifest is data only, imports its type only, and declares exactly the sections SD-V1-01 renders", () => {
+    expect(importsOf(readRepoFile(SD1_MANIFEST_FILE))).toStrictEqual([{ specifier: "../../../core/renderer-manifest", typeOnly: true }]);
+    const code = codeOf(SD1_MANIFEST_FILE);
+    expect(/["']use (client|server)["']|\bReact\b|next\/|\.css["']/.test(code)).toBe(false);
+    // The uncapable sections stay false until SD-V1-02 connects them for real.
+    for (const key of ["gallery", "music", "gift", "timeline", "dressCode", "photoStory"]) {
+      expect(code, key).toMatch(new RegExp(`${key}: false`));
+    }
+    for (const key of ["invitationMessage", "loveStory"]) {
+      expect(code, key).toMatch(new RegExp(`${key}: true`));
+    }
+  });
+
+  it("the renderer key literal appears only in its own manifest (SD-V1-01 registers nothing)", () => {
+    const withLiteral = productionSources().filter((file) => /["'`]wedding\.se-duyen\.v1["'`]/.test(codeOf(file)));
+    expect(withLiteral).toStrictEqual([SD1_MANIFEST_FILE]);
+  });
+
+  it("SD-V1-01 is not yet wired in: nothing imports the manifest and nothing loads the root", () => {
+    const importersOf = (target: string) =>
+      productionSources().filter((file) => importsOf(readRepoFile(file)).some((statement) => resolveSpecifier(file, statement.specifier) === target));
+    expect(importersOf(`${SD1}/manifest`)).toStrictEqual([]);
+    expect(importersOf(`${SD1}/se-duyen-v1`)).toStrictEqual([]);
+    const lazyLoaders = productionSources().filter((file) =>
+      dynamicImportsOf(readRepoFile(file)).specifiers.some((specifier) => resolveSpecifier(file, specifier) === `${SD1}/se-duyen-v1`),
+    );
+    expect(lazyLoaders).toStrictEqual([]);
+    // No editor manifest yet either, so the Template Editor cannot offer it.
+    expect(() => readRepoFile("templates/editor/wedding/se-duyen-v1.ts")).toThrow();
+  });
+
+  it("imports only its own tree, the shared lib/ contracts, react and (fonts only) next/font/google", () => {
+    for (const file of [...SD1_CODE_FILES, ...SD1_ISLAND_FILES, ...SD1_MODEL_FILES]) {
+      for (const modulePath of resolvedImportsOf(file)) {
+        const allowed =
+          modulePath.startsWith(`${SD1}/`) ||
+          modulePath.startsWith(`${LIB}/`) ||
+          modulePath === "lib/domain" ||
+          modulePath === "react" ||
+          (file === SD1_MANIFEST_FILE && modulePath === "templates/core/renderer-manifest") ||
+          (file === SD1_FONTS && modulePath === "next/font/google") ||
+          modulePath === SD1_CSS_FILE;
+        expect(allowed, `${file} → ${modulePath}`).toBe(true);
+      }
+    }
+  });
+
+  it.each(SD1_CODE_FILES)("%s (static) has no forbidden runtime, data, browser, prototype or hook code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of RF06B_FORBIDDEN) {
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+    expect(ALL_HOOKS.test(code), `${file}: hooks`).toBe(false);
+    expect(/ResizeObserver|IntersectionObserver|\bonAnimationEnd\b/.test(code), `${file}: observers`).toBe(false);
+  });
+
+  it.each([...SD1_ISLAND_FILES, ...SD1_MODEL_FILES])("%s has no data, network, persistence, time or prototype code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of RF06D_FORBIDDEN) {
+      // `ResizeObserver` is this island's one privileged observer: the grown
+      // photograph's rectangle is measured, so a rotation after the opening
+      // would otherwise leave a hero sized to the old viewport. The rest of
+      // that rule — `MutationObserver` and `matchMedia` — still applies.
+      if (label === "observers / media queries") {
+        expect(/MutationObserver|matchMedia/.test(code), `${file}: ${label}`).toBe(false);
+        continue;
+      }
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+    expect(/ResizeObserver/.test(code), file).toBe(file === `${SD1}/interactive/opening-stage.tsx`);
+    // The phase ends on the CSS sequence's own event, never on a timer.
+    expect(/\bset(Timeout|Interval)\b/.test(code), file).toBe(false);
+  });
+
+  it("no Se Duyên file declares a client or server boundary; only the fonts module touches next/font", () => {
+    for (const file of [...SD1_CODE_FILES, ...SD1_ISLAND_FILES, ...SD1_MODEL_FILES]) {
+      expect(/["']use (client|server)["']/.test(codeOf(file)), file).toBe(false);
+      expect(/next\/font/.test(codeOf(file)), file).toBe(file === SD1_FONTS);
+    }
+  });
+
+  it("the island owns the whole opening: the phase, the box control and the measured growth", () => {
+    const island = codeOf(`${SD1}/interactive/opening-stage.tsx`);
+    expect(island).toMatch(/<button/);
+    expect(island).toMatch(/onAnimationEnd=\{handleClockEnd\}/);
+    expect(island).toMatch(/--sdp-expand-(left|top|width|height)/);
+    // No static module may carry the control or the phase.
+    for (const file of SD1_CODE_FILES) {
+      expect(/data-phase|--sdp-expand/.test(codeOf(file)), file).toBe(false);
+    }
+  });
+
+  it("the stylesheet names only this renderer's own immutable asset path, and no demo photograph", () => {
+    const css = readRepoFile(SD1_CSS_FILE);
+    const urls = [...css.matchAll(/url\("([^"]+)"\)/g)].map((match) => match[1] as string);
+    const allowed = SD1_ASSET_FILES.map((file) => `/renderers/wedding/se-duyen/v1/${file}`);
+    expect(urls.length).toBeGreaterThan(0);
+    for (const url of urls) expect(allowed, url).toContain(url);
+    // P7: a photo frame never falls back to artwork; an empty frame is omitted.
+    expect(/var\(--sdp-[A-Za-z]+-image,/.test(css)).toBe(false);
+    // The provenance note (a comment) names where the artwork came from; no
+    // RULE may reach outside this renderer's own path.
+    expect(/prototypes|showroom/.test(stripComments(css))).toBe(false);
+  });
+
+  it("every decorative asset the stylesheet names exists and is recorded in PROVENANCE.md", () => {
+    const provenance = readRepoFile(SD1_PROVENANCE_FILE);
+    for (const file of SD1_ASSET_FILES) {
+      const bytes = readFileSync(join(REPO_ROOT, SD1_ASSET_DIR, file));
+      expect(bytes.byteLength, file).toBeGreaterThan(0);
+      expect(provenance, file).toContain(createHash("sha256").update(bytes).digest("hex"));
+    }
+  });
+
+  it("the opening's two approved durations live in the stylesheet, not in JavaScript", () => {
+    const css = readRepoFile(SD1_CSS_FILE);
+    expect(css).toMatch(/\.root\[data-phase="opening"\] \.openingClock \{\s*animation: sdp-opening-clock 200ms linear;/);
+    expect(css).toMatch(/\.root\[data-phase="opening"\] \.openingClock \{\s*animation-duration: 2150ms;/);
+    const island = codeOf(`${SD1}/interactive/opening-stage.tsx`);
+    expect(/\d{3,4}\s*(ms|\))/.test(island), "no timing constant in the island").toBe(false);
   });
 });
