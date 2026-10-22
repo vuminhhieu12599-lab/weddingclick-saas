@@ -2642,6 +2642,374 @@
 }
 
 /* ======================================================================
+   5. Hồi Âm / RSVP  (SD-V1-RSVP)
+
+   Ported from the frozen pilot v03 card. Every control is a ruled line on
+   ivory rather than a boxed input, which is what keeps it stationery; the
+   only solid shape on the card is the submit button.
+
+   `.rsvpDemo` is NOT carried over: it was the prototype's "nothing is sent"
+   badge, and this form really submits through the public RSVP capability.
+   ====================================================================== */
+
+.rsvp {
+  position: relative;
+  padding: 72px 22px 92px;
+  background: linear-gradient(180deg, var(--sdi-lacquer-deep) 0%, #230406 100%);
+}
+
+/* Warm ivory, a hairline of champagne, and a soft shadow lifting it off the
+   lacquer. No printed frame artwork — that belongs to the invitation plate. */
+.rsvpCard {
+  position: relative;
+  width: 100%;
+  max-width: 330px;
+  margin: 0 auto;
+  padding: 38px 24px 34px;
+  text-align: center;
+  color: var(--sdi-ink);
+  background:
+    radial-gradient(128% 78% at 50% 0%, #f8efdf 0%, var(--sdi-paper) 62%, var(--sdi-paper-deep) 100%);
+  box-shadow:
+    0 0 0 1px rgba(176, 140, 69, 0.42),
+    0 0 0 7px rgba(247, 240, 226, 0.05),
+    0 26px 44px -24px rgba(8, 1, 2, 0.95);
+}
+
+.rsvpEyebrow {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.46em;
+  text-indent: 0.23em;
+  text-transform: uppercase;
+  color: var(--sdi-gold);
+}
+
+.rsvpHeading {
+  margin: 12px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(27px, 8.4cqw, 33px);
+  line-height: 1.22;
+  letter-spacing: 0.018em;
+  color: #6d1416;
+}
+
+.rsvpRule {
+  display: block;
+  width: 68px;
+  height: 1px;
+  margin: 18px auto 0;
+  background: linear-gradient(
+    90deg,
+    rgba(176, 140, 69, 0) 0%,
+    rgba(176, 140, 69, 0.58) 50%,
+    rgba(176, 140, 69, 0) 100%
+  );
+}
+
+.rsvpIntro {
+  margin: 16px 0 0;
+  font-size: 12.5px;
+  font-weight: 300;
+  line-height: 1.85;
+  color: var(--sdi-ink-soft);
+  text-wrap: pretty;
+}
+
+.rsvpForm {
+  display: flex;
+  flex-direction: column;
+  margin: 26px 0 0;
+  text-align: left;
+}
+
+.rsvpLabel,
+.rsvpLegend {
+  padding: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--sdi-gold);
+}
+
+/* A ruled line to write on, not a box to fill in. */
+.rsvpInput,
+.rsvpNoteField {
+  width: 100%;
+  margin: 9px 0 0;
+  padding: 7px 2px 9px;
+  font-family: var(--sdp-sans), "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  line-height: 1.6;
+  color: var(--sdi-ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(123, 98, 69, 0.34);
+  border-radius: 0;
+  appearance: none;
+}
+
+.rsvpInput::placeholder,
+.rsvpNoteField::placeholder {
+  color: rgba(123, 98, 69, 0.54);
+}
+
+.rsvpInput:focus-visible,
+.rsvpNoteField:focus-visible {
+  outline: none;
+  border-bottom-color: rgba(176, 140, 69, 0.95);
+}
+
+.rsvpNoteField {
+  resize: none;
+}
+
+/* The count row is a flex line of its own; this label needs its own air. */
+.rsvpNoteLabel {
+  margin-top: 26px;
+}
+
+.rsvpChoices {
+  margin: 26px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Three written lines, each with a small ring that fills with gold. */
+.rsvpChoice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 0;
+  cursor: pointer;
+}
+
+.rsvpRadio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.rsvpMark {
+  position: relative;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(176, 140, 69, 0.62);
+  border-radius: 50%;
+  transition: border-color 160ms ease;
+}
+
+.rsvpMark::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: linear-gradient(160deg, #d8b36a 0%, #b08c45 100%);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 160ms ease, transform 200ms cubic-bezier(0.3, 0.9, 0.3, 1);
+}
+
+.rsvpRadio:checked + .rsvpMark {
+  border-color: rgba(176, 140, 69, 0.95);
+}
+
+.rsvpRadio:checked + .rsvpMark::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.rsvpRadio:focus-visible + .rsvpMark {
+  outline: 2px solid rgba(176, 140, 69, 0.85);
+  outline-offset: 3px;
+}
+
+.rsvpChoiceText {
+  font-family: var(--sdp-display), Georgia, serif;
+  font-size: 18px;
+  line-height: 1.4;
+  letter-spacing: 0.012em;
+  color: var(--sdi-ink);
+}
+
+.rsvpCount {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 28px 0 0;
+  padding: 16px 0 0;
+  border-top: 1px solid rgba(123, 98, 69, 0.22);
+}
+
+.rsvpStepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rsvpStep {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  line-height: 1;
+  color: #8a6a2c;
+  background: transparent;
+  border: 1px solid rgba(176, 140, 69, 0.5);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.rsvpStep:hover:not(:disabled) {
+  background: rgba(176, 140, 69, 0.12);
+}
+
+.rsvpStep:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.rsvpCountValue {
+  min-width: 74px;
+  text-align: center;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-variant-numeric: lining-nums;
+  font-size: 22px;
+  color: var(--sdi-ink);
+}
+
+.rsvpCountUnit {
+  margin-left: 5px;
+  font-family: var(--sdp-sans), "Segoe UI", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  color: var(--sdi-ink-soft);
+}
+
+/* The one solid shape on the card. */
+.rsvpSubmit {
+  margin: 30px 0 0;
+  padding: 15px 20px;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-indent: 0.1em;
+  color: #f8efdf;
+  background: linear-gradient(170deg, #7c1a1b 0%, #5a0f12 100%);
+  border: 1px solid rgba(176, 140, 69, 0.55);
+  border-radius: 0;
+  cursor: pointer;
+  transition: filter 180ms ease;
+}
+
+.rsvpSubmit:hover {
+  filter: brightness(1.08);
+}
+
+.rsvpSubmit:focus-visible {
+  outline: 2px solid rgba(176, 140, 69, 0.9);
+  outline-offset: 3px;
+}
+
+.rsvpDone {
+  margin: 28px 0 0;
+}
+
+.rsvpDoneTitle {
+  margin: 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-size: clamp(23px, 7cqw, 27px);
+  font-weight: 500;
+  color: #6d1416;
+}
+
+.rsvpDoneLine {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1.8;
+  color: var(--sdi-ink);
+}
+
+.rsvpDoneNote {
+  margin: 14px 0 0;
+  font-family: var(--sdp-display), Georgia, serif;
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--sdi-ink-soft);
+}
+
+.rsvpAgain {
+  margin: 20px 0 0;
+  padding: 0 2px 5px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-indent: 0.12em;
+  text-transform: uppercase;
+  color: #8a6a2c;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(176, 140, 69, 0.45);
+  cursor: pointer;
+}
+
+@container (max-width: 365px) {
+  .rsvp {
+    padding: 64px 14px 82px;
+  }
+
+  .rsvpCard {
+    padding: 34px 18px 30px;
+  }
+
+  .rsvpChoiceText {
+    font-size: 17px;
+  }
+}
+
+/* PRODUCTION ADDITION (SD-V1-RSVP) — the submit states.
+
+   The prototype's form sent nothing, so it needed no error line and its
+   submit button could never be busy. A real submission can be rejected by
+   validation, refused (a revoked guest link) or fail outright, and
+   CLAUDE.md §22 forbids showing success that did not happen. The note sits
+   above the button in the card's own ivory-on-lacquer type, so it reads as
+   part of the stationery rather than as a browser error. */
+.rsvpNote {
+  margin: 16px 0 0;
+  font-family: var(--sdp-sans), "Segoe UI", system-ui, sans-serif;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+  text-align: center;
+  color: #b2443f;
+}
+
+.rsvpSubmit[aria-disabled="true"] {
+  opacity: 0.62;
+  cursor: progress;
+}
+
+/* ======================================================================
    6. Mừng Cưới / wedding gift  (SD-V1-02C2)
 
    Ported from the frozen pilot v03 envelope, unchanged but for the port

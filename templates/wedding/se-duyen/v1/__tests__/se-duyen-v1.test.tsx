@@ -13,6 +13,7 @@ import type {
   MusicCapabilityV1,
 } from "../../../../../lib/invitation-rendering/renderer-capabilities";
 import type { RendererEffectiveSections } from "../../../../../lib/invitation-rendering/renderer-selection";
+import type { RsvpCapabilityV1 } from "../../../../../lib/invitation-rendering/rsvp-capability";
 import type { BuildSnapshotPayloadInput, SnapshotMediaSource } from "../../../../../lib/invitation-rendering/snapshot-payload-types";
 import { buildTemplateMediaSource } from "../../../../../lib/server/invitation-snapshot/build-template-media-source";
 import type { TemplateMediaSlotItem } from "../../../../../lib/server/template-media/template-media-slot-types";
@@ -51,6 +52,10 @@ const { musicFailureVisible } = await import("../interactive/music-control");
 const { giftPanels, giftRows, accountNumberOf } = await import("../sections/gift-panels");
 type GiftPanelShape = Parameters<typeof accountNumberOf>[0];
 const { copyLabel } = await import("../interactive/gift-envelope");
+const { rsvpNote, SE_DUYEN_RSVP_CHOICES } = await import("../interactive/rsvp");
+const { buildRsvpSubmitInput, createRsvpSubmissionGate, rsvpPhaseReducer } = await import(
+  "../../../../../lib/invitation-rendering/rsvp-form-model"
+);
 
 /**
  * SD-V1-01 — Se Duyên v1 production renderer foundation.
@@ -204,6 +209,18 @@ async function renderSdWithMusic(
   const fixture = await sdFixture(options);
   const html = renderToStaticMarkup(
     <SeDuyenV1 viewModel={fixture.viewModel} sections={fixture.selection.effectiveSections} capabilities={{ music }} />,
+  );
+  return { html, fixture };
+}
+
+/** The same render, with an RSVP capability so the card exists. */
+async function renderSdWithRsvp(
+  options: SdOptions,
+  rsvp: RsvpCapabilityV1,
+): Promise<{ html: string; fixture: RendererFixture }> {
+  const fixture = await sdFixture(options);
+  const html = renderToStaticMarkup(
+    <SeDuyenV1 viewModel={fixture.viewModel} sections={fixture.selection.effectiveSections} capabilities={{ rsvp }} />,
   );
   return { html, fixture };
 }
@@ -1486,5 +1503,178 @@ describe("L. gift", () => {
     expect(item?.sectionKey).toBe("gift");
     expect(item?.requirement).toBe("OPTIONAL");
     expect(SE_DUYEN_V1_MANIFEST.compatibility.sectionCapabilities.gift).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// M. RSVP (SD-V1-RSVP)
+// ---------------------------------------------------------------------------
+
+describe("M. rsvp", () => {
+  const RSVP = COPY.rsvp;
+  const neverCalled: RsvpCapabilityV1 = {
+    submit: async () => {
+      throw new Error("not called in server markup");
+    },
+  };
+
+  function rsvpOf(html: string): string {
+    const start = html.indexOf('aria-labelledby="sd-rsvp-heading"');
+    expect(start).toBeGreaterThan(0);
+    return html.slice(start, html.indexOf("</section>", start));
+  }
+
+  it("is absent without the capability, so Staff Preview and Review show no card", async () => {
+    const { html } = await renderSd({ variant: "COMMON" });
+    expect(html).not.toContain("sd-rsvp-heading");
+    expect(html).not.toContain(RSVP.submit);
+    expect(html).not.toContain("<form");
+  });
+
+  it("renders the approved card with the capability, and never prefills the guest's name", async () => {
+    const { html } = await renderSdWithRsvp({ variant: "COMMON", guest: FIXTURE_GUESTS.NORMAL }, neverCalled);
+    const card = rsvpOf(html);
+    expect(card).toContain(RSVP.heading);
+    expect(card).toContain(RSVP.intro);
+    // K18: the name field starts empty on every render, whatever the overlay says.
+    expect(card).toMatch(/type="text"[^>]*value=""/);
+    expect(card).not.toContain(FIXTURE_GUESTS.NORMAL.displayName);
+  });
+
+  it("offers exactly the three canonical attendance statuses", async () => {
+    const { html } = await renderSdWithRsvp({ variant: "COMMON" }, neverCalled);
+    const card = rsvpOf(html);
+    expect(SE_DUYEN_RSVP_CHOICES.map((choice) => choice.value)).toStrictEqual(["ATTENDING", "MAYBE", "NOT_ATTENDING"]);
+    for (const choice of SE_DUYEN_RSVP_CHOICES) {
+      expect(card, choice.value).toContain(`value="${choice.value}"`);
+      expect(card, choice.value).toContain(choice.label);
+    }
+    // "Sẽ tham dự" is the approved default, so the party-size stepper is shown.
+    // React emits `checked` before `value`; only the default choice has it.
+    expect(card).toMatch(/checked=""\s+value="ATTENDING"/);
+    expect(card).not.toMatch(/checked=""\s+value="(MAYBE|NOT_ATTENDING)"/);
+    expect(card).toContain(RSVP.countLabel);
+  });
+
+  it("the party-size stepper is bound to the canonical 1–20 range", async () => {
+    const { html } = await renderSdWithRsvp({ variant: "COMMON" }, neverCalled);
+    const card = rsvpOf(html);
+    expect(card).toContain(`aria-label="${RSVP.countDown}"`);
+    expect(card).toContain(`aria-label="${RSVP.countUp}"`);
+    // At the minimum the decrement is disabled and the increment is not.
+    expect(card).toMatch(/aria-label="Bớt một người" disabled=""/);
+    expect(card).not.toMatch(/aria-label="Thêm một người" disabled=""/);
+  });
+
+  it("the message field is capped at the canonical length", async () => {
+    const { html } = await renderSdWithRsvp({ variant: "COMMON" }, neverCalled);
+    expect(rsvpOf(html)).toContain('maxLength="500"');
+  });
+
+  it("nothing is submitted by rendering: the capability is only called by a press", async () => {
+    const calls: unknown[] = [];
+    const recording: RsvpCapabilityV1 = {
+      submit: async (input) => {
+        calls.push(input);
+        return { status: "SUCCESS" };
+      },
+    };
+    await renderSdWithRsvp({ variant: "COMMON" }, recording);
+    expect(calls).toStrictEqual([]);
+  });
+
+  it("the submit note is silent until something settles, and then tells the truth", () => {
+    // Nothing to say before a press, or while one is in flight.
+    expect(rsvpNote("IDLE", [])).toBeNull();
+    expect(rsvpNote("PENDING", [])).toBeNull();
+    // Success is the card's own thank-you, not a note.
+    expect(rsvpNote("SUCCESS", [])).toBeNull();
+    // Every non-success outcome is reported.
+    expect(rsvpNote("INVALID", [])).toBe(RSVP.errorInvalid);
+    expect(rsvpNote("UNAVAILABLE", [])).toBe(RSVP.errorUnavailable);
+    expect(rsvpNote("FAILED", [])).toBe(RSVP.errorFailed);
+    // Local validation speaks first, and names the field at fault.
+    expect(rsvpNote("IDLE", ["GUEST_NAME_REQUIRED"])).toBe(RSVP.errorName);
+    expect(rsvpNote("IDLE", ["MESSAGE_TOO_LONG"])).toBe(RSVP.errorMessage);
+    expect(rsvpNote("IDLE", ["PARTY_SIZE_RANGE"])).toBe(RSVP.errorInvalid);
+  });
+
+  it("validation and the input it builds are the shared frozen models", () => {
+    // A blank name never reaches the capability.
+    expect(buildRsvpSubmitInput({ attendance: "ATTENDING", partySize: 2, message: "", guestName: "  " })).toStrictEqual({
+      ok: false,
+      errors: ["GUEST_NAME_REQUIRED"],
+    });
+    // NOT_ATTENDING sends party size 0; a blank message becomes null.
+    expect(
+      buildRsvpSubmitInput({ attendance: "NOT_ATTENDING", partySize: 4, message: "   ", guestName: " Anh Hiếu " }),
+    ).toStrictEqual({ ok: true, input: { attendance: "NOT_ATTENDING", partySize: 0, message: null, guestName: "Anh Hiếu" } });
+    // The name is sent trimmed, as display data only.
+    const built = buildRsvpSubmitInput({ attendance: "MAYBE", partySize: 3, message: "Chúc mừng!", guestName: "Team Marketing" });
+    expect(built.ok).toBe(true);
+    expect(built.ok ? built.input : null).toStrictEqual({
+      attendance: "MAYBE",
+      partySize: 3,
+      message: "Chúc mừng!",
+      guestName: "Team Marketing",
+    });
+  });
+
+  it("a duplicate submission is refused synchronously, before React can rerender", async () => {
+    let settle: (() => void) | undefined;
+    const slow: RsvpCapabilityV1 = {
+      submit: async () =>
+        new Promise((resolve) => {
+          settle = () => resolve({ status: "SUCCESS" });
+        }),
+    };
+    const gate = createRsvpSubmissionGate();
+    const input = { attendance: "ATTENDING" as const, partySize: 1, message: null, guestName: "A" };
+    const first = gate.run(slow, input);
+    expect(first).not.toBeNull();
+    // The second press while the first is in flight starts nothing.
+    expect(gate.run(slow, input)).toBeNull();
+    settle?.();
+    expect(await first).toBe("SUCCESS");
+    // Once settled an explicit retry is possible again.
+    expect(gate.run(slow, input)).not.toBeNull();
+  });
+
+  it("only a resolved SUCCESS reaches the success phase; a rejection is a failure", () => {
+    expect(rsvpPhaseReducer("PENDING", { type: "SUBMIT_SETTLED", outcome: "SUCCESS" })).toBe("SUCCESS");
+    expect(rsvpPhaseReducer("PENDING", { type: "SUBMIT_SETTLED", outcome: "REJECTED" })).toBe("FAILED");
+    expect(rsvpPhaseReducer("PENDING", { type: "SUBMIT_SETTLED", outcome: "UNAVAILABLE" })).toBe("UNAVAILABLE");
+    // A settlement outside pending, and a start after success, change nothing.
+    expect(rsvpPhaseReducer("IDLE", { type: "SUBMIT_SETTLED", outcome: "SUCCESS" })).toBe("IDLE");
+    expect(rsvpPhaseReducer("SUCCESS", { type: "SUBMIT_STARTED" })).toBe("SUCCESS");
+  });
+
+  it("the card never receives or shows a token, guest id or guest overlay", async () => {
+    const { html, fixture } = await renderSdWithRsvp({ variant: "COMMON", guest: FIXTURE_GUESTS.PLAYFUL }, neverCalled);
+    const card = rsvpOf(html);
+    expect(fixture.viewModel.guest?.displayName).toBe(FIXTURE_GUESTS.PLAYFUL.displayName);
+    // The guest line belongs to the invitation plate, never to the RSVP card.
+    expect(card).not.toContain(FIXTURE_GUESTS.PLAYFUL.displayName);
+    expect(card).not.toMatch(/token|guestId|guest_id/i);
+  });
+
+  it("the approved page order is restored: album → RSVP → gift → closing", async () => {
+    const { html } = await renderSdWithRsvp({ variant: "COMMON" }, neverCalled);
+    expect(html.indexOf("sd-album-heading")).toBeLessThan(html.indexOf("sd-rsvp-heading"));
+    expect(html.indexOf("sd-rsvp-heading")).toBeLessThan(html.indexOf("sd-gift-heading"));
+    expect(html.indexOf("sd-gift-heading")).toBeLessThan(html.indexOf("sd-closing-eyebrow"));
+  });
+
+  it.each(VARIANTS)("%s shows the same card: RSVP carries no variant rule", async (variant) => {
+    const { html } = await renderSdWithRsvp({ variant }, neverCalled);
+    const card = rsvpOf(html);
+    expect(card, variant).toContain(RSVP.heading);
+    expect(card, variant).toContain(RSVP.submit);
+  });
+
+  it("no prototype demo badge survives the port", async () => {
+    const { html } = await renderSdWithRsvp({ variant: "COMMON" }, neverCalled);
+    expect(html).not.toContain("rsvpDemo");
+    expect(html).not.toContain("chưa gửi dữ liệu");
   });
 });

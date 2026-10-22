@@ -5,6 +5,7 @@ import { SE_DUYEN_V1_FONT_VARIABLES_CLASS_NAME } from "./fonts";
 import { Countdown } from "./interactive/countdown";
 import { AlbumFrames } from "./interactive/gallery-viewer";
 import { MusicControl } from "./interactive/music-control";
+import { Rsvp } from "./interactive/rsvp";
 import { OpeningStage } from "./interactive/opening-stage";
 import styles from "./se-duyen-v1.module.css";
 import { Ceremony } from "./sections/ceremony";
@@ -50,14 +51,15 @@ const COPY = SE_DUYEN_V1_COPY;
  *
  * PAGE ORDER. Opening (box → hero) → the invitation introduction → the
  * couple → the two houses → the ceremony with its per-side rites → the
- * run-of-show → the countdown → the album → the wedding gift → the closing.
- * RSVP belongs between the album and the gift and is the next checkpoint.
+ * run-of-show → the countdown → the album → the RSVP → the wedding gift →
+ * the closing, which is the approved order.
  *
- * WHAT THIS RENDERER DELIBERATELY DOES NOT DO YET. The approved direction
- * also has an RSVP form, which the prototype shows as a local, unpersisted
- * one. It is not rendered here: a guest is never shown a control that looks
- * like working customer functionality and is not, so no RSVP island is
- * mounted until the domain service behind it is connected.
+ * RSVP is the public capability the `/i/[slug]` wrapper builds, so the card
+ * appears only where a response can really be recorded: Staff Preview and
+ * Customer Review supply an UNAVAILABLE-only capability, and the renderer
+ * harness its own. The island never sees a token or a guest id — the server
+ * derives the guest from the personalized route's own token — and never
+ * prefills the name from the invitation's guest overlay.
  *
  * The countdown is not a section capability at all: it exists exactly while
  * the host supplies `capabilities.clock`, which it does only in the browser,
@@ -156,6 +158,7 @@ export function SeDuyenV1({ viewModel, sections, capabilities }: InvitationRende
             <AlbumFrames gallery={slots?.gallery ?? []} />
           </Gallery>
         ) : null}
+        {capabilities.rsvp === undefined ? null : <Rsvp rsvp={capabilities.rsvp} />}
         {panels.length === 0 ? null : <Gift panels={panels} clipboard={capabilities.clipboard} />}
         <Closing people={people} photo={closingPhoto} photoAlt={photoAlt} />
       </OpeningStage>

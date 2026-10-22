@@ -3535,6 +3535,8 @@ const SD1_ISLAND_FILES = [
   `${SD1}/interactive/music-control.tsx`,
   // SD-V1-02C2: the approved envelope, its slip and the copy control.
   `${SD1}/interactive/gift-envelope.tsx`,
+  // SD-V1-RSVP: the approved Hồi Âm card, on the public RSVP capability.
+  `${SD1}/interactive/rsvp.tsx`,
 ] as const;
 /** Pure state model behind the island. */
 const SD1_MODEL_FILES = [`${SD1}/interactive/opening-state.ts`] as const;
@@ -3639,6 +3641,9 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
     expect(/ResizeObserver/.test(code), file).toBe(file === `${SD1}/interactive/opening-stage.tsx`);
     // The phase ends on the CSS sequence's own event, never on a timer.
     expect(/\bset(Timeout|Interval)\b/.test(code), file).toBe(false);
+    // Only the RSVP card submits, and only through the shared gate and
+    // validation: no island reaches a service or a route of its own.
+    expect(/gate\.run\(|createRsvpSubmissionGate/.test(code), file).toBe(file === `${SD1}/interactive/rsvp.tsx`);
     // Only the gift envelope copies, and only through the shared model: no
     // island touches `navigator.clipboard` itself.
     expect(/copyWithFeedback/.test(code), file).toBe(file === `${SD1}/interactive/gift-envelope.tsx`);
