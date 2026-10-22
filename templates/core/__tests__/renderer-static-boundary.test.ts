@@ -3500,6 +3500,8 @@ const SD1_ROOT = `${SD1}/se-duyen-v1.tsx`;
 const SD1_FONTS = `${SD1}/fonts.ts`;
 const SD1_CSS_FILE = `${SD1}/se-duyen-v1.module.css`;
 const SD1_PROVENANCE_FILE = `${SD1}/PROVENANCE.md`;
+/** SD-V1-02A: the editor manifest, outside the renderer-version directory. */
+const SD1_EDITOR_FILE = "templates/editor/wedding/se-duyen-v1.ts";
 /** Static modules: no hooks, no interaction, no capability. */
 const SD1_CODE_FILES = [
   SD1_MANIFEST_FILE,
@@ -3519,7 +3521,9 @@ const SD1_CODE_FILES = [
 const SD1_ISLAND_FILES = [`${SD1}/interactive/opening-stage.tsx`] as const;
 /** Pure state model behind the island. */
 const SD1_MODEL_FILES = [`${SD1}/interactive/opening-state.ts`] as const;
-const SD1_FILES = [...SD1_CODE_FILES, ...SD1_ISLAND_FILES, ...SD1_MODEL_FILES, SD1_CSS_FILE, SD1_PROVENANCE_FILE];
+/** Everything inside the renderer-version directory. */
+const SD1_RENDERER_TREE = [...SD1_CODE_FILES, ...SD1_ISLAND_FILES, ...SD1_MODEL_FILES, SD1_CSS_FILE, SD1_PROVENANCE_FILE];
+const SD1_FILES = [...SD1_RENDERER_TREE, SD1_EDITOR_FILE];
 const SD1_TSX_FILES = SD1_FILES.filter((file) => file.endsWith(".tsx"));
 
 /** The approved decorative artwork, under the renderer's own immutable version path. */
@@ -3539,7 +3543,7 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
 
   it("every listed file exists, and the tree holds nothing else", () => {
     for (const file of SD1_FILES) expect(() => readRepoFile(file), file).not.toThrow();
-    expect(listSources(join(TEMPLATES_ROOT, "wedding", "se-duyen")).sort()).toStrictEqual([...SD1_FILES].sort());
+    expect(listSources(join(TEMPLATES_ROOT, "wedding", "se-duyen")).sort()).toStrictEqual([...SD1_RENDERER_TREE].sort());
   });
 
   it("the manifest is data only, imports its type only, and declares exactly the sections SD-V1-01 renders", () => {
@@ -3555,12 +3559,12 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
     }
   });
 
-  it("the renderer key literal appears only in its own manifest (SD-V1-01 registers nothing)", () => {
+  it("the renderer key literal appears only in its own two manifests (nothing registers it)", () => {
     const withLiteral = productionSources().filter((file) => /["'`]wedding\.se-duyen\.v1["'`]/.test(codeOf(file)));
-    expect(withLiteral).toStrictEqual([SD1_MANIFEST_FILE]);
+    expect(withLiteral.sort()).toStrictEqual([SD1_MANIFEST_FILE, SD1_EDITOR_FILE].sort());
   });
 
-  it("SD-V1-01 is not yet wired in: nothing imports the manifest and nothing loads the root", () => {
+  it("SD-V1-01 is not yet wired in: nothing imports either manifest and nothing loads the root", () => {
     const importersOf = (target: string) =>
       productionSources().filter((file) => importsOf(readRepoFile(file)).some((statement) => resolveSpecifier(file, statement.specifier) === target));
     expect(importersOf(`${SD1}/manifest`)).toStrictEqual([]);
@@ -3569,8 +3573,10 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
       dynamicImportsOf(readRepoFile(file)).specifiers.some((specifier) => resolveSpecifier(file, specifier) === `${SD1}/se-duyen-v1`),
     );
     expect(lazyLoaders).toStrictEqual([]);
-    // No editor manifest yet either, so the Template Editor cannot offer it.
-    expect(() => readRepoFile("templates/editor/wedding/se-duyen-v1.ts")).toThrow();
+    // SD-V1-02A: the editor manifest exists, but the production editor list
+    // does not import it, so the Template Editor cannot offer Se Duyên.
+    expect(() => readRepoFile(SD1_EDITOR_FILE)).not.toThrow();
+    expect(importersOf("templates/editor/wedding/se-duyen-v1")).toStrictEqual([]);
   });
 
   it("imports only its own tree, the shared lib/ contracts, react and (fonts only) next/font/google", () => {

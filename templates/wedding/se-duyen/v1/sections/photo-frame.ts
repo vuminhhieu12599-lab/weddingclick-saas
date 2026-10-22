@@ -20,8 +20,23 @@ import type { MediaResolution, ResolvedMedia } from "../../../../../lib/invitati
  * (docs/DECISIONS.md P7, M6–M10).
  */
 
-/** The frames SD-V1-01 fills. SD-V1-02 adds the album and closing frames. */
-export type SeDuyenPhotoSlot = "hero" | "coupleMain";
+/**
+ * The four art-directed frames SD-V1-02B1 fills, named by their FROZEN
+ * STYLESHEET STEM (`--sdp-<stem>-image`), which is not the editor slot key:
+ *
+ *   editor slot key   frozen stylesheet stem
+ *   ---------------   ----------------------
+ *   openingPhoto   →  hero
+ *   portraitLead   →  coupleMain
+ *   portraitAside  →  coupleAside
+ *   closingPhoto   →  closing
+ *
+ * The stems are the approved prototype's and are deliberately left alone, so
+ * the ported stylesheet stays diffable against the visual freeze. The
+ * renderer root owns the mapping, in one place. The album's four frames are
+ * SD-V1-02's gallery work.
+ */
+export type SeDuyenPhotoSlot = "hero" | "coupleMain" | "coupleAside" | "closing";
 
 /**
  * A supplied photograph always covers its frame: it is the only crop that
@@ -48,9 +63,4 @@ export function photoFrameStyle(slot: SeDuyenPhotoSlot, photo: ResolvedMedia): C
 export function firstResolved(items: readonly MediaResolution[] | undefined): ResolvedMedia | undefined {
   const first = items?.[0];
   return first?.status === "RESOLVED" ? first : undefined;
-}
-
-/** A single media slot when it resolved, else `undefined`. Never a substitute. */
-export function resolvedOrNone(media: MediaResolution | undefined): ResolvedMedia | undefined {
-  return media?.status === "RESOLVED" ? media : undefined;
 }

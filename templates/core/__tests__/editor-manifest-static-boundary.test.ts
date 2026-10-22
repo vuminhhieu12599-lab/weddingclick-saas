@@ -25,7 +25,14 @@ const OWS_EDITOR = "templates/editor/wedding/our-wedding-story-v1.ts";
 const VH2_EDITOR = "templates/editor/wedding/vietnamese-heritage-v2.ts";
 // OWS-V2-01: the Our Wedding Story v2 editor manifest, registered sixth.
 const OWS2_EDITOR = "templates/editor/wedding/our-wedding-story-v2.ts";
-const TE02_FILES = [EDITOR_MANIFEST, PRODUCTION_EDITOR_MANIFESTS, EE_EDITOR, VH_EDITOR, RM_EDITOR, OWS_EDITOR, VH2_EDITOR, OWS2_EDITOR] as const;
+// SD-V1-02A: the Se Duyên v1 editor manifest. Written and validated, but NOT
+// in the production editor list: `wedding.se-duyen.v1` is not a registered
+// production renderer yet, and its `gallery` slot names a section the
+// renderer is not capable of until SD-V1-02 connects it.
+const SD_EDITOR = "templates/editor/wedding/se-duyen-v1.ts";
+const TE02_FILES = [EDITOR_MANIFEST, PRODUCTION_EDITOR_MANIFESTS, EE_EDITOR, VH_EDITOR, RM_EDITOR, OWS_EDITOR, VH2_EDITOR, OWS2_EDITOR, SD_EDITOR] as const;
+/** The editor manifests the production list registers, in its order. */
+const TE02_REGISTERED_EDITORS = [EE_EDITOR, VH_EDITOR, RM_EDITOR, OWS_EDITOR, VH2_EDITOR, OWS2_EDITOR] as const;
 
 /** Exact import allowlist per file, as repository-relative module paths (no extension). */
 const ALLOWED_IMPORTS: Readonly<Record<(typeof TE02_FILES)[number], readonly string[]>> = {
@@ -47,6 +54,7 @@ const ALLOWED_IMPORTS: Readonly<Record<(typeof TE02_FILES)[number], readonly str
   [OWS_EDITOR]: ["templates/core/editor-manifest"],
   [VH2_EDITOR]: ["templates/core/editor-manifest"],
   [OWS2_EDITOR]: ["templates/core/editor-manifest"],
+  [SD_EDITOR]: ["templates/core/editor-manifest"],
 };
 
 const FORBIDDEN: readonly [string, RegExp][] = [
@@ -113,12 +121,22 @@ describe("TE-02 editor-manifest static boundary", () => {
     }
   });
 
-  it("templates/editor/** contains exactly the six production editor manifests", () => {
+  it("templates/editor/** contains exactly the six registered editor manifests plus the unregistered Se Duyên one", () => {
     const files = readdirSync(join(REPO_ROOT, "templates", "editor"), { recursive: true, withFileTypes: true })
       .filter((entry) => entry.isFile())
       .map((entry) => toPosix(relative(REPO_ROOT, join(entry.parentPath, entry.name))))
       .sort();
-    expect(files).toStrictEqual([EE_EDITOR, OWS_EDITOR, OWS2_EDITOR, RM_EDITOR, VH_EDITOR, VH2_EDITOR]);
+    expect(files).toStrictEqual([EE_EDITOR, OWS_EDITOR, OWS2_EDITOR, RM_EDITOR, SD_EDITOR, VH_EDITOR, VH2_EDITOR]);
+  });
+
+  // SD-V1-02A: writing an editor manifest is not registering it. The
+  // production list still holds exactly the six registered ones, so the
+  // Template Editor cannot offer Se Duyên to Staff yet.
+  it("the Se Duyên editor manifest exists but is not in the production editor list", () => {
+    expect(() => readRepoFile(SD_EDITOR)).not.toThrow();
+    const code = stripComments(readRepoFile(PRODUCTION_EDITOR_MANIFESTS));
+    expect(/se.?duyen/i.test(code)).toBe(false);
+    expect(ALLOWED_IMPORTS[PRODUCTION_EDITOR_MANIFESTS]).not.toContain("templates/editor/wedding/se-duyen-v1");
   });
 
   it("no editor manifest lives inside a renderer-version directory", () => {
@@ -129,6 +147,7 @@ describe("TE-02 editor-manifest static boundary", () => {
       "templates/wedding/our-wedding-story/v1",
       "templates/wedding/vietnamese-heritage/v2",
       "templates/wedding/our-wedding-story/v2",
+      "templates/wedding/se-duyen/v1",
     ]) {
       const names = readdirSync(join(REPO_ROOT, dir), { recursive: true }).map(String);
       expect(names.some((name) => /editor-manifest/.test(name)), dir).toBe(false);
@@ -151,7 +170,7 @@ describe("TE-02 editor-manifest static boundary", () => {
   });
 
   it("the per-template editor manifests import types only", () => {
-    for (const file of [EE_EDITOR, VH_EDITOR, RM_EDITOR, OWS_EDITOR, VH2_EDITOR, OWS2_EDITOR]) {
+    for (const file of [...TE02_REGISTERED_EDITORS, SD_EDITOR]) {
       const statements = stripComments(readRepoFile(file)).match(/^\s*import\s.*$/gm) ?? [];
       expect(statements.length).toBeGreaterThan(0);
       for (const statement of statements) expect(statement, file).toMatch(/^\s*import\s+type\s/);

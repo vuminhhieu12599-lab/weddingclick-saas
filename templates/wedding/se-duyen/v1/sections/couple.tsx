@@ -9,8 +9,10 @@ interface CoupleProps {
   readonly people: InvitationViewModel["people"];
   /** `viewModel.content.loveStory` when `sections.loveStory` allows it, else `null`. */
   readonly story: string | null;
-  /** The couple's own frame; `undefined` when the Project has no photograph for it. */
-  readonly photo: ResolvedMedia | undefined;
+  /** `portraitLead` — the large frame; `undefined` when the Project has none for it. */
+  readonly leadPhoto: ResolvedMedia | undefined;
+  /** `portraitAside` — the smaller overlapping frame; only shown beside the lead. */
+  readonly asidePhoto: ResolvedMedia | undefined;
   readonly photoAlt: string;
 }
 
@@ -23,12 +25,14 @@ interface CoupleProps {
  * and it labels them by each person's own explicit side — never by array
  * position (CLAUDE.md §5/§6).
  *
- * The supporting frame beside the main photograph (`.couplePhotoAside`) is
- * approved art direction waiting on Se Duyên's template media slots in
- * SD-V1-02; until then the composition is the approved solo one, which the
- * stylesheet already handles, and no frame is ever filled with demo art.
+ * Both frames come from the Project's own template media slots. The aside is
+ * positioned against the lead frame, so it exists only alongside it: without
+ * a lead photograph neither frame is drawn, and without an aside the
+ * stylesheet's approved solo composition applies (`.coupleFramesSolo` drops
+ * the overhang's footroom, so the lead keeps its approved size and position).
+ * No frame is ever filled from another slot or with demo art.
  */
-export function Couple({ people, story, photo, photoAlt }: CoupleProps) {
+export function Couple({ people, story, leadPhoto, asidePhoto, photoAlt }: CoupleProps) {
   const primaryRole = COPY.roleLabel[people.primary.side];
   const secondaryRole = COPY.roleLabel[people.secondary.side];
   const storyText = story?.trim() ?? "";
@@ -42,14 +46,22 @@ export function Couple({ people, story, photo, photoAlt }: CoupleProps) {
         </h2>
       </div>
 
-      {photo === undefined ? null : (
-        <div className={`${styles.coupleFrames} ${styles.coupleFramesSolo}`}>
+      {leadPhoto === undefined ? null : (
+        <div className={`${styles.coupleFrames} ${asidePhoto === undefined ? styles.coupleFramesSolo : ""}`}>
           <div
             className={styles.couplePhotoMain}
-            style={photoFrameStyle("coupleMain", photo)}
+            style={photoFrameStyle("coupleMain", leadPhoto)}
             role="img"
             aria-label={photoAlt}
           />
+          {asidePhoto === undefined ? null : (
+            <div
+              className={styles.couplePhotoAside}
+              style={photoFrameStyle("coupleAside", asidePhoto)}
+              role="img"
+              aria-label={photoAlt}
+            />
+          )}
         </div>
       )}
 

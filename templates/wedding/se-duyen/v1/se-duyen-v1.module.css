@@ -45,11 +45,12 @@
    are kept exactly as frozen, so a reviewer can diff this file against the
    prototype and see only the three changes above.
 
-   Two frame rules are intentionally kept without a renderer that fills them
-   yet: `.couplePhotoAside` and `.closingPhoto`. Their geometry, zoom and
-   hairlines are approved art direction tuned in-browser; SD-V1-02 binds
-   them to Se Duyên's template media slots. Re-deriving those values later
-   is a worse risk than carrying two unused rules for one checkpoint.
+   Every frame rule here is now driven by the renderer: SD-V1-02B1 bound the
+   four SINGLE template media slots to `.photoCard` (`openingPhoto`),
+   `.couplePhotoMain` (`portraitLead`), `.couplePhotoAside`
+   (`portraitAside`) and `.closingPhoto` (`closingPhoto`). The album's four
+   frames are the `gallery` slot and are still SD-V1-02 work, so their rules
+   stay in the prototype.
 
    Motion lives inside `prefers-reduced-motion: no-preference` exactly as
    approved; the reduce path is the finished layout with a short crossfade.

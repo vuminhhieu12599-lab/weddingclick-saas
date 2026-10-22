@@ -10,18 +10,31 @@ import type {
 } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
 import type { InvitationRendererCapabilitiesV1 } from "../../../../../lib/invitation-rendering/renderer-capabilities";
 import type { RendererEffectiveSections } from "../../../../../lib/invitation-rendering/renderer-selection";
-import type { BuildSnapshotPayloadInput } from "../../../../../lib/invitation-rendering/snapshot-payload-types";
+import type { BuildSnapshotPayloadInput, SnapshotMediaSource } from "../../../../../lib/invitation-rendering/snapshot-payload-types";
+import { buildTemplateMediaSource } from "../../../../../lib/server/invitation-snapshot/build-template-media-source";
+import type { TemplateMediaSlotItem } from "../../../../../lib/server/template-media/template-media-slot-types";
 import { createFixtureMediaResolver } from "../../../../core/fixtures/fixture-media-resolver";
 import { runRendererFixturePipeline, type RendererFixture } from "../../../../core/fixtures/renderer-fixture-pipeline";
 import {
   FIXTURE_GUESTS,
+  FIXTURE_PROJECT_ID,
   buildRendererFixtureSourceInput,
   type RendererFixtureSourceOptions,
 } from "../../../../core/fixtures/renderer-fixture-sources";
 import {
+  TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS,
+  TEMPLATE_EDITOR_SLOT_KEY_FORBIDDEN_WORDS,
+  validateTemplateEditorManifest,
+} from "../../../../core/editor-manifest";
+import {
+  PRODUCTION_EDITOR_MANIFEST_ERROR_MESSAGES,
+  validateProductionEditorManifests,
+} from "../../../../core/production-editor-manifests";
+import {
   createProductionCompatibilityRegistry,
   type ProductionCompatibilityRegistryV1,
 } from "../../../../core/production-renderer-manifests";
+import { SE_DUYEN_V1_EDITOR_MANIFEST } from "../../../../editor/wedding/se-duyen-v1";
 import { validateRendererProductionManifest, composeProductionRendererKey } from "../../../../core/renderer-manifest";
 import { SE_DUYEN_V1_MANIFEST } from "../manifest";
 
@@ -44,6 +57,30 @@ const { buildInvitationWording } = await import("../sections/invitation-wording"
 
 const EMPTY: InvitationRendererCapabilitiesV1 = Object.freeze({});
 
+/** Fixture PHOTO ids for the four SINGLE slots; distinct, so a repeat is visible. */
+const PHOTO = Object.freeze({
+  OPENING: "00000000-0000-4000-8000-0000000007d1",
+  LEAD: "00000000-0000-4000-8000-0000000007d2",
+  ASIDE: "00000000-0000-4000-8000-0000000007d3",
+  CLOSING: "00000000-0000-4000-8000-0000000007d4",
+});
+
+type SlotKey = "openingPhoto" | "portraitLead" | "portraitAside" | "closingPhoto";
+type SlotAssignments = Partial<Record<SlotKey, readonly string[]>>;
+
+const ALL_SLOTS: SlotAssignments = Object.freeze({
+  openingPhoto: [PHOTO.OPENING],
+  portraitLead: [PHOTO.LEAD],
+  portraitAside: [PHOTO.ASIDE],
+  closingPhoto: [PHOTO.CLOSING],
+});
+
+function slotRows(assignments: SlotAssignments): TemplateMediaSlotItem[] {
+  return Object.entries(assignments).flatMap(([slotKey, ids]) =>
+    (ids ?? []).map((projectMediaId, position) => ({ slotKey, position, projectMediaId })),
+  );
+}
+
 /**
  * The renderer is not in `PRODUCTION_RENDERER_MANIFESTS` yet (SD-V1-02), so
  * the fixture pipeline is given a registry built from its manifest — by the
@@ -55,15 +92,29 @@ interface SdOptions extends RendererFixtureSourceOptions {
   guest?: { displayName: string };
   invitationMessage?: string | null;
   unavailableMediaIds?: readonly string[];
+  /** Template media slot assignments; defaults to all four SINGLE slots filled. */
+  slots?: SlotAssignments;
 }
 
-function sdSource(options: RendererFixtureSourceOptions, invitationMessage: string | null | undefined): BuildSnapshotPayloadInput {
+function sdSource(
+  options: RendererFixtureSourceOptions,
+  invitationMessage: string | null | undefined,
+  slots: SlotAssignments,
+): BuildSnapshotPayloadInput {
   const input = buildRendererFixtureSourceInput(options);
   const { design, compatibility } = SE_DUYEN_V1_MANIFEST;
   const details = input.weddingDetails as NonNullable<BuildSnapshotPayloadInput["weddingDetails"]>;
+  const photos: SnapshotMediaSource[] = Object.values(PHOTO).map((id, index) => ({
+    id,
+    projectId: FIXTURE_PROJECT_ID,
+    mediaType: "PHOTO",
+    sortOrder: index,
+  }));
+  const media = [...input.media, ...photos];
   return {
     ...input,
     ...(invitationMessage === undefined ? {} : { weddingDetails: { ...details, invitationMessage } }),
+    media,
     design: {
       ...input.design,
       paletteKey: design.palettes[0] as string,
@@ -71,12 +122,15 @@ function sdSource(options: RendererFixtureSourceOptions, invitationMessage: stri
       effectPresetKey: design.effectPresets[0] as string,
     },
     templateVersion: { ...input.templateVersion, rendererKey: compatibility.rendererKey },
+    // The real TE-04 builder, validated against Se Duyên's own editor
+    // manifest: slot data is never hand-built into a ViewModel.
+    templateMedia: buildTemplateMediaSource(SE_DUYEN_V1_EDITOR_MANIFEST, slotRows(slots), media),
   };
 }
 
 async function sdFixture(options: SdOptions): Promise<RendererFixture> {
-  const { guest, invitationMessage, unavailableMediaIds, ...sourceOptions } = options;
-  return runRendererFixturePipeline(sdSource(sourceOptions, invitationMessage), {
+  const { guest, invitationMessage, unavailableMediaIds, slots, ...sourceOptions } = options;
+  return runRendererFixturePipeline(sdSource(sourceOptions, invitationMessage, slots ?? ALL_SLOTS), {
     resolver: createFixtureMediaResolver(unavailableMediaIds === undefined ? {} : { unavailableMediaIds }),
     registry: SD_REGISTRY,
     ...(guest === undefined ? {} : { guest }),
@@ -373,54 +427,121 @@ describe("D. guest and wording", () => {
 // ---------------------------------------------------------------------------
 
 describe("E. media", () => {
-  it("the opening photograph is the Project's resolved cover, painted on the card that grows", async () => {
+  /** Every `--sdp-<stem>-image` url in the markup, in document order. */
+  function frameUrls(html: string): string[] {
+    return [...html.matchAll(/--sdp-([A-Za-z]+)-image:url\(&quot;([^&]+)&quot;\)/g)].map(
+      (match) => `${match[1] as string}=${match[2] as string}`,
+    );
+  }
+
+  function urlOf(fixture: RendererFixture, slotKey: SlotKey): string {
+    const item = fixture.viewModel.media.templateSlots?.[slotKey]?.[0];
+    expect(item?.status, slotKey).toBe("RESOLVED");
+    return (item as { url: string }).url;
+  }
+
+  it("the four SINGLE slots each fill their own frame, once, from the Project's own media", async () => {
     const { html, fixture } = await renderSd({ variant: "COMMON" });
-    const cover = fixture.viewModel.media.cover;
-    expect(cover?.status).toBe("RESOLVED");
-    expect(html).toContain(`--sdp-hero-image:url(&quot;${(cover as { url: string }).url}&quot;)`);
+    expect(frameUrls(html)).toStrictEqual([
+      `hero=${urlOf(fixture, "openingPhoto")}`,
+      `coupleMain=${urlOf(fixture, "portraitLead")}`,
+      `coupleAside=${urlOf(fixture, "portraitAside")}`,
+      `closing=${urlOf(fixture, "closingPhoto")}`,
+    ]);
+  });
+
+  it("no photograph is ever repeated across frames", async () => {
+    const { html } = await renderSd({ variant: "COMMON" });
+    const urls = frameUrls(html).map((entry) => entry.split("=")[1] as string);
+    expect(new Set(urls).size).toBe(urls.length);
+  });
+
+  it("each slot is independent: only the opening photo fills the box, and nothing else appears", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON", slots: { openingPhoto: [PHOTO.OPENING] } });
+    expect(frameUrls(html)).toStrictEqual([`hero=${urlOf(fixture, "openingPhoto")}`]);
+    // The frames with no photograph of their own are omitted, not emptied.
+    expect(html).not.toContain("--sdp-coupleMain-image");
+    expect(html).not.toContain("--sdp-coupleAside-image");
+    expect(html).not.toContain("--sdp-closing-image");
+  });
+
+  it("the opening photograph is painted on the card inside the box that grows into the hero", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON" });
+    const slot = html.indexOf("photoSlot");
+    expect(slot).toBeGreaterThan(0);
+    // The card lives inside the box control, so the same element becomes the hero.
+    expect(html.lastIndexOf("boxButton", slot)).toBeGreaterThan(0);
+    expect(html.slice(slot)).toContain(urlOf(fixture, "openingPhoto"));
     expect(count(html, "--sdp-hero-image")).toBe(1);
   });
 
-  it("an UNAVAILABLE cover omits the frame: no broken image, no demo photograph, and the box still opens", async () => {
-    const fixture = await sdFixture({ variant: "COMMON" });
-    const coverId = (fixture.viewModel.media.cover as { mediaId: string }).mediaId;
-    const { html, fixture: degraded } = await renderSd({ variant: "COMMON", unavailableMediaIds: [coverId] });
-    expect(degraded.viewModel.media.cover?.status).toBe("UNAVAILABLE");
+  it("an UNAVAILABLE opening photo omits the frame: no broken image, no demo art, and the box still opens", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON", unavailableMediaIds: [PHOTO.OPENING] });
+    expect(fixture.viewModel.media.templateSlots?.openingPhoto?.[0]?.status).toBe("UNAVAILABLE");
     expect(html).not.toContain("--sdp-hero-image");
     expect(html).not.toContain("photoSlot");
-    // The control and the sequence are untouched.
+    // The control and the approved sequence are untouched.
     expect(html).toContain("boxButton");
     expect(html).toContain("openingClock");
+    // And the rest of the invitation is unaffected.
+    expect(html).toContain("--sdp-coupleMain-image");
   });
 
-  it("the couple frame uses the love-story photo when there is one, and is omitted when there is not", async () => {
-    const withPhoto = await renderSd({ variant: "COMMON", loveStoryPhoto: "PRESENT" });
-    const photo = withPhoto.fixture.viewModel.media.loveStoryPhoto;
-    expect(photo?.status).toBe("RESOLVED");
-    expect(withPhoto.html).toContain(`--sdp-coupleMain-image:url(&quot;${(photo as { url: string }).url}&quot;)`);
+  it("the aside frame is only drawn beside the lead, and the solo composition applies without it", async () => {
+    const both = await renderSd({ variant: "COMMON" });
+    expect(both.html).toContain("--sdp-coupleAside-image");
+    expect(both.html).not.toContain("coupleFramesSolo");
 
-    const without = await renderSd({ variant: "COMMON", loveStoryPhoto: "ABSENT" });
-    expect(without.fixture.viewModel.media.loveStoryPhoto).toBeUndefined();
-    expect(without.html).not.toContain("--sdp-coupleMain-image");
+    const leadOnly = await renderSd({ variant: "COMMON", slots: { portraitLead: [PHOTO.LEAD] } });
+    expect(leadOnly.html).toContain("--sdp-coupleMain-image");
+    expect(leadOnly.html).not.toContain("--sdp-coupleAside-image");
+    expect(leadOnly.html).toContain("coupleFramesSolo");
+
+    // An aside with no lead draws neither: the aside is positioned against the lead.
+    const asideOnly = await renderSd({ variant: "COMMON", slots: { portraitAside: [PHOTO.ASIDE] } });
+    expect(asideOnly.html).not.toContain("coupleFrames");
+    expect(asideOnly.html).not.toContain("--sdp-coupleAside-image");
   });
 
-  it("no gallery, QR, audio or portrait media is ever reached by this slice", async () => {
-    const { html, fixture } = await renderSd({ variant: "COMMON", galleryCount: 3, portraits: "PRESENT" });
-    const slots: readonly (MediaResolution | undefined)[] = [
-      ...fixture.viewModel.media.gallery,
-      fixture.viewModel.media.portrait.groom,
-      fixture.viewModel.media.portrait.bride,
-      fixture.viewModel.media.qr.groom,
-      fixture.viewModel.media.qr.bride,
-      fixture.viewModel.media.audio,
+  it("a Project with no photograph at all still renders a complete invitation", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON", slots: {} });
+    for (const slotKey of ["openingPhoto", "portraitLead", "portraitAside", "closingPhoto"] as const) {
+      expect(fixture.viewModel.media.templateSlots?.[slotKey], slotKey).toStrictEqual([]);
+    }
+    expect(frameUrls(html)).toStrictEqual([]);
+    for (const heading of ["sd-invite-title", "sd-couple-heading", "sd-houses-heading", "sd-rite-title", "sd-closing-eyebrow"]) {
+      expect(html, heading).toContain(heading);
+    }
+  });
+
+  it("no legacy media role is read: not cover, love-story, portrait, gallery, QR or audio", async () => {
+    const { html, fixture } = await renderSd({ variant: "COMMON", galleryCount: 3, portraits: "PRESENT", loveStoryPhoto: "PRESENT" });
+    const { media } = fixture.viewModel;
+    const legacy: readonly (MediaResolution | undefined)[] = [
+      media.cover,
+      media.loveStoryPhoto,
+      ...media.gallery,
+      ...media.photoStory,
+      media.portrait.groom,
+      media.portrait.bride,
+      media.qr.groom,
+      media.qr.bride,
+      media.audio,
     ];
-    const unreached = slots.filter((item): item is ResolvedMedia => item?.status === "RESOLVED");
-    expect(unreached.length).toBeGreaterThan(0);
-    for (const item of unreached) expect(html, item.url).not.toContain(item.url);
+    const resolved = legacy.filter((item): item is ResolvedMedia => item?.status === "RESOLVED");
+    expect(resolved.length).toBeGreaterThan(0);
+    for (const item of resolved) expect(html, item.url).not.toContain(item.url);
+  });
+
+  it("frames keep their approved tuned focal point; only a landscape photograph is re-centred", async () => {
+    const { html } = await renderSd({ variant: "COMMON" });
+    // The fixture slot photos carry no dimensions, so no frame is re-centred.
+    expect(html).not.toContain("-pos:");
+    expect(count(html, "--sdp-hero-size:cover")).toBe(1);
   });
 
   it("every decorative URL in the markup is this renderer's own immutable path", async () => {
-    const { html } = await renderSd({ variant: "COMMON", loveStoryPhoto: "PRESENT" });
+    const { html } = await renderSd({ variant: "COMMON" });
     for (const url of [...html.matchAll(/url\(&quot;([^&]+)&quot;\)/g)].map((match) => match[1] as string)) {
       expect(url.startsWith("/renderers/wedding/se-duyen/v1/") || url.includes("fixture"), url).toBe(true);
     }
@@ -458,5 +579,82 @@ describe("F. opening", () => {
     expect(html).toMatch(/<section class="[^"]*_hero_[^"]*" aria-hidden="true"/);
     // The stage itself is never hidden: the photograph lives there.
     expect(html).toMatch(/<section class="[^"]*_stage_[^"]*"><div/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// G. Editor manifest (SD-V1-02A)
+// ---------------------------------------------------------------------------
+
+describe("G. editor manifest", () => {
+  const editor = validateTemplateEditorManifest(SE_DUYEN_V1_EDITOR_MANIFEST);
+
+  it("validates unchanged, names this renderer and uses the template-slot media model", () => {
+    expect(editor).toStrictEqual(SE_DUYEN_V1_EDITOR_MANIFEST);
+    expect(editor.rendererKey).toBe(SE_DUYEN_V1_MANIFEST.compatibility.rendererKey);
+    expect(editor.mediaModel).toBe("TEMPLATE_SLOTS");
+  });
+
+  it("five slots cover the direction's eight art-directed frames, the album as one ordered list", () => {
+    expect(editor.mediaSlots.map((slot) => slot.key)).toStrictEqual([
+      "openingPhoto",
+      "portraitLead",
+      "portraitAside",
+      "gallery",
+      "closingPhoto",
+    ]);
+    const gallery = editor.mediaSlots.find((slot) => slot.key === "gallery");
+    expect(gallery?.cardinality).toBe("ORDERED_MULTI");
+    expect(gallery?.maxCount).toBeNull();
+    for (const slot of editor.mediaSlots.filter((entry) => entry.key !== "gallery")) {
+      expect(slot.cardinality, slot.key).toBe("SINGLE");
+      expect(slot.maxCount, slot.key).toBe(1);
+    }
+  });
+
+  it("every slot key names a position, so no person-bound exception is needed", () => {
+    for (const slot of editor.mediaSlots) {
+      expect(TEMPLATE_EDITOR_SLOT_KEY_FORBIDDEN_WORDS.test(slot.key), slot.key).toBe(false);
+    }
+    expect(Object.hasOwn(TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS, editor.rendererKey)).toBe(false);
+  });
+
+  it("content items are only those whose renderer section is capable", () => {
+    const capabilities = SE_DUYEN_V1_MANIFEST.compatibility.sectionCapabilities;
+    expect(editor.contentItems.map((item) => item.key)).toStrictEqual([
+      "COUPLE",
+      "EVENTS",
+      "FAMILIES",
+      "INVITATION_MESSAGE",
+      "LOVE_STORY",
+    ]);
+    for (const item of editor.contentItems) {
+      if (item.sectionKey !== null) expect(capabilities[item.sectionKey], item.key).toBe(true);
+    }
+    // Only COUPLE and EVENTS may be REQUIRED (TE-01 T10); nothing else is.
+    expect(editor.contentItems.filter((item) => item.requirement === "REQUIRED").map((item) => item.key)).toStrictEqual([
+      "COUPLE",
+      "EVENTS",
+    ]);
+  });
+
+  it("the manifest does NOT enforce the Product Owner's one-photo rule, and must not be read as if it did", () => {
+    // TE-01 T10: every slot minCount is 0 and no media slot may be REQUIRED,
+    // so a Project with no photograph at all passes everything expressed here.
+    for (const slot of editor.mediaSlots) {
+      expect(slot.minCount, slot.key).toBe(0);
+      expect(slot.requirement === "RECOMMENDED" || slot.requirement === "OPTIONAL", slot.key).toBe(true);
+    }
+    // The strongest available signal is a readiness nudge on the opening photo.
+    const opening = editor.mediaSlots.find((slot) => slot.key === "openingPhoto");
+    expect(opening?.requirement).toBe("RECOMMENDED");
+    expect(opening?.recommendedCount).toBe(1);
+  });
+
+  it("registration is still gated: the gallery slot names a section this renderer is not capable of", () => {
+    expect(SE_DUYEN_V1_MANIFEST.compatibility.sectionCapabilities.gallery).toBe(false);
+    expect(() => validateProductionEditorManifests([SE_DUYEN_V1_EDITOR_MANIFEST], [SE_DUYEN_V1_MANIFEST])).toThrow(
+      PRODUCTION_EDITOR_MANIFEST_ERROR_MESSAGES.SLOT_SECTION_NOT_CAPABLE,
+    );
   });
 });

@@ -1,11 +1,15 @@
-import type { InvitationViewModel } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
+import type { InvitationViewModel, ResolvedMedia } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
 import { SE_DUYEN_V1_COPY } from "../copy";
 import styles from "../se-duyen-v1.module.css";
+import { photoFrameStyle } from "./photo-frame";
 
 const COPY = SE_DUYEN_V1_COPY;
 
 interface ClosingProps {
   readonly people: InvitationViewModel["people"];
+  /** `closingPhoto`; `undefined` when the Project has no photograph for it. */
+  readonly photo: ResolvedMedia | undefined;
+  readonly photoAlt: string;
 }
 
 /**
@@ -19,13 +23,17 @@ interface ClosingProps {
  * (CLAUDE.md §5): COMMON and GROOM sign with the groom first, BRIDE with the
  * bride first.
  *
- * The closing photograph (`.closingPhoto`) is approved art direction waiting
- * on Se Duyên's template media slots in SD-V1-02; no frame is ever filled
- * with demo art. The thank-you wording is fixed template copy because the
- * canonical content contract has no closing-message field — making it
- * customer-editable is a scoped product decision, not a renderer change.
+ * The closing photograph rises out of the darkening lacquer under an arch
+ * with no frame around it, masked away at the foot so the red of the studio
+ * backdrop becomes the red of the page. It is the Project's own
+ * `closingPhoto` slot and is omitted entirely when there is none — never
+ * filled from another slot or with demo art.
+ *
+ * The thank-you wording is fixed template copy because the canonical content
+ * contract has no closing-message field — making it customer-editable is a
+ * scoped product decision, not a renderer change.
  */
-export function Closing({ people }: ClosingProps) {
+export function Closing({ people, photo, photoAlt }: ClosingProps) {
   return (
     <section className={styles.closing} aria-labelledby="sd-closing-eyebrow">
       <span className={styles.closingGlow} aria-hidden="true" />
@@ -36,6 +44,10 @@ export function Closing({ people }: ClosingProps) {
         </p>
         <span className={styles.closingRule} aria-hidden="true" />
       </div>
+
+      {photo === undefined ? null : (
+        <div className={styles.closingPhoto} style={photoFrameStyle("closing", photo)} role="img" aria-label={photoAlt} />
+      )}
 
       <p className={styles.closingMessage}>{COPY.closing.message}</p>
 

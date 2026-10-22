@@ -10,7 +10,7 @@ import { Couple } from "./sections/couple";
 import { Families } from "./sections/families";
 import { Invitation } from "./sections/invitation";
 import { formatDottedDate } from "./sections/date-text";
-import { resolvedOrNone } from "./sections/photo-frame";
+import { firstResolved } from "./sections/photo-frame";
 
 const COPY = SE_DUYEN_V1_COPY;
 
@@ -59,26 +59,38 @@ const COPY = SE_DUYEN_V1_COPY;
  * (CLAUDE.md §20). The frozen layout, type and ornament are unaffected —
  * each section simply arrives already visible.
  *
- * MEDIA. Se Duyên V1 requires at least one real wedding photograph (Product
- * Owner decision, 2026-10-21): the opening is built around a photograph that
- * rises out of the box and grows into the hero, and this direction has no
- * approved opening without one. That requirement is enforced UPSTREAM, in
- * Se Duyên's editor readiness, never here — and it is not a publishing
- * block at this checkpoint. This renderer fills the frames it can and omits
- * the rest: an absent, empty or `UNAVAILABLE` slot is never filled from
- * another slot, another role, or demo art (docs/DECISIONS.md P7, M6–M10).
- * SD-V1-01 reads the canonical `media.cover` for the opening photograph and
- * `media.loveStoryPhoto` for the couple's frame; the eight art-directed
- * frames of the approved direction need Se Duyên's own template media slots,
- * which is SD-V1-02.
+ * MEDIA. Layout photographs come only from `viewModel.media.templateSlots`
+ * (`openingPhoto`, `portraitLead`, `portraitAside`, `closingPhoto`), the
+ * slots Se Duyên's editor manifest declares. No legacy media role is read:
+ * not `media.cover`, `loveStoryPhoto`, `portrait`, `gallery`, `photoStory`,
+ * `audio` or `qr`. The slot-key → frame mapping below is the one place the
+ * editor's slot keys meet the frozen stylesheet's own variable stems.
+ *
+ * Each frame takes the first RESOLVED item of its own slot and nothing else.
+ * An absent, empty or `UNAVAILABLE` slot omits its frame: never filled from
+ * another slot, another role, or demo art, and never the same photograph
+ * twice (docs/DECISIONS.md P7, M6–M10). The album's four frames are the
+ * `gallery` slot and are still SD-V1-02 work.
+ *
+ * Se Duyên V1 requires at least one real wedding photograph (Product Owner
+ * decision, 2026-10-21): the opening is built around a photograph that rises
+ * out of the box and grows into the hero, and this direction has no approved
+ * opening without one. That requirement is enforced UPSTREAM, never here,
+ * and it is not a publishing block at this checkpoint — with no
+ * `openingPhoto` the box still opens onto the lacquer and the invitation
+ * below it is complete.
  */
 export function SeDuyenV1({ viewModel, sections }: InvitationRendererPropsV1) {
   const { people, families, ceremony, content, media } = viewModel;
   const ceremonyDate = deriveEventDateTimePresentationV1(ceremony);
   const guestDisplayName = viewModel.guest?.displayName;
 
-  const openingPhoto = resolvedOrNone(media.cover);
-  const couplePhoto = resolvedOrNone(media.loveStoryPhoto);
+  // The editor manifest's slot keys, each read once, in page order.
+  const slots = media.templateSlots;
+  const openingPhoto = firstResolved(slots?.openingPhoto);
+  const portraitLead = firstResolved(slots?.portraitLead);
+  const portraitAside = firstResolved(slots?.portraitAside);
+  const closingPhoto = firstResolved(slots?.closingPhoto);
   const photoAlt = `${COPY.hero.photoAltPrefix} ${people.primary.name} & ${people.secondary.name}`;
 
   // `sections.*` alone decides visibility; the null check only narrows types.
@@ -106,7 +118,7 @@ export function SeDuyenV1({ viewModel, sections }: InvitationRendererPropsV1) {
           ceremonyDate={ceremonyDate}
           lunarDateDisplay={ceremony.lunarDateDisplay}
         />
-        <Couple people={people} story={loveStory} photo={couplePhoto} photoAlt={photoAlt} />
+        <Couple people={people} story={loveStory} leadPhoto={portraitLead} asidePhoto={portraitAside} photoAlt={photoAlt} />
         <Families families={families} />
         <Ceremony
           ceremonyTitle={ceremony.title}
@@ -114,7 +126,7 @@ export function SeDuyenV1({ viewModel, sections }: InvitationRendererPropsV1) {
           hostFamily={families.primary}
           cards={viewModel.ceremonyCards}
         />
-        <Closing people={people} />
+        <Closing people={people} photo={closingPhoto} photoAlt={photoAlt} />
       </OpeningStage>
     </div>
   );
