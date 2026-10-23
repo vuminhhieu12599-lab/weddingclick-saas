@@ -1,4 +1,12 @@
-import type { InvitationVariant, ProjectStatus, ReviewFeedbackType, ReviewOutcomeStatus, ReviewVersionState } from "../../domain";
+import type {
+  ApprovalChannel,
+  InvitationVariant,
+  ProjectStatus,
+  ReviewFeedbackActorType,
+  ReviewFeedbackType,
+  ReviewOutcomeStatus,
+  ReviewVersionState,
+} from "../../domain";
 
 /** One `project_invitations` row (Task 030 read model; columns of migration 0012). */
 export interface ProjectInvitationRecord {
@@ -34,6 +42,47 @@ export interface ReviewFeedbackSummary {
   /** Customer text (COMMENT / REVISION_REQUEST required, APPROVAL optional); never staff metadata. */
   message: string | null;
   createdAt: string;
+  /** TE-06 (0053): who recorded it. Every pre-0053 row is `CUSTOMER`. */
+  actorType: ReviewFeedbackActorType;
+  /** TE-06 (0053): how the customer confirmed; non-null only on a STAFF approval. */
+  approvalChannel: ApprovalChannel | null;
+  /**
+   * TE-06 (0053): internal staff note, STAFF rows only. Staff-only by
+   * construction — `get_customer_review` never selects this column, so it
+   * cannot reach the customer REVIEW surface (TE-03A item 5).
+   */
+  staffNote: string | null;
+}
+
+/**
+ * TE-06 — the complete browser command for approval on behalf: which REVIEW
+ * version, the compare-and-set token, the mandatory confirmation channel and
+ * an optional internal note. Nothing authoritative: the actor is `auth.uid()`
+ * inside `staff_confirm_review_approval`, never sent by the browser.
+ */
+export interface ConfirmReviewApprovalCommand {
+  invitationVersionId: string;
+  /** The current REVIEW version the staff member saw; a mismatch is a 409. */
+  expectedCurrentReviewVersionId: string;
+  channel: ApprovalChannel;
+  /** Trimmed; blank becomes `null`. Max 2000 chars. */
+  note: string | null;
+}
+
+export interface ConfirmReviewApprovalParams extends ConfirmReviewApprovalCommand {
+  projectId: string;
+}
+
+/** The STAFF `APPROVAL` row created by `staff_confirm_review_approval` (migration 0053). */
+export interface StaffConfirmedApproval {
+  id: string;
+  projectId: string;
+  invitationVersionId: string;
+  variant: InvitationVariant;
+  approvalChannel: ApprovalChannel;
+  createdAt: string;
+  /** The Project's persisted status after the same-transaction outcome recompute. */
+  projectStatus: ProjectStatus;
 }
 
 /** Server-derived parameters of `create_review_version` (never browser input except the CAS token). */

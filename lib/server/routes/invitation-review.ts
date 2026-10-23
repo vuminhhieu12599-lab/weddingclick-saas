@@ -9,12 +9,21 @@ import {
   type ReviewVersionPreviewDependencies,
 } from "../invitation-review/build-review-version-preview";
 import {
+  confirmReviewApproval,
+  type ConfirmReviewApprovalDependencies,
+} from "../invitation-review/confirm-review-approval";
+import {
   createReviewVersion,
   type CreateReviewVersionDependencies,
   type ReviewBlockingIssue,
 } from "../invitation-review/create-review-version";
 import { getProjectReviewState, type ProjectReviewStateDependencies } from "../invitation-review/get-project-review-state";
-import type { CreatedReviewVersion, ProjectReviewState, ReviewVersionSummary } from "../invitation-review/invitation-review-types";
+import type {
+  CreatedReviewVersion,
+  ProjectReviewState,
+  ReviewVersionSummary,
+  StaffConfirmedApproval,
+} from "../invitation-review/invitation-review-types";
 
 /**
  * Pure, framework-agnostic handlers for the Task 030 staff review
@@ -123,6 +132,40 @@ export async function handleCreateReviewVersionRequest<TClient>(
     return withNoStore({ status: 201, body: { data: result.version } });
   } catch (error) {
     return withNoStore(toErrorResult(error, "[handleCreateReviewVersionRequest] Unexpected error"));
+  }
+}
+
+/**
+ * TE-06 — POST /api/v2/internal/projects/[id]/review/approvals: records the
+ * customer's approval of one exact CURRENT REVIEW version on their behalf.
+ * Body `{ invitationVersionId, expectedCurrentReviewVersionId, channel,
+ * note }` only; the confirming staff member is the authenticated session,
+ * never the body. 201 only when the STAFF approval row was actually
+ * written. The body is read only after staff auth succeeds.
+ */
+export async function handleConfirmReviewApprovalRequest<TClient>(
+  authorizationHeader: string | null,
+  projectId: string,
+  readBody: () => Promise<unknown>,
+  authGateway: StaffAuthGateway<TClient>,
+  deps: ConfirmReviewApprovalDependencies<TClient>,
+): Promise<ReviewApiResult<{ data: StaffConfirmedApproval }>> {
+  const token = parseBearerToken(authorizationHeader);
+  if (!token) {
+    return missingToken();
+  }
+  try {
+    const staff = await requireStaff(token, authGateway);
+    let body: unknown;
+    try {
+      body = await readBody();
+    } catch {
+      throw new ApiError("BAD_REQUEST", "Request body must be valid JSON");
+    }
+    const data = await confirmReviewApproval(projectId, body, staff, deps);
+    return withNoStore({ status: 201, body: { data } });
+  } catch (error) {
+    return withNoStore(toErrorResult(error, "[handleConfirmReviewApprovalRequest] Unexpected error"));
   }
 }
 

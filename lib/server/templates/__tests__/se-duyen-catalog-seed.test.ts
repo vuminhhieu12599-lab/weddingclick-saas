@@ -32,8 +32,10 @@ function jsonLiterals(): unknown[] {
 describe("Se Duyên v1 catalog seed migration 0052", () => {
   it("is the one migration after 0051 and is authored only (never applied by this task)", () => {
     const names = readdirSync(MIGRATIONS).sort();
-    expect(names.at(-1)).toBe(M0052);
-    expect(names.at(-2)).toBe(M0051);
+    // TE-06: 0053 (staff approval on behalf) is the head; 0052 stays the last catalog migration.
+    expect(names.at(-1)).toBe("20260911041213_0053_staff_approval_on_behalf.sql");
+    expect(names.at(-2)).toBe(M0052);
+    expect(names.at(-3)).toBe(M0051);
     expect(sql).toContain("AUTHORING ONLY — not applied.");
   });
 

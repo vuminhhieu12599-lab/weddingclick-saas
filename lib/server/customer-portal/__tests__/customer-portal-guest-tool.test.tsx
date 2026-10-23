@@ -697,8 +697,9 @@ describe("033E-B AG–AI: staff path, resolver and RSVP preserved", () => {
     // LAUNCH-P0-02 (checkpoint maintenance): exactly 0049 (friendly public aliases) may follow 0048.
     // VH-V2-RELEASE-READINESS (checkpoint maintenance): exactly the data-only VH v2 catalog seed 0050 may follow 0049.
     // OWS-V2-CATALOG-01 (checkpoint maintenance): exactly the data-only OWS v2 catalog seed 0051 may follow 0050.
-    // SD-V1-CATALOG-01 (checkpoint maintenance): exactly the data-only Se Duyên v1 catalog seed 0052 may follow 0051.
-    expect(readdirMigrations().slice(-10).map((name) => name.split("/").at(-1))).toEqual([
+    // SD-V1-CATALOG-01 / TE-06 (checkpoint maintenance): exactly the data-only Se Duyên v1
+    // catalog seed 0052 may follow 0051, and exactly the additive staff-approval 0053 may follow 0052.
+    expect(readdirMigrations().slice(-11).map((name) => name.split("/").at(-1))).toEqual([
       "20260911041202_0042_personalized_guest_link.sql",
       "20260911041203_0043_legacy_v1_lockdown.sql",
       "20260911041204_0044_republish_after_published.sql",
@@ -709,6 +710,7 @@ describe("033E-B AG–AI: staff path, resolver and RSVP preserved", () => {
       "20260911041210_0050_seed_vietnamese_heritage_v2_catalog.sql",
       "20260911041211_0051_seed_our_wedding_story_v2_catalog.sql",
       "20260911041212_0052_seed_se_duyen_v1_catalog.sql",
+      "20260911041213_0053_staff_approval_on_behalf.sql",
     ]);
   });
 });

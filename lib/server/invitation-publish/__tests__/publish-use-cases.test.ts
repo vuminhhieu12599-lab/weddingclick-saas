@@ -171,7 +171,17 @@ function reviewRow(id: string, invitationId: string, versionNumber: number): Rev
 }
 
 function approval(versionId: string, type: ReviewFeedbackSummary["feedbackType"] = "APPROVAL"): ReviewFeedbackSummary {
-  return { id: `${versionId}-${type}`, invitationVersionId: versionId, feedbackType: type, message: null, createdAt: stamp };
+  // TE-06 (0053): a customer-path row; the publish read model ignores the actor.
+  return {
+    id: `${versionId}-${type}`,
+    invitationVersionId: versionId,
+    feedbackType: type,
+    message: null,
+    createdAt: stamp,
+    actorType: "CUSTOMER",
+    approvalChannel: null,
+    staffNote: null,
+  };
 }
 
 function publishedRow(id: string, invitationId: string, source: string, versionNumber: number): PublishedVersionSummary {

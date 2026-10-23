@@ -42,9 +42,10 @@ describe("migration 0044", () => {
     // LAUNCH-P0-02 (checkpoint maintenance): exactly 0049 (friendly public aliases) may follow 0048.
     // VH-V2-RELEASE-READINESS (checkpoint maintenance): exactly the data-only VH v2 catalog seed 0050 may follow 0049.
     // OWS-V2-CATALOG-01 (checkpoint maintenance): exactly the data-only OWS v2 catalog seed 0051 may follow 0050.
-    // SD-V1-CATALOG-01 (checkpoint maintenance): exactly the data-only Se Duyên v1 catalog seed 0052 may follow 0051.
-    expect(names.at(-1)).toBe("20260911041212_0052_seed_se_duyen_v1_catalog.sql");
-    expect(names.filter((name) => /_(004[4-9]|00[5-9]\d|0[1-9]\d\d)_/.test(name))).toEqual([M0044_NAME, "20260911041206_0046_project_template_media_slots.sql", "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql", "20260911041208_0048_seed_vietnamese_heritage_romantic_minimal_v1_catalog.sql", "20260911041209_0049_invitation_public_aliases.sql", "20260911041210_0050_seed_vietnamese_heritage_v2_catalog.sql", "20260911041211_0051_seed_our_wedding_story_v2_catalog.sql", "20260911041212_0052_seed_se_duyen_v1_catalog.sql"]);
+    // SD-V1-CATALOG-01 / TE-06 (checkpoint maintenance): exactly the data-only Se Duyên v1
+    // catalog seed 0052 may follow 0051, and exactly the additive staff-approval 0053 may follow 0052.
+    expect(names.at(-1)).toBe("20260911041213_0053_staff_approval_on_behalf.sql");
+    expect(names.filter((name) => /_(004[4-9]|00[5-9]\d|0[1-9]\d\d)_/.test(name))).toEqual([M0044_NAME, "20260911041206_0046_project_template_media_slots.sql", "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql", "20260911041208_0048_seed_vietnamese_heritage_romantic_minimal_v1_catalog.sql", "20260911041209_0049_invitation_public_aliases.sql", "20260911041210_0050_seed_vietnamese_heritage_v2_catalog.sql", "20260911041211_0051_seed_our_wedding_story_v2_catalog.sql", "20260911041212_0052_seed_se_duyen_v1_catalog.sql", "20260911041213_0053_staff_approval_on_behalf.sql"]);
     const edited = execFileSync("git", ["diff", "--name-only", "HEAD", "--", MIGRATIONS], { cwd: ROOT, encoding: "utf8" });
     expect(edited.trim()).toBe("");
     expect(sql0044).toContain("AUTHORING ONLY — not applied.");
@@ -126,7 +127,7 @@ describe("publish read model during a post-publish correction (unchanged code)",
   const published: PublishedVersionSummary = {
     id: "p2", invitationId: "i1", projectId: PROJECT, versionNumber: 2, sourceReviewVersionId: "r1", templateVersionId: "t", rendererKeySnapshot: "wedding.elegant-editorial.v1", publishedAt: "2026-10-05T00:00:00.000Z",
   };
-  const approval: ReviewFeedbackSummary = { id: "f1", invitationVersionId: "r3", feedbackType: "APPROVAL", message: null, createdAt: "2026-10-06T01:00:00.000Z" };
+  const approval: ReviewFeedbackSummary = { id: "f1", invitationVersionId: "r3", feedbackType: "APPROVAL", message: null, createdAt: "2026-10-06T01:00:00.000Z", actorType: "CUSTOMER", approvalChannel: null, staffNote: null };
 
   function state(projectStatus: "CUSTOMER_REVIEW" | "APPROVED" | "READY_TO_PUBLISH", feedback: ReviewFeedbackSummary[]) {
     const reviews = [reviewRow("r3", 3), reviewRow("r1", 1)];
