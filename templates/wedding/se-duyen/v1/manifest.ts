@@ -15,10 +15,15 @@ import type { RendererProductionManifestV1 } from "../../../core/renderer-manife
  * `photoStory` are false by art direction: the approved composition has
  * neither. Every other section is now connected.
  *
- * Widening it then is legitimate: P22 / CLAUDE.md §9 freeze a manifest once
- * a catalog TemplateVersion row has been seeded on it, and Se Duyên has no
- * seeded row and no published invitation. After seeding, any incompatible
- * change becomes a v2 and never an edit here.
+ * Widening it was legitimate while nothing was seeded on it: P22 /
+ * CLAUDE.md §9 freeze a manifest once a catalog TemplateVersion row has been
+ * seeded on it. SD-V1-CATALOG-01 has now authored that row — migration 0052
+ * registers `wedding.se-duyen.v1` with exactly the `.design` subset below
+ * (`lib/server/templates/__tests__/se-duyen-catalog-seed.test.ts` keeps the
+ * two equal). The migration is authored only and not yet applied, and the
+ * template is seeded `is_active = false`, so there is still no published
+ * invitation; from the moment it is applied, any incompatible change here
+ * becomes a v2 and never an edit.
  *
  * `dressCode` and `photoStory` are `false` by art direction, not by
  * sequencing: the approved composition has neither.

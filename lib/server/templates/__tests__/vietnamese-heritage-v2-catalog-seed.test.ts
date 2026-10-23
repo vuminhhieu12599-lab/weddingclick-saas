@@ -30,10 +30,11 @@ function jsonLiterals(): unknown[] {
 describe("Vietnamese Heritage v2 catalog seed migration 0050", () => {
   it("is the one migration after 0049 and is authored only (never applied by this task)", () => {
     const names = readdirSync(MIGRATIONS).sort();
-    // OWS-V2-CATALOG-01: 0051 (the OWS v2 catalog seed) is the new head; 0050 still follows 0049 directly.
-    expect(names.at(-1)).toBe("20260911041211_0051_seed_our_wedding_story_v2_catalog.sql");
-    expect(names.at(-2)).toBe(M0050);
-    expect(names.at(-3)).toBe("20260911041209_0049_invitation_public_aliases.sql");
+    // SD-V1-CATALOG-01: 0052 (the Se Duyên v1 catalog seed) is the new head; OWS-V2-CATALOG-01's 0051 follows it, and 0050 still follows 0049 directly.
+    expect(names.at(-1)).toBe("20260911041212_0052_seed_se_duyen_v1_catalog.sql");
+    expect(names.at(-2)).toBe("20260911041211_0051_seed_our_wedding_story_v2_catalog.sql");
+    expect(names.at(-3)).toBe(M0050);
+    expect(names.at(-4)).toBe("20260911041209_0049_invitation_public_aliases.sql");
     expect(sql).toContain("AUTHORING ONLY — not applied.");
   });
 
