@@ -3509,6 +3509,8 @@ const SD1_CSS_FILE = `${SD1}/se-duyen-v1.module.css`;
 const SD1_PROVENANCE_FILE = `${SD1}/PROVENANCE.md`;
 /** SD-V1-02A: the editor manifest, outside the renderer-version directory. */
 const SD1_EDITOR_FILE = "templates/editor/wedding/se-duyen-v1.ts";
+/** SD-V1-RELEASE-01: the server-side, renderer-scoped publication readiness guard. */
+const SD1_PUBLICATION_GUARD = "lib/server/invitation-review/publication-readiness.ts";
 /** Static modules: no hooks, no interaction, no capability. */
 const SD1_CODE_FILES = [
   SD1_MANIFEST_FILE,
@@ -3587,9 +3589,15 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
     }
   });
 
-  it("the renderer key literal appears only in its own two manifests and the binding table", () => {
+  it("the renderer key literal appears only in its own two manifests, the binding table and its publication guard", () => {
     const withLiteral = productionSources().filter((file) => /["'`]wedding\.se-duyen\.v1["'`]/.test(codeOf(file)));
-    expect(withLiteral.sort()).toStrictEqual([SD1_MANIFEST_FILE, SD1_EDITOR_FILE, BINDINGS_MODULE].sort());
+    // SD-V1-RELEASE-01: the server-side publication readiness guard is
+    // renderer-scoped by design — it must name the renderer to apply the
+    // Product Owner's Se Duyên rules and to leave every other template
+    // untouched. It cannot read the key from the renderer manifest instead,
+    // because the assertion below keeps that manifest reachable only through
+    // the production registry.
+    expect(withLiteral.sort()).toStrictEqual([SD1_MANIFEST_FILE, SD1_EDITOR_FILE, BINDINGS_MODULE, SD1_PUBLICATION_GUARD].sort());
   });
 
   it("SD-V1: exactly the two production lists import its manifests, and only the binding module loads the root (lazily)", () => {

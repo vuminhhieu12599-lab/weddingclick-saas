@@ -36,10 +36,16 @@ import type { TemplateEditorManifestV1 } from "../../core/editor-manifest";
  * THIS MANIFEST DOES NOT ENFORCE THAT RULE, and must not be read as if it
  * did. The V1 editor contract cannot express it: `minCount` must be 0 for
  * every slot and no media slot may be REQUIRED (TE-01 T10), so the strongest
- * available signal is `openingPhoto` being RECOMMENDED with
+ * available signal here is `openingPhoto` being RECOMMENDED with
  * `recommendedCount: 1` — a readiness NUDGE in the Staff editor, not a gate.
  * A Project with no photograph at all still passes every check expressed
- * here. Real publishing enforcement is a separate scoped task.
+ * here.
+ *
+ * SD-V1-RELEASE-01 enforces the rule server-side instead, where it belongs:
+ * `lib/server/invitation-review/publication-readiness.ts` blocks REVIEW
+ * creation — and therefore publication — until at least one real customer
+ * photograph is assigned to ANY of the five slots below, the album included.
+ * No single slot is privileged, so the `openingPhoto` nudge stays a nudge.
  */
 export const SE_DUYEN_V1_EDITOR_MANIFEST: TemplateEditorManifestV1 = {
   schemaVersion: 1,
@@ -70,7 +76,7 @@ export const SE_DUYEN_V1_EDITOR_MANIFEST: TemplateEditorManifestV1 = {
     {
       key: "INVITATION_MESSAGE",
       label: "Lời mời",
-      hint: "Câu mời của gia đình, in trên tấm thiệp ngà. Để trống thì tấm thiệp chỉ còn lời chào và tên khách.",
+      hint: "Câu mời của gia đình, in trên tấm thiệp ngà. Để trống thì tấm thiệp chỉ còn lời chào và tên khách. Có thể dùng hai mã: {guest} thay bằng tên khách, {ceremonyTitle} thay bằng Lễ Thành Hôn hoặc Lễ Vu Quy theo từng bên. Viết đúng chữ hoa chữ thường; mã khác sẽ không tạo được bản duyệt.",
       requirement: "OPTIONAL",
       sectionKey: "invitationMessage",
     },

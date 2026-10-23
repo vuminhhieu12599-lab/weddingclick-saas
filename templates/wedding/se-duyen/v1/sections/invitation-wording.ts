@@ -23,16 +23,20 @@
  * module only places values it is handed into the customer's own sentence,
  * which is presentation (CLAUDE.md §6).
  *
- * CONTRACT GAP (reported with SD-V1-01). `{guest}` and `{ceremonyTitle}`
- * were the prototype's tokens and have no production contract: no server
- * validation, no editor affordance and no documented vocabulary exist for
- * them, and `content.invitationMessage` is plain text everywhere else — the
- * six other production renderers all declare `invitationMessage: false` and
- * render no customer sentence at all. Substituting here is the behaviour the
- * Product Owner approved, but the tokens must be made part of the documented
- * content contract (and, if a second template ever needs them, this module
- * promoted into `lib/invitation-rendering/`) before Se Duyên is activated.
- * Until then an unknown `{...}` token would reach a guest verbatim.
+ * THE TWO SUPPORTED TOKENS (SD-V1-RELEASE-01). `{guest}` and
+ * `{ceremonyTitle}`, case-sensitively, are the whole approved vocabulary;
+ * they are the prototype's tokens, now contracted. This module stays the
+ * only place that resolves them — Se Duyên is the only renderer that prints
+ * a customer sentence at all, since the six others declare
+ * `invitationMessage: false`.
+ *
+ * ANY OTHER `{...}` IS REJECTED BEFORE PUBLICATION, not rendered. The
+ * vocabulary is mirrored server-side in
+ * `lib/server/invitation-review/publication-readiness.ts`, which blocks
+ * REVIEW creation on an unsupported or malformed placeholder, so one can no
+ * longer reach a guest verbatim. A focused test pins the two patterns below
+ * to that server list, so they cannot drift apart. Nothing here rewrites the
+ * customer's wording: a sentence that passes is printed exactly as saved.
  */
 
 const GUEST_TOKEN = "{guest}";

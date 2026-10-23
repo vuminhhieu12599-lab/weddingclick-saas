@@ -11,6 +11,7 @@ import {
 } from "../invitation-preview/build-staff-invitation-preview";
 import { isValidUuid } from "../validation/uuid";
 import type { InvitationReviewGateway } from "./invitation-review-gateway";
+import { checkPublicationReadiness, type PublicationReadinessIssue } from "./publication-readiness";
 import type { CreatedReviewVersion } from "./invitation-review-types";
 
 /** The complete browser command: which variant, and the compare-and-set token. Nothing authoritative. */
@@ -20,9 +21,16 @@ export interface CreateReviewVersionCommand {
   expectedCurrentReviewVersionId: string | null;
 }
 
+/**
+ * SD-V1-RELEASE-01: the frozen builder's own issues, plus the server-side
+ * renderer-scoped publication readiness issues. Both shapes carry `code`,
+ * `severity` and `message`, so Staff and the 422 body see one list.
+ */
+export type ReviewBlockingIssue = SnapshotPayloadIssue | PublicationReadinessIssue;
+
 export type CreateReviewVersionResult =
   | { status: "CREATED"; version: CreatedReviewVersion }
-  | { status: "BLOCKED"; issues: [SnapshotPayloadIssue, ...SnapshotPayloadIssue[]] };
+  | { status: "BLOCKED"; issues: [ReviewBlockingIssue, ...ReviewBlockingIssue[]] };
 
 export interface CreateReviewVersionDependencies<TClient> extends StaffInvitationPreviewDependencies<TClient> {
   reviews: Pick<InvitationReviewGateway<TClient>, "createReviewVersion">;
@@ -80,7 +88,9 @@ export function assertSnapshotHasNoSignedUrls(snapshot: SnapshotPayloadV1): void
  *
  * strict command parse → `loadStaffDraftSnapshot` (the same frozen
  * pipeline Staff Preview uses) → BLOCKED returns issues and writes nothing
- * → `composeStaffInvitationRender` proves the exact pinned renderer can
+ * → renderer-scoped publication readiness (SD-V1-RELEASE-01, blocking and
+ * writing nothing) → `composeStaffInvitationRender` proves the exact
+ * pinned renderer can
  * serve this Snapshot (fail closed; the runtime ViewModel/URLs are
  * discarded, never persisted) → URL-free assertion → media refs from the
  * frozen extractor → `create_review_version` (atomic: ensure required
@@ -116,6 +126,14 @@ export async function createReviewVersion<TClient>(
     return draft;
   }
   const snapshot = draft.snapshot;
+
+  // SD-V1-RELEASE-01: the pinned renderer's own Product Owner readiness
+  // rules, on the one path into the publication pipeline. Nothing is
+  // persisted when they block, and an unlisted renderer yields no issues.
+  const [firstReadinessIssue, ...otherReadinessIssues] = checkPublicationReadiness(snapshot);
+  if (firstReadinessIssue !== undefined) {
+    return { status: "BLOCKED", issues: [firstReadinessIssue, ...otherReadinessIssues] };
+  }
 
   try {
     await composeStaffInvitationRender(snapshot, rawProjectId, staff.supabase, deps);

@@ -1,6 +1,5 @@
 import type { InvitationViewModel } from "../../invitation-rendering/invitation-view-model-types";
 import type { RendererEffectiveSections } from "../../invitation-rendering/renderer-selection";
-import type { SnapshotPayloadIssue } from "../../invitation-rendering/snapshot-payload-types";
 import { parseBearerToken } from "../auth/bearer-token";
 import { StaffAuthError } from "../auth/staff-auth-error";
 import { requireStaff, type StaffAuthGateway } from "../auth/staff-context";
@@ -9,7 +8,11 @@ import {
   buildReviewVersionPreview,
   type ReviewVersionPreviewDependencies,
 } from "../invitation-review/build-review-version-preview";
-import { createReviewVersion, type CreateReviewVersionDependencies } from "../invitation-review/create-review-version";
+import {
+  createReviewVersion,
+  type CreateReviewVersionDependencies,
+  type ReviewBlockingIssue,
+} from "../invitation-review/create-review-version";
 import { getProjectReviewState, type ProjectReviewStateDependencies } from "../invitation-review/get-project-review-state";
 import type { CreatedReviewVersion, ProjectReviewState, ReviewVersionSummary } from "../invitation-review/invitation-review-types";
 
@@ -21,7 +24,7 @@ import type { CreatedReviewVersion, ProjectReviewState, ReviewVersionSummary } f
  */
 export interface ReviewApiResult<TBody> {
   status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 422 | 500;
-  body: TBody | { error: string } | { error: string; issues: SnapshotPayloadIssue[] };
+  body: TBody | { error: string } | { error: string; issues: ReviewBlockingIssue[] };
   headers?: Record<string, string>;
 }
 

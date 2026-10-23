@@ -461,7 +461,8 @@ describe("migration 0042", () => {
     // LAUNCH-P0-02 (checkpoint maintenance): exactly 0049 (friendly public aliases) may follow 0048.
     // VH-V2-RELEASE-READINESS (checkpoint maintenance): exactly the data-only VH v2 catalog seed 0050 may follow 0049.
     // OWS-V2-CATALOG-01 (checkpoint maintenance): exactly the data-only OWS v2 catalog seed 0051 may follow 0050.
-    expect(readdirSync(join(ROOT, MIGRATIONS)).sort().slice(-9)).toEqual([sqlFile[0], "20260911041203_0043_legacy_v1_lockdown.sql", "20260911041204_0044_republish_after_published.sql", "20260911041206_0046_project_template_media_slots.sql", "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql", "20260911041208_0048_seed_vietnamese_heritage_romantic_minimal_v1_catalog.sql", "20260911041209_0049_invitation_public_aliases.sql", "20260911041210_0050_seed_vietnamese_heritage_v2_catalog.sql", "20260911041211_0051_seed_our_wedding_story_v2_catalog.sql"]);
+    // SD-V1-CATALOG-01 (checkpoint maintenance): exactly the data-only Se Duyên v1 catalog seed 0052 may follow 0051.
+    expect(readdirSync(join(ROOT, MIGRATIONS)).sort().slice(-10)).toEqual([sqlFile[0], "20260911041203_0043_legacy_v1_lockdown.sql", "20260911041204_0044_republish_after_published.sql", "20260911041206_0046_project_template_media_slots.sql", "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql", "20260911041208_0048_seed_vietnamese_heritage_romantic_minimal_v1_catalog.sql", "20260911041209_0049_invitation_public_aliases.sql", "20260911041210_0050_seed_vietnamese_heritage_v2_catalog.sql", "20260911041211_0051_seed_our_wedding_story_v2_catalog.sql", "20260911041212_0052_seed_se_duyen_v1_catalog.sql"]);
     expect(executable.match(/CREATE FUNCTION/g)).toHaveLength(3);
     expect(executable.match(/SECURITY DEFINER\s+SET search_path = ''/g)).toHaveLength(3);
   });

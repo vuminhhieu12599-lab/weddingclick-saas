@@ -66,29 +66,24 @@ only module that names these files, each by exact literal path.
 
 All six match exactly.
 
-## Open point for the Product Owner — `red-thread.webp`
+## `red-thread.webp` — Product Owner confirmation (2026-10-23)
 
-The tơ hồng (red thread) is the one file whose authorization rests on a
-reading rather than on a file-level grant, and it is flagged here rather than
-assumed.
+**RESOLVED. This file is approved for production use.** The Product Owner
+explicitly confirms that `red-thread.webp` belongs to the Se Duyên artwork
+set authorized for commercial use on 2026-10-20. No further authorization is
+needed, and the file must not be redrawn or replaced.
 
-The 2026-10-20 authorization names "the lacquer background, the wedding box,
-the lid and the **related ornaments**", and `assets/README.md` adds that the
-authorized set "is the set in this directory" — the v0.1 `assets/` directory.
-`red-thread.webp` sits in the earlier `se-duyen-visual-pilot-v02/` directory,
-whose own README still says the v0.2 files are "chưa phải asset production
-được duyệt" (not yet approved production assets).
-
-It is shipped here because it is unambiguously a Se Duyên AI-generated
-decorative ornament of the same set and the same origin, and because the
+For the record, this was the one file whose authorization previously rested
+on a reading rather than on a file-level grant: the 2026-10-20 authorization
+names "the lacquer background, the wedding box, the lid and the **related
+ornaments**", and `assets/README.md` adds that the authorized set "is the set
+in this directory" — the v0.1 `assets/` directory — while `red-thread.webp`
+sits in the earlier `se-duyen-visual-pilot-v02/` directory, whose own README
+still carries the superseded "chưa phải asset production được duyệt" note.
+The 2026-10-23 confirmation settles that: the tơ hồng is a Se Duyên
+AI-generated decorative ornament of the same set and the same origin, and the
 approved composition uses it in three places — the hero's single ornament,
 the rule under the invitation plate, and the thread under the closing words.
-Dropping it would change approved art direction; redrawing it is forbidden.
-
-**Required before activation:** explicit Product Owner confirmation that the
-2026-10-20 commercial-use authorization covers `red-thread.webp`. Until then
-this file must not be treated as cleared, and no Se Duyên invitation may be
-published.
 
 ## Not shipped
 
