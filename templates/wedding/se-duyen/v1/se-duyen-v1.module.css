@@ -2859,6 +2859,7 @@
 }
 
 .rsvpStep {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2872,6 +2873,21 @@
   border-radius: 50%;
   cursor: pointer;
   transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+/* SD-V1-TOUCH-01: the gilt ring stays exactly 32px -- it is the drawn
+   element -- while an invisible, out-of-flow overlay carries the touch
+   target to 44px (CLAUDE.md §21). Nothing is painted, nothing reflows, and
+   the two rings sit 114px apart centre to centre (32 + 4 + 74 + 4 + 32), so
+   the two overlays cannot overlap or reach the submit button. */
+.rsvpStep::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
 }
 
 .rsvpStep:hover:not(:disabled) {
@@ -3613,8 +3629,9 @@
 
 /* A mark in the margin of the slip rather than a button on a panel: no fill,
    no border, no hit-area box -- just the glyph in the same gilt the row
-   label is set in. The 8px of padding keeps the touch target at ~30px while
-   the glyph itself stays small (CLAUDE.md §21). */
+   label is set in. The 8px of padding keeps the painted mark at ~30px while
+   the glyph itself stays small; SD-V1-TOUCH-01 carries the touch target to
+   44px through the overlay below (CLAUDE.md §21). */
 .giftCopy {
   position: absolute;
   right: -7px;
@@ -3634,6 +3651,20 @@
 .giftCopy svg {
   width: 13px;
   height: 13px;
+}
+
+/* SD-V1-TOUCH-01: the same invisible 44px overlay as the RSVP stepper. The
+   mark is the only control on its row and the two slips carry one each, so
+   this reaches no other target; it is centred on the mark rather than
+   anchored to an edge, so the row's own box is unchanged. */
+.giftCopy::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
 }
 
 .giftCopy:hover {

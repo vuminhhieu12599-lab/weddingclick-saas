@@ -1678,3 +1678,71 @@ describe("M. rsvp", () => {
     expect(html).not.toContain("chưa gửi dữ liệu");
   });
 });
+
+/**
+ * SD-V1-TOUCH-01 — the two mobile usability findings from the 360/390/430 px
+ * live QA: the RSVP party stepper measured 32x32 and the gift copy mark
+ * 29x29, both under the 44px touch minimum (CLAUDE.md §21). The fix is a
+ * hit area only: every painted value stays exactly as the frozen art
+ * direction had it.
+ */
+describe("N. touch targets", () => {
+  const rules = readFileSync(join(__dirname, "..", "se-duyen-v1.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const ruleFor = (selector: string) => {
+    const at = rules.indexOf(`${selector} {`);
+    expect(at, selector).toBeGreaterThan(-1);
+    return rules.slice(at, rules.indexOf("}", at) + 1);
+  };
+
+  it.each([[".rsvpStep::after"], [".giftCopy::after"]])("%s carries a 44x44 hit area that paints nothing", (selector) => {
+    const rule = ruleFor(selector);
+    expect(rule).toMatch(/width:\s*44px/);
+    expect(rule).toMatch(/height:\s*44px/);
+    expect(rule).toMatch(/position:\s*absolute/);
+    expect(rule).toMatch(/content:\s*""/);
+    // Centred on the control, so the target grows evenly instead of drifting.
+    expect(rule).toMatch(/top:\s*50%/);
+    expect(rule).toMatch(/left:\s*50%/);
+    expect(rule).toMatch(/transform:\s*translate\(-50%,\s*-50%\)/);
+    // Paints nothing: no fill, no border, no shadow, no colour of its own.
+    expect(rule).not.toMatch(/background|border|box-shadow|outline|color|opacity/);
+  });
+
+  it("the overlay can only resolve against its own control", () => {
+    expect(ruleFor(".rsvpStep")).toMatch(/position:\s*relative/);
+    expect(ruleFor(".giftCopy")).toMatch(/position:\s*absolute/);
+  });
+
+  it("every painted dimension of both controls is unchanged", () => {
+    const step = ruleFor(".rsvpStep");
+    expect(step).toMatch(/width:\s*32px/);
+    expect(step).toMatch(/height:\s*32px/);
+    expect(step).toMatch(/border-radius:\s*50%/);
+    const svg = ruleFor(".giftCopy svg");
+    expect(svg).toMatch(/width:\s*13px/);
+    expect(svg).toMatch(/height:\s*13px/);
+    expect(ruleFor(".giftCopy")).toMatch(/padding:\s*8px/);
+  });
+
+  it("the stepper pair cannot overlap: 114px of pitch for two 44px targets", () => {
+    const stepper = ruleFor(".rsvpStepper");
+    expect(stepper).toMatch(/gap:\s*4px/);
+    expect(ruleFor(".rsvpCountValue")).toMatch(/min-width:\s*74px/);
+    const pitch = 32 + 4 + 74 + 4 + 32;
+    expect(pitch).toBeGreaterThanOrEqual(44 + 44);
+  });
+
+  it("no other control in the renderer is left under 44px by a width or height of its own", () => {
+    // Guards the fix against a future control shipped at the old size.
+    const buttons = [".rsvpStep", ".giftCopy", ".rsvpSubmit"];
+    for (const selector of buttons) {
+      const at = rules.indexOf(`${selector} {`);
+      if (at < 0) continue;
+      const rule = rules.slice(at, rules.indexOf("}", at) + 1);
+      const sized = /(?:^|[^-])height:\s*(\d+)px/.exec(rule);
+      if (sized && Number(sized[1]) < 44) {
+        expect(rules, `${selector} is ${sized[1]}px tall and needs a ::after hit area`).toContain(`${selector}::after {`);
+      }
+    }
+  });
+});
