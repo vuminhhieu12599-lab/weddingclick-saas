@@ -6,19 +6,29 @@ import { TemplateShowcase } from "./_showroom/template-showcase";
 import { PUBLIC_SHOWROOM_TEMPLATES } from "../lib/showroom/showroom-catalog";
 import { getShowroomContact } from "../lib/showroom/showroom-contact";
 import { SHOWROOM_SOCIAL_IMAGE } from "../lib/showroom/showroom-metadata";
+import { SHOWROOM_SITE_URL } from "../lib/showroom/showroom-site-url";
 import { SHOWROOM_ADDON_OFFERS, SHOWROOM_PACKAGE_OFFERS } from "../lib/showroom/showroom-pricing";
 
 const TITLE = "WeddingClick — Thiệp cưới online đẹp từ ánh nhìn đầu tiên";
 const DESCRIPTION =
   "Bộ sưu tập thiệp cưới online sang trọng: xem thử từng mẫu, thiệp chung hoặc riêng nhà trai nhà gái, xác nhận tham dự, chỉ đường Google Maps. Đội ngũ WeddingClick dựng thiệp giúp bạn.";
 
+/**
+ * WC-PROD-REVIEW-01: `metadataBase` is set HERE, on the page, not in the root
+ * layout, so published invitations and the template demo pages keep resolving
+ * their own Open Graph images exactly as before. Every value is a build-time
+ * constant, so the homepage stays statically rendered.
+ */
 export const metadata: Metadata = {
+  metadataBase: SHOWROOM_SITE_URL,
   title: TITLE,
   description: DESCRIPTION,
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     locale: "vi_VN",
     siteName: "WeddingClick",
+    url: SHOWROOM_SITE_URL.toString(),
     title: TITLE,
     description: DESCRIPTION,
     images: [SHOWROOM_SOCIAL_IMAGE],
