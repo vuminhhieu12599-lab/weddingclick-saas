@@ -1413,6 +1413,14 @@
  */
 .giftBlock {
   margin-top: 44px;
+  /* OWS-V2-UI-01: the note is the one line in this section allowed past the
+     section's own 20px text inset. At 360px that inset left it 312px, and
+     this sentence needs 324px to set in three balanced lines instead of
+     four, so the block reaches 12px further on each side. Nothing else here
+     is as wide as its content — the rule, the note and the button all stay
+     centred on the same axis — and 8px of the section's padding still
+     stands, so nothing touches the viewport edge. */
+  margin-inline: -12px;
   padding: 0 4px 8px;
   text-align: center;
 }
@@ -1426,7 +1434,12 @@
 }
 
 .giftNote {
-  max-width: 340px;
+  /* OWS-V2-UI-01: raised from 340px. The size is container-query driven
+     (`5.4cqi`), so above ~400px the note sets at 20.5px rather than 19px and
+     340px then wrapped to four lines again; 356px clears the three-line
+     threshold at both sizes (324px at 19px, 348px at 20.5px) with room to
+     spare. The width above is what decides 360px; this decides 390px up. */
+  max-width: 356px;
   margin: 0 auto;
   font-family: var(--serif);
   font-style: italic;
