@@ -16,7 +16,7 @@ import type { RendererProductionManifestV1 } from "../../templates/core/renderer
  *
  * Adding a template to the homepage is ONE new entry in
  * `SHOWROOM_TEMPLATE_ENTRIES` (plus its two screenshots under
- * `public/showroom/templates/`). Cards, routes, demo pages, sitemap of static
+ * `public/showroom/templates/`: the opened hero and an inner section). Cards, routes, demo pages, sitemap of static
  * params and the consultation page all derive from this list; no JSX changes.
  * An entry starts as `HIDDEN` and becomes `PUBLIC` only after its renderer is
  * registered, seeded active in the catalog and its demo is reviewed.
@@ -50,7 +50,12 @@ export interface ShowroomTemplateEntry {
   readonly moodVi: readonly string[];
   /** Card accent colour (hex) giving each design its own personality. */
   readonly accent: string;
-  /** Real screenshot of the template's opening screen (demo, 390 px wide, 2×). */
+  /**
+   * Real screenshot of the template's first opened screen — the hero the
+   * guest meets once the envelope/gate is past, with the couple in frame
+   * (demo, 390 px wide, 2×). Templates without an opening gate are already
+   * on that screen at load.
+   */
   readonly cover: ShowroomImage;
   /** Real screenshot of an inner section of the same demo. */
   readonly preview: ShowroomImage;
@@ -85,7 +90,7 @@ function screenshots(templateCode: string, nameVi: string): Pick<ShowroomTemplat
       src: `/showroom/templates/${templateCode}-cover.webp`,
       width: 780,
       height: 1688,
-      alt: `Màn hình mở đầu của mẫu thiệp ${nameVi}`,
+      alt: `Ảnh cưới mở đầu của mẫu thiệp ${nameVi}`,
     },
     preview: {
       src: `/showroom/templates/${templateCode}-inside.webp`,
