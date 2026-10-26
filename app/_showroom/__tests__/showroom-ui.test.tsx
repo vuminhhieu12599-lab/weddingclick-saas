@@ -10,7 +10,8 @@ const FIFTH: ShowroomTemplateEntry = {
   templateCode: "fixture-five",
   nameVi: "Mẫu Thứ Năm",
   nameEn: "Fixture Template Five",
-  sortOrder: 50,
+  // SD-V1-SHOWROOM-01: Se Duyên took sortOrder 50, so the fixture sits after it.
+  sortOrder: 60,
 };
 
 function countCards(html: string): number {
@@ -18,15 +19,18 @@ function countCards(html: string): number {
 }
 
 describe("LAUNCH-P0-04 showroom collection is data-driven", () => {
-  it("renders one card per catalog entry: four today, five with a fifth fixture, no JSX change", async () => {
-    const four = await renderToStaticMarkupAsync(<TemplateShowcase templates={SHOWROOM_TEMPLATE_ENTRIES} />);
-    expect(countCards(four)).toBe(4);
-    const five = await renderToStaticMarkupAsync(<TemplateShowcase templates={[...SHOWROOM_TEMPLATE_ENTRIES, FIFTH]} />);
-    expect(countCards(five)).toBe(5);
-    expect(five).toContain("Mẫu Thứ Năm");
-    expect(five).toContain('href="/mau-thiep/fixture-five"');
-    expect(five).toContain('href="/tu-van?mau=fixture-five"');
-    expect(five).toContain("5 mẫu thiệp đang có");
+  it("renders one card per catalog entry: the released set, one more with a fixture, no JSX change", async () => {
+    // SD-V1-SHOWROOM-01: counted from the catalog, so adding a template stays
+    // one new entry in `SHOWROOM_TEMPLATE_ENTRIES` and no JSX or test edit.
+    const released = SHOWROOM_TEMPLATE_ENTRIES.length;
+    const listed = await renderToStaticMarkupAsync(<TemplateShowcase templates={SHOWROOM_TEMPLATE_ENTRIES} />);
+    expect(countCards(listed)).toBe(released);
+    const withExtra = await renderToStaticMarkupAsync(<TemplateShowcase templates={[...SHOWROOM_TEMPLATE_ENTRIES, FIFTH]} />);
+    expect(countCards(withExtra)).toBe(released + 1);
+    expect(withExtra).toContain("Mẫu Thứ Năm");
+    expect(withExtra).toContain('href="/mau-thiep/fixture-five"');
+    expect(withExtra).toContain('href="/tu-van?mau=fixture-five"');
+    expect(withExtra).toContain(`${released + 1} mẫu thiệp đang có`);
   });
 
   it("each card links its own demo and its own selection", async () => {

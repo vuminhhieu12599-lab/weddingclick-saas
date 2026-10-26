@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="750" viewBox="0 0 600 750">
+  <!-- Se Duyên prototype placeholder portrait #2 (self-generated abstract
+       art) — same warm family as portrait-01, cooler and deeper so the two
+       frames read as two different photographs. -->
+  <defs>
+    <linearGradient id="sd2Wash" x1="80%" y1="6%" x2="16%" y2="96%">
+      <stop offset="0%" stop-color="#e7d2b6" />
+      <stop offset="48%" stop-color="#b98a76" />
+      <stop offset="100%" stop-color="#5f3330" />
+    </linearGradient>
+    <radialGradient id="sd2Bloom" cx="62%" cy="26%" r="50%">
+      <stop offset="0%" stop-color="#fff4e2" stop-opacity="0.62" />
+      <stop offset="100%" stop-color="#fff4e2" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="sd2Vignette" cx="50%" cy="46%" r="76%">
+      <stop offset="56%" stop-color="#240709" stop-opacity="0" />
+      <stop offset="100%" stop-color="#240709" stop-opacity="0.46" />
+    </radialGradient>
+  </defs>
+  <rect width="600" height="750" fill="url(#sd2Wash)" />
+  <ellipse cx="310" cy="486" rx="142" ry="238" fill="#4c2524" opacity="0.2" />
+  <ellipse cx="312" cy="312" rx="86" ry="106" fill="#f1e0c6" opacity="0.22" />
+  <rect width="600" height="750" fill="url(#sd2Bloom)" />
+  <rect width="600" height="750" fill="url(#sd2Vignette)" />
+</svg>

@@ -834,6 +834,29 @@ The server builds the Snapshot from the CURRENT draft through the same pipeline 
 
 No PUBLISHED version, no `published_version_id`, no public `/i/[slug]`, no Open Graph, no guest token and no RSVP. Customer review is §17.
 
+### 16.5 `POST /api/v2/internal/projects/[id]/review/approvals` — staff approval on behalf (TE-06)
+
+Staff-only, same Path A boundary and `Cache-Control: no-store`. Records the customer's approval of one exact **current** REVIEW version when the customer approved it through another channel (Zalo, phone, in person) instead of the REVIEW link. It is an approval, not a review creation: no draft is loaded, no Snapshot is built, and no publication or payment state is read or written.
+
+Body (strict allow-list, any other key → 400): `{ "invitationVersionId": uuid, "expectedCurrentReviewVersionId": uuid, "channel": "ZALO"|"PHONE"|"IN_PERSON"|"OTHER", "note": string|null }`. The browser never sends the actor, the Project id, the variant, the feedback type or a status: the confirming staff member is `auth.uid()` inside the RPC, so an approval cannot be attributed to another staff member. `note` is trimmed, blank becomes `null`, at most 2000 characters, and is stored in `review_feedback.staff_note` — **internal, staff-only**: it is never returned by the customer REVIEW read (§17.1) and never copied into activity metadata.
+
+One call to `staff_confirm_review_approval` (migration 0053) does everything in one transaction: `is_staff()` self-authorization, channel/note validation, Project lock and status gate, binding to the current REVIEW version of a required variant under the invitation row lock, compare-and-set on `expectedCurrentReviewVersionId`, the first-decision-is-final rule, one `review_feedback` row with `actor_type = 'STAFF'`, a `CUSTOMER_APPROVED` activity entry with a `STAFF` actor and the channel, and the same aggregate review-outcome recompute as the customer path (`PROJECT_STATUS_CHANGED` when the status moves). Nothing is written when any precondition fails.
+
+| Condition | Kind (SQLSTATE) | HTTP |
+|---|---|---|
+| Recorded | — | 201 `{ data: { id, projectId, invitationVersionId, variant, approvalChannel, createdAt, projectStatus } }` |
+| Missing/invalid token | `UNAUTHENTICATED` | 401 |
+| Not active STAFF/ADMIN | `FORBIDDEN` (SA001) | 403 |
+| Malformed id/body/JSON, unknown body key, unknown channel, note over 2000 | `BAD_REQUEST` (SA005/SA006) | 400 |
+| Project not visible; version is not a REVIEW of this Project or of a required variant | `NOT_FOUND` (SA002/SA008) | 404 |
+| Project status not open for approval; version superseded; stale `expectedCurrentReviewVersionId`; a decision already recorded on this version | `CONFLICT` (SA007/SA009/SA010/SA011) | 409 |
+| Package has no variant policy; variant not required by the package | `INVARIANT` (SA003/SA004) | 422 |
+| Unexpected DB/invariant failure | `INTERNAL` | 500 (generic body) |
+
+**Staff UI (Duyệt tab).** Offered per variant only for the current REVIEW version while that version still awaits a decision, and only while the Project status still accepts one. It names the exact version ("bản duyệt #N"), requires the channel, and requires the staff member to tick "Tôi xác nhận khách hàng đã duyệt đúng bản #N". A staff-confirmed approval is then shown with its channel, and the internal note is labelled as internal. The customer self-approval flow (§17.2) is unchanged.
+
+**Read model (§16.2).** Each feedback row now also carries `actorType` (`CUSTOMER` | `STAFF`), `approvalChannel` and `staffNote` for staff only. `approvalState`, `approved`, `reviewOutcome` and publish eligibility are computed exactly as before — a STAFF approval is an approval of that version, with no separate precedence.
+
 ## 17. Task 030B — Customer REVIEW Contract (Path B)
 
 Customer REVIEW uses the existing Task 026 REVIEW access link: Project-scoped, live across revision rounds (`[R-Q2]`), opaque 43-character token, SHA-256 hash lookup, 404 for malformed/unknown/wrong-purpose, 410 for revoked/expired, `last_used_at` on success. The raw token never reaches the database; only the resolved `{ projectId, accessLinkId }` does. Both customer RPCs (migration 0037, `EXECUTE` for `service_role` only) re-validate that context first. No email identity, no `?guest=`, no Project-id or version-id authorization.

@@ -153,6 +153,15 @@ const OWS_PHOTOS = Object.freeze(
   ].map(([name, orientation]) => folderPhoto("our-wedding-story", name ?? "", orientation === "LANDSCAPE" ? "LANDSCAPE" : "PORTRAIT")),
 );
 
+/**
+ * SD-V1-SHOWROOM-01: Se Duyên reuses the Vietnamese Heritage photographs
+ * rather than copying them. They are the only committed showroom set shot in
+ * áo dài against lacquer red, which is exactly this direction's palette, and
+ * referencing the same files keeps one set of bytes and one provenance entry
+ * (`lib/showroom/demo/ASSETS.md`). No new image is introduced by this demo.
+ */
+const SD_PHOTOS = VH_PHOTOS;
+
 /** Numbered photo `n` (1-based, the file name prefix) of a set. */
 function nth(photos: readonly DemoImage[], n: number): DemoImage {
   const photo = photos[n - 1];
@@ -216,6 +225,23 @@ export const DEMO_TEMPLATE_SLOT_PHOTO_SETS: Readonly<Record<string, DemoTemplate
     // and ends on the cover and the Thank You frame.
     gallery: Object.freeze([5, 6, 7, 8, 2, 9, 3, 4, 1, 10].map((n) => nth(OWS_PHOTOS, n))),
     thankYouPhoto: Object.freeze([nth(OWS_PHOTOS, 10)]),
+  }),
+  // SD-V1-SHOWROOM-01: Se Duyên v1. Its key literal is forbidden in lib/ by the
+  // renderer static boundary, so it is resolved from the production registry.
+  [registeredRendererKey("se-duyen", 1)]: Object.freeze({
+    // The photograph inside the lacquer box: it rises on the opening tap and
+    // grows into the hero, so it carries the whole first screen.
+    openingPhoto: Object.freeze([nth(SD_PHOTOS, 1)]),
+    // Positions, not people (TE-01 T1): the large frame of the couple page and
+    // the small frame overlapping its lower corner.
+    portraitLead: Object.freeze([nth(SD_PHOTOS, 2)]),
+    portraitAside: Object.freeze([nth(SD_PHOTOS, 7)]),
+    // The approved album is four frames — lead, a tall/small pair, then a foot
+    // frame — and draws the first four of the slot in order, so the landscape
+    // tea ceremony (05) is placed last where the wide crop sits.
+    gallery: Object.freeze([8, 3, 4, 5].map((n) => nth(SD_PHOTOS, n))),
+    // The closing frame fades into the lacquer ground under the thank-you line.
+    closingPhoto: Object.freeze([nth(SD_PHOTOS, 10)]),
   }),
 });
 

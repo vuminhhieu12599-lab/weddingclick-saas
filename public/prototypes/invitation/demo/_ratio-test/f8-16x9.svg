@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#2f3b46" />
+  <g stroke="#6d7d8b" stroke-width="3" opacity="0.55">
+    <line x1="128" y1="0" x2="128" y2="720" />
+    <line x1="0" y1="72" x2="1280" y2="72" />
+    <line x1="256" y1="0" x2="256" y2="720" />
+    <line x1="0" y1="144" x2="1280" y2="144" />
+    <line x1="384" y1="0" x2="384" y2="720" />
+    <line x1="0" y1="216" x2="1280" y2="216" />
+    <line x1="512" y1="0" x2="512" y2="720" />
+    <line x1="0" y1="288" x2="1280" y2="288" />
+    <line x1="640" y1="0" x2="640" y2="720" />
+    <line x1="0" y1="360" x2="1280" y2="360" />
+    <line x1="768" y1="0" x2="768" y2="720" />
+    <line x1="0" y1="432" x2="1280" y2="432" />
+    <line x1="896" y1="0" x2="896" y2="720" />
+    <line x1="0" y1="504" x2="1280" y2="504" />
+    <line x1="1024" y1="0" x2="1024" y2="720" />
+    <line x1="0" y1="576" x2="1280" y2="576" />
+    <line x1="1152" y1="0" x2="1152" y2="720" />
+    <line x1="0" y1="648" x2="1280" y2="648" />
+  </g>
+  <rect x="43" y="43" width="1194" height="634"
+        fill="none" stroke="#9fb3c2" stroke-width="9" stroke-dasharray="36 27" />
+  <g fill="none" stroke="#f2c14e" stroke-width="18" stroke-linecap="square">
+    <path d="M43 129 L43 43 L129 43" />
+    <path d="M1237 129 L1237 43 L1151 43" />
+    <path d="M43 591 L43 677 L129 677" />
+    <path d="M1237 591 L1237 677 L1151 677" />
+  </g>
+  <g fill="#f2c14e" font-family="DejaVu Sans, Verdana, sans-serif" text-anchor="middle">
+    <text x="640" y="360" font-size="61" font-weight="bold">F8 · 16:9</text>
+    <text x="640" y="436" font-size="32">1280×720</text>
+    <text x="640" y="107" font-size="32">TOP</text>
+    <text x="640" y="645" font-size="32">BOTTOM</text>
+    <text x="107" y="305" font-size="32">LEFT</text>
+    <text x="1173" y="305" font-size="32">RIGHT</text>
+  </g>
+</svg>

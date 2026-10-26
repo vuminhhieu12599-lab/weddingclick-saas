@@ -6,6 +6,7 @@ import { ELEGANT_EDITORIAL_V1_MANIFEST } from "../wedding/elegant-editorial/v1/m
 import { OUR_WEDDING_STORY_V1_MANIFEST } from "../wedding/our-wedding-story/v1/manifest";
 import { OUR_WEDDING_STORY_V2_MANIFEST } from "../wedding/our-wedding-story/v2/manifest";
 import { ROMANTIC_MINIMAL_V1_MANIFEST } from "../wedding/romantic-minimal/v1/manifest";
+import { SE_DUYEN_V1_MANIFEST } from "../wedding/se-duyen/v1/manifest";
 import { VIETNAMESE_HERITAGE_V1_MANIFEST } from "../wedding/vietnamese-heritage/v1/manifest";
 import { VIETNAMESE_HERITAGE_V2_MANIFEST } from "../wedding/vietnamese-heritage/v2/manifest";
 import {
@@ -64,7 +65,8 @@ export function validateProductionRendererManifests(
  * P27: the one ordered, explicit production manifest list feeding both
  * compositions: Elegant Editorial v1, Vietnamese Heritage v1 (VH-01),
  * Romantic Minimal v1 (RM-02), Our Wedding Story v1 (OWS-01), Vietnamese
- * Heritage v2 (VH-V2-01), then Our Wedding Story v2 (OWS-V2-01).
+ * Heritage v2 (VH-V2-01), Our Wedding Story v2 (OWS-V2-01), then Se Duyên v1
+ * (SD-V1).
  * Registration here is code compatibility only; a renderer is selectable
  * only through an active catalog TemplateVersion row (not seeded for
  * Vietnamese Heritage in VH-01, for Romantic Minimal in RM-02 nor for Our
@@ -79,6 +81,7 @@ export const PRODUCTION_RENDERER_MANIFESTS: readonly RendererProductionManifestV
     OUR_WEDDING_STORY_V1_MANIFEST,
     VIETNAMESE_HERITAGE_V2_MANIFEST,
     OUR_WEDDING_STORY_V2_MANIFEST,
+    SE_DUYEN_V1_MANIFEST,
   ]);
 
 /**

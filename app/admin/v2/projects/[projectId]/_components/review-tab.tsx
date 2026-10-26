@@ -3,16 +3,26 @@
 import { useState } from "react";
 
 import {
+  confirmReviewApprovalOnBehalf,
   createInvitationReviewVersion,
   fetchProjectReviewState,
   issueReviewAccessLink,
 } from "../../../../../../lib/admin/admin-api-client";
 import { AdminApiError } from "../../../../../../lib/admin/admin-api-error";
 import { useAdminQuery } from "../../../../../../lib/admin/use-admin-query";
-import type { InvitationVariant, ProjectStatus, ReviewFeedbackType, ReviewOutcomeStatus } from "../../../../../../lib/domain";
+import {
+  APPROVAL_CHANNELS,
+  CUSTOMER_FEEDBACK_OPEN_STATUSES,
+  type ApprovalChannel,
+  type InvitationVariant,
+  type ProjectStatus,
+  type ReviewFeedbackType,
+  type ReviewOutcomeStatus,
+} from "../../../../../../lib/domain";
 import type { SnapshotPayloadIssue } from "../../../../../../lib/invitation-rendering/snapshot-payload-types";
 import { formatDateTimeVi } from "../../../../../../lib/presentation/format-date";
 import { getProjectStatusLabel } from "../../../../../../lib/presentation/project-status-labels";
+import { APPROVAL_CHANNEL_LABELS } from "../../../../../../lib/presentation/review-approval-labels";
 import type {
   RequiredVariantReviewState,
   ReviewApprovalState,
@@ -159,15 +169,197 @@ export function reviewCreationMode(status: ProjectStatus): ReviewCreationMode {
   return status === "PUBLISHED" ? "CORRECTION" : "OPEN";
 }
 
+/**
+ * TE-06 — staff approval on behalf of the customer (docs/DECISIONS.md T12).
+ * Offered only for the variant's CURRENT review version while that version
+ * still awaits a decision: the exact version number is named, the
+ * confirmation channel is mandatory evidence, and the staff member must
+ * tick an explicit statement that the customer approved THAT version. The
+ * optional note is internal and is never shown to the customer.
+ *
+ * This component decides nothing: `staff_confirm_review_approval`
+ * (migration 0053) re-checks staff role, Project status, the required
+ * variant, the current-review binding, the compare-and-set token and the
+ * first-decision-is-final rule, and writes nothing when any of them fails.
+ */
+export function confirmApprovalErrorFeedback(error: unknown): string {
+  if (error instanceof AdminApiError) {
+    switch (error.status) {
+      case 401:
+        return "Phiên đăng nhập nhân sự đã hết hạn. Vui lòng đăng nhập lại.";
+      case 403:
+        return "Tài khoản không có quyền xác nhận duyệt thay khách hàng.";
+      case 404:
+        return "Không tìm thấy dự án hoặc bản duyệt này.";
+      case 409:
+        return "Bản duyệt vừa thay đổi hoặc đã có quyết định (có thể do bấm hai lần). Đã tải lại trạng thái — kiểm tra rồi thử lại nếu cần.";
+      case 400:
+      case 422:
+        return "Thiếu hoặc sai thông tin xác nhận. Chọn kênh xác nhận và thử lại.";
+    }
+  }
+  return "Không thể ghi nhận xác nhận lúc này. Vui lòng thử lại.";
+}
+
+function StaffApprovalOnBehalf({
+  projectId,
+  variantLabel,
+  reviewId,
+  versionNumber,
+  onChanged,
+}: {
+  projectId: string;
+  variantLabel: string;
+  reviewId: string;
+  versionNumber: number;
+  onChanged: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [channel, setChannel] = useState<ApprovalChannel | "">("");
+  const [note, setNote] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleConfirm() {
+    if (pending || channel === "" || !confirmed) {
+      return;
+    }
+    setPending(true);
+    setError(null);
+    try {
+      await confirmReviewApprovalOnBehalf(projectId, {
+        invitationVersionId: reviewId,
+        expectedCurrentReviewVersionId: reviewId,
+        channel,
+        note: note.trim() === "" ? null : note.trim(),
+      });
+      setOpen(false);
+      setChannel("");
+      setNote("");
+      setConfirmed(false);
+      onChanged();
+    } catch (caught) {
+      setError(confirmApprovalErrorFeedback(caught));
+      if (caught instanceof AdminApiError && caught.status === 409) {
+        onChanged();
+      }
+    } finally {
+      setPending(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <div className="mt-3">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 sm:py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          data-testid={`staff-approval-open-${reviewId}`}
+        >
+          Xác nhận thay khách hàng
+        </button>
+        <p className="mt-1 text-xs text-slate-500">
+          Dùng khi khách đã duyệt bản #{versionNumber} qua Zalo, điện thoại hoặc gặp trực tiếp thay vì bấm duyệt trên link.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="mt-3 rounded-lg border border-slate-300 bg-slate-50 p-3"
+      role="group"
+      aria-label={`Xác nhận thay khách hàng cho ${variantLabel}`}
+    >
+      <p className="text-sm font-medium text-slate-800">
+        Xác nhận thay khách hàng — {variantLabel}, bản duyệt #{versionNumber}
+      </p>
+      <label className="mt-3 block text-sm text-slate-700">
+        Khách xác nhận qua
+        <select
+          value={channel}
+          onChange={(event) => setChannel(event.currentTarget.value as ApprovalChannel | "")}
+          disabled={pending}
+          className="mt-1 block w-full rounded border border-slate-300 bg-white px-2 py-2 text-sm text-slate-800 sm:py-1.5"
+        >
+          <option value="">— Chọn kênh xác nhận —</option>
+          {APPROVAL_CHANNELS.map((option) => (
+            <option key={option} value={option}>
+              {APPROVAL_CHANNEL_LABELS[option]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="mt-3 block text-sm text-slate-700">
+        Ghi chú nội bộ (không bắt buộc)
+        <textarea
+          value={note}
+          onChange={(event) => setNote(event.currentTarget.value)}
+          disabled={pending}
+          rows={2}
+          maxLength={2000}
+          className="mt-1 block w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-800"
+          placeholder="Ví dụ: chị Hà xác nhận qua Zalo lúc 20:15."
+        />
+        <span className="mt-1 block text-xs text-slate-500">Chỉ nhân sự thấy ghi chú này; khách không bao giờ thấy.</span>
+      </label>
+      <label className="mt-3 flex items-start gap-2 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          checked={confirmed}
+          onChange={(event) => setConfirmed(event.currentTarget.checked)}
+          disabled={pending}
+          className="mt-0.5"
+        />
+        <span>Tôi xác nhận khách hàng đã duyệt đúng bản #{versionNumber}.</span>
+      </label>
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row" data-mobile-stack>
+        <button
+          type="button"
+          onClick={() => void handleConfirm()}
+          disabled={pending || channel === "" || !confirmed}
+          className="rounded-lg bg-slate-900 px-4 py-2.5 sm:py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+        >
+          {pending ? "Đang ghi nhận..." : "Ghi nhận khách đã duyệt"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            setError(null);
+          }}
+          disabled={pending}
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 sm:py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+        >
+          Huỷ
+        </button>
+      </div>
+      <p className="mt-2 text-xs text-slate-500">
+        Ghi nhận này là quyết định cuối cho bản #{versionNumber}: sau đó bản này không thể duyệt lại hay đổi sang yêu cầu chỉnh sửa.
+      </p>
+      {error !== null && (
+        <p className="mt-2 text-sm text-red-700" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function VariantReviewCard({
   projectId,
   row,
   mode,
+  approvalOpen,
   onChanged,
 }: {
   projectId: string;
   row: RequiredVariantReviewState;
   mode: ReviewCreationMode;
+  /** The Project status still accepts a decision on the current review (0053 SA007). */
+  approvalOpen: boolean;
   onChanged: () => void;
 }) {
   const [pending, setPending] = useState(false);
@@ -284,7 +476,18 @@ function VariantReviewCard({
             <li key={item.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
               <span className="font-medium">{FEEDBACK_TYPE_LABELS[item.feedbackType]}</span>
               <span className="ml-2 text-xs text-slate-400">{formatDateTimeVi(item.createdAt)}</span>
+              {item.actorType === "STAFF" && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Nhân sự xác nhận thay khách hàng
+                  {item.approvalChannel !== null && ` · ${APPROVAL_CHANNEL_LABELS[item.approvalChannel]}`}
+                </p>
+              )}
               {item.message !== null && <p className="mt-1 whitespace-pre-wrap break-words">{item.message}</p>}
+              {item.staffNote !== null && (
+                <p className="mt-1 whitespace-pre-wrap break-words text-xs text-slate-600">
+                  Ghi chú nội bộ: {item.staffNote}
+                </p>
+              )}
             </li>
           ))}
         </ul>
@@ -295,6 +498,16 @@ function VariantReviewCard({
           Bản duyệt là bản chụp cố định của dữ liệu tại thời điểm tạo. Sửa dữ liệu sau đó không làm thay đổi bản này;
           tạo bản duyệt mới sẽ cần khách duyệt lại.
         </p>
+      )}
+
+      {review !== null && approvalOpen && review.approvalState === "AWAITING_FEEDBACK" && (
+        <StaffApprovalOnBehalf
+          projectId={projectId}
+          variantLabel={PREVIEW_VARIANT_LABELS[row.variant]}
+          reviewId={review.id}
+          versionNumber={review.versionNumber}
+          onChanged={onChanged}
+        />
       )}
 
       {feedback?.kind === "CREATED" && (
@@ -382,6 +595,7 @@ export function ReviewTab({ project }: { project: ProjectSummary }) {
               projectId={project.id}
               row={row}
               mode={reviewCreationMode(data.projectStatus)}
+              approvalOpen={CUSTOMER_FEEDBACK_OPEN_STATUSES.includes(data.projectStatus)}
               onChanged={reload}
             />
           ))}

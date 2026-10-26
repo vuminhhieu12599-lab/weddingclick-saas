@@ -1,6 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { INVITATION_VARIANTS, REVIEW_FEEDBACK_TYPES, type InvitationVariant, type ReviewFeedbackType } from "../../domain";
+import {
+  APPROVAL_CHANNELS,
+  INVITATION_VARIANTS,
+  PROJECT_STATUSES,
+  REVIEW_FEEDBACK_ACTOR_TYPES,
+  REVIEW_FEEDBACK_TYPES,
+  type ApprovalChannel,
+  type InvitationVariant,
+  type ProjectStatus,
+  type ReviewFeedbackActorType,
+  type ReviewFeedbackType,
+} from "../../domain";
 import { ApiError } from "../errors/api-error";
 import type { InvitationReviewGateway } from "../invitation-review/invitation-review-gateway";
 import type {
@@ -8,22 +19,30 @@ import type {
   ProjectInvitationRecord,
   ReviewFeedbackSummary,
   ReviewVersionSummary,
+  StaffConfirmedApproval,
 } from "../invitation-review/invitation-review-types";
 import { REVIEW_RPC_ERROR_CODES } from "../invitation-review/review-rpc-error-codes";
+import { STAFF_APPROVAL_RPC_ERROR_CODES } from "../invitation-review/staff-approval-rpc-error-codes";
 import { isValidTimestamptz } from "../validation/timestamptz";
 import { isValidUuid } from "../validation/uuid";
 
 /**
  * Production InvitationReviewGateway (Task 030). Always invoked with the
  * staff-scoped client (anon key + caller JWT) — never `service_role`.
- * Reads are DIRECT RLS SELECTs; the only write is the audited
- * `create_review_version` RPC (migration 0036). No generic `.rpc()`
- * passthrough, no UPDATE/DELETE of versions, no PUBLISHED access path for
- * writes. Every row is shape-checked at runtime; a cast is never trusted.
+ * Reads are DIRECT RLS SELECTs; the only writes are the audited
+ * `create_review_version` (migration 0036) and, since TE-06,
+ * `staff_confirm_review_approval` (migration 0053) RPCs. No generic
+ * `.rpc()` passthrough, no UPDATE/DELETE of versions, no PUBLISHED access
+ * path for writes. Every row is shape-checked at runtime; a cast is never
+ * trusted.
  */
 const INVITATION_COLUMNS = "id, project_id, variant, current_review_version_id, published_version_id";
 const VERSION_COLUMNS = "id, invitation_id, project_id, version_number, version_type, template_version_id, renderer_key_snapshot, created_at";
-const FEEDBACK_COLUMNS = "id, invitation_version_id, feedback_type, message, created_at";
+// TE-06: the staff read model also reads the 0053 approval evidence.
+// `staff_note` is STAFF-only — it is selected here under the staff RLS
+// policy and never through any customer path.
+const FEEDBACK_COLUMNS =
+  "id, invitation_version_id, feedback_type, message, created_at, actor_type, approval_channel, staff_note";
 
 function fail(): never {
   throw new Error("Unexpected result shape from the database");
@@ -51,6 +70,18 @@ function isVariant(value: unknown): value is InvitationVariant {
 
 function isFeedbackType(value: unknown): value is ReviewFeedbackType {
   return typeof value === "string" && (REVIEW_FEEDBACK_TYPES as readonly string[]).includes(value);
+}
+
+function isActorType(value: unknown): value is ReviewFeedbackActorType {
+  return typeof value === "string" && (REVIEW_FEEDBACK_ACTOR_TYPES as readonly string[]).includes(value);
+}
+
+function isApprovalChannelValue(value: unknown): value is ApprovalChannel {
+  return typeof value === "string" && (APPROVAL_CHANNELS as readonly string[]).includes(value);
+}
+
+function isProjectStatus(value: unknown): value is ProjectStatus {
+  return typeof value === "string" && (PROJECT_STATUSES as readonly string[]).includes(value);
 }
 
 function isPositiveInteger(value: unknown): value is number {
@@ -110,8 +141,19 @@ function toFeedback(row: unknown): ReviewFeedbackSummary {
     !isUuid(row.invitation_version_id) ||
     !isFeedbackType(row.feedback_type) ||
     !(row.message === null || typeof row.message === "string") ||
-    !isTimestamp(row.created_at)
+    !isTimestamp(row.created_at) ||
+    !isActorType(row.actor_type) ||
+    !(row.approval_channel === null || isApprovalChannelValue(row.approval_channel)) ||
+    !(row.staff_note === null || typeof row.staff_note === "string")
   ) {
+    fail();
+  }
+  // The 0053 row CHECK already guarantees these pairings; re-asserting them
+  // here keeps the read model honest if the row ever arrives from elsewhere.
+  if (row.actor_type === "CUSTOMER" && !(row.approval_channel === null && row.staff_note === null)) {
+    fail();
+  }
+  if (row.actor_type === "STAFF" && (row.feedback_type !== "APPROVAL" || row.approval_channel === null)) {
     fail();
   }
   return {
@@ -120,6 +162,34 @@ function toFeedback(row: unknown): ReviewFeedbackSummary {
     feedbackType: row.feedback_type,
     message: row.message,
     createdAt: row.created_at,
+    actorType: row.actor_type,
+    approvalChannel: row.approval_channel,
+    staffNote: row.staff_note,
+  };
+}
+
+/** One STAFF `APPROVAL` row returned by `staff_confirm_review_approval` (migration 0053). */
+function toConfirmedApproval(row: unknown): StaffConfirmedApproval {
+  if (
+    !isRecord(row) ||
+    !isUuid(row.id) ||
+    !isUuid(row.project_id) ||
+    !isUuid(row.invitation_version_id) ||
+    !isVariant(row.variant) ||
+    !isApprovalChannelValue(row.approval_channel) ||
+    !isTimestamp(row.created_at) ||
+    !isProjectStatus(row.project_status)
+  ) {
+    fail();
+  }
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    invitationVersionId: row.invitation_version_id,
+    variant: row.variant,
+    approvalChannel: row.approval_channel,
+    createdAt: row.created_at,
+    projectStatus: row.project_status,
   };
 }
 
@@ -176,6 +246,28 @@ export const supabaseInvitationReviewGateway: InvitationReviewGateway<SupabaseCl
       fail();
     }
     return created;
+  },
+
+  async confirmReviewApproval(client, params) {
+    const { data, error } = await client.rpc("staff_confirm_review_approval", {
+      p_project_id: params.projectId,
+      p_invitation_version_id: params.invitationVersionId,
+      p_expected_current_review_version_id: params.expectedCurrentReviewVersionId,
+      p_channel: params.channel,
+      p_note: params.note,
+    });
+
+    if (error) {
+      const known = STAFF_APPROVAL_RPC_ERROR_CODES[error.code];
+      if (known) {
+        throw new ApiError(known.kind, known.message);
+      }
+      throw new Error("Failed to confirm review approval");
+    }
+    if (!Array.isArray(data) || data.length !== 1) {
+      fail();
+    }
+    return toConfirmedApproval(data[0]);
   },
 
   async listProjectInvitations(client, projectId) {

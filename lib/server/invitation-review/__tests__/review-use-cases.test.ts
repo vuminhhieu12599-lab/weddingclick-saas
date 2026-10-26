@@ -291,6 +291,10 @@ const fb = (versionId: string, feedbackType: ReviewFeedbackSummary["feedbackType
   feedbackType,
   message: feedbackType === "APPROVAL" ? null : "Sửa giúp",
   createdAt: stamp,
+  // TE-06 (0053): the customer path — every pre-0053 row reads exactly like this.
+  actorType: "CUSTOMER",
+  approvalChannel: null,
+  staffNote: null,
 });
 
 describe("evaluateProjectReviewState (required-variant approval)", () => {

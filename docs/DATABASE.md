@@ -523,10 +523,14 @@ Suggested fields:
 - `access_link_id` or review session FK.
 - `invitation_version_id` where feedback applies to a specific version.
 - `feedback_type` — `COMMENT`, `REVISION_REQUEST`, `APPROVAL`.
-- `message` optional.
+- `message` optional — customer-facing text.
 - `created_at`.
+- `actor_type` — `CUSTOMER` or `STAFF` *(TE-06, migration 0053)*.
+- `staff_profile_id`, `approval_channel` (`ZALO`/`PHONE`/`IN_PERSON`/`OTHER`) and `staff_note` — approval evidence on a `STAFF` row only; all `NULL` on a customer row *(TE-06)*.
 
 Approval must be tied to the reviewed version/state rather than an unspecified future draft.
+
+**Approval on behalf of the customer (TE-06).** Staff may record an approval the customer gave through another channel, as an `APPROVAL` row with `actor_type = 'STAFF'` for the exact current REVIEW version — never as a direct status change. `staff_note` is internal and is never exposed to the customer REVIEW surface; `message` stays `NULL` on a staff row. See `docs/PHYSICAL_DATABASE_PLAN.md` §2.18 and `docs/API_CONTRACT.md` §16.5.
 
 ---
 

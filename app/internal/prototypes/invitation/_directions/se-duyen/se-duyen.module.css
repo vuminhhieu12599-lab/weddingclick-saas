@@ -1,0 +1,935 @@
+/* ---------------------------------------------------------------------- */
+/* Se Duyên (Thread of Fate) — SD-00 internal visual prototype.           */
+/*                                                                        */
+/* Scope: opening/cover + couple section only. Lacquered-object direction: */
+/* dark oxblood lacquer page, gold-leaf relief, ivory inner card, one      */
+/* crimson silk thread (tơ hồng) tying the composition together.          */
+/*                                                                        */
+/* Depth is built from gradients, hairlines and layered shadows — no       */
+/* raster artwork, no WebGL, no filters on large surfaces, no particle or  */
+/* rAF loop. Motion is CSS only and lives inside the no-preference query,  */
+/* so the reduced-motion path is the plain, already-complete layout.       */
+/* ---------------------------------------------------------------------- */
+
+.root {
+  --sd-lacquer-deep: #240709;
+  --sd-lacquer: #40100f;
+  --sd-lacquer-hi: #5d1a19;
+  --sd-vermilion: #8e1b20;
+  --sd-gold: #c8a664;
+  --sd-gold-hi: #f2e0ad;
+  --sd-gold-deep: #8a6a33;
+  --sd-ivory: #f7f0e2;
+  --sd-ivory-deep: #ece0c9;
+  --sd-ink: #2b1513;
+  --sd-ink-soft: #6d4a42;
+
+  --sd-gutter: 18px;
+
+  position: relative;
+  min-height: 100%;
+  background: var(--sd-lacquer-deep);
+  color: var(--sd-ink);
+  font-family: var(--sd-sans), "Segoe UI", system-ui, sans-serif;
+  font-variant-numeric: lining-nums tabular-nums;
+  overflow-x: hidden;
+  container-type: inline-size;
+}
+
+/* While the lid is still up, the invitation behind it must not scroll out  */
+/* of the first viewport (same guard the Vietnamese Heritage prototype uses).*/
+.rootClosed {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.stage {
+  position: relative;
+  min-height: 100%;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Inner invitation card — what the lid reveals.                          */
+/* ---------------------------------------------------------------------- */
+
+.inner {
+  position: relative;
+  min-height: 100%;
+  padding: 30px var(--sd-gutter) 34px;
+  display: flex;
+  background:
+    radial-gradient(118% 70% at 50% 0%, rgba(93, 26, 25, 0.75), transparent 62%),
+    linear-gradient(176deg, var(--sd-lacquer) 0%, var(--sd-lacquer-deep) 72%);
+}
+
+.innerPaper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 26px 20px 28px;
+  text-align: center;
+  background:
+    /* Silk weave: two near-invisible hatch passes over warm ivory. */
+    repeating-linear-gradient(90deg, rgba(109, 74, 66, 0.035) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(0deg, rgba(109, 74, 66, 0.03) 0 1px, transparent 1px 5px),
+    radial-gradient(96% 62% at 50% 0%, #fdf8ec 0%, transparent 58%),
+    linear-gradient(172deg, var(--sd-ivory) 0%, var(--sd-ivory-deep) 100%);
+  box-shadow:
+    0 26px 44px -26px rgba(12, 2, 3, 0.85),
+    inset 0 0 0 1px rgba(200, 166, 100, 0.5),
+    inset 0 0 0 5px rgba(247, 240, 226, 0.6),
+    inset 0 0 0 6px rgba(200, 166, 100, 0.26);
+}
+
+/* The thread entering the card from the top edge. */
+.innerThread {
+  width: 20px;
+  height: 52px;
+  margin-top: -6px;
+}
+
+.eyebrow {
+  margin: 10px 0 0;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--sd-gold-deep);
+}
+
+.guestLine {
+  margin: 12px 0 0;
+  font-family: var(--sd-display), Georgia, serif;
+  font-size: clamp(19px, 5.6cqw, 24px);
+  line-height: 1.45;
+  color: var(--sd-ink);
+  text-wrap: balance;
+}
+
+.ceremonyTitle {
+  margin: 18px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--sd-vermilion);
+}
+
+.ceremonyTitle::before,
+.ceremonyTitle::after {
+  content: "";
+  width: 26px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--sd-gold));
+}
+
+.ceremonyTitle::after {
+  background: linear-gradient(90deg, var(--sd-gold), transparent);
+}
+
+.coupleNames {
+  margin: 18px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.coupleName {
+  font-family: var(--sd-display), Georgia, serif;
+  font-size: clamp(30px, 9.2cqw, 40px);
+  line-height: 1.18;
+  color: var(--sd-ink);
+  text-wrap: balance;
+}
+
+/* Long Vietnamese names: three words or more drop a step rather than      */
+/* wrapping into the ornament below.                                       */
+.coupleNameLong {
+  font-size: clamp(25px, 7.4cqw, 33px);
+}
+
+.namesKnot {
+  width: 54px;
+  height: 48px;
+  margin: 2px 0;
+}
+
+.sideLabel {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--sd-gold-deep);
+}
+
+.divider {
+  width: 160px;
+  height: 22px;
+  margin: 20px 0 0;
+}
+
+.dateBlock {
+  margin: 16px 0 0;
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  color: var(--sd-ink);
+}
+
+.dateWeekday,
+.dateTime {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sd-ink-soft);
+}
+
+.dateDay {
+  font-family: var(--sd-display), Georgia, serif;
+  font-size: 44px;
+  line-height: 0.92;
+  color: var(--sd-vermilion);
+}
+
+.dateRule {
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(200, 166, 100, 0.85), transparent);
+}
+
+.dateMonthYear {
+  font-family: var(--sd-display), Georgia, serif;
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  color: var(--sd-ink);
+}
+
+.lunarLine {
+  margin: 12px 0 0;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  color: var(--sd-ink-soft);
+}
+
+.poeticLine {
+  margin: 18px 0 0;
+  max-width: 24ch;
+  font-family: var(--sd-display), Georgia, serif;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--sd-ink-soft);
+  text-wrap: balance;
+}
+
+.scrollCue {
+  margin: 22px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 9.5px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--sd-gold-deep);
+}
+
+.scrollCueRule {
+  width: 1px;
+  height: 26px;
+  background: linear-gradient(180deg, var(--sd-gold), transparent);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Lacquer lid (the cover).                                               */
+/* ---------------------------------------------------------------------- */
+
+.cover {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  container-type: size;
+  /* The box edge: a gold rule and a dark shadow under the lid's lip, so    */
+  /* the lift reads as a lid leaving a box rather than a page sliding up.   */
+  border-bottom: 1px solid rgba(200, 166, 100, 0.55);
+  box-shadow: 0 16px 28px -10px rgba(10, 2, 3, 0.9);
+}
+
+.lid {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 78% at 50% -6%, rgba(255, 236, 206, 0.12), transparent 58%),
+    radial-gradient(100% 62% at 18% 104%, rgba(0, 0, 0, 0.5), transparent 70%),
+    linear-gradient(163deg, #5d1a19 0%, #40100f 42%, #240709 100%);
+}
+
+/* Lacquer craquelure: two very low-contrast hatch passes. Nothing moves,  */
+/* nothing is filtered — it only breaks the flatness of the gradient.      */
+.lidGrain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.55;
+  background:
+    repeating-linear-gradient(64deg, rgba(255, 228, 190, 0.016) 0 1px, transparent 1px 13px),
+    repeating-linear-gradient(-58deg, rgba(0, 0, 0, 0.035) 0 1px, transparent 1px 19px);
+  pointer-events: none;
+}
+
+/* One slow diagonal sheen — the lacquer's wet highlight. Static.         */
+.lidSheen {
+  position: absolute;
+  inset: -20% -40%;
+  background: linear-gradient(104deg, transparent 26%, rgba(255, 238, 206, 0.055) 46%, rgba(255, 238, 206, 0.02) 58%, transparent 74%);
+  pointer-events: none;
+}
+
+/* Double gold hairline, inset from the lid edge. */
+.coverFrame {
+  position: absolute;
+  inset: 13px;
+  border: 1px solid rgba(200, 166, 100, 0.62);
+  pointer-events: none;
+}
+
+.coverFrame::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(200, 166, 100, 0.22);
+}
+
+.coverCorner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  pointer-events: none;
+}
+
+.coverCornerTl {
+  top: 17px;
+  left: 17px;
+}
+
+.coverCornerTr {
+  top: 17px;
+  right: 17px;
+  transform: scaleX(-1);
+}
+
+.coverCornerBl {
+  bottom: 17px;
+  left: 17px;
+  transform: scaleY(-1);
+}
+
+.coverCornerBr {
+  bottom: 17px;
+  right: 17px;
+  transform: scale(-1);
+}
+
+.coverContent {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(6cqh + 26px) 30px calc(4cqh + 22px);
+  text-align: center;
+  color: var(--sd-ivory);
+}
+
+.coverTop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.coverEyebrow {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.46em;
+  text-transform: uppercase;
+  color: rgba(242, 224, 173, 0.82);
+}
+
+.coverThread {
+  width: 18px;
+  height: clamp(52px, 15cqh, 104px);
+  margin-top: 10px;
+}
+
+.coverMiddle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* The emblem: a lacquer disc with a gold rim bevel, the vector knot on   */
+/* top. Disc depth is three shadows — rim light, inner valley, cast.      */
+.emblemDisc {
+  position: relative;
+  width: clamp(116px, 34cqw, 148px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(72% 60% at 38% 26%, rgba(255, 234, 198, 0.16), transparent 62%),
+    radial-gradient(100% 100% at 50% 118%, rgba(0, 0, 0, 0.5), transparent 64%),
+    linear-gradient(158deg, #5f1b1a 0%, #3a0e0e 58%, #280809 100%);
+  box-shadow:
+    0 14px 26px -14px rgba(8, 1, 2, 0.95),
+    inset 0 1px 0 rgba(255, 232, 194, 0.3),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(200, 166, 100, 0.5);
+}
+
+.emblemRings {
+  position: absolute;
+  inset: 7%;
+}
+
+.emblemKnot {
+  position: relative;
+  width: 58%;
+}
+
+.coverCaption {
+  margin-top: 14px;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  color: rgba(242, 224, 173, 0.72);
+}
+
+/* Gold-leaf lettering: the one place the gradient-clipped text is worth   */
+/* its cost. Vietnamese diacritics clip correctly with the extra padding.  */
+.coverNames {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--sd-display), Georgia, serif;
+  font-size: clamp(27px, 8.2cqw, 35px);
+  line-height: 1.26;
+}
+
+/* The gold ramp is per line: across the whole block it made the first   */
+/* name noticeably darker than the second.                               */
+.coverNameLine {
+  padding: 0 2px 3px;
+  background: linear-gradient(174deg, #f6e8c2 0%, #dcbd80 46%, #bb964f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-wrap: balance;
+}
+
+.coverNamesAmp {
+  margin: 1px 0;
+  font-size: 0.56em;
+  color: rgba(206, 172, 106, 0.92);
+}
+
+.coverDate {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(247, 240, 226, 0.78);
+}
+
+.coverDate::before,
+.coverDate::after {
+  content: "";
+  width: 20px;
+  height: 1px;
+  background: rgba(200, 166, 100, 0.6);
+}
+
+.coverBottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Wax seal trigger.                                                      */
+/* ---------------------------------------------------------------------- */
+
+.sealButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 4px;
+  min-height: 56px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.seal {
+  position: relative;
+  width: 74px;
+  height: 74px;
+  display: grid;
+  place-items: center;
+  /* Pressed wax is never a perfect circle, and it is matte, not glassy:  */
+  /* a wide low highlight, a squeezed rim, and a shadow that sits under   */
+  /* the disc rather than glowing around it.                              */
+  border-radius: 47% 53% 52% 48% / 51% 46% 54% 49%;
+  background:
+    radial-gradient(84% 70% at 34% 24%, rgba(255, 206, 196, 0.2), transparent 68%),
+    radial-gradient(120% 96% at 50% 118%, rgba(44, 4, 6, 0.55), transparent 58%),
+    linear-gradient(162deg, #9d2124 0%, #85191d 52%, #5e1010 100%);
+  box-shadow:
+    0 10px 16px -9px rgba(8, 1, 2, 0.95),
+    inset 0 1px 0 rgba(255, 198, 188, 0.26),
+    inset 0 -4px 9px rgba(50, 5, 7, 0.6),
+    0 0 0 1px rgba(200, 166, 100, 0.26),
+    /* the squeezed outer lip of the wax */
+    0 1px 0 3px rgba(123, 22, 25, 0.42);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease;
+}
+
+
+.sealButton:active .seal {
+  transform: scale(0.94) rotate(3deg);
+}
+
+.sealButton:focus-visible .seal {
+  outline: 2px solid rgba(242, 224, 173, 0.9);
+  outline-offset: 5px;
+}
+
+.sealRelief {
+  width: 68%;
+}
+
+.sealHint {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(242, 224, 173, 0.74);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Couple section.                                                        */
+/* ---------------------------------------------------------------------- */
+
+.couple {
+  position: relative;
+  padding: 34px var(--sd-gutter) 30px;
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(93, 26, 25, 0.55), transparent 60%),
+    linear-gradient(184deg, var(--sd-lacquer-deep) 0%, #1c0507 100%);
+}
+
+.coupleCard {
+  position: relative;
+  padding: 28px 18px 26px;
+  text-align: center;
+  background:
+    repeating-linear-gradient(90deg, rgba(109, 74, 66, 0.03) 0 1px, transparent 1px 4px),
+    radial-gradient(90% 56% at 50% 0%, #fdf8ec 0%, transparent 60%),
+    linear-gradient(170deg, var(--sd-ivory) 0%, var(--sd-ivory-deep) 100%);
+  box-shadow:
+    0 24px 40px -24px rgba(10, 2, 3, 0.85),
+    inset 0 0 0 1px rgba(200, 166, 100, 0.48),
+    inset 0 0 0 5px rgba(247, 240, 226, 0.55),
+    inset 0 0 0 6px rgba(200, 166, 100, 0.22);
+}
+
+.coupleHeading {
+  margin: 8px 0 0;
+  font-family: var(--sd-display), Georgia, serif;
+  font-size: clamp(25px, 7.4cqw, 31px);
+  line-height: 1.25;
+  color: var(--sd-ink);
+}
+
+/* Two staggered frames with the thread curving through the gap between.  */
+.frames {
+  position: relative;
+  margin: 22px 0 0;
+}
+
+.framesPair {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.frameSlotFirst {
+  width: 74%;
+  align-self: flex-start;
+}
+
+.frameSlotSecond {
+  width: 74%;
+  align-self: flex-end;
+  margin-top: -26px;
+}
+
+.threadCurve {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 38%;
+  height: 26%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.framesSingle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.singleThread {
+  width: 18px;
+  height: 44px;
+  margin-bottom: -4px;
+}
+
+.frameSlotSingle {
+  width: 84%;
+}
+
+/* Gilded frame: a gold-leaf mat, a dark rabbet shadow, the photo inside. */
+.frame {
+  position: relative;
+  margin: 0;
+  padding: 9px;
+  background: linear-gradient(148deg, #efdcae 0%, #cfae72 30%, #a7854a 62%, #e2c892 100%);
+  box-shadow:
+    0 20px 30px -20px rgba(10, 2, 3, 0.8),
+    inset 0 1px 0 rgba(255, 248, 226, 0.75),
+    inset 0 -1px 0 rgba(58, 14, 14, 0.35);
+}
+
+.frameInner {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 1px rgba(58, 14, 14, 0.4),
+    inset 0 3px 8px rgba(36, 7, 9, 0.5);
+}
+
+.framePhoto {
+  position: absolute;
+  inset: 0;
+  background-position: center 34%;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.frameCorner {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+}
+
+.frameCornerTl {
+  top: 3px;
+  left: 3px;
+}
+
+.frameCornerTr {
+  top: 3px;
+  right: 3px;
+  transform: scaleX(-1);
+}
+
+.frameCornerBl {
+  bottom: 3px;
+  left: 3px;
+  transform: scaleY(-1);
+}
+
+.frameCornerBr {
+  bottom: 3px;
+  right: 3px;
+  transform: scale(-1);
+}
+
+.coupleNamesRow {
+  margin: 26px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.coupleCaption {
+  margin: 20px auto 0;
+  max-width: 30ch;
+  font-size: 12.5px;
+  line-height: 1.85;
+  color: var(--sd-ink-soft);
+  text-wrap: pretty;
+}
+
+/* Prototype-only chrome: never part of the design under review. */
+.protoControls {
+  margin: 18px auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.protoLabel {
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(242, 224, 173, 0.45);
+}
+
+.protoButton {
+  min-height: 32px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgba(247, 240, 226, 0.72);
+  background: rgba(247, 240, 226, 0.06);
+  border: 1px solid rgba(200, 166, 100, 0.34);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.protoButtonActive {
+  color: var(--sd-lacquer-deep);
+  background: rgba(220, 192, 134, 0.92);
+  border-color: rgba(242, 224, 173, 0.9);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Motion. Everything below is inside the no-preference query, so a        */
+/* reduced-motion viewer gets the finished layout with no keyframes at all.*/
+/* ---------------------------------------------------------------------- */
+
+/* Thread is fully drawn by default; the draw-on is the enhancement. */
+@media (prefers-reduced-motion: no-preference) {
+  .threadDraw :global(.sdThreadCore),
+  .threadDraw :global(.sdThreadGlint) {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: sd-thread-draw 1.5s cubic-bezier(0.33, 0, 0.2, 1) 0.15s forwards;
+  }
+
+  .threadDraw :global(.sdThreadGlint) {
+    animation-delay: 0.32s;
+  }
+
+  @keyframes sd-thread-draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  /* Cover entrance — the lid settles once, on load. */
+  .cover {
+    animation: sd-cover-settle 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes sd-cover-settle {
+    from {
+      opacity: 0;
+      transform: scale(1.015);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .coverMiddle > *,
+  .coverTop > *,
+  .coverBottom {
+    animation: sd-rise 820ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .coverEyebrow {
+    animation-delay: 120ms;
+  }
+
+  .emblemDisc {
+    animation-delay: 220ms;
+  }
+
+  .coverCaption {
+    animation-delay: 320ms;
+  }
+
+  .coverNames {
+    animation-delay: 400ms;
+  }
+
+  .coverDate {
+    animation-delay: 480ms;
+  }
+
+  .coverBottom {
+    animation-delay: 660ms;
+  }
+
+  @keyframes sd-rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 14px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Opening: the seal presses, then the lid lifts off the box. */
+  .coverOpening .seal {
+    animation: sd-seal-press 300ms cubic-bezier(0.34, 1.3, 0.64, 1) both;
+  }
+
+  @keyframes sd-seal-press {
+    40% {
+      transform: scale(0.9) rotate(5deg);
+    }
+    100% {
+      transform: scale(0.82) rotate(5deg);
+      opacity: 0;
+    }
+  }
+
+  .coverOpening .coverContent {
+    animation: sd-cover-content-out 320ms ease-out 200ms both;
+  }
+
+  @keyframes sd-cover-content-out {
+    to {
+      opacity: 0;
+      transform: translate3d(0, -8px, 0);
+    }
+  }
+
+  .coverOpening {
+    animation: sd-lid-lift 860ms cubic-bezier(0.72, 0, 0.26, 1) 240ms both;
+  }
+
+  @keyframes sd-lid-lift {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    18% {
+      transform: translate3d(0, 1.2%, 0);
+    }
+    100% {
+      transform: translate3d(0, -101%, 0);
+    }
+  }
+
+  /* The card underneath rises into place as the lid clears. */
+  .innerRevealing {
+    animation: sd-card-settle 780ms cubic-bezier(0.22, 1, 0.36, 1) 380ms both;
+  }
+
+  @keyframes sd-card-settle {
+    from {
+      opacity: 0.45;
+      transform: scale(0.972);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* Reduced motion: a plain cross-fade, nothing else. */
+@media (prefers-reduced-motion: reduce) {
+  .coverOpening {
+    animation: sd-cover-fade 220ms linear both;
+  }
+
+  /* The seal's press feedback is the only transition declared outside the  */
+  /* no-preference query; drop it so `reduce` really means no motion. The   */
+  /* pressed state still reads through its own box-shadow/outline change.   */
+  .seal {
+    transition: none;
+  }
+
+  @keyframes sd-cover-fade {
+    to {
+      opacity: 0;
+    }
+  }
+}
+
+/* Narrow phones (360 px): tighten gutters before anything can overflow.  */
+/* The queries below target descendants of `.root` (a container cannot     */
+/* style itself), so the gutter override lands on the two consumers.       */
+@container (max-width: 374px) {
+  .stage,
+  .couple {
+    --sd-gutter: 12px;
+  }
+
+  .innerPaper {
+    padding: 22px 14px 24px;
+  }
+
+  .coverContent {
+    padding: calc(5cqh + 20px) 22px calc(3cqh + 18px);
+  }
+
+  .coupleCard {
+    padding: 24px 13px 22px;
+  }
+
+  .frameSlotFirst,
+  .frameSlotSecond {
+    width: 80%;
+  }
+}
+
+/* Roomier phones (430 px): let the card breathe rather than grow type.   */
+@container (min-width: 412px) {
+  .stage,
+  .couple {
+    --sd-gutter: 22px;
+  }
+
+  .innerPaper {
+    padding: 30px 24px 32px;
+  }
+
+  .coupleCard {
+    padding: 32px 22px 30px;
+  }
+}

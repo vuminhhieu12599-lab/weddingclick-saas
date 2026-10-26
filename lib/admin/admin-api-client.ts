@@ -30,7 +30,12 @@ import type {
   UpdateProjectEventResult,
 } from "../server/project-events/project-events-types";
 import type { ProjectSummary } from "../server/projects/project-types";
-import type { CreatedReviewVersion, ProjectReviewState } from "../server/invitation-review/invitation-review-types";
+import type {
+  ConfirmReviewApprovalCommand,
+  CreatedReviewVersion,
+  ProjectReviewState,
+  StaffConfirmedApproval,
+} from "../server/invitation-review/invitation-review-types";
 import type { ProjectPublishState, PublishedInvitationVersion } from "../server/invitation-publish/invitation-publish-types";
 import type { MarkPaidResult, TransitionStatusResult } from "../server/project-lifecycle/project-lifecycle-types";
 import type { StaffInvitationPreviewBody } from "../server/routes/invitation-preview";
@@ -303,6 +308,25 @@ export async function createInvitationReviewVersion(
     `/api/v2/internal/projects/${encodeURIComponent(projectId)}/review/versions`,
     token,
     { method: "POST", body: { variant, expectedCurrentReviewVersionId } },
+  );
+  return body.data;
+}
+
+/**
+ * TE-06 — records the customer's approval of one exact current REVIEW
+ * version on their behalf. Sends only the version, the compare-and-set
+ * token, the confirmation channel and the optional internal note; the
+ * confirming staff member is the authenticated session, never the body.
+ */
+export async function confirmReviewApprovalOnBehalf(
+  projectId: string,
+  command: ConfirmReviewApprovalCommand,
+): Promise<StaffConfirmedApproval> {
+  const token = await requireAccessToken();
+  const body = await requestJson<{ data: StaffConfirmedApproval }>(
+    `/api/v2/internal/projects/${encodeURIComponent(projectId)}/review/approvals`,
+    token,
+    { method: "POST", body: { ...command } },
   );
   return body.data;
 }

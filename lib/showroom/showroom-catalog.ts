@@ -165,6 +165,26 @@ export const SHOWROOM_TEMPLATE_ENTRIES: readonly ShowroomTemplateEntry[] = [
     visibility: "PUBLIC",
     categories: ["hien-dai", "ke-chuyen"],
   },
+  {
+    // SD-V1-SHOWROOM-01: Se Duyên v1 — registered in the production registries
+    // (SD-V1-FINAL) and seeded by migration 0052. The marketing name is the
+    // renderer's own display name, so nameVi and nameEn are the same word.
+    templateCode: "se-duyen",
+    versionNumber: 1,
+    nameVi: "Se Duyên",
+    nameEn: "Se Duyên",
+    taglineVi: "Hộp cưới sơn mài mở ra, ảnh cưới lớn dần thành trang thiệp đỏ son.",
+    descriptionVi:
+      "Nền sơn mài đỏ, hoa sen và chỉ hồng dát vàng, mở đầu bằng một chiếc hộp cưới chạm vào mới mở. Dành cho cặp đôi muốn một tấm thiệp truyền thống nhưng sang trọng và riêng biệt.",
+    moodVi: ["Sơn mài", "Đỏ son", "Dát vàng"],
+    // The gilt the renderer draws its own rules and glyphs in; distinct from
+    // Sắc Son Trăm Năm's lacquer red so the two traditional cards read apart.
+    accent: "#b08c45",
+    ...screenshots("se-duyen", "Se Duyên"),
+    sortOrder: 50,
+    visibility: "PUBLIC",
+    categories: ["truyen-thong"],
+  },
 ];
 
 /**

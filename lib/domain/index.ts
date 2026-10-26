@@ -8,6 +8,7 @@ export * from "./access-link-type";
 export * from "./payment-status";
 export * from "./occasion-type";
 export * from "./review-feedback-type";
+export * from "./review-approval-actor";
 export * from "./review-outcome";
 export * from "./intake-submission-status";
 export * from "./rsvp-attendance";

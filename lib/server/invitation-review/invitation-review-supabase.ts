@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseStaffInvitationPreviewDependencies } from "../invitation-preview/staff-invitation-preview-supabase";
 import { supabaseInvitationReviewGateway } from "../supabase/invitation-review-repository";
 import type { ReviewVersionPreviewDependencies } from "./build-review-version-preview";
+import type { ConfirmReviewApprovalDependencies } from "./confirm-review-approval";
 import type { CreateReviewVersionDependencies } from "./create-review-version";
 import type { ProjectReviewStateDependencies } from "./get-project-review-state";
 
@@ -13,6 +14,11 @@ import type { ProjectReviewStateDependencies } from "./get-project-review-state"
  */
 export const supabaseCreateReviewVersionDependencies: CreateReviewVersionDependencies<SupabaseClient> = {
   ...supabaseStaffInvitationPreviewDependencies,
+  reviews: supabaseInvitationReviewGateway,
+};
+
+/** TE-06: the approval-on-behalf action needs the review gateway only. */
+export const supabaseConfirmReviewApprovalDependencies: ConfirmReviewApprovalDependencies<SupabaseClient> = {
   reviews: supabaseInvitationReviewGateway,
 };
 
