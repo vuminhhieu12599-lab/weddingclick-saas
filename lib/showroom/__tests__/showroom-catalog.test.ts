@@ -36,18 +36,21 @@ const WITH_FIFTH_MANIFEST = [
 ] as const;
 
 describe("LAUNCH-P0-04 showroom catalog", () => {
-  it("publishes exactly the four released templates, in display order", () => {
+  it("publishes exactly the five released templates, in display order", () => {
     expect(PUBLIC_SHOWROOM_TEMPLATES.map((template) => template.templateCode)).toStrictEqual([
       "elegant-editorial",
       "vietnamese-heritage",
       "romantic-minimal",
       "our-wedding-story",
+      // SD-V1-SHOWROOM-01: Se Duyên is the fifth card, sortOrder 50.
+      "se-duyen",
     ]);
     expect(PUBLIC_SHOWROOM_TEMPLATES.map((template) => template.nameVi)).toStrictEqual([
       "Nét Thanh Lịch",
       "Sắc Son Trăm Năm",
       "Dịu Dàng",
       "Chuyện Chúng Mình",
+      "Se Duyên",
     ]);
   });
 
@@ -86,10 +89,11 @@ describe("LAUNCH-P0-04 showroom catalog", () => {
     }
   });
 
-  it("a fifth entry appears automatically, ordered by sortOrder, without other changes", () => {
-    const fifth = entry({ templateCode: "fixture-five", nameVi: "Mẫu Thứ Năm", nameEn: "Fixture Template Five", sortOrder: 15 });
-    const list = selectPublicShowroomTemplates([...SHOWROOM_TEMPLATE_ENTRIES, fifth], WITH_FIFTH_MANIFEST);
-    expect(list).toHaveLength(5);
+  it("one more entry appears automatically, ordered by sortOrder, without other changes", () => {
+    // SD-V1-SHOWROOM-01: the released list is five, so the fixture entry makes six.
+    const extra = entry({ templateCode: "fixture-five", nameVi: "Mẫu Thứ Năm", nameEn: "Fixture Template Five", sortOrder: 15 });
+    const list = selectPublicShowroomTemplates([...SHOWROOM_TEMPLATE_ENTRIES, extra], WITH_FIFTH_MANIFEST);
+    expect(list).toHaveLength(SHOWROOM_TEMPLATE_ENTRIES.length + 1);
     expect(list[1]?.templateCode).toBe("fixture-five");
     expect(list[1]?.rendererKey).toBe("wedding.fixture-five.v1");
   });

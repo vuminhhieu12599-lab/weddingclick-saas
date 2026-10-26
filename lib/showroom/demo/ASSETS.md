@@ -51,7 +51,7 @@ Supplied by the Product Owner on 2026-10-13 (LAUNCH-P0-04) as ten 1086×1448 / 1
 
 Only the WebP files below are committed and served. Pillow 12.1.1, `quality=86, method=6`, same pixel dimensions, about 950 KB for all ten. At 100 % they are visually indistinguishable from the PNGs, with no banding on the red backdrops. The source PNGs are not committed.
 
-Wired only for `wedding.vietnamese-heritage.v1` through `DEMO_TEMPLATE_SLOT_PHOTO_SETS` (`demo-media.ts`): `heroPhoto` 01; `portraitCluster` 04, 02, 03 (layout positions side / dominant centre / side, identical for every variant); `loveStoryPhoto` 05; `gallery` 01, 02, 03, 04, 06, 05, 07–10: file-number order with 05/06 swapped, so the landscape 05 falls on the album's full-width row instead of a tall pair, where it would show as a small print on a large mat.
+Wired through `DEMO_TEMPLATE_SLOT_PHOTO_SETS` (`demo-media.ts`) for `wedding.vietnamese-heritage.v2`, and — by reference, without copying a byte — for `wedding.se-duyen.v1` as well (see “Se Duyên demo photos” below). The Vietnamese Heritage mapping is: `heroPhoto` 01; `portraitCluster` 04, 02, 03 (layout positions side / dominant centre / side, identical for every variant); `loveStoryPhoto` 05; `gallery` 01, 02, 03, 04, 06, 05, 07–10: file-number order with 05/06 swapped, so the landscape 05 falls on the album's full-width row instead of a tall pair, where it would show as a small print on a large mat.
 
 | File | Size | Bytes | SHA-256 |
 |---|---|---|---|
@@ -126,6 +126,24 @@ The person-bound portraits follow OWS-01: each photo stays with its own person i
 | 09-editorial-seated-wide.webp | 1448×1086 | 52 KB | 8d537cbce3e34b648276ad105f49e8c41065a4d729c6430561879bf57f61818d |
 | 10-thank-you-couple.webp | 1086×1448 | 53 KB | a3b4403e3014919b59ba6328e340cd197f7aad796eb4e09093bff7d6c28e282c |
 
+## Se Duyên demo photos — reused, no new files
+
+SD-V1-SHOWROOM-01 (2026-10-26). The Se Duyên showroom demo introduces **no new image files**. It references the ten Vietnamese Heritage WebPs above (`public/showroom/demo/vietnamese-heritage/photos/`) by path: `demo-media.ts` sets `const SD_PHOTOS = VH_PHOTOS`, so there is one set of bytes, one licence and one provenance entry — the Vietnamese Heritage section above, including the Product Owner's 2026-10-15 attestation, which covers this use unchanged. They are fictional showroom photographs, never a real couple, wedding or client portfolio, and never a fallback for a customer invitation.
+
+Why that set: it is the only committed showroom photography shot in áo dài against lacquer red, which is exactly Se Duyên's palette (Sơn mài / Đỏ son / Dát vàng). Copying the files into a `se-duyen/` folder would have doubled about 950 KB of identical bytes and split one provenance record in two.
+
+Wired only for `wedding.se-duyen.v1` through `DEMO_TEMPLATE_SLOT_PHOTO_SETS`, keyed by `registeredRendererKey("se-duyen", 1)` because the renderer static boundary forbids that key literal outside the renderer's own files. Mapping, against the v1 editor manifest's declared slots and `maxCount`:
+
+| Slot | maxCount | Photo |
+|---|---|---|
+| `openingPhoto` | 1 | 01 — rises out of the lacquer box on the opening tap and grows into the hero |
+| `portraitLead` | 1 | 02 — the large frame of the Uyên Ương page |
+| `portraitAside` | 1 | 07 — the small frame overlapping its lower corner |
+| `gallery` | null (no limit) | 08, 03, 04, 05 |
+| `closingPhoto` | 1 | 10 — fades into the lacquer ground under the thank-you line |
+
+Se Duyên declares **no person-bound slot**: every frame is a layout position, identical for COMMON, GROOM and BRIDE, so no photograph is presented as "the groom's" or "the bride's". The album's approved composition is four frames — a lead, a tall/small pair, then a wide foot frame — and the renderer draws the first four of the slot in order, so the landscape tea ceremony (05) is placed last, where the wide crop belongs. The renderer is unchanged: its frames cover-crop and the viewer shows every photo whole.
+
 ## Template screenshots — `public/showroom/templates/`
 
 Real screenshots of the public demo pages (`/mau-thiep/<code>`, demo bar removed) from a local production build, headless Chrome, 390×844 CSS px at 2× (780×1688), WebP quality 78. `<code>-cover.webp` is the closed opening screen; `<code>-inside.webp` is an inner section after opening. Re-capture whenever a renderer version, the demo data or the demo images change, and for every new template.
@@ -145,6 +163,11 @@ kept byte-for-byte, so its hash below is unchanged.
 | romantic-minimal-inside.webp | Save The Date photo rising from the envelope | df6b452d4b804b2782ac6446132e9628568f45c41edef00904916248d3025833 |
 | our-wedding-story-cover.webp | — | 35802259ea86ee3197fc257d7b681eb13b306ae39cd0d415f5fc3c63313677a9 |
 | our-wedding-story-inside.webp | invitation card | 724b2888147fe787dda0c44ce1d9434b9ab4c27c7b2657dc2a53aa5cbe6562a7 |
+| se-duyen-cover.webp | — | 1f6bb70aef155b737e39611fbeea2893e719d29278117963a257a4d598cf0b49 |
+| se-duyen-inside.webp | invitation card: Lễ Thành Hôn, date, time, lunar date | 79114db672d990f098430ceb60337a1f74e159ad38bacc855947e23ea7762ffe |
+
+
+The two `se-duyen-*.webp` captures (SD-V1-SHOWROOM-01, 2026-10-23) are real captures of `/mau-thiep/se-duyen` running the production Se Duyên v1 renderer on the demo data above: the cover is the closed lacquer box (“Chạm vào hộp để nhận thiệp”), the inside shot is the opened invitation card. No placeholder art and no broken media in either.
 
 ## Social share image — `public/showroom/og-weddingclick.jpg`
 

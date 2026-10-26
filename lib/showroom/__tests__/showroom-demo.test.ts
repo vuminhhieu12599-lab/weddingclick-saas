@@ -224,6 +224,62 @@ describe("LAUNCH-P0-04 showroom demos run the real pipeline", () => {
     }
   });
 
+  it("the Se Duyên demo runs v1 on the Vietnamese Heritage photo set, slot by slot for COMMON/GROOM/BRIDE", async () => {
+    const sd = PUBLIC_SHOWROOM_TEMPLATES.find((template) => template.templateCode === "se-duyen");
+    expect(sd?.rendererKey).toBe("wedding.se-duyen.v1");
+    const set = DEMO_TEMPLATE_SLOT_PHOTO_SETS["wedding.se-duyen.v1"];
+    expect(set).toBeDefined();
+    if (set === undefined) return;
+    const url = (image: DemoImage) => `${DEMO_MEDIA_BASE_PATH}${image.file}`;
+    const urlOf = (item: unknown) => (item as { status: string; url?: string }).url;
+    const file = (slot: string, index = 0) => set[slot]?.[index]?.file;
+    const frames = Object.values(set).flat();
+
+    // SD-V1-SHOWROOM-01: the set is the Vietnamese Heritage photographs reused by
+    // reference — no Se Duyên folder, no copied bytes — so every frame must be one
+    // of that set's committed files (provenance: `lib/showroom/demo/ASSETS.md`).
+    const vh = DEMO_TEMPLATE_SLOT_PHOTO_SETS["wedding.vietnamese-heritage.v2"];
+    const vhFiles = new Set(Object.values(vh ?? {}).flat().map((image) => image.file));
+    expect(vhFiles.size).toBe(10);
+    for (const image of frames) {
+      expect(image.file, image.file).toMatch(/^vietnamese-heritage\/photos\/\d\d-[\w-]+\.webp$/);
+      expect(vhFiles.has(image.file), image.file).toBe(true);
+    }
+
+    expect(file("openingPhoto")).toBe("vietnamese-heritage/photos/01-cover-doi-uyen-uong-ao-dai-tren-nen-do.webp");
+    // Positions, not people: the couple page's large frame and the small frame
+    // overlapping its lower corner. Se Duyên declares no person-bound slot, so
+    // nothing here is read as "the groom's photo" or "the bride's photo".
+    expect(file("portraitLead")).toBe("vietnamese-heritage/photos/02-couple-portrait-ao-dai-sac-do-le-hoi.webp");
+    expect(file("portraitAside")).toBe("vietnamese-heritage/photos/07-couple-ao-dai-red-lanterns.webp");
+    expect(file("closingPhoto")).toBe("vietnamese-heritage/photos/10-playful-couple-ao-dai-red-black.webp");
+    // The album is four frames — lead, a tall/small pair, then a wide foot frame —
+    // drawn from the first four of the slot in order, so the landscape tea ceremony
+    // sits last where the wide crop belongs.
+    expect(set.gallery?.map((image) => image.file)).toStrictEqual([
+      "vietnamese-heritage/photos/08-couple-portrait-with-double-happiness.webp",
+      "vietnamese-heritage/photos/03-bride-portrait-ao-dai-do-quat-xep.webp",
+      "vietnamese-heritage/photos/04-groom-portrait-chu-re-ben-chu-hy-do.webp",
+      "vietnamese-heritage/photos/05-tea-ceremony-traditional-vietnamese.webp",
+    ]);
+    expect(set.gallery?.[3]?.orientation).toBe("LANDSCAPE");
+    expect(new Set(frames.map((image) => image.file)).size).toBe(frames.length);
+    // Exactly the five declared slots, no person-bound portrait slot among them.
+    expect(Object.keys(set).sort()).toStrictEqual(["closingPhoto", "gallery", "openingPhoto", "portraitAside", "portraitLead"]);
+
+    for (const variant of INVITATION_VARIANTS) {
+      const { viewModel } = await buildDemoRenderData("wedding.se-duyen.v1", variant);
+      const slots = viewModel.media.templateSlots ?? {};
+      // Identical for every variant: the photographs are bound to frames, and only
+      // the names, family blocks and ceremony wording follow COMMON/GROOM/BRIDE.
+      for (const [slotKey, images] of Object.entries(set)) {
+        expect((slots[slotKey] ?? []).map(urlOf), `${variant} ${slotKey}`).toStrictEqual(images.map(url));
+      }
+      expect(Object.keys(slots).sort(), variant).toStrictEqual(Object.keys(set).sort());
+      expect(viewModel.media.portrait, variant).toStrictEqual({});
+    }
+  });
+
   it("every slot photo set names only declared slots within maxCount", () => {
     for (const [rendererKey, set] of Object.entries(DEMO_TEMPLATE_SLOT_PHOTO_SETS)) {
       const editor = lookupTemplateEditorManifest(rendererKey);
