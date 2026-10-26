@@ -1905,10 +1905,12 @@
 }
 
 .riteVenueAddress {
+  /* SD-V1-MOTION-01B: the rite's own address moves with the reception
+     addresses below it, so the page has one supporting-text size. */
   margin: 12px 0 0;
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 300;
-  line-height: 1.85;
+  line-height: 1.7;
   color: var(--sdi-ink-soft);
   text-wrap: balance;
 }
@@ -1933,8 +1935,12 @@
     padding: 126px 16px 76px;
   }
 
+  /* SD-V1-MOTION-01B: was 12px, a step down from the old 12.5px base. The
+     base is now 14px and the reception addresses below hold 14px at every
+     width, so the narrow step is closed: the page has one supporting-text
+     size wherever a guest reads an address. */
   .riteVenueAddress {
-    font-size: 12px;
+    font-size: 14px;
   }
 }
 
@@ -1975,7 +1981,10 @@
   margin: 8px 0 0;
   font-family: var(--sdp-display), Georgia, serif;
   font-style: italic;
-  font-size: 14.5px;
+  /* SD-V1-MOTION-01B: the rite line of each reception, raised from 14.5px.
+     It names the ceremony a guest is being invited to, so it should not sit
+     below the supporting detail around it. */
+  font-size: 16px;
   letter-spacing: 0.04em;
   color: var(--sdi-ink-soft);
 }
@@ -1992,7 +2001,9 @@
   font-family: var(--sdp-display), Georgia, serif;
   font-weight: 500;
   font-variant-numeric: lining-nums;
-  font-size: clamp(17px, 5.1cqw, 20px);
+  /* SD-V1-MOTION-01B: raised from clamp(17px, 5.1cqw, 20px). The hour is the
+     single fact a guest comes back to the card for. */
+  font-size: clamp(20px, 6.1cqw, 22px);
   letter-spacing: 0.2em;
   text-indent: 0.1em;
   color: var(--sdi-gold);
@@ -2000,7 +2011,9 @@
 
 /* Only printed when the reception falls on another day than the rite. */
 .ritePartyDate {
-  font-size: 11.5px;
+  /* SD-V1-MOTION-01B: 11.5px set this below comfortable reading; it now sits
+     in the same supporting tier as the address. */
+  font-size: 14px;
   font-weight: 300;
   letter-spacing: 0.04em;
   color: var(--sdi-ink-soft);
@@ -2010,17 +2023,23 @@
   margin: 10px 0 0;
   font-family: var(--sdp-display), Georgia, serif;
   font-weight: 500;
-  font-size: clamp(16px, 4.8cqw, 18px);
-  line-height: 1.42;
+  /* SD-V1-MOTION-01B: the most prominent line of the card, raised from
+     clamp(16px, 4.8cqw, 18px) — "Tư gia nhà trai" is where a guest is being
+     asked to go, and it now leads the block instead of matching it. */
+  font-size: clamp(19px, 5.8cqw, 21px);
+  line-height: 1.4;
   color: var(--sdi-ink);
   text-wrap: balance;
 }
 
 .ritePartyAddress {
-  margin: 7px 0 0;
-  font-size: 12px;
+  /* SD-V1-MOTION-01B: raised from 12px. The leading is closed from 1.8 to
+     1.7 at the same time, so the taller type does not make the block grow
+     and the card keeps its approved breathing room. */
+  margin: 8px 0 0;
+  font-size: 14px;
   font-weight: 300;
-  line-height: 1.8;
+  line-height: 1.7;
   color: var(--sdi-ink-soft);
   text-wrap: balance;
 }
