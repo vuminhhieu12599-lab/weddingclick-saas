@@ -97,6 +97,12 @@ export const ELEGANT_EDITORIAL_V1_COPY = Object.freeze({
     heading: "Album ảnh cưới",
     unavailable: "Ảnh tạm thời chưa hiển thị",
     imageAlt: "Ảnh cưới",
+    /** EE-V1-UI-01 lightbox: "Xem ảnh cưới {canonical position}" on each resolved tile. */
+    open: "Xem ảnh cưới",
+    viewerLabel: "Album ảnh cưới",
+    close: "Đóng album ảnh",
+    previous: "Ảnh trước",
+    next: "Ảnh tiếp theo",
   }),
   gift: Object.freeze({
     heading: "Hộp mừng cưới",

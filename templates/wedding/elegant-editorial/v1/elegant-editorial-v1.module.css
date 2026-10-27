@@ -1222,6 +1222,132 @@
   color: var(--ee-secondary);
 }
 
+/*
+ * EE-V1-UI-01 album lightbox. The open control is invisible chrome over the
+ * tile's photograph: the 4:5 crop, the grid and the spacing are unchanged.
+ */
+.galleryOpen {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: zoom-in;
+}
+
+.galleryOpen:focus-visible {
+  outline: 2px solid var(--ee-gold);
+  outline-offset: -3px;
+}
+
+.galleryViewer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ee-on-accent);
+  font-family: var(--ee-sans);
+  overflow: hidden;
+}
+
+.galleryViewer::backdrop {
+  background-color: color-mix(in srgb, var(--ee-text) 92%, transparent);
+}
+
+/* The whole photograph, bounded by the viewport inside safe margins; clicks around it reach the backdrop. */
+.galleryViewerStage {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 68px 16px 60px;
+  pointer-events: none;
+}
+
+.galleryViewerImage {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(100%, 720px);
+  max-height: 100%;
+  object-fit: contain;
+  box-shadow: 0 24px 50px -20px color-mix(in srgb, var(--ee-accent-deep) 80%, transparent);
+  pointer-events: auto;
+}
+
+.galleryViewerClose,
+.galleryViewerNav {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--ee-gold) 55%, transparent);
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--ee-text) 55%, transparent);
+  color: var(--ee-on-accent);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.galleryViewerClose {
+  top: 12px;
+  right: 12px;
+  font-size: 17px;
+}
+
+.galleryViewerNav {
+  top: 50%;
+  translate: 0 -50%;
+  font-size: 28px;
+}
+
+.galleryViewerPrev {
+  left: 10px;
+}
+
+.galleryViewerNext {
+  right: 10px;
+}
+
+.galleryViewerClose:focus-visible,
+.galleryViewerNav:focus-visible {
+  outline: 2px solid var(--ee-gold);
+  outline-offset: 3px;
+}
+
+.galleryViewerCount {
+  position: absolute;
+  bottom: 18px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  font-variant-numeric: lining-nums;
+  text-align: center;
+  color: var(--ee-on-accent-muted);
+  pointer-events: none;
+}
+
 /* ---------------------------------------------------------------------- */
 /* Closing — deep moss bookend                                            */
 /* ---------------------------------------------------------------------- */

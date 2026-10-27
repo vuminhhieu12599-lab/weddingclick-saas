@@ -1,7 +1,7 @@
 import type { MediaResolution } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
 import { ELEGANT_EDITORIAL_V1_COPY } from "../copy";
 import styles from "../elegant-editorial-v1.module.css";
-import { MediaImage } from "./media-image";
+import { GalleryLightbox } from "../interactive/gallery-lightbox";
 
 const COPY = ELEGANT_EDITORIAL_V1_COPY;
 
@@ -22,6 +22,10 @@ interface GalleryProps {
  * tile with fixed copy: it is never removed, reordered or replaced, and it
  * never hides the section. Visibility is decided by the caller from
  * `sections.gallery` only.
+ *
+ * EE-V1-UI-01: the grid itself lives in the album island, which adds only the
+ * open control on each `RESOLVED` tile and the viewer. The layout, crop,
+ * order, spacing and `UNAVAILABLE` tile are unchanged.
  */
 export function Gallery({ gallery, coupleText }: GalleryProps) {
   return (
@@ -29,27 +33,7 @@ export function Gallery({ gallery, coupleText }: GalleryProps) {
       <h2 id="ee-gallery-heading" className={styles.sectionKicker}>
         {COPY.gallery.heading}
       </h2>
-      <ul className={styles.gallery}>
-        {gallery.map((item, index) => (
-          <li
-            key={`${index}-${item.mediaId}`}
-            className={styles.galleryItem}
-            data-media-state={item.status === "RESOLVED" ? "resolved" : "unavailable"}
-          >
-            {item.status === "RESOLVED" ? (
-              <MediaImage
-                media={item}
-                alt={`${COPY.gallery.imageAlt} ${index + 1} – ${coupleText}`}
-                className={styles.galleryImage}
-              />
-            ) : (
-              <div className={styles.galleryUnavailable}>
-                <p>{COPY.gallery.unavailable}</p>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
+      <GalleryLightbox gallery={gallery} coupleText={coupleText} />
     </section>
   );
 }

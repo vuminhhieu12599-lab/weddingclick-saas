@@ -1104,6 +1104,136 @@
   aspect-ratio: 3 / 4.3;
 }
 
+/*
+ * VH-V2-UI-03 portrait viewer. Its own classes throughout, so the approved
+ * album lightbox keeps every rule it had. The open control is invisible
+ * chrome over the portrait: the frame and its composition are unchanged.
+ */
+.portraitOpen {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: zoom-in;
+}
+
+.portraitOpen:focus-visible {
+  outline: 2px solid var(--vh-gold-deep);
+  outline-offset: 3px;
+}
+
+.portraitViewer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--vh-lacquer-text);
+  font-family: var(--vh-font-serif), Georgia, "Times New Roman", serif;
+  overflow: hidden;
+}
+
+.portraitViewer::backdrop {
+  background: color-mix(in srgb, var(--vh-shadow) 94%, transparent);
+}
+
+/* The whole photograph, bounded by the viewport inside safe margins; clicks around it reach the backdrop. */
+.portraitViewerStage {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 68px 16px 60px;
+  pointer-events: none;
+}
+
+.portraitViewerImage {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(100%, 720px);
+  max-height: 100%;
+  object-fit: contain;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--vh-gold-soft) 45%, transparent),
+    0 24px 50px -20px color-mix(in srgb, var(--vh-shadow) 80%, transparent);
+  pointer-events: auto;
+}
+
+.portraitViewerClose,
+.portraitViewerNav {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--vh-gold-soft) 60%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--vh-shadow) 55%, transparent);
+  color: var(--vh-lacquer-heading);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.portraitViewerClose {
+  top: 12px;
+  right: 12px;
+  font-size: 17px;
+}
+
+.portraitViewerNav {
+  top: 50%;
+  translate: 0 -50%;
+  font-size: 28px;
+}
+
+.portraitViewerPrev {
+  left: 10px;
+}
+
+.portraitViewerNext {
+  right: 10px;
+}
+
+.portraitViewerClose:focus-visible,
+.portraitViewerNav:focus-visible {
+  outline: 2px solid var(--vh-gold-light);
+  outline-offset: 3px;
+}
+
+.portraitViewerCount {
+  position: absolute;
+  bottom: 18px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  margin: 0;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.3em;
+  font-variant-numeric: lining-nums;
+  text-align: center;
+  color: var(--vh-gold-soft);
+  pointer-events: none;
+}
+
 .inviteBlock {
   position: relative;
   max-width: 100%;
@@ -2548,6 +2678,11 @@
 /* The image entrance plays only without a reduced-motion preference; otherwise it simply appears. */
 @media (prefers-reduced-motion: no-preference) {
   .viewerImage {
+    animation: vh-viewer-in 240ms ease-out both;
+  }
+
+  /* VH-V2-UI-03: the portrait viewer shares the album entrance and its block. */
+  .portraitViewerImage {
     animation: vh-viewer-in 240ms ease-out both;
   }
 }

@@ -162,13 +162,14 @@ describe("gift dialog", () => {
       resolver: createFixtureMediaResolver({ unavailableMediaIds: [FIXTURE_MEDIA_IDS.QR_GROOM] }),
     });
     const html = render(viewModel, selection.effectiveSections, clipboard({ status: "SUCCESS" }));
-    expect(html).not.toMatch(/<dialog|giftOpen|ee-gift-heading/);
+    // EE-V1-UI-01 added the album viewer dialog, so this names the gift dialog's own class.
+    expect(html).not.toMatch(/giftDialog|giftOpen|ee-gift-heading/);
   });
 
   it("sections.gift false: no gift block, dialog or copy control", async () => {
     const { viewModel, selection } = await buildRendererFixture({ variant: "COMMON", sectionSettings: { gift: false } });
     const html = render(viewModel, selection.effectiveSections, clipboard({ status: "SUCCESS" }));
-    expect(html).not.toMatch(/<dialog|giftOpen|copyButton/);
+    expect(html).not.toMatch(/giftDialog|giftOpen|copyButton/);
   });
 
   it("dialog source: native showModal()/close(), explicit close, Escape and backdrop via the native close event, focus returns to the opener", () => {
