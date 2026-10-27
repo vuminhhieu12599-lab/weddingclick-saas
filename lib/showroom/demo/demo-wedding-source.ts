@@ -179,7 +179,7 @@ function demoWeddingDetails(couple: DemoCoupleOverride): NonNullable<BuildSnapsh
     brideFamilyAddress: BRIDE_HOME,
     invitationMessage: "Sự hiện diện của quý khách là niềm vinh hạnh cho gia đình chúng tôi.",
     loveStory:
-      "Chúng mình gặp nhau trong một buổi chiều mưa ở hiệu sách cũ, cùng với tay lấy một cuốn thơ.\nSau năm năm đi qua bao mùa hoa sữa, chúng mình quyết định về chung một nhà.",
+      "Chúng mình đã cùng nhau trải qua những ngày vui, cả những lúc không dễ dàng. Từ những điều giản dị trong cuộc sống, chúng mình dần hiểu, sẻ chia và thương nhau nhiều hơn.\n\nHôm nay, chúng mình chọn về chung một nhà, cùng bắt đầu chặng đường mới với người mà mình muốn ở bên suốt những năm tháng sau này.",
     groomBankName: "Ngân hàng Demo (thiệp mẫu)",
     groomBankAccountName: couple.groomAccountName,
     groomBankAccountNumber: "0000000001",
