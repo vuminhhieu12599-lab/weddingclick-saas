@@ -100,5 +100,9 @@ describe("CSS: Photo Story placement, Love Story → RSVP spacing, Gallery untou
 });
 
 // Digests of the PO-approved Gallery (two-column 4:5 correction), recorded before this task's changes.
-const GALLERY_SOURCE_DIGEST = "ba1fb12854028262";
+// EE-V1-UI-01 re-recorded the source digest: the section now hands its grid to the album island, which
+// draws the same tiles with an open control on each RESOLVED one. The CSS digest is deliberately
+// unchanged — the approved grid, tile and crop rules are byte-identical, and the viewer's own rules sit
+// after `.galleryUnavailable`, outside this slice.
+const GALLERY_SOURCE_DIGEST = "6738998780e7ee91";
 const GALLERY_CSS_DIGEST = "326567ec35ae9f90";

@@ -35,6 +35,12 @@ export const VIETNAMESE_HERITAGE_V2_COPY = Object.freeze({
      * Positions are layout only, never groom / couple / bride.
      */
     portraitAlt: "Ảnh cưới, khung",
+    /** VH-V2-UI-03 portrait viewer: "Xem ảnh {slot position}" on each portrait. */
+    portraitOpen: "Xem ảnh",
+    portraitViewerLabel: "Ảnh cưới",
+    portraitClose: "Đóng ảnh",
+    portraitPrevious: "Ảnh trước",
+    portraitNext: "Ảnh tiếp theo",
     /** Task 029 salutation line (VH-02A ruling D3). */
     salutation: "Trân Trọng Kính Mời",
     /** Unpersonalized guest line (VH-02A ruling D3); presentation only, never identity. */

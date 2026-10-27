@@ -600,9 +600,11 @@ describe("E. canonical mapping", () => {
     expect(html).not.toMatch(/<audio|<form/);
     // No capability → no RSVP or music. Controls: the opening button (VH-02B-M1); the gift CTA and, in
     // its closed dialog, the close control and the two COMMON side tabs (VH-02B-E1); one open control
-    // per RESOLVED album print (4 here; VH-02B-M2). The closed album viewer renders no controls yet.
-    expect(html.match(/<button/g)).toHaveLength(9);
-    expect(html.match(/<dialog/g)).toHaveLength(2);
+    // per RESOLVED album print (4 here; VH-02B-M2) and one per RESOLVED portrait (3 here;
+    // VH-V2-UI-03). Both closed viewers render no controls yet.
+    expect(html.match(/<button/g)).toHaveLength(12);
+    // The gift dialog, the album viewer and the portrait viewer (VH-V2-UI-03).
+    expect(html.match(/<dialog/g)).toHaveLength(3);
   });
 
   it("gift: one panel per operational side with canonical lines; GROOM shows only the groom side", async () => {
@@ -1822,6 +1824,8 @@ describe("J. progressive section reveal (VH-02B-M2)", () => {
     expect(outside).not.toContain("[data-vh-reveal");
     expect(outside).not.toMatch(/animation: vh-viewer-in/);
     expect(noPreference.join("\n")).toMatch(/\.viewerImage \{\s*animation: vh-viewer-in 240ms ease-out both;/);
+    // VH-V2-UI-03: the portrait viewer shares that entrance, inside the same block.
+    expect(noPreference.join("\n")).toMatch(/\.portraitViewerImage \{\s*animation: vh-viewer-in 240ms ease-out both;/);
     // The opening's own reduced-motion rule is unchanged.
     expect(cssSource).toMatch(/\.opening\[data-opening="opening"\] \{\s*animation: vh-opening-fade 220ms ease-out both;/);
     // Safe-fit album prints are unchanged.

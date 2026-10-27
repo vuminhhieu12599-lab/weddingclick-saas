@@ -1,16 +1,11 @@
 import type { ReactNode } from "react";
 
 import type { EventDateTimePresentationV1 } from "../../../../../lib/invitation-rendering/event-date-time-presentation";
-import type {
-  InvitationViewModel,
-  MediaResolution,
-  ResolvedMedia,
-  ViewModelFamily,
-} from "../../../../../lib/invitation-rendering/invitation-view-model-types";
+import type { InvitationViewModel, MediaResolution, ViewModelFamily } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
 import { VIETNAMESE_HERITAGE_V2_COPY } from "../copy";
+import { PortraitLightbox } from "../interactive/portrait-lightbox";
 import styles from "../vietnamese-heritage-v2.module.css";
 import { DecorImage } from "./decor";
-import { MediaImage } from "./media-image";
 import { SongHy } from "./song-hy";
 
 const COPY = VIETNAMESE_HERITAGE_V2_COPY.ceremonial;
@@ -21,21 +16,6 @@ function present(value: string | null): value is string {
 
 function familyLines(family: ViewModelFamily): string[] {
   return [family.father, family.mother, family.address].filter(present);
-}
-
-interface PortraitEntry {
-  /** 1-based `portraitCluster` slot position: layout order only, never a person or side. */
-  position: number;
-  media: ResolvedMedia;
-}
-
-/**
- * The `RESOLVED` items of the `portraitCluster` slot in slot order, each
- * keeping its original position. `UNAVAILABLE` items are skipped, never
- * substituted; the visual state follows the resolved count alone.
- */
-function resolvedPortraits(cluster: readonly MediaResolution[]): PortraitEntry[] {
-  return cluster.flatMap((media, index): PortraitEntry[] => (media.status === "RESOLVED" ? [{ position: index + 1, media }] : []));
 }
 
 /** Slim gold page edges: hairlines plus the approved border art as short end caps. */
@@ -80,7 +60,9 @@ interface CeremonialProps {
  *   dominant centre / side, two → a balanced pair, one → a centred single,
  *   none → no block. Positions carry no person or side meaning, so the order
  *   is identical for COMMON, GROOM and BRIDE, alt text is generic, and an
- *   `UNAVAILABLE` item is skipped, never replaced by another Project image;
+ *   `UNAVAILABLE` item is skipped, never replaced by another Project image.
+ *   VH-V2-UI-03: the row lives in the portrait island, which adds only the
+ *   open control and the viewer; the composition itself is unchanged;
  * - "Trân Trọng Kính Mời" and the guest line: the authorized overlay's
  *   free-form `displayName` verbatim, else "Bạn và Gia Đình" (ruling D3);
  * - the rite: `ceremony.title` verbatim (RF3), RF-05C weekday, time, day,
@@ -90,7 +72,6 @@ interface CeremonialProps {
  */
 export function Ceremonial({ families, portraitCluster, ceremony, ceremonyDate, guestDisplayName, countdown, children }: CeremonialProps) {
   const shownFamilies = [families.primary, families.secondary].filter((family) => familyLines(family).length > 0);
-  const portraits = resolvedPortraits(portraitCluster);
   const lunar = ceremony.lunarDateDisplay;
 
   return (
@@ -115,20 +96,7 @@ export function Ceremonial({ families, portraitCluster, ceremony, ceremonyDate, 
         </div>
       ) : null}
 
-      {portraits.length > 0 ? (
-        <div className={styles.portraitRow} data-count={portraits.length}>
-          {portraits.map(({ position, media }, index) => (
-            <figure
-              key={position}
-              className={styles.portraitFrame}
-              data-position={position}
-              data-emphasis={portraits.length === 3 && index === 1 ? "center" : undefined}
-            >
-              <MediaImage media={media} alt={`${COPY.portraitAlt} ${String(position)}`} className={styles.portraitPhoto} />
-            </figure>
-          ))}
-        </div>
-      ) : null}
+      <PortraitLightbox cluster={portraitCluster} />
 
       <div className={styles.inviteBlock}>
         <span className={`${styles.inviteCorner} ${styles.inviteCornerTopLeft}`} aria-hidden="true" />

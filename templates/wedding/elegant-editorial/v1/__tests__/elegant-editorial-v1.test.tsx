@@ -767,7 +767,8 @@ describe("section gating (props sections are the only authority)", () => {
       return;
     }
     const gallery = block(html, 'aria-labelledby="ee-gallery-heading"');
-    const items = [...gallery.matchAll(/<li class="([^"]*)"[^>]*><img [^>]*src="([^"]*)"/g)];
+    // EE-V1-UI-01: a RESOLVED tile wraps its photograph in the open control.
+    const items = [...gallery.matchAll(/<li class="([^"]*)"[^>]*>(?:<button [^>]*>)?<img [^>]*src="([^"]*)"/g)];
     expect(items.map((m) => m[2])).toStrictEqual(viewModel.media.gallery.map((item) => fixtureMediaUrl(item.mediaId)));
     // PO two-column correction: one tile class for every item, no slot/span geometry.
     expect(new Set(items.map((m) => m[1])).size).toBe(1);
@@ -1028,15 +1029,18 @@ describe("event map links", () => {
 // RF-06D replacement: with an EMPTY capabilities object the renderer still
 // shows no capability-driven UI. The only interactive elements are the
 // capability-independent RF-06D opening envelope control (no skip control) and
-// the gift dialog entry, close and — for COMMON only — the two side tabs.
+// the gift dialog entry, close and — for COMMON only — the two side tabs, plus
+// the EE-V1-UI-01 album open control on each RESOLVED tile. Both dialogs (gift
+// and album viewer) are closed and render no controls of their own yet.
 describe("no capability-driven UI without capabilities", () => {
   it.each(INVITATION_VARIANTS)("%s: no RSVP, music, countdown, clipboard or interactive control", async (variant) => {
     const { html, sections, viewModel } = await renderFixture({ variant, guest: FIXTURE_GUESTS.NORMAL });
     expect(sections.music).toBe(true);
     expect(viewModel.media.audio?.status).toBe("RESOLVED");
     expect(html).not.toMatch(/<(form|input|select|textarea|audio|video)\b/);
-    expect(count(html, "<button")).toBe(variant === "COMMON" ? 5 : 3);
-    expect(count(html, "<dialog")).toBe(1);
+    const albumOpens = viewModel.media.gallery.filter((item) => item.status === "RESOLVED").length;
+    expect(count(html, "<button")).toBe((variant === "COMMON" ? 5 : 3) + albumOpens);
+    expect(count(html, "<dialog")).toBe(2);
     expect(html).not.toMatch(/onclick|role="button"/i);
     // No tabindex at all in server markup: the Hero is made focusable only when the opening completes.
     expect(html).not.toMatch(/tabindex=/);

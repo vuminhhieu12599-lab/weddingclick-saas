@@ -299,6 +299,8 @@ const RF06D_MUSIC = `${RF06D_DIR}/music-control.tsx`;
 const RF06D_GIFT_DIALOG = `${RF06D_DIR}/gift-dialog.tsx`;
 const RF06D_COPY_BUTTON = `${RF06D_DIR}/copy-account-button.tsx`;
 const RF06D_RSVP = `${RF06D_DIR}/rsvp.tsx`;
+// EE-V1-UI-01: the album grid and its lightbox.
+const RF06D_GALLERY_LIGHTBOX = `${RF06D_DIR}/gallery-lightbox.tsx`;
 const RF06D_OPENING_STATE = `${RF06D_DIR}/opening-state.ts`;
 const RF06D_RSVP_MODEL = `${RF06D_DIR}/rsvp-model.ts`;
 /** RF-06D visual/interaction remediation: Task029 section reveal (Design Baseline B5 item 19). */
@@ -310,6 +312,7 @@ const RF06D_ISLAND_FILES = [
   RF06D_GIFT_DIALOG,
   RF06D_COPY_BUTTON,
   RF06D_RSVP,
+  RF06D_GALLERY_LIGHTBOX,
   RF06D_REVEAL,
 ] as const;
 const RF06D_MODEL_FILES = [RF06D_OPENING_STATE, RF06D_RSVP_MODEL] as const;
@@ -530,7 +533,8 @@ const RF06B_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06B_CODE_FILES)[number], 
     `${V1}/sections/date-text`,
   ],
   [`${V1}/sections/families.tsx`]: [`${LIB}/invitation-view-model-types`, ...SECTION_COMMON, `${V1}/sections/decor`],
-  [`${V1}/sections/gallery.tsx`]: [`${LIB}/invitation-view-model-types`, ...SECTION_COMMON, `${V1}/sections/media-image`],
+  // EE-V1-UI-01: the grid moved into the island, which owns the images.
+  [`${V1}/sections/gallery.tsx`]: [`${LIB}/invitation-view-model-types`, ...SECTION_COMMON, `${V1}/interactive/gallery-lightbox`],
   [`${V1}/sections/gift.tsx`]: [
     `${LIB}/invitation-view-model-types`,
     `${LIB}/wedding-domain-types`,
@@ -1714,6 +1718,7 @@ const RF06D_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06D_FILES)[number], reado
   ],
   [RF06D_MUSIC]: ["react", `${LIB}/renderer-capabilities`, `${V1}/copy`, CSS_MODULE],
   [RF06D_GIFT_DIALOG]: ["react", `${LIB}/wedding-domain-types`, `${V1}/copy`, CSS_MODULE],
+  [RF06D_GALLERY_LIGHTBOX]: ["react", `${LIB}/invitation-view-model-types`, `${V1}/copy`, CSS_MODULE, `${V1}/sections/media-image`],
   [RF06D_COPY_BUTTON]: ["react", `${LIB}/renderer-capabilities`, `${V1}/copy`, CSS_MODULE],
   [RF06D_RSVP]: [
     "react",
@@ -1772,23 +1777,26 @@ const ALL_HOOKS =
  * listed RF-06D module(s), and in no RF-06A, RF-06B or RF-06C file.
  */
 const RF06D_PRIVILEGE: readonly [string, RegExp, readonly string[]][] = [
-  ["useState", /\buseState\b/, [RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP]],
+  // EE-V1-UI-01 adds the album island: it holds the open photo and its dialog.
+  ["useState", /\buseState\b/, [RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX]],
   ["useReducer", /\buseReducer\b/, [RF06D_OPENING, RF06D_RSVP]],
   // RF-06D remediation: RSVP manages focus around "Sửa lại" (D11); the reveal observes once after mount.
-  ["useRef", /\buseRef\b/, [RF06D_OPENING, RF06D_GIFT_DIALOG, RF06D_RSVP, RF06D_REVEAL]],
-  ["useEffect", /\buseEffect\b/, [RF06D_OPENING, RF06D_GIFT_DIALOG, RF06D_RSVP, RF06D_REVEAL]],
+  ["useRef", /\buseRef\b/, [RF06D_OPENING, RF06D_GIFT_DIALOG, RF06D_RSVP, RF06D_REVEAL, RF06D_GALLERY_LIGHTBOX]],
+  ["useEffect", /\buseEffect\b/, [RF06D_OPENING, RF06D_GIFT_DIALOG, RF06D_RSVP, RF06D_REVEAL, RF06D_GALLERY_LIGHTBOX]],
   [
     "other hooks",
     /\buse(LayoutEffect|InsertionEffect|Memo|Callback|SyncExternalStore|Context|Transition|Optimistic|ActionState|Id|DeferredValue|ImperativeHandle)\b/,
     [],
   ],
-  ["button element", /<button\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP]],
-  ["click handler", /\bonClick\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP]],
-  ["dialog element / API", /<dialog\b|role="dialog"|showModal|HTMLDialogElement|\.close\(\)|onClose\b|onCancel\b/, [RF06D_GIFT_DIALOG]],
-  ["programmatic focus", /\.focus\(/, [RF06D_OPENING, RF06D_GIFT_DIALOG, RF06D_RSVP]],
+  ["button element", /<button\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX]],
+  ["click handler", /\bonClick\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX]],
+  ["dialog element / API", /<dialog\b|role="dialog"|showModal|HTMLDialogElement|\.close\(\)|onClose\b|onCancel\b/, [RF06D_GIFT_DIALOG, RF06D_GALLERY_LIGHTBOX]],
+  // The album island returns focus to the tile that opened the viewer.
+  ["programmatic focus", /\.focus\(/, [RF06D_OPENING, RF06D_GIFT_DIALOG, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX]],
   ["IntersectionObserver", /IntersectionObserver/, [RF06D_REVEAL]],
   ["reveal marks", /data-ee-reveal/, [RF06D_REVEAL]],
-  ["form events", /\bonSubmit\b|\bonChange\b|preventDefault/, [RF06D_RSVP]],
+  // `preventDefault` only: the album island stops ArrowLeft / ArrowRight scrolling the page behind the viewer.
+  ["form events", /\bonSubmit\b|\bonChange\b|preventDefault/, [RF06D_RSVP, RF06D_GALLERY_LIGHTBOX]],
   ["form controls", /<form\b|<input\b|<select\b|<textarea\b|<fieldset\b|<label\b/, [RF06D_RSVP]],
   ["music capability actions", /\.play\(|\.pause\(|MusicCapabilityV1/, [RF06D_MUSIC]],
   ["clipboard capability action", /copyText|ClipboardCapabilityV1/, [RF06D_COPY_BUTTON]],
@@ -1848,12 +1856,12 @@ describe("RF-06D interactive files", () => {
     }
   });
 
-  it("only the root and the gift section render islands, and only the root reads capabilities", () => {
+  it("only the root, the gift section and the album section render islands, and only the root reads capabilities", () => {
     const islandImporters = [...RF06A_FILES, ...RF06B_CODE_FILES, ...RF06D_FILES].filter((file) =>
       resolvedImportsOf(file).some((modulePath) => modulePath.startsWith(`${RF06D_DIR}/`) && !/-(state|model)$/.test(modulePath)),
     );
     expect(islandImporters.sort()).toStrictEqual(
-      [`${V1}/elegant-editorial-v1.tsx`, `${V1}/sections/gift.tsx`, `${V1}/sections/opening-cover.tsx`].sort(),
+      [`${V1}/elegant-editorial-v1.tsx`, `${V1}/sections/gallery.tsx`, `${V1}/sections/gift.tsx`, `${V1}/sections/opening-cover.tsx`].sort(),
     );
     for (const file of RF06B_CODE_FILES) {
       if (file === `${V1}/elegant-editorial-v1.tsx`) continue;
@@ -3067,15 +3075,19 @@ function toVh2(file: string): string {
   return file.replace(`${VH}/`, `${VH2}/`).replace("vietnamese-heritage-v1", "vietnamese-heritage-v2");
 }
 const VH2_CODE_FILES = VH01_CODE_FILES.map(toVh2);
-const VH2_ISLAND_FILES = VH02B_ISLAND_FILES.map(toVh2);
+// VH-V2-UI-03: the portrait viewer is a v2-only island; v1 keeps its frozen file set.
+const VH2_PORTRAIT_LIGHTBOX = `${VH2}/interactive/portrait-lightbox.tsx`;
+const VH2_ISLAND_FILES = [...VH02B_ISLAND_FILES.map(toVh2), VH2_PORTRAIT_LIGHTBOX];
 const VH2_ROOT = toVh2(VH01_ROOT);
 const VH2_CSS_FILE = toVh2(VH01_CSS_FILE);
-const VH2_FILES = [...VH01_FILES, ...VH02B_ISLAND_FILES, ...VH02B_MODEL_FILES].map(toVh2);
+const VH2_FILES = [...[...VH01_FILES, ...VH02B_ISLAND_FILES, ...VH02B_MODEL_FILES].map(toVh2), VH2_PORTRAIT_LIGHTBOX];
 const VH2_TSX_FILES = VH2_FILES.filter((file) => file.endsWith(".tsx"));
 
 describe("VH-V2-01 Vietnamese Heritage v2 files", () => {
   it("v2 mirrors the v1 file set exactly and every file exists", () => {
-    expect(VH2_FILES).toHaveLength(VH01_FILES.length + VH02B_ISLAND_FILES.length + VH02B_MODEL_FILES.length);
+    // VH-V2-UI-03: v2 mirrors v1 file for file, plus the one portrait island v1 does not have.
+    expect(VH2_FILES).toHaveLength(VH01_FILES.length + VH02B_ISLAND_FILES.length + VH02B_MODEL_FILES.length + 1);
+    expect(VH2_FILES).toContain(VH2_PORTRAIT_LIGHTBOX);
     for (const file of VH2_FILES) expect(() => readRepoFile(file), file).not.toThrow();
   });
 
