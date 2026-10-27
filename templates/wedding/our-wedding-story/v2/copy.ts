@@ -48,8 +48,9 @@ export const OUR_WEDDING_STORY_V2_COPY = Object.freeze({
     /** Unpersonalized guest line; presentation only, never identity. */
     defaultGuest: "Bạn và Gia Đình",
     to: "tới dự",
-    dateCaption: "Hôn lễ được cử hành vào lúc",
     monthPrefix: "Tháng",
+    /** OWS-V2-UI-02: fixed label for the canonical `ceremony.lunarDateDisplay`. */
+    lunarPrefix: "Tức ngày",
     receptionsLabel: "Tiệc cưới",
     /** Reception subtitle by the ceremony card's explicit side (its rite). */
     receptionTitleBySide: Object.freeze({ GROOM: "Tiệc mừng Lễ Thành Hôn", BRIDE: "Tiệc mừng Lễ Vu Quy" }),

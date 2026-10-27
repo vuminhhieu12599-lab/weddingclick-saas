@@ -98,10 +98,10 @@ export function VietnameseHeritageV2({ viewModel, sections, capabilities }: Invi
           ceremony={ceremony}
           ceremonyDate={ceremonyDate}
           guestDisplayName={viewModel.guest?.displayName}
+          countdown={capabilities.clock !== undefined ? <Countdown ceremony={ceremony} clock={capabilities.clock} /> : null}
         >
           <Events cards={viewModel.ceremonyCards} />
           {sections.timeline ? <Timeline items={content.timeline} /> : null}
-          {capabilities.clock !== undefined ? <Countdown ceremony={ceremony} clock={capabilities.clock} /> : null}
         </Ceremonial>
         {loveStory !== null ? <LoveStory story={loveStory} photo={loveStoryPhoto} /> : null}
         {capabilities.rsvp !== undefined ? <Rsvp rsvp={capabilities.rsvp} /> : null}

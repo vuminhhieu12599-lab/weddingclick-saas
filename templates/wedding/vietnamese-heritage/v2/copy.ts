@@ -59,8 +59,8 @@ export const VIETNAMESE_HERITAGE_V2_COPY = Object.freeze({
     heading: "Lịch trình",
   }),
   countdown: Object.freeze({
-    /** Accessible name only; Task 029 shows the four cells without a visible heading. */
-    heading: "Đếm ngược đến lễ cưới",
+    /** VH-V2-UI-02: shown above the cells, and the group's accessible name. */
+    heading: "Đếm ngược ngày chung đôi",
     /** Task 029 unit labels. */
     units: Object.freeze({ days: "Ngày", hours: "Giờ", minutes: "Phút", seconds: "Giây" }),
   }),

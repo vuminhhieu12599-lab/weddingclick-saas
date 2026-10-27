@@ -87,6 +87,8 @@ export const VH_REVEAL_TARGETS: readonly RevealTarget<VhRevealVariant>[] = [
   target("venueCard", "card"),
   target("venueMapLink", "rise"),
   target("scheduleItem", "rise"),
+  // VH-V2-UI-02: the heading arrives with the cells it names, not before them.
+  target("countdownHeading", "rise"),
   target("countdownCell", "scale"),
   // Love Story
   target("loveStoryHeader", "rise"),

@@ -57,6 +57,12 @@ interface CeremonialProps {
   ceremony: InvitationViewModel["ceremony"];
   ceremonyDate: EventDateTimePresentationV1;
   guestDisplayName: string | undefined;
+  /**
+   * VH-V2-UI-02: the countdown island, set inside the rite directly below the
+   * lunar line. The root owns it (it needs `capabilities.clock`); this section
+   * only decides where it sits, so there is never a second countdown.
+   */
+  countdown?: ReactNode;
   /** The venue cards and timeline, set on the same printed sheet below the rite. */
   children?: ReactNode;
 }
@@ -79,9 +85,10 @@ interface CeremonialProps {
  *   free-form `displayName` verbatim, else "Bạn và Gia Đình" (ruling D3);
  * - the rite: `ceremony.title` verbatim (RF3), RF-05C weekday, time, day,
  *   month and year, and the verbatim ceremony lunar text beside the fixed
- *   "Tức ngày" label, omitted when absent (RF6). No host line is invented.
+ *   "Tức ngày" label, omitted when absent (RF6). No host line is invented;
+ * - the countdown (VH-V2-UI-02), directly below that lunar line.
  */
-export function Ceremonial({ families, portraitCluster, ceremony, ceremonyDate, guestDisplayName, children }: CeremonialProps) {
+export function Ceremonial({ families, portraitCluster, ceremony, ceremonyDate, guestDisplayName, countdown, children }: CeremonialProps) {
   const shownFamilies = [families.primary, families.secondary].filter((family) => familyLines(family).length > 0);
   const portraits = resolvedPortraits(portraitCluster);
   const lunar = ceremony.lunarDateDisplay;
@@ -156,6 +163,7 @@ export function Ceremonial({ families, portraitCluster, ceremony, ceremonyDate, 
             <span aria-hidden="true">)</span>
           </p>
         ) : null}
+        {countdown}
         <DecorImage decor="divider" className={styles.riteDivider} />
       </div>
 

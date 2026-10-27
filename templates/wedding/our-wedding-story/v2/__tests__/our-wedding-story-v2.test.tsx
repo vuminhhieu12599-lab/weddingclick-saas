@@ -555,3 +555,30 @@ describe("OWS directions CTA (LAUNCH-P0-01)", () => {
     expect(html).not.toMatch(/google\.[a-z.]+\/maps|maps\.google|maps\.app\.goo\.gl|maps\.apple|geo:/);
   });
 });
+
+describe("OWS-V2-UI-02 the invitation date block", () => {
+  /** The invitation's date block: the row (weekday | time over day | month / year) and what follows it. */
+  const dateBlock = (html: string) => /inviteDate_[^"]*">([\s\S]*?)<\/div><\/div>/.exec(html)?.[1] ?? "";
+
+  it("drops the caption line and sets the canonical lunar text under the day number", async () => {
+    for (const variant of ["COMMON", "GROOM", "BRIDE"] as const) {
+      const { html, fixture } = await renderOws({ variant });
+      expect(html).not.toContain("Hôn lễ được cử hành vào lúc");
+      const lunar = fixture.viewModel.ceremony.lunarDateDisplay;
+      expect(lunar).not.toBeNull();
+      const block = dateBlock(html);
+      // The verbatim canonical value, after the day number, behind the fixed label.
+      expect(block).toContain(`Tức ngày ${String(lunar)}`);
+      expect(block.indexOf("inviteDateDay")).toBeLessThan(block.indexOf("inviteDateLunar"));
+    }
+  });
+
+  it("no canonical lunar text → no lunar line, and nothing is calculated", async () => {
+    const { html } = await renderOws({ variant: "GROOM", ceremonyLunar: "ABSENT" });
+    expect(html).not.toContain("Tức ngày");
+    expect(html).not.toContain("inviteDateLunar");
+    expect(html).not.toMatch(/Âm Lịch|âm lịch/);
+    // The Gregorian row is untouched: the time still stands over the day number.
+    expect(dateBlock(html)).toMatch(/inviteDateTime[^>]*>\d{2}:\d{2}<\/span><span class="[^"]*inviteDateDay[^>]*>\d{1,2}</);
+  });
+});

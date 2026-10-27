@@ -36,9 +36,11 @@ export function ceremonyCountdownParts(ceremony: InvitationViewModel["ceremony"]
  * Rendered by the root only while `capabilities.clock` exists, which the
  * runtime host provides after mount only, so no current time ever enters
  * server-rendered markup; each clock refresh is an ordinary rerender.
- * Task 029 placement and look: on the ceremonial sheet after the schedule,
- * four unboxed cells (Ngày · Giờ · Phút · Giây) under a gold rule. Once the
- * ceremony has passed it renders nothing. `role="timer"` keeps the
+ * Task 029 look, VH-V2-UI-02 placement: on the ceremonial sheet directly
+ * below the rite's lunar line, its heading over four unboxed cells (Ngày ·
+ * Giờ · Phút · Giây) under a gold rule. The heading is `aria-hidden` because
+ * the same words are already the group's accessible name. Once the ceremony
+ * has passed it renders nothing. `role="timer"` keeps the
  * per-second change out of polite announcements.
  */
 export function Countdown({ ceremony, clock }: { ceremony: InvitationViewModel["ceremony"]; clock: ClockCapabilityV1 }) {
@@ -46,6 +48,9 @@ export function Countdown({ ceremony, clock }: { ceremony: InvitationViewModel["
   if (parts === null) return null;
   return (
     <div className={styles.countdown} role="group" aria-label={COPY.heading} data-countdown="upcoming">
+      <p className={styles.countdownHeading} aria-hidden="true">
+        {COPY.heading}
+      </p>
       <ol className={styles.countdownRow} role="timer">
         {parts.map((part) => (
           <li key={part.unit} className={styles.countdownCell}>

@@ -71,6 +71,11 @@ interface InvitationProps {
  * explicit side, with "HH:mm" and "weekday, DD.MM.YYYY" from that event's own
  * timezone, canonical venue/address, and "Chỉ đường" only for a canonical
  * `mapUrl`. No free-text invitation message (`invitationMessage: false`).
+ *
+ * OWS-V2-UI-02: the "Hôn lễ được cử hành vào lúc" caption is gone, and the
+ * verbatim `ceremony.lunarDateDisplay` sits under the day number beside the
+ * fixed "Tức ngày" label. Nothing here computes a lunar date: a null or blank
+ * canonical value simply leaves the line out.
  */
 export function Invitation({ number, people, ceremony, ceremonyDate, cards, guestDisplayName }: InvitationProps) {
   const multiSide = cards.length > 1;
@@ -93,7 +98,6 @@ export function Invitation({ number, people, ceremony, ceremonyDate, cards, gues
         </div>
 
         <div className={styles.inviteDate}>
-          <div className={styles.inviteDateCaption}>{COPY.invitation.dateCaption}</div>
           <div className={styles.inviteDateRow}>
             <span className={styles.inviteDateSide}>{ceremonyDate.weekday}</span>
             <span className={styles.inviteDateCenter}>
@@ -106,6 +110,11 @@ export function Invitation({ number, people, ceremony, ceremonyDate, cards, gues
               {ceremonyDate.year}
             </span>
           </div>
+          {present(ceremony.lunarDateDisplay) ? (
+            <div className={styles.inviteDateLunar}>
+              {COPY.invitation.lunarPrefix} {ceremony.lunarDateDisplay}
+            </div>
+          ) : null}
         </div>
       </div>
 
