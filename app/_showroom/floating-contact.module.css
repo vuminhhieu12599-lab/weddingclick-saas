@@ -72,47 +72,49 @@
 }
 
 /*
- * The attention wiggle: about half a second of movement at the start of a
- * nine-second cycle, then a long rest. The second button follows a beat later
- * so the pair never moves in lockstep. Automatic motion only — the hover and
- * press responses above stay, since they answer the visitor's own action.
+ * WC-SHOWROOM-CONTACT-02 — the attention wiggle, every three seconds: 0.42s of
+ * movement (the first 14% of the cycle) and 2.58s of complete stillness. The
+ * second button starts half a second later, so the two never shake together.
+ * Automatic motion only — the hover and press responses above stay, since they
+ * answer the visitor's own action.
  */
 @media (prefers-reduced-motion: no-preference) {
   .button {
-    animation: sr-contact-wiggle 9s ease-in-out 3s infinite;
+    animation: sr-contact-wiggle 3s ease-in-out 1s infinite;
   }
 
   .button + .button {
-    animation-delay: 3.4s;
+    animation-delay: 1.5s;
   }
 }
 
 @keyframes sr-contact-wiggle {
-  0%,
-  100% {
+  0% {
     rotate: 0deg;
     scale: 1;
   }
 
-  1.5% {
-    rotate: -9deg;
-    scale: 1.06;
-  }
-
   3% {
-    rotate: 8deg;
-  }
-
-  4.5% {
-    rotate: -6deg;
+    rotate: -8deg;
+    scale: 1.05;
   }
 
   6% {
-    rotate: 4deg;
-    scale: 1.03;
+    rotate: 7deg;
   }
 
-  7.5% {
+  9% {
+    rotate: -5deg;
+  }
+
+  12% {
+    rotate: 3deg;
+    scale: 1.02;
+  }
+
+  /* Still from here to the end of the cycle: 2.58s of rest, no vibration. */
+  14%,
+  100% {
     rotate: 0deg;
     scale: 1;
   }

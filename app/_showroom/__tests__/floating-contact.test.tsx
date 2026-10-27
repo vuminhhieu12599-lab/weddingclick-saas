@@ -27,13 +27,15 @@ describe("WC-SHOWROOM-CONTACT-01 the two buttons", () => {
     expect(html).not.toContain("0901 234 567");
   });
 
-  it("Messenger links the Product Owner's profile URL verbatim, safely in a new tab", () => {
-    expect(WEDDINGCLICK_MESSENGER_URL).toBe("https://www.facebook.com/profile.php?id=61582288501879");
+  it("Messenger opens the conversation deep link for the Product Owner's id, safely in a new tab", () => {
+    // WC-SHOWROOM-CONTACT-02: `m.me/<id>` built from the id the Product Owner supplied,
+    // with no other Facebook address left behind.
+    expect(WEDDINGCLICK_MESSENGER_URL).toBe("https://m.me/61582288501879");
     const html = render();
     expect(html).toContain(`href="${WEDDINGCLICK_MESSENGER_URL}"`);
-    // No invented m.me deep link, and nothing claims the profile opens a chat thread.
-    expect(html).not.toMatch(/m\.me|messenger\.com/);
-    expect(html).not.toMatch(/nhắn tin|chat ngay/i);
+    expect(html).not.toMatch(/facebook\.com|profile\.php/);
+    // The destination is unverified, so the label still only offers contact.
+    expect(html).not.toMatch(/nhắn tin ngay|chat ngay/i);
     expect(html.match(/target="_blank" rel="noopener noreferrer"/g)).toHaveLength(2);
   });
 
@@ -77,13 +79,22 @@ describe("WC-SHOWROOM-CONTACT-01 placement", () => {
     // Native <dialog> modals render in the top layer, so no z-index can cover them.
   });
 
-  it("the attention motion is automatic only without a reduced-motion preference", () => {
+  it("wiggles every three seconds, staggered, and only without a reduced-motion preference", () => {
     const noPreference = /@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}/.exec(css)?.[0] ?? "";
-    expect(noPreference).toMatch(/animation: sr-contact-wiggle 9s ease-in-out 3s infinite;/);
-    // The only `animation` declaration in the file is inside that block.
+    // WC-SHOWROOM-CONTACT-02: a 3s cycle for both buttons, the second half a second behind.
+    expect(noPreference).toMatch(/\.button \{\s*animation: sr-contact-wiggle 3s ease-in-out 1s infinite;/);
+    expect(noPreference).toMatch(/\.button \+ \.button \{\s*animation-delay: 1\.5s;/);
+    // The only `animation` declaration in the file is inside that block, so `reduce` gets none.
     expect(css.replace(noPreference, "")).not.toMatch(/\banimation:/);
-    // It wiggles briefly and then rests: the movement ends at 7.5% of a 9s cycle.
-    expect(css).toMatch(/7\.5% \{\s*rotate: 0deg;\s*scale: 1;/);
+    // It moves for the first 14% of the cycle (0.42s) and is still for the other 2.58s.
+    const frames = [...css.matchAll(/(?:^|\n)\s*([\d.]+)%(?:,\n\s*([\d.]+)%)? \{/g)].flatMap((m) => [m[1], m[2]]);
+    expect(frames.filter((f) => f !== undefined).map(Number).sort((a, b) => a - b)).toStrictEqual([0, 3, 6, 9, 12, 14, 100]);
+    expect(css).toMatch(/14%,\n\s*100% \{\s*rotate: 0deg;\s*scale: 1;/);
+    // Restrained: no rotation past 8deg and no scale past 1.05.
+    const rotations = [...css.matchAll(/rotate: (-?[\d.]+)deg;/g)].map((m) => Math.abs(Number(m[1])));
+    expect(Math.max(...rotations)).toBeLessThanOrEqual(8);
+    const scales = [...css.matchAll(/scale: ([\d.]+);/g)].map((m) => Number(m[1]));
+    expect(Math.max(...scales)).toBeLessThanOrEqual(1.05);
     // Hover and press answer the visitor's own action, so they stay.
     expect(css).toMatch(/\.button:active \{\s*transform: scale\(0\.94\);/);
   });

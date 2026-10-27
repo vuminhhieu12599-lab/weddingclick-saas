@@ -2,15 +2,18 @@ import type { ShowroomContact } from "../../lib/showroom/showroom-contact";
 import styles from "./floating-contact.module.css";
 
 /**
- * The business Facebook profile, exactly as the Product Owner gave it. It is a
- * public page address, not a secret and not an environment value, and it is
- * used by this dock alone — `lib/showroom/showroom-contact.ts` stays the
- * env-driven Zalo/hotline configuration it was, untouched.
+ * The business Messenger conversation, built from the Facebook id the Product
+ * Owner supplied. It is a public address, not a secret and not an environment
+ * value, and it is used by this dock alone — `lib/showroom/showroom-contact.ts`
+ * stays the env-driven Zalo/hotline configuration it was, untouched.
  *
- * It opens the profile. It is NOT an `m.me` chat deep link, and no label here
- * promises that it starts a conversation.
+ * `m.me/<id>` is Facebook's own deep link and is meant to open the chat with
+ * that account. WC-SHOWROOM-CONTACT-02: that destination has NOT been opened
+ * and confirmed against Facebook here, so nothing claims it is verified; the
+ * Product Owner confirms it manually on the Preview. The label stays the
+ * modest "Liên hệ qua Messenger".
  */
-export const WEDDINGCLICK_MESSENGER_URL = "https://www.facebook.com/profile.php?id=61582288501879";
+export const WEDDINGCLICK_MESSENGER_URL = "https://m.me/61582288501879";
 
 /**
  * Zalo's blue speech bubble with its "Z". Brand colour and shape only, drawn
