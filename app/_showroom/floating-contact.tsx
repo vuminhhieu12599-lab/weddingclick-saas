@@ -1,4 +1,4 @@
-import type { ShowroomContact } from "../../lib/showroom/showroom-contact";
+import type { ShowroomContact, ShowroomContactChannel } from "../../lib/showroom/showroom-contact";
 import styles from "./floating-contact.module.css";
 
 /**
@@ -16,17 +16,33 @@ import styles from "./floating-contact.module.css";
 export const WEDDINGCLICK_MESSENGER_URL = "https://m.me/61582288501879";
 
 /**
- * Zalo's blue speech bubble with its "Z". Brand colour and shape only, drawn
- * here — no Zalo logo artwork is bundled.
+ * WC-SHOWROOM-CONTACT-03: the two destinations for the one configured number.
+ *
+ * `zalo.me/<phone>` is Zalo's own link format and is what hands off to the app
+ * on a phone; `chat.zalo.me/?phone=<phone>` is the Zalo Web conversation, which
+ * is what a desktop browser can actually open — `zalo.me/<phone>` there only
+ * shows a profile page. The number is read back from the canonical href rather
+ * than configured a second time, so `getShowroomContact()` stays the one source.
+ */
+export function zaloChatLinks(zalo: ShowroomContactChannel): { readonly app: string; readonly web: string } {
+  const phone = /^https:\/\/zalo\.me\/(\d+)$/.exec(zalo.href)?.[1];
+  return { app: zalo.href, web: phone === undefined ? zalo.href : `https://chat.zalo.me/?phone=${phone}` };
+}
+
+/**
+ * Zalo's blue bubble with a bold white-on-blue "Z". Brand colour and shape
+ * only, drawn here — no Zalo logo artwork is bundled. The bubble fills the
+ * button and the "Z" fills the bubble, so the mark still reads at 28px on a
+ * phone.
  */
 function ZaloMark() {
   return (
     <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path
         fill="#ffffff"
-        d="M12 3.6c-4.76 0-8.6 3.17-8.6 7.08 0 2.23 1.25 4.22 3.2 5.52-.13.93-.6 2.08-1.6 3.14-.2.21-.06.56.23.53 1.86-.2 3.43-.98 4.5-1.74.72.15 1.48.23 2.27.23 4.76 0 8.6-3.17 8.6-7.68S16.76 3.6 12 3.6Z"
+        d="M12 1.9C6.2 1.9 1.5 5.8 1.5 10.6c0 2.72 1.52 5.14 3.9 6.72-.2 1.09-.69 2.37-1.77 3.45-.34.34-.09.93.39.87 2.26-.29 4.06-1.28 5.16-2.06.9.2 1.85.31 2.82.31 5.8 0 10.5-3.9 10.5-8.7S17.8 1.9 12 1.9Z"
       />
-      <path fill="#0068ff" d="M8.9 8.2h5.3v1.5l-3.3 3.6h3.4v1.6H8.6v-1.5l3.3-3.6H8.9V8.2Z" />
+      <path fill="#0068ff" d="M7 5.9h10v2.2l-6.1 5.3H17v2.2H7v-2.2l6.1-5.3H7V5.9Z" />
     </svg>
   );
 }
@@ -61,21 +77,41 @@ function MessengerMark() {
  * Server-rendered and CSS-only: no client island, no timer, no chat SDK.
  * Mount it outside any invitation renderer.
  */
+function ZaloButton({ zalo }: { readonly zalo: ShowroomContactChannel }) {
+  const links = zaloChatLinks(zalo);
+  const label = "Liên hệ qua Zalo";
+  return (
+    <>
+      {/*
+       * Phones: the app link, navigated in this tab. A universal / app link
+       * only hands off to the installed app from a top-level navigation —
+       * opening it in a new tab or an in-app webview is what leaves the
+       * visitor on Zalo's "get the app" page instead of in the conversation.
+       * With no app installed the same URL still lands on Zalo's own page, so
+       * the fallback is Zalo, never an app store as the destination.
+       */}
+      <a href={links.app} className={`${styles.button} ${styles.zalo} ${styles.zaloApp}`} aria-label={label} title={label}>
+        <ZaloMark />
+      </a>
+      {/* Desktop: Zalo Web's conversation, in a new tab so the showroom stays open. */}
+      <a
+        href={links.web}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${styles.button} ${styles.zalo} ${styles.zaloWeb}`}
+        aria-label={label}
+        title={label}
+      >
+        <ZaloMark />
+      </a>
+    </>
+  );
+}
+
 export function FloatingContact({ contact }: { readonly contact: ShowroomContact }) {
   return (
     <div className={styles.dock}>
-      {contact.zalo === null ? null : (
-        <a
-          href={contact.zalo.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`${styles.button} ${styles.zalo}`}
-          aria-label="Liên hệ qua Zalo"
-          title="Liên hệ qua Zalo"
-        >
-          <ZaloMark />
-        </a>
-      )}
+      {contact.zalo === null ? null : <ZaloButton zalo={contact.zalo} />}
       <a
         href={WEDDINGCLICK_MESSENGER_URL}
         target="_blank"

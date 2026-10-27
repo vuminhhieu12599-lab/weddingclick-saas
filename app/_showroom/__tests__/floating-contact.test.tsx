@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { resolveShowroomContact } from "../../../lib/showroom/showroom-contact";
-import { FloatingContact, WEDDINGCLICK_MESSENGER_URL } from "../floating-contact";
+import { FloatingContact, WEDDINGCLICK_MESSENGER_URL, zaloChatLinks } from "../floating-contact";
 
 /**
  * WC-SHOWROOM-CONTACT-01 — the floating Zalo / Messenger buttons on the public
@@ -18,13 +18,37 @@ const UNCONFIGURED = resolveShowroomContact({});
 const render = (contact = CONFIGURED) => renderToStaticMarkup(<FloatingContact contact={contact} />);
 
 describe("WC-SHOWROOM-CONTACT-01 the two buttons", () => {
-  it("Zalo reuses the one configured business link, never a second copy of the number", () => {
+  it("Zalo reuses the one configured business number, never a second configuration of it", () => {
     const html = render();
     expect(CONFIGURED.zalo?.href).toBe("https://zalo.me/0901234567");
+    // WC-SHOWROOM-CONTACT-03: both destinations are derived from that one href.
+    expect(zaloChatLinks(CONFIGURED.zalo!)).toStrictEqual({
+      app: "https://zalo.me/0901234567",
+      web: "https://chat.zalo.me/?phone=0901234567",
+    });
     expect(html).toContain('href="https://zalo.me/0901234567"');
-    // The number is in the link and nowhere else: no visible phone text, no duplicate.
-    expect(html.match(/0901234567/g)).toHaveLength(1);
+    expect(html).toContain('href="https://chat.zalo.me/?phone=0901234567"');
+    // The number appears only inside those two links: no visible phone text.
+    expect(html.match(/0901234567/g)).toHaveLength(2);
     expect(html).not.toContain("0901 234 567");
+  });
+
+  it("WC-SHOWROOM-CONTACT-03: the app link navigates in this tab, the web link opens a new one", () => {
+    const html = render();
+    const anchors = [...html.matchAll(/<a ([^>]*)>/g)].map((match) => match[1]);
+    expect(anchors).toHaveLength(3);
+    const app = anchors.find((a) => a.includes("https://zalo.me/")) ?? "";
+    const web = anchors.find((a) => a.includes("chat.zalo.me")) ?? "";
+    // A universal link only hands off to the app from a top-level navigation.
+    expect(app).not.toMatch(/target=/);
+    expect(web).toContain('target="_blank" rel="noopener noreferrer"');
+    // Neither destination is an app store.
+    expect(html).not.toMatch(/play\.google\.com|apps\.apple\.com|itunes\.apple\.com|\/store\//);
+  });
+
+  it("an unparsable Zalo href falls back to that href for both, never to a guessed number", () => {
+    const odd = { display: "0901 234 567", href: "https://zalo.me/oa/weddingclick" };
+    expect(zaloChatLinks(odd)).toStrictEqual({ app: odd.href, web: odd.href });
   });
 
   it("Messenger opens the conversation deep link for the Product Owner's id, safely in a new tab", () => {
@@ -43,13 +67,22 @@ describe("WC-SHOWROOM-CONTACT-01 the two buttons", () => {
     const html = render();
     expect(html).toContain('aria-label="Liên hệ qua Zalo"');
     expect(html).toContain('aria-label="Liên hệ qua Messenger"');
-    expect(html.match(/aria-hidden="true"/g)).toHaveLength(2);
+    // One mark per anchor: the two Zalo buttons (one shown per device) and Messenger.
+    expect(html.match(/aria-hidden="true"/g)).toHaveLength(3);
+  });
+
+  it("exactly one Zalo button is reachable: the other device's link is display:none", () => {
+    const css = readFileSync(join(__dirname, "..", "floating-contact.module.css"), "utf8");
+    // Default is the desktop web conversation; a phone (no hover, coarse pointer) swaps to the app link.
+    expect(css).toMatch(/\.zaloApp \{\s*display: none;\s*\}/);
+    expect(css).toMatch(/@media \(hover: none\) and \(pointer: coarse\) \{\s*\.zaloApp \{\s*display: flex;\s*\}\s*\.zaloWeb \{\s*display: none;\s*\}/);
   });
 
   it("no configured Zalo number → no Zalo button, and Messenger still stands alone", () => {
     expect(UNCONFIGURED.zalo).toBeNull();
     const html = render(UNCONFIGURED);
     expect(html).not.toMatch(/zalo\.me|Liên hệ qua Zalo/);
+    expect(html).not.toContain("chat.zalo.me");
     expect(html).toContain(`href="${WEDDINGCLICK_MESSENGER_URL}"`);
     expect(html.match(/<a /g)).toHaveLength(1);
   });
@@ -83,7 +116,7 @@ describe("WC-SHOWROOM-CONTACT-01 placement", () => {
     const noPreference = /@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}/.exec(css)?.[0] ?? "";
     // WC-SHOWROOM-CONTACT-02: a 3s cycle for both buttons, the second half a second behind.
     expect(noPreference).toMatch(/\.button \{\s*animation: sr-contact-wiggle 3s ease-in-out 1s infinite;/);
-    expect(noPreference).toMatch(/\.button \+ \.button \{\s*animation-delay: 1\.5s;/);
+    expect(noPreference).toMatch(/\.messenger \{\s*animation-delay: 1\.5s;/);
     // The only `animation` declaration in the file is inside that block, so `reduce` gets none.
     expect(css.replace(noPreference, "")).not.toMatch(/\banimation:/);
     // It moves for the first 14% of the cycle (0.42s) and is still for the other 2.58s.

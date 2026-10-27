@@ -54,6 +54,30 @@
   background: #0068ff;
 }
 
+/*
+ * WC-SHOWROOM-CONTACT-03 — one Zalo destination per device class, chosen in
+ * CSS so the markup stays server-rendered and no script is needed. The hidden
+ * one is `display: none`, so it is out of the tab order and silent to
+ * assistive technology; exactly one Zalo button is ever reachable.
+ *
+ * Default (and anything that cannot answer the query) is the desktop web
+ * conversation. A device with no hover and a coarse pointer — a phone or
+ * tablet — gets the app link instead.
+ */
+.zaloApp {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .zaloApp {
+    display: flex;
+  }
+
+  .zaloWeb {
+    display: none;
+  }
+}
+
 .messenger {
   background: linear-gradient(145deg, #00b2ff 0%, #006aff 28%, #a033ff 62%, #ff5280 86%, #ff7061 100%);
 }
@@ -83,7 +107,11 @@
     animation: sr-contact-wiggle 3s ease-in-out 1s infinite;
   }
 
-  .button + .button {
+  /*
+   * By class, not by sibling order: the dock now carries two Zalo anchors of
+   * which only one is displayed, so `+` would have staggered the wrong pair.
+   */
+  .messenger {
     animation-delay: 1.5s;
   }
 }
