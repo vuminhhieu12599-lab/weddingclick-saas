@@ -423,7 +423,7 @@
 /* ---------------------------------------------------------------------- */
 
 .messageBand {
-  padding: 38px 30px 26px;
+  padding: 34px 24px 24px;
   background-color: var(--ee-background);
   text-align: center;
 }
@@ -433,7 +433,7 @@
 .guestKicker {
   margin-bottom: 10px;
   font-family: var(--ee-sans);
-  font-size: 10px;
+  font-size: 11.5px;
   font-weight: 400;
   letter-spacing: 0.3em;
   color: var(--ee-bronze);
@@ -441,7 +441,7 @@
 
 .guestLine {
   font-family: var(--ee-serif);
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1.5;
   color: var(--ee-text);
   overflow-wrap: break-word;
@@ -456,7 +456,7 @@
 /* ---------------------------------------------------------------------- */
 
 .familiesBand {
-  padding: 0 20px 32px;
+  padding: 0 16px 32px;
   background-color: var(--ee-background);
 }
 
@@ -489,7 +489,7 @@
   position: relative;
   flex: 1 1 0;
   min-width: 0;
-  padding: 0 14px;
+  padding: 0 10px;
 }
 
 .familyDivider {
@@ -505,7 +505,7 @@
 .familySide {
   margin-bottom: 10px;
   font-family: var(--ee-sans);
-  font-size: 10px;
+  font-size: 11.5px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--ee-bronze);
@@ -513,7 +513,7 @@
 
 .familyName {
   font-family: var(--ee-serif);
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.75;
   color: var(--ee-accent);
   overflow-wrap: break-word;
@@ -541,7 +541,7 @@
 .ceremonyTitle {
   margin-bottom: 20px;
   font-family: var(--ee-sans);
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 0.34em;
   text-transform: uppercase;
   color: var(--ee-accent);
@@ -559,7 +559,7 @@
 
 .ceremonyDay {
   font-family: var(--ee-serif);
-  font-size: 46px;
+  font-size: 52px;
   line-height: 1;
   color: var(--ee-accent);
 }
@@ -572,7 +572,7 @@
   padding-left: 16px;
   border-left: 1px solid color-mix(in srgb, var(--ee-gold) 35%, transparent);
   font-family: var(--ee-sans);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.6;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -583,7 +583,7 @@
   margin-top: 16px;
   font-family: var(--ee-serif);
   font-style: italic;
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--ee-secondary);
 }
 
@@ -599,7 +599,7 @@
 .ceremonyMeta {
   margin-top: 6px;
   font-family: var(--ee-sans);
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.14em;
   color: var(--ee-accent);
 }
@@ -703,7 +703,7 @@
 .calendarWeekday {
   padding: 0;
   line-height: 14px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 400;
   letter-spacing: 0.04em;
   color: color-mix(in srgb, var(--ee-surface) 50%, transparent);
@@ -784,7 +784,7 @@
 
 .eventTime {
   font-family: var(--ee-sans);
-  font-size: 12px;
+  font-size: 13.5px;
   letter-spacing: 0.1em;
   color: var(--ee-bronze);
 }
@@ -818,7 +818,7 @@
 .eventAddress {
   margin-top: 6px;
   font-family: var(--ee-serif);
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.6;
   color: var(--ee-secondary);
   overflow-wrap: break-word;
@@ -831,7 +831,7 @@
   padding: 0 20px;
   border: 1px solid var(--ee-accent);
   font-family: var(--ee-sans);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 44px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1601,7 +1601,7 @@
 
 .countdownLabel {
   font-family: var(--ee-sans);
-  font-size: 9px;
+  font-size: 10.5px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ee-bronze);

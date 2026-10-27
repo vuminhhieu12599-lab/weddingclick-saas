@@ -1496,13 +1496,21 @@ describe("I. countdown (VH-02B-M1)", () => {
     expect(html).not.toMatch(/countdown|role="timer"/i);
   });
 
-  it("upcoming: the four Task 029 cells from ceremony.startsAt and clock.nowEpochMs, after the schedule", async () => {
+  it("upcoming: the four Task 029 cells from ceremony.startsAt and clock.nowEpochMs, under their heading in the rite", async () => {
     const fixture = await vhFixture({ variant: "GROOM" });
     const html = renderWith(fixture, { clock: clockAt("2026-10-16T00:58:57Z") });
     const cells = [...html.matchAll(/countdownValue[^"]*">(\d+)<\/span><span class="[^"]*countdownLabel[^"]*">([^<]+)</g)].map((match) => `${match[1]} ${match[2]}`);
     expect(cells).toStrictEqual(["2 Ngày", "1 Giờ", "1 Phút", "3 Giây"]);
     expect(html).toContain('role="timer"');
-    expect(html.indexOf("Đón khách")).toBeLessThan(html.indexOf('data-countdown="upcoming"'));
+    // VH-V2-UI-02: the heading shows above the cells, and repeats the group's
+    // accessible name, so it is hidden from assistive technology.
+    expect(html).toMatch(/countdownHeading[^"]*" aria-hidden="true">Đếm ngược ngày chung đôi</);
+    expect(html.indexOf("Đếm ngược ngày chung đôi")).toBeLessThan(html.indexOf("countdownValue"));
+    // VH-V2-UI-02 placement: inside the rite, after its lunar line, and before
+    // the venue cards and the timeline that follow on the same sheet.
+    expect(html.indexOf("riteLunar")).toBeLessThan(html.indexOf('data-countdown="upcoming"'));
+    expect(html.indexOf('data-countdown="upcoming"')).toBeLessThan(html.indexOf("venueTitle"));
+    expect(html.indexOf('data-countdown="upcoming"')).toBeLessThan(html.indexOf("Đón khách"));
     expect(html.indexOf('data-countdown="upcoming"')).toBeLessThan(html.indexOf("vh-love-story-heading"));
   });
 

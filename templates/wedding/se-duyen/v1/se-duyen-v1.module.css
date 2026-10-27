@@ -1136,7 +1136,7 @@
 
 .inviteRite {
   margin: 0;
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.42em;
   text-transform: uppercase;
@@ -1214,7 +1214,7 @@
 }
 
 .inviteWeekday {
-  font-size: 9px;
+  font-size: 10.5px;
   font-weight: 500;
   letter-spacing: 0.38em;
   text-indent: 0.19em;
@@ -1238,7 +1238,7 @@
   position: relative;
   margin-top: 15px;
   padding-top: 14px;
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.3em;
   text-indent: 0.15em;
@@ -1266,7 +1266,7 @@
 /* Static companion label, never presented as computed (types.ts). */
 .inviteLunar {
   margin: 13px 0 0;
-  font-size: 10px;
+  font-size: 11.5px;
   font-weight: 300;
   letter-spacing: 0.08em;
   font-style: italic;
@@ -1622,7 +1622,7 @@
 
 .houseLabel {
   margin: 0;
-  font-size: 9.5px;
+  font-size: 10.5px;
   font-weight: 500;
   letter-spacing: 0.34em;
   text-indent: 0.17em;
@@ -1651,7 +1651,7 @@
 
 .houseAddress {
   margin: 14px 0 0;
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 300;
   line-height: 1.75;
   letter-spacing: 0.004em;
@@ -2421,7 +2421,7 @@
 }
 
 .countdownDialLabel {
-  font-size: 8.5px;
+  font-size: 9.5px;
   font-weight: 500;
   letter-spacing: 0.3em;
   text-indent: 0.15em;
