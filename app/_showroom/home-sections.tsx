@@ -6,6 +6,7 @@ import type { ShowroomTemplateEntry } from "../../lib/showroom/showroom-catalog"
 import type { ShowroomContact } from "../../lib/showroom/showroom-contact";
 import type { ShowroomAddonOffer, ShowroomPackageOffer } from "../../lib/showroom/showroom-pricing";
 import { SHOWROOM_SECTION_IDS, SHOWROOM_TEMPLATES_HREF, consultationHref } from "../../lib/showroom/showroom-routes";
+import { SectionLink } from "./section-link";
 import { ContactActions } from "./contact-actions";
 import { ShowroomIcons } from "./icons";
 import { PhoneMockup } from "./phone-mockup";
@@ -35,9 +36,9 @@ export function Hero({ templates, startingPriceVnd }: { readonly templates: read
             trước khi gửi tới khách mời.
           </p>
           <div className={`${styles.heroActions} ${styles.rise} ${styles.riseDelay3}`}>
-            <Link href={SHOWROOM_TEMPLATES_HREF} className={`${styles.button} ${styles.buttonPrimary}`}>
+            <SectionLink href={SHOWROOM_TEMPLATES_HREF} className={`${styles.button} ${styles.buttonPrimary}`}>
               Khám phá mẫu thiệp
-            </Link>
+            </SectionLink>
             <Link href={consultationHref()} className={`${styles.button} ${styles.buttonGhost}`}>
               Tư vấn miễn phí
             </Link>
@@ -251,9 +252,9 @@ export function ClosingCta({ contact }: { readonly contact: ShowroomContact }) {
           </h2>
           <p className={styles.closingLead}>Chọn mẫu bạn thích hoặc trò chuyện với chúng tôi để được gợi ý miễn phí.</p>
           <div className={styles.closingActions}>
-            <Link href={SHOWROOM_TEMPLATES_HREF} className={`${styles.button} ${styles.buttonLight}`}>
+            <SectionLink href={SHOWROOM_TEMPLATES_HREF} className={`${styles.button} ${styles.buttonLight}`}>
               Chọn mẫu thiệp
-            </Link>
+            </SectionLink>
             <ClosingContact contact={contact} />
           </div>
         </div>

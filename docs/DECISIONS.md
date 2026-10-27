@@ -3122,3 +3122,15 @@ Product Owner decision, on `fix/zalo-chat-link` (PR #17), from `04cebc4`. **No m
 4. **Everything else about the dock is unchanged.** One 50px circle, bottom-right inside the safe areas, same shadow, border and `z-index: 20` under the header, the mobile menu and every invitation overlay; the 3s wiggle with its 0.42s movement and its `prefers-reduced-motion: no-preference` gate; hover and press responses. The stagger rule went with the second button.
 
 5. **The mark.** Facebook's "f" in white on Facebook blue `#1877F2`, drawn inline and nudged up so it sits centred in the round button. Brand colour and letterform only — no Facebook logo artwork is bundled.
+
+## WC-SHOWROOM-NAV-01 — Homepage Section Links Are Native Anchors (2026-10-27)
+
+Bug fix on `fix/showroom-section-anchors` from `9093e44`. **No migration, database, API, layout, styling, animation or copy change**, and no new dependency.
+
+1. **Root cause, measured on Production.** Every showroom section link went through `next/link`. The router treats a navigation to the URL the page is already on as a no-op, so the first click scrolled and set the hash and **every click after that did nothing**. Reproduced on https://weddingclick.vercel.app: from the top, "Khám phá mẫu thiệp" scrolled `0 → 1182`; scrolling back and clicking either it or the header's "Mẫu thiệp" then left `scrollY` at `0`. The same held for all four header links locally, so the reported symptom is the second-and-later click, not the first. The target `id`, the markup and `scroll-margin-top: 72px` were all correct.
+
+2. **The fix.** A six-line `app/_showroom/section-link.tsx` renders a native `<a>`, and the links into a homepage section use it: the four header nav items (desktop nav and the `<details>` mobile panel), the footer's section list and its "Quy trình đặt thiệp" link, the hero "Khám phá mẫu thiệp" and the closing "Chọn mẫu thiệp". The browser's own fragment navigation re-runs "scroll to the fragment" on every click, honours `scroll-margin-top`, and from another page loads the homepage already at the section. No scroll framework, no handler, no `useEffect`.
+
+3. **What keeps `next/link`.** Links that can never be same-page — the demo pages' "Mẫu thiệp" and "Xem mẫu khác", and the consultation page's body link — are unchanged and were re-verified to land correctly. The trade is that the shared header and footer now leave `/tu-van` by a document load rather than a client transition; that path was verified to land at the right offset.
+
+4. **Verified by scroll position, not by href.** After the fix, each of the four header links scrolls to its section on the 1st, 2nd and 3rd click; the hero CTA likewise three times; the closing CTA, both footer links and the mobile menu panel at a 500 px viewport all scroll on repeat clicks. Every landing equals the section top minus the 72 px sticky-header margin.
