@@ -1,0 +1,119 @@
+/*
+ * WC-SHOWROOM-CONTACT-01 — floating Zalo / Messenger buttons.
+ *
+ * Mounted as a sibling of the showroom and demo roots, never inside an
+ * invitation renderer, so no template layout or stacking context can clip it.
+ * The z-index deliberately sits below the sticky header (100), the mobile menu
+ * panel (50) and every invitation overlay (90 and the native dialog top
+ * layer), so a gallery lightbox, gift sheet or music control always wins.
+ */
+.dock {
+  position: fixed;
+  z-index: 20;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* The dock itself never catches a tap between the buttons. */
+  pointer-events: none;
+}
+
+.button {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 6px 16px -6px rgba(20, 14, 10, 0.45),
+    0 2px 6px -2px rgba(20, 14, 10, 0.3);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.button:focus-visible {
+  outline: 2px solid #2a211d;
+  outline-offset: 3px;
+}
+
+.icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+}
+
+/* Zalo's blue; Messenger's gradient. Brand colours only — no logo artwork. */
+.zalo {
+  background: #0068ff;
+}
+
+.messenger {
+  background: linear-gradient(145deg, #00b2ff 0%, #006aff 28%, #a033ff 62%, #ff5280 86%, #ff7061 100%);
+}
+
+@media (hover: hover) {
+  .button:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 10px 22px -8px rgba(20, 14, 10, 0.5),
+      0 3px 8px -2px rgba(20, 14, 10, 0.32);
+  }
+}
+
+.button:active {
+  transform: scale(0.94);
+}
+
+/*
+ * The attention wiggle: about half a second of movement at the start of a
+ * nine-second cycle, then a long rest. The second button follows a beat later
+ * so the pair never moves in lockstep. Automatic motion only — the hover and
+ * press responses above stay, since they answer the visitor's own action.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .button {
+    animation: sr-contact-wiggle 9s ease-in-out 3s infinite;
+  }
+
+  .button + .button {
+    animation-delay: 3.4s;
+  }
+}
+
+@keyframes sr-contact-wiggle {
+  0%,
+  100% {
+    rotate: 0deg;
+    scale: 1;
+  }
+
+  1.5% {
+    rotate: -9deg;
+    scale: 1.06;
+  }
+
+  3% {
+    rotate: 8deg;
+  }
+
+  4.5% {
+    rotate: -6deg;
+  }
+
+  6% {
+    rotate: 4deg;
+    scale: 1.03;
+  }
+
+  7.5% {
+    rotate: 0deg;
+    scale: 1;
+  }
+}

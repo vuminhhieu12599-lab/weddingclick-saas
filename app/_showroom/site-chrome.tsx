@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import type { ShowroomContact } from "../../lib/showroom/showroom-contact";
 import { SHOWROOM_SECTION_IDS, consultationHref } from "../../lib/showroom/showroom-routes";
+import { FloatingContact } from "./floating-contact";
 import { ShowroomIcons } from "./icons";
 import { SHOWROOM_FONT_VARIABLES_CLASS_NAME } from "./showroom-fonts";
 import styles from "./showroom.module.css";
@@ -128,16 +129,25 @@ export function SiteFooter({ contact }: { readonly contact: ShowroomContact }) {
   );
 }
 
-/** Root wrapper: showroom fonts, tokens, skip link, header and footer. */
+/**
+ * Root wrapper: showroom fonts, tokens, skip link, header and footer.
+ *
+ * WC-SHOWROOM-CONTACT-01: the floating contact buttons are a sibling of the
+ * styled root, not a child, so the root's `overflow-x: clip` can never clip
+ * them and no showroom stacking context can trap them.
+ */
 export function ShowroomShell({ contact, children }: { readonly contact: ShowroomContact; readonly children: ReactNode }) {
   return (
-    <div className={`${SHOWROOM_FONT_VARIABLES_CLASS_NAME} ${styles.root}`}>
-      <a href="#noi-dung" className={styles.skipLink}>
-        Bỏ qua tới nội dung
-      </a>
-      <SiteHeader />
-      <main id="noi-dung">{children}</main>
-      <SiteFooter contact={contact} />
-    </div>
+    <>
+      <div className={`${SHOWROOM_FONT_VARIABLES_CLASS_NAME} ${styles.root}`}>
+        <a href="#noi-dung" className={styles.skipLink}>
+          Bỏ qua tới nội dung
+        </a>
+        <SiteHeader />
+        <main id="noi-dung">{children}</main>
+        <SiteFooter contact={contact} />
+      </div>
+      <FloatingContact contact={contact} />
+    </>
   );
 }

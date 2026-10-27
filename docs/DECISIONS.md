@@ -3068,3 +3068,23 @@ Presentation checkpoint on `feat/gallery-lightbox` from `b58e018`, at the Produc
 6. **Not changed.** Layouts, crops, palettes, fonts, opening gates, scroll reveals, RSVP, gift, music, timeline, gallery content, COMMON / GROOM / BRIDE resolution, the editor manifests, the catalog and the demo data.
 
 7. **Pre-existing failures, untouched.** The same six Elegant Editorial failures recorded under WC-UI-TYPOGRAPHY-01 item 7 still fail on `weddingclick-v2` for reasons outside this task.
+
+## WC-SHOWROOM-CONTACT-01 — Floating Zalo / Messenger Buttons (2026-10-27)
+
+Public-showroom checkpoint on `feat/showroom-contact-buttons` from `9b155e4`, at the Product Owner's request. **No migration, database, domain, authentication, API or rendering-contract change**, no new dependency, no chat SDK and no tracking script. No invitation renderer, Staff, Customer Portal or Review surface is touched.
+
+1. **One component, two surfaces.** `app/_showroom/floating-contact.tsx` is a server component with its own CSS module; it mounts beside the showroom root in `ShowroomShell` (homepage and `/tu-van`) and beside the demo root in `DemoView` (`/mau-thiep/<template>` and its `nha-trai` / `nha-gai` variants). A test walks `app/**` and asserts those are the only two importers.
+
+2. **Outside the invitation renderer, and outside the styled root.** On a demo page it is a sibling of the demo root, after `DemoInvitationRenderer`, so no renderer changes. In both hosts it sits beside the styled root rather than inside it, because the showroom root carries `overflow-x: clip`, which can clip a fixed descendant.
+
+3. **Zalo reuses the one configured number.** `contact.zalo.href` from `getShowroomContact()`, unchanged — `lib/showroom/showroom-contact.ts` is byte-identical. Not configured → no Zalo button at all, and Messenger stands alone. The number appears once, in the link, never as visible text.
+
+4. **Messenger links the profile, and says so.** `WEDDINGCLICK_MESSENGER_URL` is the Product Owner's exact Facebook profile URL, declared in the component because it is used nowhere else and the contact module is for the env-driven Zalo/hotline configuration. It is **not** an `m.me` deep link; the label is "Liên hệ qua Messenger", so nothing promises a direct chat thread. Both links open in a new tab with `rel="noopener noreferrer"`.
+
+5. **Placement and stacking.** Fixed bottom-right, `calc(16px + env(safe-area-inset-right/bottom, 0px))`, two 50px circles 12px apart; the dock is `pointer-events: none` so only the buttons take taps. `z-index: 20` is deliberately below the sticky header (100), the mobile menu panel (50) and the lowest invitation overlay (90) — and every invitation overlay is a native `<dialog>`, which renders in the top layer, so a lightbox, gift sheet or opening cover always covers the dock. Verified live: with the Vietnamese Heritage album viewer open, `elementFromPoint` over the dock returns the dialog.
+
+6. **Attention motion.** A CSS-only wiggle: roughly half a second of rotate/scale at the start of a nine-second cycle, then rest, with the second button a beat behind. The whole `animation` declaration lives inside `@media (prefers-reduced-motion: no-preference)`, so `reduce` gets no automatic motion at all; hover lift and press-in stay, since they answer the visitor's own action. No JavaScript timer and no animation dependency.
+
+7. **Brand marks are drawn, not bundled.** The Zalo mark is a white speech bubble with a blue "Z" on Zalo blue `#0068FF`; the Messenger mark is the bubble-with-bolt punched through a Messenger gradient with `fill-rule="evenodd"`. These are brand **colours and shapes**, not the registered logo artwork — no third-party logo file is committed. Swapping in official artwork needs the Product Owner to supply it from each brand kit.
+
+8. **Not changed.** The in-flow Zalo / hotline buttons and the footer contact list; showroom layout, copy and template designs; the demo bar, tabs and footer CTAs; every invitation renderer.
