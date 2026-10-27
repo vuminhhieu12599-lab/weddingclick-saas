@@ -3108,3 +3108,17 @@ Public-showroom checkpoint on `fix/zalo-chat-link` from `04cebc4`, at the Produc
 5. **Animation.** Unchanged behaviour — the 3s cycle with its 0.42s wiggle and the `no-preference` gate stand. The only edit is that the stagger now selects `.messenger` by class rather than `.button + .button` by sibling order, because the dock holds two Zalo anchors of which one is hidden.
 
 6. **Not changed.** Messenger's URL, mark, target and `rel`; the in-flow Zalo / hotline buttons and the footer contact list; showroom layout and copy; every invitation renderer; the dock's layering under dialogs.
+
+## WC-SHOWROOM-CONTACT-04 — One Floating Facebook Button (2026-10-27)
+
+Product Owner decision, on `fix/zalo-chat-link` (PR #17), from `04cebc4`. **No migration, database, domain, environment-variable, API or authentication change**, no new dependency, and `lib/showroom/showroom-contact.ts` is still byte-identical.
+
+1. **Messenger becomes Facebook.** The dock's one button now opens `https://www.facebook.com/profile.php?id=61582288501879` — the WeddingClick page — in a new tab with `rel="noopener noreferrer"`, labelled "Xem Facebook WeddingClick". The `m.me` destination and the Messenger mark are gone, and a test asserts no label or markup mentions Messenger or a conversation, so the unverified-chat question from WC-SHOWROOM-CONTACT-02 no longer applies.
+
+2. **The floating Zalo button is withdrawn** until WeddingClick has a Zalo Official Account. It is removed outright, not hidden: no anchor renders, and the WC-SHOWROOM-CONTACT-03 mobile/desktop URL split (`zaloChatLinks`, `.zaloApp` / `.zaloWeb` and the `(hover: none) and (pointer: coarse)` rule) is deleted with it. **The configured number and every other place it appears are untouched** — verified on a build with the number set: the dock carries no Zalo anchor while the homepage still renders its Zalo links four times, in the section calls to action and the footer.
+
+3. **`FloatingContact` no longer takes a prop.** With no Zalo button it needs no contact, so `ShowroomShell` and `DemoView` render `<FloatingContact />`, and `DemoView` no longer calls `getShowroomContact()`.
+
+4. **Everything else about the dock is unchanged.** One 50px circle, bottom-right inside the safe areas, same shadow, border and `z-index: 20` under the header, the mobile menu and every invitation overlay; the 3s wiggle with its 0.42s movement and its `prefers-reduced-motion: no-preference` gate; hover and press responses. The stagger rule went with the second button.
+
+5. **The mark.** Facebook's "f" in white on Facebook blue `#1877F2`, drawn inline and nudged up so it sits centred in the round button. Brand colour and letterform only — no Facebook logo artwork is bundled.

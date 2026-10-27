@@ -1,5 +1,5 @@
 /*
- * WC-SHOWROOM-CONTACT-01 — floating Zalo / Messenger buttons.
+ * WC-SHOWROOM-CONTACT-01 — the floating contact button.
  *
  * Mounted as a sibling of the showroom and demo roots, never inside an
  * invitation renderer, so no template layout or stacking context can clip it.
@@ -49,37 +49,9 @@
   height: 28px;
 }
 
-/* Zalo's blue; Messenger's gradient. Brand colours only — no logo artwork. */
-.zalo {
-  background: #0068ff;
-}
-
-/*
- * WC-SHOWROOM-CONTACT-03 — one Zalo destination per device class, chosen in
- * CSS so the markup stays server-rendered and no script is needed. The hidden
- * one is `display: none`, so it is out of the tab order and silent to
- * assistive technology; exactly one Zalo button is ever reachable.
- *
- * Default (and anything that cannot answer the query) is the desktop web
- * conversation. A device with no hover and a coarse pointer — a phone or
- * tablet — gets the app link instead.
- */
-.zaloApp {
-  display: none;
-}
-
-@media (hover: none) and (pointer: coarse) {
-  .zaloApp {
-    display: flex;
-  }
-
-  .zaloWeb {
-    display: none;
-  }
-}
-
-.messenger {
-  background: linear-gradient(145deg, #00b2ff 0%, #006aff 28%, #a033ff 62%, #ff5280 86%, #ff7061 100%);
+/* Facebook blue. Brand colour only — no logo artwork. */
+.facebook {
+  background: #1877f2;
 }
 
 @media (hover: hover) {
@@ -97,22 +69,13 @@
 
 /*
  * WC-SHOWROOM-CONTACT-02 — the attention wiggle, every three seconds: 0.42s of
- * movement (the first 14% of the cycle) and 2.58s of complete stillness. The
- * second button starts half a second later, so the two never shake together.
+ * movement (the first 14% of the cycle) and 2.58s of complete stillness.
  * Automatic motion only — the hover and press responses above stay, since they
  * answer the visitor's own action.
  */
 @media (prefers-reduced-motion: no-preference) {
   .button {
     animation: sr-contact-wiggle 3s ease-in-out 1s infinite;
-  }
-
-  /*
-   * By class, not by sibling order: the dock now carries two Zalo anchors of
-   * which only one is displayed, so `+` would have staggered the wrong pair.
-   */
-  .messenger {
-    animation-delay: 1.5s;
   }
 }
 

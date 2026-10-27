@@ -147,7 +147,7 @@ export function ShowroomShell({ contact, children }: { readonly contact: Showroo
         <main id="noi-dung">{children}</main>
         <SiteFooter contact={contact} />
       </div>
-      <FloatingContact contact={contact} />
+      <FloatingContact />
     </>
   );
 }
