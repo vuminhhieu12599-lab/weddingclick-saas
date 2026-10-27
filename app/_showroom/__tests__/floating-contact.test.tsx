@@ -4,71 +4,61 @@ import { join, relative } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { resolveShowroomContact } from "../../../lib/showroom/showroom-contact";
-import { FloatingContact, WEDDINGCLICK_MESSENGER_URL } from "../floating-contact";
+import { FloatingContact, WEDDINGCLICK_FACEBOOK_URL } from "../floating-contact";
 
 /**
- * WC-SHOWROOM-CONTACT-01 — the floating Zalo / Messenger buttons on the public
- * showroom. The Zalo channel itself (normalization, "not configured") is
- * covered by showroom-pricing-contact.test.ts and its module is unchanged;
- * this file covers only the two buttons, where they mount and how they behave.
+ * WC-SHOWROOM-CONTACT-04 — the floating contact button on the public showroom.
+ * One button, the WeddingClick Facebook page: the Zalo button is withdrawn
+ * until there is a Zalo Official Account, and the configured number itself is
+ * untouched, which showroom-pricing-contact.test.ts still covers.
  */
-const CONFIGURED = resolveShowroomContact({ WEDDINGCLICK_CONTACT_ZALO_PHONE: "0901 234 567" });
-const UNCONFIGURED = resolveShowroomContact({});
-const render = (contact = CONFIGURED) => renderToStaticMarkup(<FloatingContact contact={contact} />);
+const render = () => renderToStaticMarkup(<FloatingContact />);
 
-describe("WC-SHOWROOM-CONTACT-01 the two buttons", () => {
-  it("Zalo reuses the one configured business link, never a second copy of the number", () => {
+describe("WC-SHOWROOM-CONTACT-04 the Facebook button", () => {
+  it("links the WeddingClick page verbatim, safely in a new tab", () => {
+    expect(WEDDINGCLICK_FACEBOOK_URL).toBe("https://www.facebook.com/profile.php?id=61582288501879");
     const html = render();
-    expect(CONFIGURED.zalo?.href).toBe("https://zalo.me/0901234567");
-    expect(html).toContain('href="https://zalo.me/0901234567"');
-    // The number is in the link and nowhere else: no visible phone text, no duplicate.
-    expect(html.match(/0901234567/g)).toHaveLength(1);
-    expect(html).not.toContain("0901 234 567");
-  });
-
-  it("Messenger opens the conversation deep link for the Product Owner's id, safely in a new tab", () => {
-    // WC-SHOWROOM-CONTACT-02: `m.me/<id>` built from the id the Product Owner supplied,
-    // with no other Facebook address left behind.
-    expect(WEDDINGCLICK_MESSENGER_URL).toBe("https://m.me/61582288501879");
-    const html = render();
-    expect(html).toContain(`href="${WEDDINGCLICK_MESSENGER_URL}"`);
-    expect(html).not.toMatch(/facebook\.com|profile\.php/);
-    // The destination is unverified, so the label still only offers contact.
-    expect(html).not.toMatch(/nhắn tin ngay|chat ngay/i);
-    expect(html.match(/target="_blank" rel="noopener noreferrer"/g)).toHaveLength(2);
-  });
-
-  it("accessible labels name each channel, and the marks themselves are decorative", () => {
-    const html = render();
-    expect(html).toContain('aria-label="Liên hệ qua Zalo"');
-    expect(html).toContain('aria-label="Liên hệ qua Messenger"');
-    expect(html.match(/aria-hidden="true"/g)).toHaveLength(2);
-  });
-
-  it("no configured Zalo number → no Zalo button, and Messenger still stands alone", () => {
-    expect(UNCONFIGURED.zalo).toBeNull();
-    const html = render(UNCONFIGURED);
-    expect(html).not.toMatch(/zalo\.me|Liên hệ qua Zalo/);
-    expect(html).toContain(`href="${WEDDINGCLICK_MESSENGER_URL}"`);
+    expect(html).toContain(`href="${WEDDINGCLICK_FACEBOOK_URL}"`);
+    expect(html).toContain('target="_blank" rel="noopener noreferrer"');
+    // One button in the dock, and its mark is decorative.
     expect(html.match(/<a /g)).toHaveLength(1);
+    expect(html.match(/aria-hidden="true"/g)).toHaveLength(1);
+  });
+
+  it("names the page, and never promises a Messenger conversation", () => {
+    const html = render();
+    expect(html).toContain('aria-label="Xem Facebook WeddingClick"');
+    expect(html).not.toMatch(/m\.me|messenger|nhắn tin|chat/i);
+  });
+
+  it("the Zalo button is gone, with no hidden anchor and no leftover link logic", () => {
+    const html = render();
+    expect(html).not.toMatch(/zalo/i);
+    // The comments still explain why the Zalo button is withdrawn; the code itself has nothing left of it.
+    const code = readFileSync(join(__dirname, "..", "floating-contact.tsx"), "utf8");
+    const executable = code.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+    expect(executable).not.toMatch(/zalo|ShowroomContact/i);
+    const css = readFileSync(join(__dirname, "..", "floating-contact.module.css"), "utf8");
+    expect(css).not.toMatch(/zalo|messenger|hover: none/i);
   });
 
   it("is server-rendered and brings no chat SDK, timer or tracking script", () => {
     const code = readFileSync(join(__dirname, "..", "floating-contact.tsx"), "utf8");
-    expect(code).not.toMatch(/"use client"|useState|useEffect|setInterval|setTimeout|<script|fbq|gtag|connect\.facebook\.net|zalo\.sdk/);
+    expect(code).not.toMatch(/"use client"|useState|useEffect|setInterval|setTimeout|<script|fbq|gtag|connect\.facebook\.net/);
   });
 });
 
-describe("WC-SHOWROOM-CONTACT-01 placement", () => {
+describe("WC-SHOWROOM-CONTACT-04 placement", () => {
   const css = readFileSync(join(__dirname, "..", "floating-contact.module.css"), "utf8");
 
-  it("sits in the bottom-right corner inside the safe areas, with 50px touch targets", () => {
+  it("sits in the bottom-right corner inside the safe areas, with a 50px touch target", () => {
     expect(css).toMatch(/\.dock \{[^}]*position: fixed;/);
     expect(css).toMatch(/right: calc\(16px \+ env\(safe-area-inset-right, 0px\)\);/);
     expect(css).toMatch(/bottom: calc\(16px \+ env\(safe-area-inset-bottom, 0px\)\);/);
     expect(css).toMatch(/\.button \{[^}]*width: 50px;\s*height: 50px;/);
-    // Nothing is positioned off the right edge, so no page can overflow sideways.
+    // The shadow and the round shape are unchanged.
+    expect(css).toMatch(/\.button \{[^}]*border-radius: 50%;/);
+    expect(css).toMatch(/\.button \{[^}]*box-shadow:/);
     expect(css).not.toMatch(/right:\s*-|left:\s*100/);
   });
 
@@ -79,16 +69,12 @@ describe("WC-SHOWROOM-CONTACT-01 placement", () => {
     // Native <dialog> modals render in the top layer, so no z-index can cover them.
   });
 
-  it("wiggles every three seconds, staggered, and only without a reduced-motion preference", () => {
+  it("still wiggles every three seconds, and only without a reduced-motion preference", () => {
     const noPreference = /@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}/.exec(css)?.[0] ?? "";
-    // WC-SHOWROOM-CONTACT-02: a 3s cycle for both buttons, the second half a second behind.
     expect(noPreference).toMatch(/\.button \{\s*animation: sr-contact-wiggle 3s ease-in-out 1s infinite;/);
-    expect(noPreference).toMatch(/\.button \+ \.button \{\s*animation-delay: 1\.5s;/);
     // The only `animation` declaration in the file is inside that block, so `reduce` gets none.
     expect(css.replace(noPreference, "")).not.toMatch(/\banimation:/);
     // It moves for the first 14% of the cycle (0.42s) and is still for the other 2.58s.
-    const frames = [...css.matchAll(/(?:^|\n)\s*([\d.]+)%(?:,\n\s*([\d.]+)%)? \{/g)].flatMap((m) => [m[1], m[2]]);
-    expect(frames.filter((f) => f !== undefined).map(Number).sort((a, b) => a - b)).toStrictEqual([0, 3, 6, 9, 12, 14, 100]);
     expect(css).toMatch(/14%,\n\s*100% \{\s*rotate: 0deg;\s*scale: 1;/);
     // Restrained: no rotation past 8deg and no scale past 1.05.
     const rotations = [...css.matchAll(/rotate: (-?[\d.]+)deg;/g)].map((m) => Math.abs(Number(m[1])));
@@ -100,20 +86,7 @@ describe("WC-SHOWROOM-CONTACT-01 placement", () => {
   });
 });
 
-describe("WC-SHOWROOM-CONTACT-01 page scope", () => {
-  const read = (...parts: string[]) => readFileSync(join(__dirname, "..", "..", ...parts), "utf8");
-
-  it("the showroom shell mounts it beside its root, so the homepage and /tu-van carry it", () => {
-    const shell = read("_showroom", "site-chrome.tsx");
-    expect(shell).toMatch(/<\/div>\s*<FloatingContact contact=\{contact\} \/>\s*<\/>/);
-  });
-
-  it("the demo pages mount it outside the invitation renderer, which is untouched", () => {
-    const demo = read("mau-thiep", "_components", "demo-view.tsx");
-    expect(demo).toMatch(/<\/div>\s*<FloatingContact contact=\{contact\} \/>\s*<\/>/);
-    expect(demo.indexOf("<DemoInvitationRenderer")).toBeLessThan(demo.indexOf("<FloatingContact"));
-  });
-
+describe("WC-SHOWROOM-CONTACT-04 page scope", () => {
   it("exactly two files import it: no invitation, Staff, Portal or Review surface does", () => {
     const appDir = join(__dirname, "..", "..");
     const importers: string[] = [];
@@ -129,5 +102,11 @@ describe("WC-SHOWROOM-CONTACT-01 page scope", () => {
     };
     walk(appDir);
     expect(importers.sort()).toStrictEqual(["_showroom/site-chrome.tsx", join("mau-thiep", "_components", "demo-view.tsx")].sort());
+  });
+
+  it("the demo pages mount it outside the invitation renderer, which is untouched", () => {
+    const demo = readFileSync(join(__dirname, "..", "..", "mau-thiep", "_components", "demo-view.tsx"), "utf8");
+    expect(demo).toMatch(/<\/div>\s*<FloatingContact \/>\s*<\/>/);
+    expect(demo.indexOf("<DemoInvitationRenderer")).toBeLessThan(demo.indexOf("<FloatingContact"));
   });
 });

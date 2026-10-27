@@ -3088,3 +3088,37 @@ Public-showroom checkpoint on `feat/showroom-contact-buttons` from `9b155e4`, at
 7. **Brand marks are drawn, not bundled.** The Zalo mark is a white speech bubble with a blue "Z" on Zalo blue `#0068FF`; the Messenger mark is the bubble-with-bolt punched through a Messenger gradient with `fill-rule="evenodd"`. These are brand **colours and shapes**, not the registered logo artwork — no third-party logo file is committed. Swapping in official artwork needs the Product Owner to supply it from each brand kit.
 
 8. **Not changed.** The in-flow Zalo / hotline buttons and the footer contact list; showroom layout, copy and template designs; the demo bar, tabs and footer CTAs; every invitation renderer.
+
+## WC-SHOWROOM-CONTACT-03 — Zalo Mark and Direct-Chat Link (2026-10-27)
+
+Public-showroom checkpoint on `fix/zalo-chat-link` from `04cebc4`, at the Product Owner's request: the floating Zalo button's mark read weakly and its link did not land in a conversation. **No migration, database, admin, Customer Portal, invitation renderer, API or authentication change**, no new dependency, and `lib/showroom/showroom-contact.ts` is byte-identical — the configured number is still the one source.
+
+1. **Root cause of the link.** One href, `https://zalo.me/<phone>`, was used everywhere and opened in a new tab. Two things follow from that. On desktop `zalo.me/<phone>` is a profile page, not a conversation. On a phone it is Zalo's own universal link, but a universal link only hands the visitor to the installed app from a **top-level navigation**; opened with `target="_blank"` — or inside an in-app webview, which is where a social-media visitor usually arrives — the handoff is skipped and the visitor lands on Zalo's "get the app" page instead.
+
+2. **The strategy.** One configured number, two destinations, chosen in CSS so the markup stays server-rendered and no script is needed:
+   - **phones** (`@media (hover: none) and (pointer: coarse)`) → `https://zalo.me/<phone>`, navigated **in this tab**, so the OS can hand off to the app;
+   - **everything else** (the default, including anything that cannot answer the query) → `https://chat.zalo.me/?phone=<phone>`, the Zalo Web conversation, in a new tab so the showroom stays open.
+
+   Both anchors are rendered; the one that does not apply is `display: none`, so exactly one Zalo button is ever focusable or announced. `zaloChatLinks()` derives the web URL by reading the number back out of the canonical `zalo.me` href, and falls back to that href unchanged when the shape is not the expected one — it never guesses a number. **No app-store URL appears anywhere**, as a test asserts.
+
+3. **Not verified, and stated as such.** Neither destination was opened against Zalo from here; there is no official Zalo documentation for a phone-number chat link, and the pattern comes from the common Vietnamese practice for web chat buttons. What is proved is the markup and the device split. Whether a tap truly lands in the WeddingClick conversation on iOS and Android, with and without the app installed, is a Product Owner check on a real phone.
+
+4. **The mark.** The "Z" grew from roughly 5.3 × 6.4 units to 10 × 9.6 in the same 24-unit viewBox (about 2.8× the area) and the bubble from ~17 to ~21 units wide, so the glyph fills the bubble and the bubble fills the button. Still brand colour and shape drawn inline — no Zalo logo artwork, no asset file, no dependency. Button size, dock style, placement, safe areas and `z-index` are untouched.
+
+5. **Animation.** Unchanged behaviour — the 3s cycle with its 0.42s wiggle and the `no-preference` gate stand. The only edit is that the stagger now selects `.messenger` by class rather than `.button + .button` by sibling order, because the dock holds two Zalo anchors of which one is hidden.
+
+6. **Not changed.** Messenger's URL, mark, target and `rel`; the in-flow Zalo / hotline buttons and the footer contact list; showroom layout and copy; every invitation renderer; the dock's layering under dialogs.
+
+## WC-SHOWROOM-CONTACT-04 — One Floating Facebook Button (2026-10-27)
+
+Product Owner decision, on `fix/zalo-chat-link` (PR #17), from `04cebc4`. **No migration, database, domain, environment-variable, API or authentication change**, no new dependency, and `lib/showroom/showroom-contact.ts` is still byte-identical.
+
+1. **Messenger becomes Facebook.** The dock's one button now opens `https://www.facebook.com/profile.php?id=61582288501879` — the WeddingClick page — in a new tab with `rel="noopener noreferrer"`, labelled "Xem Facebook WeddingClick". The `m.me` destination and the Messenger mark are gone, and a test asserts no label or markup mentions Messenger or a conversation, so the unverified-chat question from WC-SHOWROOM-CONTACT-02 no longer applies.
+
+2. **The floating Zalo button is withdrawn** until WeddingClick has a Zalo Official Account. It is removed outright, not hidden: no anchor renders, and the WC-SHOWROOM-CONTACT-03 mobile/desktop URL split (`zaloChatLinks`, `.zaloApp` / `.zaloWeb` and the `(hover: none) and (pointer: coarse)` rule) is deleted with it. **The configured number and every other place it appears are untouched** — verified on a build with the number set: the dock carries no Zalo anchor while the homepage still renders its Zalo links four times, in the section calls to action and the footer.
+
+3. **`FloatingContact` no longer takes a prop.** With no Zalo button it needs no contact, so `ShowroomShell` and `DemoView` render `<FloatingContact />`, and `DemoView` no longer calls `getShowroomContact()`.
+
+4. **Everything else about the dock is unchanged.** One 50px circle, bottom-right inside the safe areas, same shadow, border and `z-index: 20` under the header, the mobile menu and every invitation overlay; the 3s wiggle with its 0.42s movement and its `prefers-reduced-motion: no-preference` gate; hover and press responses. The stagger rule went with the second button.
+
+5. **The mark.** Facebook's "f" in white on Facebook blue `#1877F2`, drawn inline and nudged up so it sits centred in the round button. Brand colour and letterform only — no Facebook logo artwork is bundled.

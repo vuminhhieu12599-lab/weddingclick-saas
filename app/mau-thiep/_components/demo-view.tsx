@@ -10,7 +10,6 @@ import {
   type DemoVariantSegment,
 } from "../../../lib/showroom/demo/build-demo-render-data";
 import { PUBLIC_SHOWROOM_TEMPLATES, findPublicShowroomTemplate, type PublicShowroomTemplate } from "../../../lib/showroom/showroom-catalog";
-import { getShowroomContact } from "../../../lib/showroom/showroom-contact";
 import { SHOWROOM_TEMPLATES_HREF, consultationHref, demoHref } from "../../../lib/showroom/showroom-routes";
 import { FloatingContact } from "../../_showroom/floating-contact";
 import { ShowroomIcons } from "../../_showroom/icons";
@@ -67,7 +66,6 @@ export function demoMetadata(template: PublicShowroomTemplate, segment: DemoVari
 export async function DemoView({ template, segment }: { readonly template: PublicShowroomTemplate; readonly segment: DemoVariantSegment | undefined }) {
   const variant = segment === undefined ? "COMMON" : DEMO_VARIANT_SEGMENTS[segment];
   const data = await buildDemoRenderData(template.rendererKey, variant);
-  const contact = getShowroomContact();
   return (
     <>
       <div className={`${SHOWROOM_FONT_VARIABLES_CLASS_NAME} ${styles.root}`}>
@@ -115,7 +113,7 @@ export async function DemoView({ template, segment }: { readonly template: Publi
           </div>
         </aside>
       </div>
-      <FloatingContact contact={contact} />
+      <FloatingContact />
     </>
   );
 }

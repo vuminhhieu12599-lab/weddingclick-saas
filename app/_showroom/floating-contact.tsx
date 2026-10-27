@@ -1,90 +1,57 @@
-import type { ShowroomContact } from "../../lib/showroom/showroom-contact";
 import styles from "./floating-contact.module.css";
 
 /**
- * The business Messenger conversation, built from the Facebook id the Product
- * Owner supplied. It is a public address, not a secret and not an environment
- * value, and it is used by this dock alone — `lib/showroom/showroom-contact.ts`
- * stays the env-driven Zalo/hotline configuration it was, untouched.
+ * The WeddingClick Facebook page, exactly as the Product Owner gave it. It is
+ * a public page address, not a secret and not an environment value, and it is
+ * used by this dock alone — `lib/showroom/showroom-contact.ts` stays the
+ * env-driven Zalo/hotline configuration it was, untouched.
  *
- * `m.me/<id>` is Facebook's own deep link and is meant to open the chat with
- * that account. WC-SHOWROOM-CONTACT-02: that destination has NOT been opened
- * and confirmed against Facebook here, so nothing claims it is verified; the
- * Product Owner confirms it manually on the Preview. The label stays the
- * modest "Liên hệ qua Messenger".
+ * It opens the page. It is not a Messenger deep link, and no label here
+ * promises that it starts a conversation.
  */
-export const WEDDINGCLICK_MESSENGER_URL = "https://m.me/61582288501879";
+export const WEDDINGCLICK_FACEBOOK_URL = "https://www.facebook.com/profile.php?id=61582288501879";
 
 /**
- * Zalo's blue speech bubble with its "Z". Brand colour and shape only, drawn
- * here — no Zalo logo artwork is bundled.
+ * Facebook's "f" in white on Facebook blue. Brand colour and letterform only,
+ * drawn here — no Facebook logo artwork is bundled. The glyph is nudged up so
+ * it sits centred in the round button rather than riding its lower edge.
  */
-function ZaloMark() {
+function FacebookMark() {
   return (
     <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path
         fill="#ffffff"
-        d="M12 3.6c-4.76 0-8.6 3.17-8.6 7.08 0 2.23 1.25 4.22 3.2 5.52-.13.93-.6 2.08-1.6 3.14-.2.21-.06.56.23.53 1.86-.2 3.43-.98 4.5-1.74.72.15 1.48.23 2.27.23 4.76 0 8.6-3.17 8.6-7.68S16.76 3.6 12 3.6Z"
-      />
-      <path fill="#0068ff" d="M8.9 8.2h5.3v1.5l-3.3 3.6h3.4v1.6H8.6v-1.5l3.3-3.6H8.9V8.2Z" />
-    </svg>
-  );
-}
-
-/**
- * Messenger's bubble with the bolt punched through to the gradient behind it
- * (`fill-rule="evenodd"`). Brand colours and shape only — no logo artwork.
- */
-function MessengerMark() {
-  return (
-    <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path
-        fill="#ffffff"
-        fillRule="evenodd"
-        d="M12 2.8c-5.2 0-9.2 3.8-9.2 8.9 0 2.9 1.3 5.4 3.4 7.1v3.5l3.2-1.8c.84.23 1.73.35 2.6.35 5.2 0 9.2-3.8 9.2-8.9S17.2 2.8 12 2.8Zm-5.3 11.6 4.9-5.2 2.5 2.6 4.3-2.6-4.9 5.2-2.5-2.6-4.3 2.6Z"
-        clipRule="evenodd"
+        transform="translate(0 -1.1)"
+        d="M13.5 21.5v-8h2.7l.4-3.1h-3.1V8.4c0-.9.25-1.5 1.55-1.5H16.7V4.1c-.29-.04-1.27-.13-2.4-.13-2.38 0-4 1.45-4 4.11v2.3H7.6v3.1h2.7v8h3.2Z"
       />
     </svg>
   );
 }
 
 /**
- * WC-SHOWROOM-CONTACT-01 — the two floating contact buttons on the public
- * showroom (homepage, consultation page and the template demos).
+ * WC-SHOWROOM-CONTACT-04 — the floating contact button on the public showroom
+ * (homepage, consultation page and the template demos).
  *
- * Zalo reuses the one configured business number from `getShowroomContact()`
- * and simply does not render when that number is not configured: no
- * placeholder, no second copy of the number. Messenger links to the Product
- * Owner's Facebook profile verbatim — that opens the page, not a chat thread,
- * which is why the label says "liên hệ" rather than promising a direct chat.
+ * One button: the WeddingClick Facebook page. The floating Zalo button is
+ * withdrawn until WeddingClick has a Zalo Official Account — the configured
+ * Zalo number and every other place it appears (the in-flow contact buttons,
+ * the footer) are untouched, so only this dock changed.
  *
  * Server-rendered and CSS-only: no client island, no timer, no chat SDK.
  * Mount it outside any invitation renderer.
  */
-export function FloatingContact({ contact }: { readonly contact: ShowroomContact }) {
+export function FloatingContact() {
   return (
     <div className={styles.dock}>
-      {contact.zalo === null ? null : (
-        <a
-          href={contact.zalo.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`${styles.button} ${styles.zalo}`}
-          aria-label="Liên hệ qua Zalo"
-          title="Liên hệ qua Zalo"
-        >
-          <ZaloMark />
-        </a>
-      )}
       <a
-        href={WEDDINGCLICK_MESSENGER_URL}
+        href={WEDDINGCLICK_FACEBOOK_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className={`${styles.button} ${styles.messenger}`}
-        aria-label="Liên hệ qua Messenger"
-        title="Liên hệ qua Messenger"
+        className={`${styles.button} ${styles.facebook}`}
+        aria-label="Xem Facebook WeddingClick"
+        title="Xem Facebook WeddingClick"
       >
-        <MessengerMark />
+        <FacebookMark />
       </a>
     </div>
   );
