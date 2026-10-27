@@ -119,7 +119,7 @@ export const SE_DUYEN_V1_COPY = Object.freeze({
   gift: Object.freeze({
     eyebrow: "Tấm Lòng",
     heading: "Mừng Cưới",
-    note: "Sự hiện diện của quý vị đã là món quà quý nhất. Nếu quý vị ở xa và muốn gửi lời chúc, xin dùng thông tin dưới đây.",
+    note: "Sự hiện diện của bạn là món quà quý giá nhất. Nếu không thể tham dự và muốn gửi quà chúc mừng, gia đình xin phép nhận tại đây.",
     openHint: "Chạm vào phong bì",
     closeHint: "Gấp phong bì lại",
     sideLegend: "Chọn nhà",

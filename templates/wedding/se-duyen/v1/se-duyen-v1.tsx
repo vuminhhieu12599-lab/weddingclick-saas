@@ -7,6 +7,7 @@ import { AlbumFrames } from "./interactive/gallery-viewer";
 import { MusicControl } from "./interactive/music-control";
 import { Rsvp } from "./interactive/rsvp";
 import { OpeningStage } from "./interactive/opening-stage";
+import { SectionReveal } from "./interactive/section-reveal";
 import styles from "./se-duyen-v1.module.css";
 import { Ceremony } from "./sections/ceremony";
 import { Closing } from "./sections/closing";
@@ -65,11 +66,17 @@ const COPY = SE_DUYEN_V1_COPY;
  * the host supplies `capabilities.clock`, which it does only in the browser,
  * so no current time ever reaches server markup.
  *
- * The scroll-reveal motion of the interior (the prototype's shared `Reveal`)
- * is also SD-V1-02 work: it belongs on the shared section-reveal controller
- * the other production renderers use, not on a second animation engine
- * (CLAUDE.md §20). The frozen layout, type and ornament are unaffected —
- * each section simply arrives already visible.
+ * The scroll-reveal motion of the interior is SD-V1-MOTION-01, and it is
+ * where that header always said it would be: on the shared section-reveal
+ * controller the other production renderers use, never a second animation
+ * engine (CLAUDE.md §20). `interactive/section-reveal.tsx` holds the whole
+ * of it — one `IntersectionObserver`, one attribute, one stylesheet
+ * vocabulary — and it is scoped to the interior column, which is the
+ * opening stage's sibling, so the frozen box sequence cannot be reached by
+ * it. The frozen layout, type and ornament are unaffected: every target
+ * settles into exactly its approved resting style, nothing is held back
+ * from a reader without JavaScript, and under reduced motion each section
+ * still simply arrives already visible.
  *
  * MEDIA. Layout photographs come only from `viewModel.media.templateSlots`
  * (`openingPhoto`, `portraitLead`, `portraitAside`, `closingPhoto` and the
@@ -134,6 +141,7 @@ export function SeDuyenV1({ viewModel, sections, capabilities }: InvitationRende
         fullDate={formatDottedDate(ceremonyDate)}
         photo={openingPhoto}
         photoAlt={photoAlt}
+        interiorMotion={<SectionReveal hasCountdown={capabilities.clock !== undefined} />}
       >
         {music === undefined ? null : <MusicControl music={music} />}
         <Invitation

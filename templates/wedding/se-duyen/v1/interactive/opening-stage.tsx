@@ -26,6 +26,18 @@ interface OpeningStageProps {
   readonly photoAlt: string;
   /** The invitation itself: a sibling of the opening screen, below it. */
   readonly children: ReactNode;
+  /**
+   * SD-V1-MOTION-01. An inert island that measures the interior column, and
+   * which must not run until the opening has finished and that column is
+   * really laid out — so it is mounted here, by the phase, not in `children`.
+   *
+   * While the box is closed the interior is `display: none`, so every element
+   * inside it reports a zero rectangle, and an `IntersectionObserver` reads a
+   * zero rectangle as "already scrolled past". Mounted any earlier, the
+   * scroll reveal would fire for the whole invitation at once behind the
+   * closed box, and nothing would ever animate on scroll again.
+   */
+  readonly interiorMotion?: ReactNode;
 }
 
 /**
@@ -60,6 +72,7 @@ export function OpeningStage({
   photo,
   photoAlt,
   children,
+  interiorMotion,
 }: OpeningStageProps) {
   const [phase, dispatch] = useReducer(openingReducer, INITIAL_OPENING_PHASE);
   const interactive = useSyncExternalStore(
@@ -236,7 +249,13 @@ export function OpeningStage({
         <span className={styles.openingClock} aria-hidden="true" onAnimationEnd={handleClockEnd} />
       </div>
 
-      <div className={styles.interior}>{children}</div>
+      {/* `interiorMotion` first, and only in the final phase: it is an inert
+          anchor whose parent must be this column, and the column has no
+          layout at all until the opening has finished. */}
+      <div className={styles.interior}>
+        {phase === "hero" ? interiorMotion : null}
+        {children}
+      </div>
     </>
   );
 }

@@ -3546,6 +3546,8 @@ const SD1_ISLAND_FILES = [
   `${SD1}/interactive/gift-envelope.tsx`,
   // SD-V1-RSVP: the approved Hồi Âm card, on the public RSVP capability.
   `${SD1}/interactive/rsvp.tsx`,
+  // SD-V1-MOTION-01: the interior scroll reveal, on the shared controller.
+  `${SD1}/interactive/section-reveal.tsx`,
 ] as const;
 /** Pure state model behind the island. */
 const SD1_MODEL_FILES = [`${SD1}/interactive/opening-state.ts`] as const;

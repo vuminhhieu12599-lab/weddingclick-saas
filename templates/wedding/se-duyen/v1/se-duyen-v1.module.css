@@ -1905,10 +1905,12 @@
 }
 
 .riteVenueAddress {
+  /* SD-V1-MOTION-01B: the rite's own address moves with the reception
+     addresses below it, so the page has one supporting-text size. */
   margin: 12px 0 0;
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 300;
-  line-height: 1.85;
+  line-height: 1.7;
   color: var(--sdi-ink-soft);
   text-wrap: balance;
 }
@@ -1933,8 +1935,12 @@
     padding: 126px 16px 76px;
   }
 
+  /* SD-V1-MOTION-01B: was 12px, a step down from the old 12.5px base. The
+     base is now 14px and the reception addresses below hold 14px at every
+     width, so the narrow step is closed: the page has one supporting-text
+     size wherever a guest reads an address. */
   .riteVenueAddress {
-    font-size: 12px;
+    font-size: 14px;
   }
 }
 
@@ -1975,7 +1981,10 @@
   margin: 8px 0 0;
   font-family: var(--sdp-display), Georgia, serif;
   font-style: italic;
-  font-size: 14.5px;
+  /* SD-V1-MOTION-01B: the rite line of each reception, raised from 14.5px.
+     It names the ceremony a guest is being invited to, so it should not sit
+     below the supporting detail around it. */
+  font-size: 16px;
   letter-spacing: 0.04em;
   color: var(--sdi-ink-soft);
 }
@@ -1992,7 +2001,9 @@
   font-family: var(--sdp-display), Georgia, serif;
   font-weight: 500;
   font-variant-numeric: lining-nums;
-  font-size: clamp(17px, 5.1cqw, 20px);
+  /* SD-V1-MOTION-01B: raised from clamp(17px, 5.1cqw, 20px). The hour is the
+     single fact a guest comes back to the card for. */
+  font-size: clamp(20px, 6.1cqw, 22px);
   letter-spacing: 0.2em;
   text-indent: 0.1em;
   color: var(--sdi-gold);
@@ -2000,7 +2011,9 @@
 
 /* Only printed when the reception falls on another day than the rite. */
 .ritePartyDate {
-  font-size: 11.5px;
+  /* SD-V1-MOTION-01B: 11.5px set this below comfortable reading; it now sits
+     in the same supporting tier as the address. */
+  font-size: 14px;
   font-weight: 300;
   letter-spacing: 0.04em;
   color: var(--sdi-ink-soft);
@@ -2010,17 +2023,23 @@
   margin: 10px 0 0;
   font-family: var(--sdp-display), Georgia, serif;
   font-weight: 500;
-  font-size: clamp(16px, 4.8cqw, 18px);
-  line-height: 1.42;
+  /* SD-V1-MOTION-01B: the most prominent line of the card, raised from
+     clamp(16px, 4.8cqw, 18px) — "Tư gia nhà trai" is where a guest is being
+     asked to go, and it now leads the block instead of matching it. */
+  font-size: clamp(19px, 5.8cqw, 21px);
+  line-height: 1.4;
   color: var(--sdi-ink);
   text-wrap: balance;
 }
 
 .ritePartyAddress {
-  margin: 7px 0 0;
-  font-size: 12px;
+  /* SD-V1-MOTION-01B: raised from 12px. The leading is closed from 1.8 to
+     1.7 at the same time, so the taller type does not make the block grow
+     and the card keeps its approved breathing room. */
+  margin: 8px 0 0;
+  font-size: 14px;
   font-weight: 300;
-  line-height: 1.8;
+  line-height: 1.7;
   color: var(--sdi-ink-soft);
   text-wrap: balance;
 }
@@ -4099,4 +4118,382 @@
 
 .lightboxNext {
   right: 12px;
+}
+
+/* ======================================================================
+   SD-V1-MOTION-01 — interior scroll reveal, "Tơ Hồng Khai Duyên".
+
+   A motion ENHANCEMENT, not a redesign: not one RESTING style below this
+   line differs from the approved freeze above it. Every rule lives inside
+   `@media (prefers-reduced-motion: no-preference)`, so under
+   `prefers-reduced-motion: reduce` none of it applies at all — each target
+   simply keeps its natural style, visible, readable and still, with no
+   entrance movement and nothing that has to be undone.
+
+   Each variant has two states. While pending, the island has written
+   `data-sd-reveal="<variant>"` and the pending rule holds where the
+   entrance begins. Once shown it writes `"<variant> shown"`, the pending
+   rule's exact-match selector stops matching, and the element's specified
+   style is its approved one again; the entrance then plays ONCE from the
+   keyframe's `from`, with `backwards` fill. The settled state is therefore
+   always the approved style, never an animation's leftover — and a target
+   can never be left invisible, because invisibility only ever lives in a
+   selector that the reveal itself removes.
+
+   Only opacity, `translate`, `scale`, `rotate` and `transform` move: never
+   a box, a size, a margin, a position or a scroll height. No reveal can
+   shift the layout, move a control's resting hit area, or create
+   horizontal overflow. `--sd-reveal-delay` carries the controller's
+   per-batch stagger, which restarts at 0 for every batch and is capped, so
+   nothing far down the page ever waits on an earlier section.
+
+   SCOPE. Every selector is under `.interior`, which is the SIBLING of the
+   opening stage `.root`. The frozen box, lid, rising photograph and hero
+   are unreachable from here, and their two approved durations above are
+   untouched. */
+
+.interior {
+  --sd-reveal-delay: 0ms;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* ---- Hinges and overlays that must survive the state change ---- */
+
+  /* The plate unfolds on its top edge, like paper laid open away from you. */
+  .interior [data-sd-reveal^="silk"] {
+    transform-origin: 50% 0;
+  }
+
+  /* The two portraits swing on their outer edges, towards each other. */
+  .interior [data-sd-reveal^="lead"] {
+    transform-origin: 0% 50%;
+  }
+
+  .interior [data-sd-reveal^="aside"] {
+    transform-origin: 100% 50%;
+  }
+
+  /* The tơ hồng is drawn downwards from where it starts. */
+  .interior [data-sd-reveal^="thread"]::before {
+    transform-origin: 50% 0;
+  }
+
+  /* A single gold-foil pass, carried on a throwaway overlay that ends at
+     zero opacity — so the heading's own colour and weight are never
+     altered, before, during or after. */
+  .interior [data-sd-reveal^="foil"] {
+    position: relative;
+  }
+
+  /* The overlay NEVER MOVES: it stays pinned to its own box and the light is
+     swept inside it by `background-position`, across a band 2.6× the box's
+     width. A translated overlay would travel outside the card, and on a
+     360 px screen that is horizontal overflow. */
+  .interior [data-sd-reveal^="foil"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    background-image: linear-gradient(
+      104deg,
+      rgba(246, 228, 181, 0) 42%,
+      rgba(246, 228, 181, 0.5) 50%,
+      rgba(246, 228, 181, 0) 58%
+    );
+    background-repeat: no-repeat;
+    background-size: 260% 100%;
+    background-position: 115% 0;
+  }
+
+  /* ---- Pending states: where each entrance begins ---- */
+
+  .interior [data-sd-reveal="rise"] {
+    opacity: 0;
+    translate: 0 20px;
+  }
+
+  .interior [data-sd-reveal="silk"] {
+    opacity: 0;
+    translate: 0 32px;
+    scale: 0.965;
+    transform: perspective(1200px) rotateX(10deg);
+  }
+
+  .interior [data-sd-reveal="foil"] {
+    opacity: 0;
+    translate: 0 18px;
+  }
+
+  .interior [data-sd-reveal="lead"] {
+    opacity: 0;
+    translate: -34px 0;
+    scale: 0.94;
+    transform: perspective(1000px) rotateY(13deg);
+  }
+
+  .interior [data-sd-reveal="aside"] {
+    opacity: 0;
+    translate: 30px 0;
+    scale: 0.9;
+    transform: perspective(1000px) rotateY(-15deg);
+  }
+
+  .interior [data-sd-reveal="panelLeft"] {
+    opacity: 0;
+    translate: -26px 0;
+    transform: perspective(1100px) rotateY(7deg);
+  }
+
+  .interior [data-sd-reveal="panelRight"] {
+    opacity: 0;
+    translate: 26px 0;
+    transform: perspective(1100px) rotateY(-7deg);
+  }
+
+  .interior [data-sd-reveal="draw"] {
+    opacity: 0;
+    scale: 0.16 1;
+  }
+
+  .interior [data-sd-reveal="thread"]::before {
+    scale: 1 0;
+  }
+
+  .interior [data-sd-reveal="knot"] {
+    opacity: 0;
+    translate: 0 16px;
+  }
+
+  .interior [data-sd-reveal="knot"]::before {
+    opacity: 0;
+    scale: 0.4;
+  }
+
+  /* Each print is laid at its own small angle, art-directed per frame so no
+     two land alike; the album reads as photographs set down by hand on the
+     lacquer rather than a grid fading in. */
+  .interior [data-sd-reveal="photo"] {
+    opacity: 0;
+    translate: 0 30px;
+    scale: 0.94;
+    rotate: var(--sd-tilt, -2deg);
+  }
+
+  .interior .albumLead {
+    --sd-tilt: -2.4deg;
+  }
+
+  .interior .albumPairTall {
+    --sd-tilt: 2.8deg;
+  }
+
+  .interior .albumPairSmall {
+    --sd-tilt: -3.2deg;
+  }
+
+  .interior .albumFoot {
+    --sd-tilt: 1.9deg;
+  }
+
+  /* The closing photograph is a masked arch on the page's centre line: a
+     tilt would read as a mistake, so it rises square. */
+  .interior .closingPhoto {
+    --sd-tilt: 0deg;
+  }
+
+  .interior [data-sd-reveal="scale"] {
+    opacity: 0;
+    scale: 0.86;
+  }
+
+  /* ---- Entrances: each plays once, then the approved style stands ---- */
+
+  .interior [data-sd-reveal="rise shown"] {
+    animation: sd-reveal-rise 820ms cubic-bezier(0.22, 1, 0.36, 1) var(--sd-reveal-delay) backwards;
+  }
+
+  .interior [data-sd-reveal="silk shown"] {
+    animation: sd-reveal-silk 1280ms cubic-bezier(0.19, 1, 0.3, 1) var(--sd-reveal-delay) backwards;
+  }
+
+  .interior [data-sd-reveal="foil shown"] {
+    animation: sd-reveal-foil-lift 900ms cubic-bezier(0.22, 1, 0.36, 1) var(--sd-reveal-delay) backwards;
+  }
+
+  /* The sweep waits for its heading to have arrived, then crosses once. */
+  .interior [data-sd-reveal="foil shown"]::after,
+  .interior [data-sd-reveal="silk shown"]::after {
+    animation: sd-reveal-foil 1500ms ease-out calc(var(--sd-reveal-delay) + 460ms) backwards;
+  }
+
+  .interior [data-sd-reveal="lead shown"] {
+    animation: sd-reveal-lead 1180ms cubic-bezier(0.19, 1, 0.3, 1) var(--sd-reveal-delay) backwards;
+  }
+
+  /* The answering portrait is held back a beat longer, so the two read as
+     meeting rather than arriving together. */
+  .interior [data-sd-reveal="aside shown"] {
+    animation: sd-reveal-aside 1180ms cubic-bezier(0.19, 1, 0.3, 1) calc(var(--sd-reveal-delay) + 170ms) backwards;
+  }
+
+  .interior [data-sd-reveal="panelLeft shown"] {
+    animation: sd-reveal-panel-left 980ms cubic-bezier(0.22, 1, 0.36, 1) var(--sd-reveal-delay) backwards;
+  }
+
+  .interior [data-sd-reveal="panelRight shown"] {
+    animation: sd-reveal-panel-right 980ms cubic-bezier(0.22, 1, 0.36, 1) var(--sd-reveal-delay) backwards;
+  }
+
+  .interior [data-sd-reveal="draw shown"] {
+    animation: sd-reveal-draw 900ms cubic-bezier(0.22, 1, 0.36, 1) var(--sd-reveal-delay) backwards;
+  }
+
+  .interior [data-sd-reveal="thread shown"]::before {
+    animation: sd-reveal-thread 1450ms cubic-bezier(0.32, 0.72, 0.26, 1) var(--sd-reveal-delay) backwards;
+  }
+
+  .interior [data-sd-reveal="knot shown"] {
+    animation: sd-reveal-rise 860ms cubic-bezier(0.22, 1, 0.36, 1) var(--sd-reveal-delay) backwards;
+  }
+
+  /* The knot ties after its step has settled: a short gilt flare, gone. */
+  .interior [data-sd-reveal="knot shown"]::before {
+    animation: sd-reveal-knot 760ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--sd-reveal-delay) + 220ms) backwards;
+  }
+
+  .interior [data-sd-reveal="photo shown"] {
+    animation: sd-reveal-photo 1060ms cubic-bezier(0.19, 1, 0.3, 1) var(--sd-reveal-delay) backwards;
+  }
+
+  .interior [data-sd-reveal="scale shown"] {
+    animation: sd-reveal-scale 760ms cubic-bezier(0.22, 1, 0.36, 1) var(--sd-reveal-delay) backwards;
+  }
+
+  /* ---- The keyframes. Each states only its FROM: the implicit `to` is
+     the element's own approved style, so no entrance can invent a
+     resting appearance the freeze above did not specify. ---- */
+
+  @keyframes sd-reveal-rise {
+    from {
+      opacity: 0;
+      translate: 0 20px;
+    }
+  }
+
+  @keyframes sd-reveal-silk {
+    from {
+      opacity: 0;
+      translate: 0 32px;
+      scale: 0.965;
+      transform: perspective(1200px) rotateX(10deg);
+    }
+  }
+
+  @keyframes sd-reveal-foil-lift {
+    from {
+      opacity: 0;
+      translate: 0 18px;
+    }
+  }
+
+  /* One pass, left to right, and gone: the band begins and ends outside the
+     box, so the heading's own colour is what remains. */
+  @keyframes sd-reveal-foil {
+    from {
+      opacity: 0;
+      background-position: 115% 0;
+    }
+
+    20% {
+      opacity: 1;
+    }
+
+    76% {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+      background-position: -15% 0;
+    }
+  }
+
+  @keyframes sd-reveal-lead {
+    from {
+      opacity: 0;
+      translate: -34px 0;
+      scale: 0.94;
+      transform: perspective(1000px) rotateY(13deg);
+    }
+  }
+
+  @keyframes sd-reveal-aside {
+    from {
+      opacity: 0;
+      translate: 30px 0;
+      scale: 0.9;
+      transform: perspective(1000px) rotateY(-15deg);
+    }
+  }
+
+  @keyframes sd-reveal-panel-left {
+    from {
+      opacity: 0;
+      translate: -26px 0;
+      transform: perspective(1100px) rotateY(7deg);
+    }
+  }
+
+  @keyframes sd-reveal-panel-right {
+    from {
+      opacity: 0;
+      translate: 26px 0;
+      transform: perspective(1100px) rotateY(-7deg);
+    }
+  }
+
+  @keyframes sd-reveal-draw {
+    from {
+      opacity: 0;
+      scale: 0.16 1;
+    }
+  }
+
+  @keyframes sd-reveal-thread {
+    from {
+      scale: 1 0;
+    }
+  }
+
+  @keyframes sd-reveal-knot {
+    from {
+      opacity: 0;
+      scale: 0.4;
+    }
+
+    58% {
+      opacity: 1;
+      scale: 1.22;
+      box-shadow:
+        0 0 0 4px rgba(64, 9, 12, 0.92),
+        0 0 18px 3px rgba(240, 214, 155, 0.72);
+    }
+  }
+
+  @keyframes sd-reveal-photo {
+    from {
+      opacity: 0;
+      translate: 0 30px;
+      scale: 0.94;
+      rotate: var(--sd-tilt, -2deg);
+    }
+  }
+
+  @keyframes sd-reveal-scale {
+    from {
+      opacity: 0;
+      scale: 0.86;
+    }
+  }
 }
