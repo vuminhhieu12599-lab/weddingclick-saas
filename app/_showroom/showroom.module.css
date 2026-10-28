@@ -337,15 +337,22 @@
   gap: 14px;
 }
 
-.staffLink {
+/* Icon-only staff login: 18px lock inside a 38px tap target, desktop only. */
+.staffLogin {
   display: none;
-  font-size: 13px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--sr-line);
   color: var(--sr-muted) !important;
   text-decoration: none;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
-.staffLink:hover {
-  color: var(--sr-ink) !important;
+.staffLogin:hover {
+  color: var(--sr-burgundy) !important;
+  border-color: var(--sr-gold-line);
+  background: var(--sr-white);
 }
 
 .headerCta {
@@ -422,9 +429,14 @@
     gap: 30px;
   }
 
-  .staffLink,
   .headerCta {
     display: inline-flex;
+  }
+
+  .staffLogin {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .menu {
