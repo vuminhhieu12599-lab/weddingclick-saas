@@ -10,6 +10,7 @@ import path from "node:path";
 import {
   DEMO_MEDIA_BASE_PATH,
   DEMO_LEGACY_ROLE_PHOTO_SETS,
+  DEMO_QR_IMAGES,
   DEMO_TEMPLATE_SLOT_PHOTO_SETS,
   allDemoImages,
   type DemoImage,
@@ -50,14 +51,23 @@ describe("LAUNCH-P0-04 showroom demos run the real pipeline", () => {
     }
   });
 
-  it("demo media are only local demo images; no QR, no audio; portraits only from a photo set", async () => {
+  it("demo media are only local demo images; both demo QR plates, no audio; portraits only from a photo set", async () => {
     const allowed = new Set(allDemoImages().map((image) => `${DEMO_MEDIA_BASE_PATH}${image.file}`));
     for (const template of PUBLIC_SHOWROOM_TEMPLATES) {
       const data = await buildDemoRenderData(template.rendererKey, "COMMON");
       const urls = mediaUrls(data.viewModel.media);
       expect(urls.length).toBeGreaterThan(0);
       for (const url of urls) expect(allowed.has(url), url).toBe(true);
-      expect(data.viewModel.media.qr).toStrictEqual({});
+      // Each operational side resolves its own demo plate; there is no common QR.
+      expect(Object.keys(data.viewModel.media.qr).sort()).toStrictEqual(["bride", "groom"]);
+      expect(data.viewModel.media.qr.groom).toMatchObject({
+        status: "RESOLVED",
+        url: `${DEMO_MEDIA_BASE_PATH}${DEMO_QR_IMAGES.GROOM.file}`,
+      });
+      expect(data.viewModel.media.qr.bride).toMatchObject({
+        status: "RESOLVED",
+        url: `${DEMO_MEDIA_BASE_PATH}${DEMO_QR_IMAGES.BRIDE.file}`,
+      });
       expect(data.viewModel.media.audio).toBeUndefined();
       expect(data.sections.music).toBe(false);
       if (Object.hasOwn(DEMO_LEGACY_ROLE_PHOTO_SETS, template.rendererKey)) continue;
@@ -71,6 +81,23 @@ describe("LAUNCH-P0-04 showroom demos run the real pipeline", () => {
         const rendered = (data.viewModel.media.templateSlots?.[slot] ?? []).map((item) => (item as { url?: string }).url);
         expect(rendered, `${template.rendererKey} ${slot}`).toStrictEqual(declared(slot));
       }
+    }
+  });
+
+  it("the demo QR follows the variant's operational sides, with no common QR", async () => {
+    for (const template of PUBLIC_SHOWROOM_TEMPLATES) {
+      const groom = await buildDemoRenderData(template.rendererKey, "GROOM");
+      const bride = await buildDemoRenderData(template.rendererKey, "BRIDE");
+      expect(Object.keys(groom.viewModel.media.qr), template.rendererKey).toStrictEqual(["groom"]);
+      expect(Object.keys(bride.viewModel.media.qr), template.rendererKey).toStrictEqual(["bride"]);
+      expect(groom.viewModel.media.qr.groom).toMatchObject({
+        status: "RESOLVED",
+        url: `${DEMO_MEDIA_BASE_PATH}${DEMO_QR_IMAGES.GROOM.file}`,
+      });
+      expect(bride.viewModel.media.qr.bride).toMatchObject({
+        status: "RESOLVED",
+        url: `${DEMO_MEDIA_BASE_PATH}${DEMO_QR_IMAGES.BRIDE.file}`,
+      });
     }
   });
 

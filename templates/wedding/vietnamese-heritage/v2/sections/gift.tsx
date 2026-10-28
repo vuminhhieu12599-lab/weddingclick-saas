@@ -64,12 +64,19 @@ function GiftDetails({ panel, clipboard }: { panel: GiftPanel; clipboard: Clipbo
         {giftLines(panel.gift).map((line) => (
           <div key={line.key} className={styles.giftLine} data-line={line.key}>
             <dt>{line.label}</dt>
-            <dd className={line.key === "accountNumber" ? styles.giftAccountNumber : undefined}>{line.value}</dd>
-            {line.key === "accountNumber" && clipboard !== undefined ? (
-              <dd className={styles.giftLineAction}>
-                <CopyAccountButton clipboard={clipboard} value={line.value} sideLabel={sideLabel} />
+            {line.key === "accountNumber" ? (
+              // The number holds the row's optical centre and the copy control
+              // sits in the balancing column beside it, so the icon's width
+              // never pushes it off axis (GIFT-UI-01).
+              <dd className={`${styles.giftAccountNumber} ${styles.giftAccountRow}`}>
+                <span className={styles.giftAccountValue}>{line.value}</span>
+                {clipboard === undefined ? null : (
+                  <CopyAccountButton clipboard={clipboard} value={line.value} sideLabel={sideLabel} />
+                )}
               </dd>
-            ) : null}
+            ) : (
+              <dd>{line.value}</dd>
+            )}
           </div>
         ))}
       </dl>

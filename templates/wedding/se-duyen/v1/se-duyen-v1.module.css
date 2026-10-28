@@ -3560,7 +3560,13 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  margin: 26px 0 0;
+  /* GIFT-UI-01: the size the note above states, now that a QR actually shows
+     here — 148px centred in the slip's 196px measure, so the code sits in the
+     paper's margin instead of filling it edge to edge. */
+  width: 148px;
+  max-width: 100%;
+  aspect-ratio: 1;
+  margin: 26px auto 0;
 }
 
 /* PRODUCTION ADDITION (SD-V1-02C2) — the QR figure needs no caption now, so

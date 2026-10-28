@@ -389,6 +389,18 @@ describe("OWS-V2-01 content and capabilities", () => {
     const bride = await renderOws({ variant: "BRIDE" }, { clipboard: { copyText: vi.fn() } });
     expect([...bride.html.matchAll(/bankCard[^"]*" data-side="(GROOM|BRIDE)"/g)].map((match) => match[1])).toStrictEqual(["BRIDE"]);
     expect(bride.html).toContain(COPY.gift.copy);
+    // GIFT-UI-01: the control is icon-only — its whole name is the aria-label,
+    // it carries no visible wording, and the number sits on its own centred plate.
+    const controls = [
+      ...bride.html.matchAll(/<button type="button" class="[^"]*copyButton[^"]*" aria-label="([^"]+)" title="([^"]+)"[^>]*>(.*?)<\/button>/g),
+    ];
+    expect(controls).toHaveLength(1);
+    const [, label, title, inner] = controls[0] ?? [];
+    expect(label).toBe(`${COPY.gift.copy} ${COPY.gift.copyTarget} ${COPY.sideLabel.BRIDE}`);
+    expect(title).toBe(`${COPY.gift.copy} ${COPY.gift.copyTarget}`);
+    expect(inner).toMatch(/^<svg [^>]*aria-hidden="true"/);
+    expect(inner?.replace(/<[^>]*>/g, "").trim()).toBe("");
+    expect(bride.html).toMatch(/class="[^"]*bankAccount[^"]*" data-line="accountNumber"/);
   });
 
   it("gift off and no RSVP capability: the whole RSVP & Gift page is omitted", async () => {

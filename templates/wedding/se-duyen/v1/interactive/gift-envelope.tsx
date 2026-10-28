@@ -67,6 +67,9 @@ function AccountRow({ value, sideLabel, clipboard }: { readonly value: string; r
             onClick={handleCopy}
             aria-disabled={feedback === "PENDING" ? true : undefined}
             aria-label={`${COPY.copyLabel} ${sideLabel}`}
+            // GIFT-UI-01: the short form as a pointer tooltip, like the other
+            // templates' icon-only controls; the accessible name is unchanged.
+            title={COPY.copyLabel}
             data-copy-feedback={feedback.toLowerCase()}
           >
             {feedback === "SUCCESS" ? (

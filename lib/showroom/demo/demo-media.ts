@@ -36,6 +36,20 @@ export const DEMO_IMAGES: readonly DemoImage[] = Object.freeze([
 ] as const satisfies readonly DemoImage[]);
 
 /**
+ * The demo bank-QR plates, one per family, shown on the gift modal's QR plate
+ * in every template that resolves `media.qr.<side>`. Generated in this
+ * repository by `generate-demo-qr-images.py` (provenance in
+ * `lib/showroom/demo/ASSETS.md`): each is a real QR symbol encoding one
+ * plain-text line that names the sample card and nothing else. They are not
+ * payment codes — the demo couple's bank is the openly fictional "Ngân hàng
+ * Demo (thiệp mẫu)" — and they are never a fallback for a Project's own QR.
+ */
+export const DEMO_QR_IMAGES: Readonly<Record<"GROOM" | "BRIDE", DemoImage>> = Object.freeze({
+  GROOM: Object.freeze({ file: "qr-demo-nha-trai.webp", width: 600, height: 600, orientation: "SQUARE" }),
+  BRIDE: Object.freeze({ file: "qr-demo-nha-gai.webp", width: 600, height: 600, orientation: "SQUARE" }),
+});
+
+/**
  * Fictional couple photography for one `LEGACY_ROLES` renderer, by media
  * role. Files live under `DEMO_MEDIA_BASE_PATH`; provenance in
  * `lib/showroom/demo/ASSETS.md`. AI-generated people (no real couple, client
@@ -253,7 +267,7 @@ export function lookupDemoLegacyRolePhotoSet(rendererKey: string): DemoLegacyRol
   return Object.hasOwn(DEMO_LEGACY_ROLE_PHOTO_SETS, rendererKey) ? DEMO_LEGACY_ROLE_PHOTO_SETS[rendererKey] : undefined;
 }
 
-/** Every local demo image a demo may reference (mood images and photo sets). */
+/** Every local demo image a demo may reference (mood images, QR plates and photo sets). */
 export function allDemoImages(): DemoImage[] {
   const photos = Object.values(DEMO_LEGACY_ROLE_PHOTO_SETS).flatMap((set) => [
     set.cover,
@@ -264,7 +278,7 @@ export function allDemoImages(): DemoImage[] {
     ...set.gallery,
   ]);
   const slotPhotos = Object.values(DEMO_TEMPLATE_SLOT_PHOTO_SETS).flatMap((set) => Object.values(set).flat());
-  return [...DEMO_IMAGES, ...photos, ...slotPhotos];
+  return [...DEMO_IMAGES, ...Object.values(DEMO_QR_IMAGES), ...photos, ...slotPhotos];
 }
 
 /**

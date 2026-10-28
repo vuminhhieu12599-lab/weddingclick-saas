@@ -27,19 +27,25 @@ function BankCard({ panel, clipboard }: { panel: GiftPanel; clipboard: Clipboard
       )}
       {panel.lines.length === 0 ? null : (
         <dl className={styles.bankRows}>
-          {panel.lines.map((line) => (
-            <div key={line.key} className={styles.bankRow} data-line={line.key}>
-              <dt>{LINE_LABEL[line.key]}</dt>
-              {line.key === "accountNumber" ? (
-                <dd className={styles.bankNumberRow}>
+          {panel.lines.map((line) =>
+            line.key === "accountNumber" ? (
+              // GIFT-UI-01: the number leaves the label/value grid and takes a
+              // centred plate of its own, with the copy control in the column
+              // balancing it, so the icon's width never pulls it off axis.
+              <div key={line.key} className={styles.bankAccount} data-line={line.key}>
+                <dt>{LINE_LABEL[line.key]}</dt>
+                <dd className={styles.bankAccountRow}>
                   <span className={styles.bankNumber}>{line.value}</span>
                   {clipboard === undefined ? null : <CopyAccountButton clipboard={clipboard} value={line.value} sideLabel={sideLabel} />}
                 </dd>
-              ) : (
+              </div>
+            ) : (
+              <div key={line.key} className={styles.bankRow} data-line={line.key}>
+                <dt>{LINE_LABEL[line.key]}</dt>
                 <dd>{line.value}</dd>
-              )}
-            </div>
-          ))}
+              </div>
+            ),
+          )}
         </dl>
       )}
     </div>
