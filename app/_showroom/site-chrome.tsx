@@ -5,6 +5,7 @@ import type { ShowroomContact } from "../../lib/showroom/showroom-contact";
 import { SHOWROOM_SECTION_IDS, consultationHref } from "../../lib/showroom/showroom-routes";
 import { FloatingContact } from "./floating-contact";
 import { ShowroomIcons } from "./icons";
+import { SectionLink } from "./section-link";
 import { SHOWROOM_FONT_VARIABLES_CLASS_NAME } from "./showroom-fonts";
 import styles from "./showroom.module.css";
 
@@ -38,9 +39,9 @@ export function SiteHeader() {
         <BrandLink />
         <nav className={styles.nav} aria-label="Điều hướng chính">
           {NAV_ITEMS.map((item) => (
-            <Link key={item.href} href={item.href} className={styles.navLink}>
+            <SectionLink key={item.href} href={item.href} className={styles.navLink}>
               {item.label}
-            </Link>
+            </SectionLink>
           ))}
         </nav>
         <div className={styles.headerActions}>
@@ -56,9 +57,9 @@ export function SiteHeader() {
             </summary>
             <nav className={styles.menuPanel} aria-label="Điều hướng trên di động">
               {NAV_ITEMS.map((item) => (
-                <Link key={item.href} href={item.href}>
+                <SectionLink key={item.href} href={item.href}>
                   {item.label}
-                </Link>
+                </SectionLink>
               ))}
               <Link href={consultationHref()} className={styles.menuCta}>
                 Tư vấn miễn phí
@@ -88,11 +89,11 @@ export function SiteFooter({ contact }: { readonly contact: ShowroomContact }) {
             <ul className={styles.footerLinks}>
               {NAV_ITEMS.slice(0, 3).map((item) => (
                 <li key={item.href}>
-                  <Link href={item.href}>{item.label}</Link>
+                  <SectionLink href={item.href}>{item.label}</SectionLink>
                 </li>
               ))}
               <li>
-                <Link href={`/#${SHOWROOM_SECTION_IDS.process}`}>Quy trình đặt thiệp</Link>
+                <SectionLink href={`/#${SHOWROOM_SECTION_IDS.process}`}>Quy trình đặt thiệp</SectionLink>
               </li>
             </ul>
           </div>
