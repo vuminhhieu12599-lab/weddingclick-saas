@@ -44,7 +44,6 @@ function giftLines(gift: ViewModelGiftSide | undefined): GiftLine[] {
 function GiftDetails({ panel, clipboard }: { panel: GiftPanel; clipboard: ClipboardCapabilityV1 | undefined }) {
   const sideLabel = COPY.identity.labelBySide[panel.side];
   const lines = giftLines(panel.gift);
-  const accountNumber = lines.find((line) => line.key === "accountNumber");
   return (
     <div>
       {panel.qr?.status === "RESOLVED" ? (
@@ -57,13 +56,22 @@ function GiftDetails({ panel, clipboard }: { panel: GiftPanel; clipboard: Clipbo
           {lines.map((line) => (
             <div key={line.key} className={styles.giftInfoRow} data-line={line.key}>
               <dt>{line.label}</dt>
-              <dd className={line.key === "accountNumber" ? styles.giftAccountNumber : undefined}>{line.value}</dd>
+              {line.key === "accountNumber" ? (
+                // The number holds the row's optical centre and the copy
+                // control sits in the balancing column beside it, so the
+                // icon's width never pushes it off axis (GIFT-UI-01).
+                <dd className={`${styles.giftAccountNumber} ${styles.giftAccountRow}`}>
+                  <span className={styles.giftAccountValue}>{line.value}</span>
+                  {clipboard === undefined ? null : (
+                    <CopyAccountButton clipboard={clipboard} value={line.value} sideLabel={sideLabel} />
+                  )}
+                </dd>
+              ) : (
+                <dd>{line.value}</dd>
+              )}
             </div>
           ))}
         </dl>
-      ) : null}
-      {accountNumber !== undefined && clipboard !== undefined ? (
-        <CopyAccountButton clipboard={clipboard} value={accountNumber.value} sideLabel={sideLabel} />
       ) : null}
     </div>
   );

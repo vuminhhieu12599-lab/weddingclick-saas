@@ -299,6 +299,18 @@ describe("RM-02 content and capabilities", () => {
     expect(bride.html).toContain('id="rm-gift-panel-BRIDE"');
     expect(bride.html).not.toContain('id="rm-gift-panel-GROOM"');
     expect(bride.html).toContain(COPY.gift.copy);
+    // GIFT-UI-01: the control is icon-only — its whole name is the aria-label,
+    // it carries no visible wording, and the number keeps its own centred span.
+    const controls = [
+      ...bride.html.matchAll(/<button type="button" class="[^"]*giftCopy[^"]*" aria-label="([^"]+)" title="([^"]+)"[^>]*>(.*?)<\/button>/g),
+    ];
+    expect(controls).toHaveLength(1);
+    const [, label, title, inner] = controls[0] ?? [];
+    expect(label).toBe(`${COPY.gift.copy} ${COPY.gift.copyTarget} ${COPY.identity.labelBySide.BRIDE}`);
+    expect(title).toBe(`${COPY.gift.copy} ${COPY.gift.copyTarget}`);
+    expect(inner).toMatch(/^<svg [^>]*aria-hidden="true"/);
+    expect(inner?.replace(/<[^>]*>/g, "").trim()).toBe("");
+    expect(bride.html).toMatch(/class="[^"]*giftAccountValue[^"]*">/);
   });
 });
 

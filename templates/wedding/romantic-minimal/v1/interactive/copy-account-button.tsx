@@ -24,13 +24,48 @@ interface CopyAccountButtonProps {
 }
 
 /**
- * Romantic Minimal v1 copy control (docs/DECISIONS.md "RM-02").
- * Rendered by the gift section only with `capabilities.clipboard` and a
- * non-blank canonical account number; without the capability the number
- * stays visible and selectable and no control exists. "Sao chép" turns into
- * "Đã sao chép" only after the capability resolved `SUCCESS`; `UNAVAILABLE`
- * and `FAILED` show their honest note. A press while one copy is pending is
- * ignored. Nothing is stored.
+ * The two glyphs the control shows: the sheets a guest taps, and the tick it
+ * becomes once the clipboard confirmed. Decorative — the button's own
+ * `aria-label` carries the name and the status line carries the outcome — so
+ * both are `aria-hidden`. Each renderer draws its own, at its own weight and
+ * colour; the geometry is deliberately the house one so the five templates
+ * read as one product.
+ */
+function CopyGlyph({ copied }: { readonly copied: boolean }) {
+  return copied ? (
+    <svg className={styles.giftCopyGlyph} viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <path d="M3 8.5 6.3 11.8 13 4.7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ) : (
+    <svg className={styles.giftCopyGlyph} viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <rect x="5.8" y="1.7" width="8.5" height="10.6" rx="1.6" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <path
+        d="M10.2 14.3H3.3a1.6 1.6 0 0 1-1.6-1.6V4.9"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Romantic Minimal v1 copy control (docs/DECISIONS.md "RM-02"; icon-only
+ * since GIFT-UI-01). Rendered by the gift section only with
+ * `capabilities.clipboard` and a non-blank canonical account number; without
+ * the capability the number stays visible and selectable and no control
+ * exists.
+ *
+ * The control is a 44px tap target around a small glyph, so it sits beside
+ * the account number without competing with it. Its whole accessible name is
+ * "Sao chép số tài khoản <Nhà Trai|Nhà Gái>", built from the same fixed copy
+ * the text button used, and `title` repeats the short form for pointer users.
+ * The glyph becomes a tick only after the capability resolved `SUCCESS`,
+ * which is also announced on the status line; `UNAVAILABLE` and `FAILED` show
+ * their honest note under the row rather than a silent no-op (CLAUDE.md §22).
+ * A press while one copy is pending is ignored. Nothing is stored.
  */
 export function CopyAccountButton({ clipboard, value, sideLabel }: CopyAccountButtonProps) {
   const [feedback, setFeedback] = useState<CopyFeedback>("IDLE");
@@ -43,23 +78,21 @@ export function CopyAccountButton({ clipboard, value, sideLabel }: CopyAccountBu
   }
 
   return (
-    <span className={styles.giftCopyControl}>
+    <>
       <button
         type="button"
         className={styles.giftCopy}
         onClick={handleCopy}
         aria-disabled={feedback === "PENDING" ? true : undefined}
+        aria-label={`${COPY.copy} ${COPY.copyTarget} ${sideLabel}`}
+        title={`${COPY.copy} ${COPY.copyTarget}`}
         data-copy-feedback={feedback.toLowerCase()}
       >
-        {feedback === "SUCCESS" ? COPY.copied : COPY.copy}
-        <span className={styles.srOnly}>
-          {" "}
-          {COPY.copyTarget} {sideLabel}
-        </span>
+        <CopyGlyph copied={feedback === "SUCCESS"} />
       </button>
       <span className={note === null ? styles.srOnly : styles.giftCopyNote} role="status">
         {feedback === "SUCCESS" ? COPY.copied : note}
       </span>
-    </span>
+    </>
   );
 }

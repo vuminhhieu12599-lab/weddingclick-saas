@@ -1282,14 +1282,30 @@ describe("H. wedding gift CTA and dialog (VH-02B-E1)", () => {
     expect(html).toContain("Ngân hàng Hoa Sữa");
   });
 
-  it("clipboard absent → no copy control (number still shown); present → one control per account number", () => {
+  it("clipboard absent → no copy control (number still shown); present → one icon control per account number", () => {
     const without = giftHtml({ operationalSides: ["GROOM", "BRIDE"], gift: { groom: GROOM_LINES, bride: BRIDE_LINES } });
     expect(without).not.toMatch(/giftCopy|Sao chép/);
     expect(without).toContain("9001000000002");
     const clipboard = clipboardDouble();
     const withCopy = giftHtml({ operationalSides: ["GROOM", "BRIDE"], gift: { groom: GROOM_LINES, bride: BRIDE_LINES }, clipboard });
-    expect(withCopy.match(/<button type="button" class="[^"]*giftCopy[^"]*" data-copy-feedback="idle">Sao chép/g)).toHaveLength(2);
-    expect(withCopy).toContain("số tài khoản Nhà Gái");
+    // GIFT-UI-01: one icon-only control per side, named for that side, with no
+    // visible label of its own and a decorative glyph inside.
+    const controls = [
+      ...withCopy.matchAll(
+        /<button type="button" class="[^"]*giftCopy[^"]*" aria-label="([^"]+)" title="([^"]+)" data-copy-feedback="idle">(.*?)<\/button>/g,
+      ),
+    ].map((match) => match.slice(1, 4));
+    expect(controls.map((control) => control.slice(0, 2))).toStrictEqual([
+      ["Sao chép số tài khoản Nhà Trai", "Sao chép số tài khoản"],
+      ["Sao chép số tài khoản Nhà Gái", "Sao chép số tài khoản"],
+    ]);
+    // The button's whole content is one decorative glyph: no visible wording.
+    for (const [, , inner] of controls) {
+      expect(inner).toMatch(/^<svg [^>]*aria-hidden="true"/);
+      expect(inner?.replace(/<[^>]*>/g, "").trim()).toBe("");
+    }
+    // The number keeps its own centred span beside the control.
+    expect(withCopy.match(/class="[^"]*giftAccountValue[^"]*">9001000000001</g)).toHaveLength(1);
     expect(clipboard.copyText).not.toHaveBeenCalled();
     // No account number → no copy control.
     expect(giftHtml({ gift: { groom: { ...GROOM_LINES, bankAccountNumber: null } }, clipboard })).not.toMatch(/giftCopy/);

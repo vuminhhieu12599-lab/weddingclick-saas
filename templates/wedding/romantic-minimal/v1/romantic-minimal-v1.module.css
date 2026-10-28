@@ -2020,43 +2020,82 @@
 .giftInfoRow .giftAccountNumber {
   font-size: 22px;
   letter-spacing: 0.08em;
+  font-variant-numeric: lining-nums tabular-nums;
   color: #8c4f5b;
 }
 
+/*
+ * GIFT-UI-01. Three columns, the outer two equally flexible, so the number
+ * keeps the row's optical centre whatever the copy control measures. The
+ * control takes the right column and the honest FAILED / UNAVAILABLE note
+ * takes a full row underneath; the success note is screen-reader only and
+ * absolutely positioned, so it never opens that second row.
+ */
+.giftInfoRow .giftAccountRow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  row-gap: 6px;
+}
+
+.giftAccountValue {
+  grid-column: 2;
+  grid-row: 1;
+  user-select: all;
+}
+
 .giftCopy {
-  min-height: 40px;
-  margin-top: 14px;
-  padding: 0 24px;
-  border: 1px solid rgba(155, 89, 102, 0.5);
-  border-radius: 8px;
-  background: rgba(243, 221, 225, 0.5);
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 12.5px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: #9b5966;
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* A 44px target around a 19px glyph: light to the eye, still easy to hit. */
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(155, 89, 102, 0.72);
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.giftCopy[data-copy-feedback="success"] {
-  border-color: #9b5966;
-  background: #9b5966;
-  color: #fffaf6;
+/* The borderless icon has no shape of its own to show focus, so it says so. */
+.giftCopy:focus-visible {
+  outline: 2px solid #c5a06a;
+  outline-offset: 2px;
 }
 
-.giftCopyControl {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+.giftCopyGlyph {
+  display: block;
+  width: 19px;
+  height: 19px;
+}
+
+@media (hover: hover) {
+  .giftCopy:hover {
+    color: #9b5966;
+    background: rgba(243, 221, 225, 0.75);
+  }
+}
+
+.giftCopy[data-copy-feedback="success"] {
+  color: #9b5966;
+  background: rgba(243, 221, 225, 0.9);
 }
 
 .giftCopyNote {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-self: center;
+  max-width: 260px;
   font-style: italic;
   font-weight: 500;
   font-size: 14px;
+  line-height: 1.45;
   color: #8a5d66;
 }
 

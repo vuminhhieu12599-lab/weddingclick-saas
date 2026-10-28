@@ -13,6 +13,7 @@ import { lookupTemplateEditorManifest } from "../../../templates/core/production
 import { PRODUCTION_COMPATIBILITY_REGISTRY } from "../../../templates/core/production-renderer-manifests";
 import {
   DEMO_IMAGES,
+  DEMO_QR_IMAGES,
   lookupDemoLegacyRolePhotoSet,
   lookupDemoTemplateSlotPhotoSet,
   type DemoImage,
@@ -25,9 +26,10 @@ import {
  *
  * These are RF-02 builder INPUT records (as Staff would enter them), never a
  * hand-built Snapshot or ViewModel: every demo runs the frozen production
- * pipeline. Fictional people, fictional venues, a clearly-demo bank, no QR
- * image (nothing scannable), no audio. Fixed literals only: no database,
- * network, current time or randomness.
+ * pipeline. Fictional people, fictional venues, a clearly-demo bank, a
+ * clearly-demo QR plate per family that encodes a plain sample line and no
+ * payment data (`DEMO_QR_IMAGES`), no audio. Fixed literals only: no
+ * database, network, current time or randomness.
  *
  * Generic over renderer keys: design keys come from the production renderer
  * manifest and template slots from the production editor manifest, so a new
@@ -183,11 +185,11 @@ function demoWeddingDetails(couple: DemoCoupleOverride): NonNullable<BuildSnapsh
     groomBankName: "Ngân hàng Demo (thiệp mẫu)",
     groomBankAccountName: couple.groomAccountName,
     groomBankAccountNumber: "0000000001",
-    groomBankQrMediaId: null,
+    groomBankQrMediaId: DEMO_QR_MEDIA_IDS.GROOM,
     brideBankName: "Ngân hàng Demo (thiệp mẫu)",
     brideBankAccountName: couple.brideAccountName,
     brideBankAccountNumber: "0000000002",
-    brideBankQrMediaId: null,
+    brideBankQrMediaId: DEMO_QR_MEDIA_IDS.BRIDE,
   };
 }
 
@@ -217,6 +219,13 @@ const DEMO_GALLERY_COUNT = 6;
 function demoMediaId(n: number): string {
   return `00000000-0000-4000-8000-00000000d${String(n).padStart(3, "0")}`;
 }
+
+/**
+ * The two QR plates sit in a reserved id range of their own, above anything
+ * the photo walk allocates, so adding or reordering demo photographs never
+ * moves them and the canonical `wedding_details` references stay fixed.
+ */
+const DEMO_QR_MEDIA_IDS = Object.freeze({ GROOM: demoMediaId(900), BRIDE: demoMediaId(901) });
 
 /** Picks demo images by orientation in a stable rotation so neighbours differ. */
 class DemoImagePicker {
@@ -282,6 +291,15 @@ export function buildDemoWeddingSource(rendererKey: string, variant: InvitationV
   };
   const add = (mediaType: SnapshotMediaSource["mediaType"], orientation: DemoImageOrientation | "ANY", sortOrder: number): string =>
     addImage(mediaType, picker.next(orientation), sortOrder);
+
+  // Semantic QR media, exactly as a Project stores them: one row per side and
+  // the canonical `wedding_details` reference to it. The builder emits only
+  // the operational sides' QR, so a GROOM demo carries the groom plate alone.
+  media.push({ id: DEMO_QR_MEDIA_IDS.GROOM, projectId: DEMO_PROJECT_ID, mediaType: "QR_GROOM", sortOrder: 0 });
+  media.push({ id: DEMO_QR_MEDIA_IDS.BRIDE, projectId: DEMO_PROJECT_ID, mediaType: "QR_BRIDE", sortOrder: 0 });
+  imageById.set(DEMO_QR_MEDIA_IDS.GROOM, DEMO_QR_IMAGES.GROOM);
+  imageById.set(DEMO_QR_MEDIA_IDS.BRIDE, DEMO_QR_IMAGES.BRIDE);
+
   const photoSet = lookupDemoLegacyRolePhotoSet(rendererKey);
 
   let templateMedia: BuildSnapshotPayloadInput["templateMedia"];
