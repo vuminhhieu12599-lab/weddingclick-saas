@@ -29,8 +29,9 @@ export function BrandLink() {
 
 /**
  * Sticky header. Mobile navigation is a native `<details>` disclosure, so it
- * works without JavaScript and is keyboard accessible. Staff login stays
- * reachable but visually secondary.
+ * works without JavaScript and is keyboard accessible. On desktop staff login
+ * is an icon-only lock after the consultation CTA, labelled for assistive tech;
+ * the mobile menu keeps the full text entry.
  */
 export function SiteHeader() {
   return (
@@ -45,11 +46,11 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className={styles.headerActions}>
-          <Link href="/login" className={styles.staffLink}>
-            Nhân viên đăng nhập
-          </Link>
           <Link href={consultationHref()} className={`${styles.button} ${styles.buttonPrimary} ${styles.buttonSmall} ${styles.headerCta}`}>
             Tư vấn miễn phí
+          </Link>
+          <Link href="/login" className={styles.staffLogin} aria-label="Nhân viên đăng nhập" title="Nhân viên đăng nhập">
+            {ShowroomIcons.lock(styles.buttonIcon)}
           </Link>
           <details className={styles.menu}>
             <summary className={styles.menuToggle} aria-label="Mở menu">
