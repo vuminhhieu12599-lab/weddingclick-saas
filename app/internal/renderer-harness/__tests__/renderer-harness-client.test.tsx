@@ -30,6 +30,15 @@ vi.mock("../../../../templates/wedding/elegant-editorial/v1/elegant-editorial-v1
     return <div data-renderer="spy" />;
   },
 }));
+// SD-V2-01: the Se Duyên v2 scenario renders that renderer, so it needs the
+// same spy — and mocking the root keeps its next/font loaders, which only run
+// under the Next compiler, out of this test entirely.
+vi.mock("../../../../templates/wedding/se-duyen/v2/se-duyen-v2", () => ({
+  SeDuyenV2: (props: InvitationRendererPropsV1) => {
+    received.push(props);
+    return <div data-renderer="spy" />;
+  },
+}));
 
 const { RendererHarnessClient } = await import("../renderer-harness-client");
 
@@ -64,10 +73,12 @@ describe("RendererHarnessClient RSVP capability", () => {
   it.each(HARNESS_SCENARIO_IDS)("%s: the renderer receives exactly { rsvp } during server render", async (id) => {
     const capabilities = await harnessCapabilities(id);
     // Harness audio is UNAVAILABLE and the clock/clipboard appear only after mount.
-    // RF-06D: music-resolved alone opts into the local harness tone, so the
-    // RF-06C host adds its PAUSED music capability there (P35, P38).
-    expect(Reflect.ownKeys(capabilities)).toStrictEqual(id === "music-resolved" ? ["rsvp", "music"] : ["rsvp"]);
-    if (id === "music-resolved") expect(capabilities.music?.status).toBe("PAUSED");
+    // RF-06D: only the scenarios that opt into the local harness tone get the
+    // RF-06C host's PAUSED music member (P35, P38) — music-resolved, and the
+    // Se Duyên v2 one SD-V2-01 added to check music on open.
+    const withTone = id === "music-resolved" || id === "se-duyen-v2";
+    expect(Reflect.ownKeys(capabilities)).toStrictEqual(withTone ? ["rsvp", "music"] : ["rsvp"]);
+    if (withTone) expect(capabilities.music?.status).toBe("PAUSED");
     expect(Object.isFrozen(capabilities)).toBe(true);
   });
 

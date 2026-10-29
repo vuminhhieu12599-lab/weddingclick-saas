@@ -5,8 +5,13 @@ import type {
   MediaResolver,
 } from "../../../lib/invitation-rendering/invitation-view-model-types";
 import type { RendererEffectiveSections } from "../../../lib/invitation-rendering/renderer-selection";
-import type { SnapshotDesignSettingValue } from "../../../lib/invitation-rendering/snapshot-payload-types";
+import type {
+  BuildSnapshotPayloadInput,
+  SnapshotDesignSettingValue,
+} from "../../../lib/invitation-rendering/snapshot-payload-types";
 import { runRendererFixturePipeline } from "../../../templates/core/fixtures/renderer-fixture-pipeline";
+import { SE_DUYEN_V2_EDITOR_MANIFEST } from "../../../templates/editor/wedding/se-duyen-v2";
+import { SE_DUYEN_V2_MANIFEST } from "../../../templates/wedding/se-duyen/v2/manifest";
 import {
   FIXTURE_GUESTS,
   FIXTURE_MEDIA_DIMENSIONS,
@@ -114,12 +119,84 @@ export function createHarnessMediaResolver(
   });
 }
 
+/**
+ * SD-V2-01 harness scenario data: the ten album photographs, in order,
+ * assembled from fixture media that already have a local placeholder in
+ * `HARNESS_MEDIA_FILES` — no new image is added.
+ *
+ * The three named gallery images come first, then the five photo-story ones
+ * (`PHOTO_STORY` is slot-assignable, and Se Duyên renders no photo-story
+ * section, so those rows are free to use here), then two gallery extras.
+ * That ordering is deliberate: the harness ships only three gallery
+ * placeholders and recycles them for the extras, so taking the photo-story
+ * images gives EIGHT visibly different pictures across the ten tiles —
+ * enough to check the grid order and step the viewer through it by eye.
+ */
+const SE_DUYEN_V2_GALLERY_IDS: readonly string[] = Object.freeze([
+  FIXTURE_MEDIA_IDS.GALLERY_1,
+  FIXTURE_MEDIA_IDS.GALLERY_2,
+  FIXTURE_MEDIA_IDS.GALLERY_3,
+  FIXTURE_MEDIA_IDS.PHOTO_STORY_1,
+  FIXTURE_MEDIA_IDS.PHOTO_STORY_2,
+  FIXTURE_MEDIA_IDS.PHOTO_STORY_3,
+  FIXTURE_MEDIA_IDS.PHOTO_STORY_4,
+  FIXTURE_MEDIA_IDS.PHOTO_STORY_5,
+  fixtureExtraGalleryId(4),
+  fixtureExtraGalleryId(5),
+]);
+
+/**
+ * Se Duyên's five positional slots, each filled from an existing fixture
+ * image of a slot-assignable media type (COVER, PORTRAIT_*, GALLERY,
+ * LOVE_STORY_PHOTO). Fictional fixture ids only.
+ */
+const SE_DUYEN_V2_SLOT_MEDIA: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  openingPhoto: [FIXTURE_MEDIA_IDS.COVER],
+  portraitLead: [FIXTURE_MEDIA_IDS.PORTRAIT_GROOM],
+  portraitAside: [FIXTURE_MEDIA_IDS.PORTRAIT_BRIDE],
+  gallery: SE_DUYEN_V2_GALLERY_IDS,
+  closingPhoto: [FIXTURE_MEDIA_IDS.LOVE_STORY_PHOTO],
+});
+
+/**
+ * Re-points a built fixture input at `wedding.se-duyen.v2`: its pinned
+ * template version, the design keys its own manifest declares, and the
+ * TEMPLATE_SLOTS assignments above. Pure and local — no database, no
+ * network, no environment, and no media id that is not a fixture id. The
+ * slot keys and the gallery-backed ones are read from Se Duyên v2's own
+ * editor manifest rather than hand-listed, so they cannot drift from it.
+ */
+function toSeDuyenV2Source(input: BuildSnapshotPayloadInput): BuildSnapshotPayloadInput {
+  const { compatibility, design } = SE_DUYEN_V2_MANIFEST;
+  const declared = SE_DUYEN_V2_EDITOR_MANIFEST.mediaSlots;
+  return {
+    ...input,
+    design: {
+      ...input.design,
+      paletteKey: design.palettes[0] as string,
+      fontPresetKey: design.fontPresets[0] as string,
+      effectPresetKey: design.effectPresets[0] as string,
+    },
+    templateVersion: { ...input.templateVersion, rendererKey: compatibility.rendererKey },
+    templateMedia: {
+      // Every declared slot, so an unfilled one is `[]` rather than missing.
+      slots: Object.fromEntries(declared.map((slot) => [slot.key, SE_DUYEN_V2_SLOT_MEDIA[slot.key] ?? []])),
+      gallerySlotKeys: declared.filter((slot) => slot.sectionKey === "gallery").map((slot) => slot.key),
+    },
+  };
+}
+
 interface HarnessScenarioDefinition {
   readonly label: string;
   readonly source: RendererFixtureSourceOptions;
   readonly guest?: GuestOverlay;
   readonly unavailableMediaIds?: readonly string[];
   readonly resolveAudio?: boolean;
+  /**
+   * Rewrites the built fixture input so a scenario can render a registered
+   * renderer other than the default one. Pure; fixture data only.
+   */
+  readonly overrideSource?: (input: BuildSnapshotPayloadInput) => BuildSnapshotPayloadInput;
 }
 
 const ALL_SECTIONS_OFF: Record<string, SnapshotDesignSettingValue> = Object.freeze({
@@ -183,6 +260,21 @@ export const HARNESS_SCENARIOS = Object.freeze({
     source: { variant: "GROOM" },
     resolveAudio: true,
   },
+  // SD-V2-01 local visual QA: the album grid full at ten photographs, and a
+  // resolved tone so the music-on-open tap can be checked in a browser.
+  "se-duyen-v2": {
+    label: "Se Duyên v2 — album 10 ảnh + nhạc",
+    source: {
+      variant: "COMMON",
+      portraits: "PRESENT",
+      loveStoryPhoto: "PRESENT",
+      photoStory: "PRESENT",
+      galleryCount: 5,
+    },
+    guest: FIXTURE_GUESTS.NORMAL,
+    resolveAudio: true,
+    overrideSource: toSeDuyenV2Source,
+  },
 } as const satisfies Record<string, HarnessScenarioDefinition>);
 
 export type HarnessScenarioId = keyof typeof HARNESS_SCENARIOS;
@@ -204,7 +296,9 @@ export interface HarnessRenderData {
 
 export async function buildHarnessRenderData(id: HarnessScenarioId): Promise<HarnessRenderData> {
   const scenario: HarnessScenarioDefinition = HARNESS_SCENARIOS[id];
-  const fixture = await runRendererFixturePipeline(buildRendererFixtureSourceInput(scenario.source), {
+  const base = buildRendererFixtureSourceInput(scenario.source);
+  const source = scenario.overrideSource === undefined ? base : scenario.overrideSource(base);
+  const fixture = await runRendererFixturePipeline(source, {
     resolver: createHarnessMediaResolver(scenario.unavailableMediaIds, {
       resolveAudio: scenario.resolveAudio === true,
     }),

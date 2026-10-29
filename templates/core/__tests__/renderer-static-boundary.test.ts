@@ -1166,6 +1166,12 @@ const HARNESS_ALLOWED_IMPORTS: Readonly<Record<(typeof HARNESS_FILES)[number], r
     `${LIB}/snapshot-payload-types`,
     "templates/core/fixtures/renderer-fixture-pipeline",
     "templates/core/fixtures/renderer-fixture-sources",
+    // SD-V2-01 local visual QA: the two DATA-ONLY modules the Se Duyên v2
+    // scenario reads to pin the renderer key, its design keys and its slot
+    // keys. Never the renderer root, its CSS module or its font loader, so
+    // the harness server graph still reaches no renderer implementation.
+    "templates/editor/wedding/se-duyen-v2",
+    "templates/wedding/se-duyen/v2/manifest",
   ],
 };
 
