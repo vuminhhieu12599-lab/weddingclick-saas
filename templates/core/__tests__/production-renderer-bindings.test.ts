@@ -48,6 +48,10 @@ vi.mock("../../wedding/elegant-editorial/v1/fonts", () => ({
 vi.mock("../../wedding/se-duyen/v1/fonts", () => ({
   SE_DUYEN_V1_FONT_VARIABLES_CLASS_NAME: "sd-test-font-variables",
 }));
+// SD-V2-01: and Se Duyên v2, likewise.
+vi.mock("../../wedding/se-duyen/v2/fonts", () => ({
+  SE_DUYEN_V2_FONT_VARIABLES_CLASS_NAME: "sd2-test-font-variables",
+}));
 
 const {
   PRODUCTION_RENDERER_BINDING_ERROR_MESSAGES,
@@ -61,6 +65,7 @@ const { OurWeddingStoryV1 } = await import("../../wedding/our-wedding-story/v1/o
 const { VietnameseHeritageV2 } = await import("../../wedding/vietnamese-heritage/v2/vietnamese-heritage-v2");
 const { OurWeddingStoryV2 } = await import("../../wedding/our-wedding-story/v2/our-wedding-story-v2");
 const { SeDuyenV1 } = await import("../../wedding/se-duyen/v1/se-duyen-v1");
+const { SeDuyenV2 } = await import("../../wedding/se-duyen/v2/se-duyen-v2");
 
 /**
  * RF-06B production binding registry (docs/DECISIONS.md "RF-06-0 …" P27 B,
@@ -80,8 +85,9 @@ const OWS_KEY = "wedding.our-wedding-story.v1";
 const VH2_KEY = "wedding.vietnamese-heritage.v2";
 const OWS2_KEY = "wedding.our-wedding-story.v2";
 const SD_KEY = "wedding.se-duyen.v1";
+const SD2_KEY = "wedding.se-duyen.v2";
 
-/** The real production key → component pairs (VH-01: two renderers; RM-02: three; OWS-01: four; VH-V2-01: five; OWS-V2-01: six). */
+/** The real production key → component pairs (VH-01: two renderers; RM-02: three; OWS-01: four; VH-V2-01: five; OWS-V2-01: six; SD-V1: seven; SD-V2-01: eight). */
 function productionComponents(): Map<string, InvitationRendererComponentV1> {
   return new Map<string, InvitationRendererComponentV1>([
     [EE_KEY, ElegantEditorialV1],
@@ -91,6 +97,7 @@ function productionComponents(): Map<string, InvitationRendererComponentV1> {
     [VH2_KEY, VietnameseHeritageV2],
     [OWS2_KEY, OurWeddingStoryV2],
     [SD_KEY, SeDuyenV1],
+    [SD2_KEY, SeDuyenV2],
   ]);
 }
 
@@ -176,7 +183,7 @@ describe("key-set equality (P27)", () => {
 describe("Elegant Editorial binding", () => {
   it("wedding.elegant-editorial.v1 resolves to a deferred binding of exactly ElegantEditorialV1", async () => {
     // VH-01 generalization: the production key list is now exactly EE then VH (was EE only).
-    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([EE_KEY, VH_KEY, RM_KEY, OWS_KEY, VH2_KEY, OWS2_KEY, SD_KEY]);
+    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([EE_KEY, VH_KEY, RM_KEY, OWS_KEY, VH2_KEY, OWS2_KEY, SD_KEY, SD2_KEY]);
     const bound = resolveInvitationRendererComponent(PRODUCTION_RENDERER_BINDING_REGISTRY, "wedding.elegant-editorial.v1");
     expect(isDeferred(bound)).toBe(true);
     expect(await lazyMarkup(bound, "COMMON")).toBe(directMarkup(ElegantEditorialV1, "COMMON"));

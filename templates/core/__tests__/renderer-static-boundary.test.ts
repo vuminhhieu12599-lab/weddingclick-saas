@@ -55,6 +55,8 @@ const ALLOWED_IMPORTS: Readonly<Record<(typeof RF06A_FILES)[number], readonly st
     "templates/wedding/our-wedding-story/v2/manifest",
     // SD-V1: the seventh explicit production manifest.
     "templates/wedding/se-duyen/v1/manifest",
+    // SD-V2-01: the eighth explicit production manifest.
+    "templates/wedding/se-duyen/v2/manifest",
     "templates/core/renderer-manifest",
   ],
   "templates/wedding/elegant-editorial/v1/manifest.ts": ["templates/core/renderer-manifest"],
@@ -134,6 +136,8 @@ const RS01_LAZY_ROOTS = [
   "templates/wedding/our-wedding-story/v2/our-wedding-story-v2",
   // SD-V1: the seventh production renderer root.
   "templates/wedding/se-duyen/v1/se-duyen-v1",
+  // SD-V2-01: the eighth production renderer root.
+  "templates/wedding/se-duyen/v2/se-duyen-v2",
 ] as const;
 
 /** Resolves a relative specifier from `file` to a repository-relative module path. */
@@ -254,7 +258,7 @@ describe("RF-06A files", () => {
     const code = stripComments(readRepoFile("templates/core/production-renderer-manifests.ts"));
     // VH-01: still one explicit, ordered literal list, now with the second manifest; RM-02: and the third; OWS-01: and the fourth.
     expect(code).toMatch(
-      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*OUR_WEDDING_STORY_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V2_MANIFEST,\s*OUR_WEDDING_STORY_V2_MANIFEST,\s*SE_DUYEN_V1_MANIFEST,\s*\]\)/,
+      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*OUR_WEDDING_STORY_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V2_MANIFEST,\s*OUR_WEDDING_STORY_V2_MANIFEST,\s*SE_DUYEN_V1_MANIFEST,\s*SE_DUYEN_V2_MANIFEST,\s*\]\)/,
     );
     expect(/["'`]wedding\.[\w-]+\.v\d+/.test(code)).toBe(false);
   });
@@ -343,6 +347,7 @@ describe("templates/** production tree (P39)", () => {
   // RM-02 extension: plus exactly the Romantic Minimal v1 renderer files (rules at the end of this file).
   // OWS-01 extension: plus exactly the Our Wedding Story v1 manifests and renderer files (rules at the end of this file).
   // SD-V1-01 extension: plus exactly the Se Duyên v1 renderer files (rules at the end of this file).
+  // SD-V2-01 extension: plus exactly the Se Duyên v2 renderer files (rules at the end of this file).
   it("templates/** contains exactly the RF-06A, RF-06B, RF-06C, RF-06D, VH-01, TE-02, RM-01, RM-02 and OWS-01 files", () => {
     expect([...sources].sort()).toStrictEqual(
       [
@@ -360,6 +365,7 @@ describe("templates/** production tree (P39)", () => {
         ...VH2_FILES,
         ...OWS2_FILES,
         ...SD1_FILES,
+        ...SD2_FILES,
       ].sort(),
     );
   });
@@ -664,12 +670,14 @@ describe("RF-06B template files", () => {
           ...OWS2_TSX_FILES,
           SD1_CSS_FILE,
           ...SD1_TSX_FILES,
+          SD2_CSS_FILE,
+          ...SD2_TSX_FILES,
         ],
         file,
       ).toContain(file);
     }
     expect(sources.filter((source) => source.endsWith(".css")).sort()).toStrictEqual(
-      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE, VH2_CSS_FILE, OWS2_CSS_FILE, SD1_CSS_FILE].sort(),
+      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE, VH2_CSS_FILE, OWS2_CSS_FILE, SD1_CSS_FILE, SD2_CSS_FILE].sort(),
     );
   });
 
@@ -1388,13 +1396,13 @@ describe("RS-01 renderer-key lazy loading", () => {
 
   it("the binding module owns exactly one literal import() per production renderer root, nothing else", () => {
     const { specifiers, total } = dynamicImportsOf(readRepoFile(BINDINGS_MODULE));
-    expect(total).toBe(7);
+    expect(total).toBe(8);
     expect(specifiers.map((specifier) => resolveSpecifier(BINDINGS_MODULE, specifier))).toStrictEqual([...RS01_LAZY_ROOTS]);
     const code = codeOf(BINDINGS_MODULE);
     // No template literal, concatenation, variable or discovery in a specifier.
     expect(code).not.toMatch(/import\(\s*[^"'\s]|import\(`|import\([^)]*\+|readdir|glob|require\(/);
     // next/dynamic with no options: SSR on, no `loading` (no Suspense boundary, no placeholder content).
-    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(7);
+    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(8);
     expect(code).not.toMatch(/ssr:|loading:|suspense/i);
     // Each lazy root binds its own export only.
     expect(code).toMatch(/import\("\.\.\/wedding\/elegant-editorial\/v1\/elegant-editorial-v1"\)\.then\(\(module\) => module\.ElegantEditorialV1\)/);
@@ -1403,6 +1411,8 @@ describe("RS-01 renderer-key lazy loading", () => {
     expect(code).toMatch(/import\("\.\.\/wedding\/our-wedding-story\/v1\/our-wedding-story-v1"\)\.then\(\(module\) => module\.OurWeddingStoryV1\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/vietnamese-heritage\/v2\/vietnamese-heritage-v2"\)\.then\(\(module\) => module\.VietnameseHeritageV2\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/our-wedding-story\/v2\/our-wedding-story-v2"\)\.then\(\(module\) => module\.OurWeddingStoryV2\)/);
+    expect(code).toMatch(/import\("\.\.\/wedding\/se-duyen\/v1\/se-duyen-v1"\)\.then\(\(module\) => module\.SeDuyenV1\)/);
+    expect(code).toMatch(/import\("\.\.\/wedding\/se-duyen\/v2\/se-duyen-v2"\)\.then\(\(module\) => module\.SeDuyenV2\)/);
     expect(code).not.toMatch(/\bcatch\b|\.catch\(/);
   });
 
@@ -1420,6 +1430,7 @@ describe("RS-01 renderer-key lazy loading", () => {
       "templates/wedding/our-wedding-story/v2/manifest.ts",
       "templates/wedding/romantic-minimal/v1/manifest.ts",
       "templates/wedding/se-duyen/v1/manifest.ts",
+      "templates/wedding/se-duyen/v2/manifest.ts",
       "templates/wedding/vietnamese-heritage/v1/manifest.ts",
       "templates/wedding/vietnamese-heritage/v2/manifest.ts",
     ]);
@@ -3568,6 +3579,64 @@ const SD1_RENDERER_TREE = [...SD1_CODE_FILES, ...SD1_ISLAND_FILES, ...SD1_MODEL_
 const SD1_FILES = [...SD1_RENDERER_TREE, SD1_EDITOR_FILE];
 const SD1_TSX_FILES = SD1_FILES.filter((file) => file.endsWith(".tsx"));
 
+// ===========================================================================
+// SD-V2-01 extension — Se Duyên v2 (docs/DECISIONS.md "SD-V2-01").
+//
+// The same tree as v1, one file for one file: v2 is v1 with the music control
+// started from the opening gesture and floated, and the four-frame album
+// replaced by a responsive grid. It adds NO decorative asset and NO public
+// directory of its own — `se-duyen-v2.module.css` names v1's immutable
+// `public/renderers/wedding/se-duyen/v1/` files, which is why SD2 has no
+// asset list here (see templates/wedding/se-duyen/v2/PROVENANCE.md).
+// ===========================================================================
+
+const SD2 = "templates/wedding/se-duyen/v2";
+const SD2_MANIFEST_FILE = `${SD2}/manifest.ts`;
+const SD2_ROOT = `${SD2}/se-duyen-v2.tsx`;
+const SD2_FONTS = `${SD2}/fonts.ts`;
+const SD2_CSS_FILE = `${SD2}/se-duyen-v2.module.css`;
+const SD2_PROVENANCE_FILE = `${SD2}/PROVENANCE.md`;
+/** SD-V2-02A: the editor manifest, outside the renderer-version directory. */
+const SD2_EDITOR_FILE = "templates/editor/wedding/se-duyen-v2.ts";
+/** Static modules: no hooks, no interaction, no capability. */
+const SD2_CODE_FILES = [
+  SD2_MANIFEST_FILE,
+  SD2_ROOT,
+  `${SD2}/copy.ts`,
+  SD2_FONTS,
+  `${SD2}/sections/ceremony.tsx`,
+  `${SD2}/sections/closing.tsx`,
+  `${SD2}/sections/couple.tsx`,
+  `${SD2}/sections/date-text.ts`,
+  `${SD2}/sections/families.tsx`,
+  // SD-V2-02: the album's section head and its pure tile selection.
+  `${SD2}/sections/gallery.tsx`,
+  `${SD2}/sections/gallery-frames.ts`,
+  `${SD2}/sections/invitation.tsx`,
+  `${SD2}/sections/invitation-wording.ts`,
+  `${SD2}/sections/photo-frame.ts`,
+  `${SD2}/sections/timeline.tsx`,
+  `${SD2}/sections/gift.tsx`,
+  `${SD2}/sections/gift-panels.ts`,
+] as const;
+/** The interactive islands: as v1, with the album viewer now a grid. */
+const SD2_ISLAND_FILES = [
+  `${SD2}/interactive/opening-stage.tsx`,
+  `${SD2}/interactive/gallery-viewer.tsx`,
+  `${SD2}/interactive/countdown.tsx`,
+  // SD-V2-01: the gilt disc, floated and started by the opening gesture.
+  `${SD2}/interactive/music-control.tsx`,
+  `${SD2}/interactive/gift-envelope.tsx`,
+  `${SD2}/interactive/rsvp.tsx`,
+  `${SD2}/interactive/section-reveal.tsx`,
+] as const;
+/** Pure state model behind the island. */
+const SD2_MODEL_FILES = [`${SD2}/interactive/opening-state.ts`] as const;
+/** Everything inside the renderer-version directory. */
+const SD2_RENDERER_TREE = [...SD2_CODE_FILES, ...SD2_ISLAND_FILES, ...SD2_MODEL_FILES, SD2_CSS_FILE, SD2_PROVENANCE_FILE];
+const SD2_FILES = [...SD2_RENDERER_TREE, SD2_EDITOR_FILE];
+const SD2_TSX_FILES = SD2_FILES.filter((file) => file.endsWith(".tsx"));
+
 /** The approved decorative artwork, under the renderer's own immutable version path. */
 const SD1_ASSET_DIR = "public/renderers/wedding/se-duyen/v1";
 const SD1_ASSET_FILES = [
@@ -3585,7 +3654,9 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
 
   it("every listed file exists, and the tree holds nothing else", () => {
     for (const file of SD1_FILES) expect(() => readRepoFile(file), file).not.toThrow();
-    expect(listSources(join(TEMPLATES_ROOT, "wedding", "se-duyen")).sort()).toStrictEqual([...SD1_RENDERER_TREE].sort());
+    expect(listSources(join(TEMPLATES_ROOT, "wedding", "se-duyen")).sort()).toStrictEqual(
+      [...SD1_RENDERER_TREE, ...SD2_RENDERER_TREE].sort(),
+    );
   });
 
   it("the manifest is data only, imports its type only, and declares exactly the sections the renderer renders", () => {
