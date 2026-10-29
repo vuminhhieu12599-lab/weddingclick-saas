@@ -33,8 +33,9 @@ function jsonLiterals(): unknown[] {
 describe("Se Duyên v2 catalog seed migration 0054", () => {
   it("is the head migration and is authored only (never applied by this task)", () => {
     const names = readdirSync(MIGRATIONS).sort();
-    expect(names.at(-1)).toBe(M0054);
-    expect(names.at(-2)).toBe("20260911041213_0053_staff_approval_on_behalf.sql");
+    expect(names.at(-1)).toBe("20260911041215_0055_rsvp_invitation_source.sql");
+    expect(names.at(-2)).toBe(M0054);
+    expect(names.at(-3)).toBe("20260911041213_0053_staff_approval_on_behalf.sql");
     expect(sql).toContain("AUTHORING ONLY — not applied.");
     // One 0054 and no reuse of a retired number.
     expect(names.filter((name) => /_0054_/.test(name))).toStrictEqual([M0054]);

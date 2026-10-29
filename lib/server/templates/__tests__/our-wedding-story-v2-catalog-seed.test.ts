@@ -32,11 +32,12 @@ describe("Our Wedding Story v2 catalog seed migration 0051", () => {
     const names = readdirSync(MIGRATIONS).sort();
     // SD-V2-CATALOG-01's 0054 is the new head, then TE-06's 0053 and 0052
     // (the Se Duyên v1 catalog seed); 0051 still follows 0050 directly.
-    expect(names.at(-1)).toBe("20260911041214_0054_seed_se_duyen_v2_catalog.sql");
-    expect(names.at(-2)).toBe("20260911041213_0053_staff_approval_on_behalf.sql");
-    expect(names.at(-3)).toBe("20260911041212_0052_seed_se_duyen_v1_catalog.sql");
-    expect(names.at(-4)).toBe(M0051);
-    expect(names.at(-5)).toBe("20260911041210_0050_seed_vietnamese_heritage_v2_catalog.sql");
+    expect(names.at(-1)).toBe("20260911041215_0055_rsvp_invitation_source.sql");
+    expect(names.at(-2)).toBe("20260911041214_0054_seed_se_duyen_v2_catalog.sql");
+    expect(names.at(-3)).toBe("20260911041213_0053_staff_approval_on_behalf.sql");
+    expect(names.at(-4)).toBe("20260911041212_0052_seed_se_duyen_v1_catalog.sql");
+    expect(names.at(-5)).toBe(M0051);
+    expect(names.at(-6)).toBe("20260911041210_0050_seed_vietnamese_heritage_v2_catalog.sql");
     expect(sql).toContain("AUTHORING ONLY — not applied.");
   });
 

@@ -578,6 +578,7 @@ Suggested fields:
 - `id`.
 - `project_id` FK.
 - `guest_id` nullable FK (`ON DELETE SET NULL`, not cascade — deleting a guest must not destroy their actual RSVP response).
+- `invitation_id` nullable. *Since migration 0055 (RSVP-P0-02):* the invitation this response was actually submitted through, derived server-side from the validated currently published `public_slug` — never from client input. Composite FK `(invitation_id, project_id)` → `project_invitations(id, project_id)`, `ON DELETE NO ACTION`, so a response can only name an invitation of its own Project. `NULL` means the source was never recorded (every pre-0055 row; no backfill, never inferred): the Customer Portal shows such a row as "Chưa xác định nguồn" and never assigns it to a family. See `docs/API_CONTRACT.md` §40.
 - `guest_display_name_snapshot` nullable — required (NOT NULL in effect via CHECK) when `guest_id` is null (non-personalized flow); for personalized flow, a copy of `guests.display_name` at submission time so the response stays legible even if the guest row is later removed. *Since migration 0032:* every new RSVP stores the typed response name here (personalized or not; display data only, never identity — identity is `guest_id`); older rows keep their stored value.
 - `attendance` — `TEXT CHECK IN ('ATTENDING','MAYBE','NOT_ATTENDING')` (MAYBE: migration 0032), not boolean (see `docs/PHYSICAL_DATABASE_PLAN.md` §A for rationale).
 - `party_size` integer, bounded (`0`–`20`).
@@ -587,7 +588,7 @@ Suggested fields:
 
 Rules:
 
-- personalized guest has one current RSVP; enforced via a partial unique index on `guest_id WHERE guest_id IS NOT NULL`;
+- personalized guest has one current RSVP; enforced via a partial unique index on `guest_id WHERE guest_id IS NOT NULL`; a resubmission also replaces the recorded `invitation_id` (0055);
 - `party_size` must be non-negative and bounded by an approved reasonable maximum (20);
 - `attendance` `'ATTENDING'` or `'MAYBE'` (0032) requires `party_size` between 1 and 20; `attendance = 'NOT_ATTENDING'` requires `party_size = 0` — both directions enforced by a single hard `CHECK`;
 - `guest_id IS NOT NULL OR guest_display_name_snapshot IS NOT NULL`, enforced by a hard `CHECK`;

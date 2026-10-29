@@ -280,7 +280,7 @@ describe("K–P: boundaries", () => {
   it("M: logging is a fixed string; the shell renders no fake controls", () => {
     const page = read(PAGE);
     for (const line of page.split("\n").filter((l) => /console\./.test(l))) expect(line).toMatch(/console\.error\("\[CustomerPortalPage\] Unexpected error"\);/);
-    expect(page).toContain("<PortalRsvpList rows={view.rsvps} summary={view.rsvpSummary} />");
+    expect(page).toContain("<PortalRsvpList view={view.rsvps} />");
     expect(page).not.toMatch(/<button|onClick|<form/);
   });
 

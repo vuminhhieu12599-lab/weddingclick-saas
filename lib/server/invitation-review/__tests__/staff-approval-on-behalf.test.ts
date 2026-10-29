@@ -255,10 +255,11 @@ describe("D. the error contract mirrors exactly the SQLSTATEs 0053 raises", () =
 describe("E. migration 0053 — placement and the additive evidence columns", () => {
   it("is the one migration after 0052, authored only, and reuses no retired number", () => {
     const names = readdirSync(MIGRATIONS).sort();
-    // SD-V2-CATALOG-01's 0054 is now the head; 0053 still follows 0052 directly.
-    expect(names.at(-1)).toBe("20260911041214_0054_seed_se_duyen_v2_catalog.sql");
-    expect(names.at(-2)).toBe(M0053);
-    expect(names.at(-3)).toBe(M0052);
+    // RSVP-P0-02's 0055 is now the head, then SD-V2-CATALOG-01's 0054; 0053 still follows 0052 directly.
+    expect(names.at(-1)).toBe("20260911041215_0055_rsvp_invitation_source.sql");
+    expect(names.at(-2)).toBe("20260911041214_0054_seed_se_duyen_v2_catalog.sql");
+    expect(names.at(-3)).toBe(M0053);
+    expect(names.at(-4)).toBe(M0052);
     expect(names.filter((name) => /_0045_/.test(name))).toStrictEqual([]);
     expect(names.filter((name) => /_0053_/.test(name))).toStrictEqual([M0053]);
     expect(migration).toContain("AUTHORING ONLY — not applied.");

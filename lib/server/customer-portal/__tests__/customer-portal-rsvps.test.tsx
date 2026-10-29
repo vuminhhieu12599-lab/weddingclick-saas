@@ -36,6 +36,7 @@ const PORTAL_B = generateAccessToken();
 /** Raw DB-shaped rows, as the repository SELECT returns them. */
 const dbRow = (projectId: string, patch: Record<string, unknown> = {}) => ({
   project_id: projectId,
+  invitation_id: null,
   guest_id: null,
   guest_display_name_snapshot: "Bạn Lan",
   attendance: "ATTENDING",
@@ -116,28 +117,35 @@ async function ready(token: string, d = deps()) {
   return view;
 }
 
-const render = (view: Extract<CustomerPortalView, { status: "READY" }>) => renderToStaticMarkup(<PortalRsvpList rows={view.rsvps} summary={view.rsvpSummary} />);
+const render = (view: Extract<CustomerPortalView, { status: "READY" }>) => renderToStaticMarkup(<PortalRsvpList view={view.rsvps} />);
+
+/** RSVP-P0-02: a COMMON Project keeps the single list, so every row is in its one `ALL` group. */
+const onlyGroup = (view: Extract<CustomerPortalView, { status: "READY" }>) => {
+  expect(view.rsvps.layout).toBe("SINGLE");
+  expect(view.rsvps.groups.map((g) => g.key)).toEqual(["ALL"]);
+  return view.rsvps.groups[0];
+};
 
 describe("033D A–E, N–P: generic + personalized RSVP owner-read", () => {
   it("A/B/P: a valid Portal reads its generic and personalized rows, newest updated first", async () => {
     const view = await ready(PORTAL_A.rawToken);
-    expect(view.rsvps.map((r) => [r.kind, r.attendance])).toEqual([
+    expect(onlyGroup(view).rows.map((r) => [r.kind, r.attendance])).toEqual([
       ["PERSONALIZED", "MAYBE"],
       ["GENERIC", "NOT_ATTENDING"],
       ["GENERIC", "ATTENDING"],
     ]);
-    expect(view.rsvps.map((r) => r.respondedAt)).toEqual(["03/10/2026 17:30", "02/10/2026 08:00", "01/10/2026 10:00"]);
+    expect(onlyGroup(view).rows.map((r) => r.respondedAt)).toEqual(["03/10/2026 17:30", "02/10/2026 08:00", "01/10/2026 10:00"]);
   });
 
   it("C/D: personalized identity is the canonical guest display_name; the typed name is only a secondary snapshot", async () => {
-    const [personal] = (await ready(PORTAL_A.rawToken)).rsvps;
+    const [personal] = onlyGroup(await ready(PORTAL_A.rawToken)).rows;
     expect(personal).toMatchObject({ guestName: "Anh Hiếu và gia đình", respondedAs: "Hiếu nè", invitationVariant: "GROOM" });
     const same = toPortalRsvps([dbRow(PROJECT_A, { guest_id: GUEST_A, guest_display_name_snapshot: null, guest: { project_id: PROJECT_A, display_name: "Em và sự cô đơn", invitation_variant: null } })], PROJECT_A);
     expect(same[0]).toMatchObject({ typedName: null, guest: { displayName: "Em và sự cô đơn", invitationVariant: null } });
   });
 
   it("E: generic rows use the typed snapshot and are never deduplicated by name", async () => {
-    const generic = (await ready(PORTAL_A.rawToken)).rsvps.filter((r) => r.kind === "GENERIC");
+    const generic = onlyGroup(await ready(PORTAL_A.rawToken)).rows.filter((r) => r.kind === "GENERIC");
     expect(generic.map((r) => [r.guestName, r.respondedAs, r.invitationVariant])).toEqual([
       ["Bạn Lan", null, null],
       ["Bạn Lan", null, null],
@@ -146,9 +154,9 @@ describe("033D A–E, N–P: generic + personalized RSVP owner-read", () => {
 
   it("N/O: Vietnamese attendance labels, stored party_size, message and summary counts render; no controls or ids", async () => {
     const view = await ready(PORTAL_A.rawToken);
-    expect(view.rsvpSummary).toEqual({ responses: { ATTENDING: 1, MAYBE: 1, NOT_ATTENDING: 1 }, people: { ATTENDING: 2, MAYBE: 3, NOT_ATTENDING: 0 } });
+    expect(onlyGroup(view).summary).toEqual({ responses: { ATTENDING: 1, MAYBE: 1, NOT_ATTENDING: 1 }, people: { ATTENDING: 2, MAYBE: 3, NOT_ATTENDING: 0 } });
     const html = render(view);
-    for (const text of ["Phản hồi tham dự", "Sẽ tham dự · 2 người", "Có thể tham dự · 3 người", "Không tham dự", "Chúc mừng hai bạn!", "Khách mời cá nhân · thiệp nhà trai", "Phản hồi từ link chung", "Trả lời với tên: Hiếu nè"]) {
+    for (const text of ["Phản hồi tham dự", "Sẽ tham dự · 2 người", "Có thể tham dự · 3 người", "Không tham dự", "Chúc mừng hai bạn!", "Khách mời cá nhân · thiệp nhà trai", "Chưa xác định nguồn", "Trả lời với tên: Hiếu nè"]) {
       expect(html).toContain(text);
     }
     expect(html).not.toMatch(/Không tham dự · 0/);
@@ -175,7 +183,7 @@ describe("033D F–J, R: scoping and serialization", () => {
     const b = deps();
     const viewB = await ready(PORTAL_B.rawToken, b);
     expect(b.rsvpReads).toEqual([PROJECT_B]);
-    expect(viewB.rsvps.map((r) => r.guestName)).toEqual(["Khách của dự án B"]);
+    expect(onlyGroup(viewB).rows.map((r) => r.guestName)).toEqual(["Khách của dự án B"]);
     // The only input is the raw token: no projectId parameter exists to override.
     expect(loadCustomerPortal.length).toBe(2);
   });
@@ -223,7 +231,7 @@ function listSources(dir: string): string[] {
 describe("033D K, L, S, T: static boundaries", () => {
   it("K/L/S/T: read-only explicit-column RSVP SELECT; no mutation/API/Guest Tool; service_role server-only; metadata unchanged", () => {
     const repo = strip(read("lib/server/supabase/customer-portal-repository.ts"));
-    expect(repo).toMatch(/\.from\("rsvps"\)\s+\.select\(\s+"project_id, guest_id, guest_display_name_snapshot, attendance, party_size, message, created_at, updated_at, guest:guests\(project_id, display_name, invitation_variant\)"/);
+    expect(repo).toMatch(/\.from\("rsvps"\)\s+\.select\(\s+"project_id, invitation_id, guest_id, guest_display_name_snapshot, attendance, party_size, message, created_at, updated_at, guest:guests\(project_id, display_name, invitation_variant\)"/);
     expect(repo).toMatch(/\.order\("updated_at", \{ ascending: false \}\)\s+\.order\("id", \{ ascending: false \}\)/);
     expect(repo).not.toMatch(/token_hash|token_hint|token_issued_at|phone|note|\.(insert|update|upsert|delete|rpc)\(/);
 

@@ -17,6 +17,9 @@ import { createServiceRoleSupabaseClient } from "./service-role-client";
  * 0013): the Project code, its invitations with a published pointer, exactly
  * those versions, and the PERSONALIZED_GUEST add-on presence.
  *
+ * RSVP-P0-02 adds `rsvps.invitation_id` (migration 0055) to the RSVP column
+ * list — one more column of the same table, no new table, join or grant.
+ *
  * Task 033D adds one read-only RSVP list SELECT over the existing 0018
  * service_role SELECT grant ("PORTAL R aggregate/list", PHYSICAL_DATABASE_PLAN
  * §15) with the canonical Guest relationship embedded through the
@@ -114,7 +117,10 @@ function isNullableText(value: unknown): value is string | null {
  * Guards and reduces RSVP rows read for `projectId`. A row of another
  * Project, or a personalized row whose embedded Guest is missing or belongs
  * to another Project, fails closed. `guest_id` / Guest `project_id` are
- * checked here and never leave this function.
+ * checked here and never leave this function. RSVP-P0-02: `invitation_id`
+ * (0055) must be a UUID or `null`; it is carried as an opaque id and only
+ * the use case turns it into a source, against this same Project's own
+ * invitations.
  */
 export function toPortalRsvps(rows: unknown, projectId: string): PortalRsvpRecord[] {
   if (!Array.isArray(rows)) fail();
@@ -124,6 +130,7 @@ export function toPortalRsvps(rows: unknown, projectId: string): PortalRsvpRecor
     if (
       r.project_id !== projectId ||
       !(r.guest_id === null || isUuid(r.guest_id)) ||
+      !(r.invitation_id === null || isUuid(r.invitation_id)) ||
       !isNullableText(r.guest_display_name_snapshot) ||
       !isAttendance(r.attendance) ||
       typeof r.party_size !== "number" ||
@@ -156,6 +163,7 @@ export function toPortalRsvps(rows: unknown, projectId: string): PortalRsvpRecor
 
     return {
       typedName: r.guest_display_name_snapshot,
+      invitationId: r.invitation_id,
       attendance: r.attendance,
       partySize: r.party_size,
       message: r.message,
@@ -225,7 +233,7 @@ export function getServiceRoleCustomerPortalGateway(): CustomerPortalGateway {
       const rsvps = await client
         .from("rsvps")
         .select(
-          "project_id, guest_id, guest_display_name_snapshot, attendance, party_size, message, created_at, updated_at, guest:guests(project_id, display_name, invitation_variant)",
+          "project_id, invitation_id, guest_id, guest_display_name_snapshot, attendance, party_size, message, created_at, updated_at, guest:guests(project_id, display_name, invitation_variant)",
           { count: "exact" },
         )
         .eq("project_id", projectId)

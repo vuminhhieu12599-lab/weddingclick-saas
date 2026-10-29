@@ -996,6 +996,8 @@ Every response is `Cache-Control: no-store`. No database detail is returned; not
 
 **Not in this task.** Personalized guest tokens / guest resolve (*since added by §22, Task 033B1; this generic contract is unchanged*), RSVP read/portal/summary, rate limiting (Task 035 pre-production gate), Open Graph (Task 032B), analytics, republish lifecycle.
 
+*Since RSVP-P0-02 (§40): the RPC also stores the invitation it resolved in `rsvps.invitation_id`. The request body, status codes and duplicate rule above are unchanged.*
+
 ## 21. Task 032B — Open Graph + Social Share Cover for `/i/[slug]`
 
 `generateMetadata` on `app/i/[slug]/page.tsx`, resolved per request (the page is `force-dynamic`). Invitation rendering and the Task 033A RSVP path are unchanged; one React `cache()` shares the single Task 032A PUBLISHED load between metadata and page.
@@ -1079,7 +1081,7 @@ Same endpoint as §20. The body is either the five §20 keys (generic, unchanged
 
 With `guestToken`: shape check (malformed → 404, no database call) → SHA-256 → `submit_public_guest_rsvp(slug, hash, …)` (0042, `SECURITY DEFINER`, `service_role` only). The RPC re-validates input (`RS001`), resolves the guest exactly as in §22.2, and then:
 
-- `guest_id` comes only from the token; `project_id` only from the publication;
+- `guest_id` comes only from the token; `project_id` only from the publication; *since RSVP-P0-02 (§40)* `invitation_id` too, re-derived from the same validated slug pinned to that Project;
 - the typed `guestName` is stored in `guest_display_name_snapshot` as response data, never identity;
 - one logical RSVP per guest: `INSERT … ON CONFLICT (guest_id) WHERE guest_id IS NOT NULL DO UPDATE` on the existing `rsvps_guest_id_key` (0018). The first submission inserts; later ones atomically replace `attendance`, `party_size`, `message` and the name snapshot (attendance may change). `id`, `project_id`, `guest_id`, `created_at` are kept.
 
@@ -1141,7 +1143,7 @@ It reads no RSVPs, guests, media, Storage, payment, review or draft data, and wr
 
 **Presentation (`presentPortalRsvps`).**
 - PERSONALIZED (`guest_id` set): the canonical `guests.display_name` is the identity. The typed `guest_display_name_snapshot` appears only as a secondary "Trả lời với tên" line when it differs, and is never identity. The Guest's invitation variant is shown when set. There is one current row per guest (0018 unique index).
-- GENERIC (`guest_id` NULL): the typed snapshot is shown, labeled "Phản hồi từ link chung". Each submission is its own row and is never deduplicated. A response whose Guest was later deleted (FK `SET NULL`) shows as generic, under its snapshot name.
+- GENERIC (`guest_id` NULL): the typed snapshot is shown. Each submission is its own row and is never deduplicated. A response whose Guest was later deleted (FK `SET NULL`) shows as generic, under its snapshot name. *Since RSVP-P0-02 (§40) the label is the recorded source, not a fixed "Phản hồi từ link chung", and SEPARATE Projects are grouped by side.*
 - Attendance labels: ATTENDING "Sẽ tham dự", MAYBE "Có thể tham dự", NOT_ATTENDING "Không tham dự". `party_size` is shown as stored, and a person count is not shown for NOT_ATTENDING (always 0). Rows are never recalculated or rewritten.
 - Summary: responses per status and summed party size per status, derived from the loaded rows only.
 - Time: `updated_at`, formatted dd/mm/yyyy HH:mm in Asia/Ho_Chi_Minh (`formatDateTimeVi`).
@@ -1612,3 +1614,30 @@ A collision never overwrites another couple's alias and never adds a suffix: Sta
 ### 39.3 Staff and Portal UI
 
 Xuất bản: every published variant shows its link (friendly when assigned, else canonical; "Link cũ vẫn hoạt động" shows the canonical path), labelled Nhà trai / Nhà gái / Thiệp chung, with **Mở thiệp** and **Sao chép link** (success only after the clipboard resolved). Unpublished variants show no link. **Review before write (PO correction):** publishing never assigns an alias. A published GROOM/BRIDE without an alias shows the one-time **Tạo link đẹp**, which opens a review step: the proposed alias (derived server-side from the PUBLISHED names) prefilled as two editable name parts, the normalized final URL in real time, a warning that the link cannot be changed afterwards, and an explicit **Xác nhận tạo link** (plus **Huỷ**). Only then is the exact reviewed alias sent; invalid input is never sent. On `ALIAS_TAKEN` the form stays open with a usable message for another readable alternative. `GET …/publish` adds `publicLinks: { variant, canonicalPath, friendlyPath, canCreateFriendlyLink, suggestedAlias }[]` (published required variants only; `suggestedAlias` only while a link can still be created, `null` when not derivable). The server-side default of §39.1 (no `alias`) remains for API compatibility; the Staff UI always sends the reviewed alias. The Customer Portal (§23) shows the friendly path when one exists, else the canonical path.
+
+## 40. RSVP-P0-02 — RSVP invitation source and Portal grouping by side
+
+**The defect (P0).** `rsvps` recorded only `project_id`, so the two public invitations of a SEPARATE Project (GROOM and BRIDE) wrote into one undifferentiated pile and the Portal labelled every non-personalized response "Phản hồi từ link chung". Both write RPCs already resolved the invitation from the slug and then discarded it.
+
+**Storage (migration 0055).** Nullable `rsvps.invitation_id`, composite FK `(invitation_id, project_id)` → `project_invitations(id, project_id)` `ON DELETE NO ACTION`. Same-Project integrity is therefore structural. No backfill: every pre-0055 row keeps `NULL`, which means "source not recorded".
+
+**Write path (unchanged contracts).** §20 and §22.3 keep their request bodies, status codes, `RS001`/`PI001`/`GT001` mapping and duplicate rules; no TypeScript write code changes. Only the two RPC bodies change:
+
+- `submit_public_rsvp` persists the invitation it already resolved from `public_slug` in 0040.
+- `submit_public_guest_rsvp` re-derives it from the same validated slug **pinned to the Project `resolve_public_guest()` resolved** (`published_version_id IS NOT NULL`; a miss is `PI001`), and its `ON CONFLICT (guest_id)` upsert replaces `invitation_id` with the other response fields — one current row per guest, now carrying the link actually used last.
+
+The browser never supplies an invitation id or variant: there is no such parameter in either signature. A friendly alias (§39) resolves to the canonical slug before these calls, so aliased links attribute identically.
+
+**Portal read (§24 extended).** The RSVP SELECT gains the single column `invitation_id` (same table, no new join, table or grant). The row guard requires a UUID or `null`. The use case maps it to a side using **only** the Project's own integrity-verified published invitations; an id this Project does not own is `UNKNOWN`, exactly like a missing one. A side is never inferred from a guest's `invitation_variant`, a typed name or a row's age.
+
+`CustomerPortalView.rsvps` is now `{ layout, groups }` (replacing `rsvps` + `rsvpSummary`), and `PortalRsvpList` takes that one value:
+
+- **COMMON package** — `layout: "SINGLE"`, `groups` is exactly `[ALL]`: the existing single list, unchanged.
+- **SEPARATE package** — `layout: "BY_SIDE"`, `groups` is exactly `[GROOM, BRIDE, ALL]`, rendered as three stacked server-rendered views titled **Nhà trai**, **Nhà gái** and **Tổng hợp**, each with its own summary and its own responses. The two sides hold exactly the rows attributed to their own link; **Tổng hợp** holds every stored response once, so overall counts never double-count and never lose an unattributed row. An empty side says "Chưa có phản hồi tham dự." rather than borrowing the other side's rows.
+- An unrecognized `package_code_snapshot` has no documented variant policy and throws (fail closed), like the Guest Tool mode.
+
+**Labels.** Source: `GROOM` "Phản hồi từ link thiệp nhà trai", `BRIDE` "Phản hồi từ link thiệp nhà gái", `COMMON` "Phản hồi từ link chung", `UNKNOWN` "Chưa xác định nguồn". Personalized rows keep their own identity line ("Khách mời cá nhân · thiệp nhà trai", from the Guest's side) **and** show the source line separately: identity and submission source are distinct facts. Consequence of honesty: a response stored before 0055 now reads "Chưa xác định nguồn" instead of "Phản hồi từ link chung", including on a COMMON Project.
+
+**Unchanged.** PORTAL token authorization and Project scoping (§23/§24), guest-token resolution and variant rule (§22.2, §7.3), personalized one-current-row (0018), the `count: "exact"` truncation guard, read-only presentation with no controls or ids, §23 metadata/privacy, both public RSVP HTTP contracts, the RSVP success screen and every renderer.
+
+**Not in RSVP-P0-02.** Backfilling historical attribution, per-side export/filter/sort, staff-side RSVP views, and the separate RSVP-P0-01 / P0-03 tasks.

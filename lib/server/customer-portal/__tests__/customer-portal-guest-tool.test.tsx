@@ -274,7 +274,7 @@ describe("033E-A A–E: PERSONALIZED_GUEST gating", () => {
       ],
       personalizedGuestEntitled: entitled,
     });
-    const rsvp = { typedName: "Lan", attendance: "ATTENDING" as const, partySize: 1, message: null, createdAt: "2026-10-01T00:00:00Z", updatedAt: "2026-10-01T00:00:00Z", guest: null };
+    const rsvp = { typedName: "Lan", invitationId: null, attendance: "ATTENDING" as const, partySize: 1, message: null, createdAt: "2026-10-01T00:00:00Z", updatedAt: "2026-10-01T00:00:00Z", guest: null };
     const load = (entitled: boolean) =>
       loadCustomerPortal(PORTAL_A.rawToken, {
         resolution: resolution(),
@@ -282,12 +282,18 @@ describe("033E-A A–E: PERSONALIZED_GUEST gating", () => {
         guests: getServiceRolePortalGuestGateway(),
       });
     const off = await load(false);
-    expect(off).toMatchObject({ status: "READY", guestTool: null, rsvps: [{ guestName: "Lan" }] });
+    expect(off).toMatchObject({ status: "READY", guestTool: null, rsvps: { layout: "BY_SIDE" } });
+    if (off.status !== "READY") throw new Error("expected READY");
+    expect(off.rsvps.groups.map((g) => [g.key, g.rows.map((r) => r.guestName)])).toEqual([
+      ["GROOM", []],
+      ["BRIDE", []],
+      ["ALL", ["Lan"]],
+    ]);
     const on = await load(true);
     if (on.status !== "READY" || on.guestTool === null) throw new Error("expected guest tool");
     expect(on.guestTool.mode).toBe("GROOM_OR_BRIDE");
     expect(on.guestTool.guests.map((g) => g.displayName)).toEqual(["Anh Hiếu và gia đình", "Chú B và người thương"]);
-    expect(on.rsvps).toHaveLength(1);
+    expect(on.rsvps.groups.at(-1)?.rows).toHaveLength(1);
   });
 });
 
@@ -699,7 +705,7 @@ describe("033E-B AG–AI: staff path, resolver and RSVP preserved", () => {
     // OWS-V2-CATALOG-01 (checkpoint maintenance): exactly the data-only OWS v2 catalog seed 0051 may follow 0050.
     // SD-V1-CATALOG-01 / TE-06 (checkpoint maintenance): exactly the data-only Se Duyên v1
     // catalog seed 0052 may follow 0051, and exactly the additive staff-approval 0053 may follow 0052.
-    expect(readdirMigrations().slice(-11).map((name) => name.split("/").at(-1))).toEqual([
+    expect(readdirMigrations().slice(-13).map((name) => name.split("/").at(-1))).toEqual([
       "20260911041202_0042_personalized_guest_link.sql",
       "20260911041203_0043_legacy_v1_lockdown.sql",
       "20260911041204_0044_republish_after_published.sql",
@@ -711,6 +717,8 @@ describe("033E-B AG–AI: staff path, resolver and RSVP preserved", () => {
       "20260911041211_0051_seed_our_wedding_story_v2_catalog.sql",
       "20260911041212_0052_seed_se_duyen_v1_catalog.sql",
       "20260911041213_0053_staff_approval_on_behalf.sql",
+      "20260911041214_0054_seed_se_duyen_v2_catalog.sql",
+      "20260911041215_0055_rsvp_invitation_source.sql",
     ]);
   });
 });
@@ -870,7 +878,7 @@ describe("033E-C R–X: loader, entitlement, 033D and UI", () => {
       versions: [{ id: "22222222-0000-4000-8000-000000000001", invitationId: "11111111-0000-4000-8000-000000000001", projectId: PROJECT_A, versionType: "PUBLISHED", templateVersionId: FIXTURE_TEMPLATE_VERSION_ID, rendererKey: snapshot.template.rendererKey, payload: snapshot }],
       personalizedGuestEntitled: entitled,
     });
-    const generic = { typedName: "Anh Hiếu và gia đình", attendance: "ATTENDING" as const, partySize: 3, message: "Hẹn gặp", createdAt: "2026-10-01T00:00:00Z", updatedAt: "2026-10-01T00:00:00Z", guest: null };
+    const generic = { typedName: "Anh Hiếu và gia đình", invitationId: null, attendance: "ATTENDING" as const, partySize: 3, message: "Hẹn gặp", createdAt: "2026-10-01T00:00:00Z", updatedAt: "2026-10-01T00:00:00Z", guest: null };
     const gw = getServiceRolePortalGuestGateway();
     const rsvpReads: string[] = [];
     const load = (entitled: boolean) =>
@@ -885,10 +893,10 @@ describe("033E-C R–X: loader, entitlement, 033D and UI", () => {
       ["Anh Hiếu và gia đình", "NOT_RESPONDED", null],
       ["Chú B và người thương", "ATTENDING", 2],
     ]);
-    expect(on.rsvps).toEqual([expect.objectContaining({ guestName: "Anh Hiếu và gia đình", message: "Hẹn gặp" })]);
+    expect(on.rsvps.groups.at(-1)?.rows).toEqual([expect.objectContaining({ guestName: "Anh Hiếu và gia đình", message: "Hẹn gặp", source: "UNKNOWN" })]);
     expect(rsvpReads).toEqual([PROJECT_A]);
     const off = await load(false);
-    expect(off).toMatchObject({ status: "READY", guestTool: null, rsvps: [{ guestName: "Anh Hiếu và gia đình" }] });
+    expect(off).toMatchObject({ status: "READY", guestTool: null, rsvps: { layout: "BY_SIDE" } });
     expect(rsvpReads).toEqual([PROJECT_A]);
   });
 
