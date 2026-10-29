@@ -93,10 +93,11 @@ describe("harness audio fixture bytes", () => {
 });
 
 describe("harness audio wiring", () => {
-  it("only music-resolved resolves the canonical audio slot, through the real pipeline, to the local file", async () => {
+  it("only the opted-in scenarios resolve the canonical audio slot, through the real pipeline, to the local file", async () => {
     for (const id of HARNESS_SCENARIO_IDS) {
       const { viewModel, sections } = await buildHarnessRenderData(id);
-      if (id === "music-resolved") {
+      // SD-V2-01 added a second opted-in scenario, to check music on open.
+      if (id === "music-resolved" || id === "se-duyen-v2") {
         expect(viewModel.media.audio).toStrictEqual({
           status: "RESOLVED",
           mediaId: FIXTURE_MEDIA_IDS.AUDIO,

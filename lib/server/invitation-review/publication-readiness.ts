@@ -2,7 +2,8 @@ import type { SnapshotPayloadV1 } from "../../invitation-rendering/snapshot-payl
 
 /**
  * SD-V1-RELEASE-01 — renderer-scoped publication readiness, checked on the
- * one path into the publication pipeline.
+ * one path into the publication pipeline. Extended to `wedding.se-duyen.v2`
+ * by SD-V2-01; behaviour for every other template is unchanged.
  *
  * WHY HERE. `publish_invitation` (migration 0038) publishes by copying an
  * already approved REVIEW version and inspects no content; a REVIEW can only
@@ -29,13 +30,21 @@ export interface PublicationReadinessIssue {
   message: string;
 }
 
-const SE_DUYEN_RENDERER_KEY = "wedding.se-duyen.v1";
+/**
+ * Every Se Duyên renderer version. The two Product Owner rules below are
+ * about the DIRECTION, not about one implementation of it, so v2 carries
+ * them exactly as v1 does — SD-V2-01 changed the music control and the album
+ * layout and neither rule — and a version left out here would publish
+ * without them, which is a false readiness (CLAUDE.md §22).
+ */
+const SE_DUYEN_RENDERER_KEYS = new Set<string>(["wedding.se-duyen.v1", "wedding.se-duyen.v2"]);
 
 /**
  * The only placeholders the Se Duyên renderer resolves — it substitutes
  * exactly these two, case-sensitively (`templates/wedding/se-duyen/v1/
- * sections/invitation-wording.ts`). A focused test pins that module's own
- * patterns to this list, so the two can never drift apart.
+ * sections/invitation-wording.ts`, and v2's byte-identical copy of it). A
+ * focused test pins those modules' own patterns to this list, so they can
+ * never drift apart.
  */
 export const SE_DUYEN_SUPPORTED_WORDING_TOKENS = ["{guest}", "{ceremonyTitle}"] as const;
 
@@ -89,7 +98,7 @@ function unsupportedPlaceholders(message: string | null): string[] {
  *    verbatim.
  */
 export function checkPublicationReadiness(snapshot: SnapshotPayloadV1): PublicationReadinessIssue[] {
-  if (snapshot.template.rendererKey !== SE_DUYEN_RENDERER_KEY) return [];
+  if (!SE_DUYEN_RENDERER_KEYS.has(snapshot.template.rendererKey)) return [];
 
   const issues: PublicationReadinessIssue[] = [];
 

@@ -52,6 +52,7 @@ describe("scenario set", () => {
       "lunar-null",
       "sections-minimal",
       "music-resolved",
+      "se-duyen-v2",
     ]);
     expect(DEFAULT_HARNESS_SCENARIO_ID).toBe("common-full");
   });
@@ -143,10 +144,12 @@ describe("scenario content", () => {
     const qr = (await data("qr-unavailable")).viewModel.media.qr;
     expect(qr.groom?.status).toBe("UNAVAILABLE");
     expect(qr.bride?.status).toBe("RESOLVED");
-    // RF-06D: only music-resolved opts into the local harness tone.
+    // RF-06D: only the two opted-in scenarios reach the local harness tone
+    // (SD-V2-01 added the Se Duyên v2 one, to check music on open).
+    const RESOLVES_AUDIO: readonly HarnessScenarioId[] = ["music-resolved", "se-duyen-v2"];
     for (const id of HARNESS_SCENARIO_IDS) {
       const audio = (await data(id)).viewModel.media.audio;
-      if (id === "music-resolved") {
+      if (RESOLVES_AUDIO.includes(id)) {
         expect(audio).toStrictEqual({
           status: "RESOLVED",
           mediaId: FIXTURE_MEDIA_IDS.AUDIO,
@@ -159,6 +162,36 @@ describe("scenario content", () => {
       }
     }
     expect((await data("music-resolved")).sections.music).toBe(true);
+  });
+
+  // SD-V2-01 local visual QA scenario: the one thing it has to get right is
+  // that it really renders v2, with a full album and a playable track.
+  it("se-duyen-v2 renders wedding.se-duyen.v2 with ten ordered album photos and a resolved track", async () => {
+    const { rendererKey, viewModel, sections } = await data("se-duyen-v2");
+    expect(rendererKey).toBe("wedding.se-duyen.v2");
+
+    const slots = viewModel.media.templateSlots;
+    const gallery = slots?.gallery ?? [];
+    expect(gallery).toHaveLength(10);
+    expect(gallery.every((item) => item.status === "RESOLVED")).toBe(true);
+    // Ten distinct fixture photographs, in the order the scenario lists them,
+    // every one a local harness file. The harness ships only three gallery
+    // placeholders and recycles them for the extras, so the ten tiles show
+    // eight visibly different pictures — enough to check order by eye.
+    const ids = gallery.map((item) => (item.status === "RESOLVED" ? item.mediaId : null));
+    expect(new Set(ids).size).toBe(10);
+    const urls = gallery.map((item) => (item.status === "RESOLVED" ? item.url : ""));
+    expect(new Set(urls).size).toBe(8);
+    for (const url of urls) expect(url).toMatch(/^\/internal\/renderer-harness\/[a-z0-9-]+\.svg$/);
+    // The other four positional slots are filled too, so no frame is missing.
+    for (const key of ["openingPhoto", "portraitLead", "portraitAside", "closingPhoto"]) {
+      expect(slots?.[key]?.[0]?.status, key).toBe("RESOLVED");
+    }
+
+    // Music on open needs a real track and the section on.
+    expect(viewModel.media.audio?.status).toBe("RESOLVED");
+    expect(sections.music).toBe(true);
+    expect(sections.gallery).toBe(true);
   });
 
   it("lunar-null has no lunar text; sections-minimal turns every optional section off", async () => {

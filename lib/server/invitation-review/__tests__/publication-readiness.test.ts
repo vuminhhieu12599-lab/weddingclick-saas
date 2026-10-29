@@ -22,6 +22,7 @@ import { checkPublicationReadiness, SE_DUYEN_SUPPORTED_WORDING_TOKENS } from "..
  */
 
 const SD_KEY = "wedding.se-duyen.v1";
+const SD2_KEY = "wedding.se-duyen.v2";
 const SLOT_KEYS = SE_DUYEN_V1_EDITOR_MANIFEST.mediaSlots.map((slot) => slot.key);
 const GALLERY_SLOT_KEYS = SE_DUYEN_V1_EDITOR_MANIFEST.mediaSlots
   .filter((slot) => slot.sectionKey === "gallery")
@@ -76,6 +77,26 @@ describe("other templates are unaffected", () => {
   it("the rules key off the renderer alone: the same empty Snapshot blocks only under Se Duyên", () => {
     expect(checkPublicationReadiness(snapshot({ rendererKey: "wedding.our-wedding-story.v2" }))).toStrictEqual([]);
     expect(codes(snapshot())).toStrictEqual(["SE_DUYEN_CUSTOMER_PHOTO_REQUIRED"]);
+  });
+});
+
+describe("SD-V2-01: v2 carries the same rules as v1", () => {
+  // The two rules are about the DIRECTION, not one implementation of it, so
+  // a Project published on v2 is gated exactly as one on v1. A version left
+  // out of the guard would publish without them (CLAUDE.md §22).
+  it("blocks a v2 Project with no photograph in any slot, with the same issue code", () => {
+    expect(codes(snapshot({ rendererKey: SD2_KEY }))).toStrictEqual(["SE_DUYEN_CUSTOMER_PHOTO_REQUIRED"]);
+  });
+
+  it("blocks an unresolvable placeholder under v2 too", () => {
+    const payload = snapshot({ rendererKey: SD2_KEY, slots: { gallery: [PHOTO_IDS[0] as string] }, message: "Kính mời {ten}" });
+    expect(codes(payload)).toStrictEqual(["SE_DUYEN_UNSUPPORTED_WORDING_TOKEN"]);
+  });
+
+  it("passes a v2 Project with one real photograph and supported tokens, exactly as v1 does", () => {
+    const options = { slots: { gallery: [PHOTO_IDS[0] as string] }, message: "Kính mời {guest} tới dự {ceremonyTitle}" };
+    expect(checkPublicationReadiness(snapshot({ rendererKey: SD2_KEY, ...options }))).toStrictEqual([]);
+    expect(checkPublicationReadiness(snapshot({ rendererKey: SD_KEY, ...options }))).toStrictEqual([]);
   });
 });
 

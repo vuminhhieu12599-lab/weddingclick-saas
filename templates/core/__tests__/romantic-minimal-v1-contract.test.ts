@@ -74,6 +74,8 @@ describe("RM-01 Romantic Minimal v1 renderer manifest", () => {
       "wedding.our-wedding-story.v2",
       // SD-V1: Se Duyên v1 is appended seventh; RM keeps its third position.
       "wedding.se-duyen.v1",
+      // SD-V2-01: Se Duyên v2 is appended eighth; RM keeps its third position.
+      "wedding.se-duyen.v2",
     ]);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(RM_KEY)).toStrictEqual(ROMANTIC_MINIMAL_V1_MANIFEST);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(RM_KEY)).not.toBe(ROMANTIC_MINIMAL_V1_MANIFEST);
