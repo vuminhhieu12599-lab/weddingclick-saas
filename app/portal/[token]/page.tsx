@@ -118,7 +118,7 @@ export default async function CustomerPortalPage({ params }: { params: Promise<{
           ))}
         </section>
 
-        <PortalRsvpList rows={view.rsvps} summary={view.rsvpSummary} />
+        <PortalRsvpList view={view.rsvps} />
 
         {view.guestTool !== null && <PortalGuestTool token={token} mode={view.guestTool.mode} guests={view.guestTool.guests} />}
       </div>

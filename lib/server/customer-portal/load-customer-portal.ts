@@ -1,4 +1,4 @@
-import { INVITATION_VARIANTS, invitationPublicAliasPath } from "../../domain";
+import { INVITATION_VARIANTS, invitationPublicAliasPath, type InvitationVariant } from "../../domain";
 import { buildInvitationViewModel } from "../../invitation-rendering/build-invitation-view-model";
 import { deriveEventDateTimePresentationV1 } from "../../invitation-rendering/event-date-time-presentation";
 import type { MediaResolver } from "../../invitation-rendering/invitation-view-model-types";
@@ -44,7 +44,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  *     stored Snapshot binding + Project code), fail closed
  *   → read-only summary from the immutable PUBLISHED Snapshot
  *   → Task 033D: read-only RSVP list of that same resolved projectId
- *     (generic and personalized; not PERSONALIZED_GUEST-gated)
+ *     (generic and personalized; not PERSONALIZED_GUEST-gated), grouped by
+ *     recorded invitation source for a SEPARATE package (RSVP-P0-02) using
+ *     only the integrity-verified invitations read above
  *   → Task 033E-A: with an active PERSONALIZED_GUEST add-on only, that
  *     Project's guest list (Guest Tool; mutations are separate routes).
  *
@@ -57,12 +59,15 @@ export async function loadCustomerPortal(rawToken: string, deps: LoadCustomerPor
   const context = await resolveAccessLink({ rawToken, expectedLinkType: "PORTAL" }, deps.resolution, deps.now);
 
   const record = await deps.portal.getPortalProject(context.projectId);
-  if (record.projectCode === null) {
+  if (record.projectCode === null || record.packageCode === null) {
     throw new Error("Portal Project could not be loaded");
   }
 
   const versions = new Map(record.versions.map((row) => [row.id, row]));
   const invitations: CustomerPortalInvitationCard[] = [];
+  // RSVP-P0-02: the only authority for an RSVP's side — built here from this
+  // Project's own integrity-verified published invitations.
+  const invitationVariantsById = new Map<string, InvitationVariant>();
   for (const variant of INVITATION_VARIANTS) {
     const invitation = record.invitations.find((row) => row.variant === variant);
     if (invitation === undefined) continue;
@@ -88,6 +93,8 @@ export async function loadCustomerPortal(rawToken: string, deps: LoadCustomerPor
       throw new Error("Stored published Snapshot belongs to a different Project");
     }
 
+    invitationVariantsById.set(invitation.id, variant);
+
     const viewModel = buildInvitationViewModel({ snapshot, mediaResolutions: await resolveSnapshotMedia(snapshot, NO_MEDIA_RESOLVER) });
     invitations.push({
       variant,
@@ -103,7 +110,10 @@ export async function loadCustomerPortal(rawToken: string, deps: LoadCustomerPor
   if (invitations.length === 0) {
     return { status: "NOT_READY" };
   }
-  const rsvps = presentPortalRsvps(await deps.portal.listPortalRsvps(context.projectId));
+  const rsvps = presentPortalRsvps(await deps.portal.listPortalRsvps(context.projectId), {
+    packageCode: record.packageCode,
+    invitationVariantsById,
+  });
 
   let guestTool: CustomerPortalGuestTool | null = null;
   if (record.personalizedGuestEntitled) {
@@ -119,8 +129,7 @@ export async function loadCustomerPortal(rawToken: string, deps: LoadCustomerPor
     status: "READY",
     invitations,
     personalizedGuestEntitled: record.personalizedGuestEntitled,
-    rsvps: rsvps.rows,
-    rsvpSummary: rsvps.summary,
+    rsvps,
     guestTool,
   };
 }

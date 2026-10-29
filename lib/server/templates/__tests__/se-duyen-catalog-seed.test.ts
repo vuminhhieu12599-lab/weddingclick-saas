@@ -34,10 +34,11 @@ describe("Se Duyên v1 catalog seed migration 0052", () => {
     const names = readdirSync(MIGRATIONS).sort();
     // SD-V2-CATALOG-01: 0054 (the Se Duyên v2 catalog seed) is the head, with
     // TE-06's 0053 behind it; 0052 keeps its own place and its own content.
-    expect(names.at(-1)).toBe("20260911041214_0054_seed_se_duyen_v2_catalog.sql");
-    expect(names.at(-2)).toBe("20260911041213_0053_staff_approval_on_behalf.sql");
-    expect(names.at(-3)).toBe(M0052);
-    expect(names.at(-4)).toBe(M0051);
+    expect(names.at(-1)).toBe("20260911041215_0055_rsvp_invitation_source.sql");
+    expect(names.at(-2)).toBe("20260911041214_0054_seed_se_duyen_v2_catalog.sql");
+    expect(names.at(-3)).toBe("20260911041213_0053_staff_approval_on_behalf.sql");
+    expect(names.at(-4)).toBe(M0052);
+    expect(names.at(-5)).toBe(M0051);
     expect(sql).toContain("AUTHORING ONLY — not applied.");
   });
 

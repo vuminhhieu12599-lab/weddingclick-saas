@@ -59,9 +59,10 @@ describe("migration 0046 (static)", () => {
     // OWS-V2-CATALOG-01 (checkpoint maintenance): exactly the data-only OWS v2 catalog seed 0051 may follow 0050.
     // SD-V1-CATALOG-01 / TE-06 (checkpoint maintenance): exactly the data-only Se Duyên v1
     // catalog seed 0052 may follow 0051, and exactly the additive staff-approval 0053 may follow 0052.
-    expect(names.at(-1)).toBe("20260911041213_0053_staff_approval_on_behalf.sql");
+    expect(names.at(-1)).toBe("20260911041215_0055_rsvp_invitation_source.sql");
+    expect(names.at(-3)).toBe("20260911041213_0053_staff_approval_on_behalf.sql");
     expect(names.some((name) => /_0045_/.test(name))).toBe(false);
-    expect(names.slice(-9)).toEqual(["20260911041204_0044_republish_after_published.sql", M0046, "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql", "20260911041208_0048_seed_vietnamese_heritage_romantic_minimal_v1_catalog.sql", "20260911041209_0049_invitation_public_aliases.sql", "20260911041210_0050_seed_vietnamese_heritage_v2_catalog.sql", "20260911041211_0051_seed_our_wedding_story_v2_catalog.sql", "20260911041212_0052_seed_se_duyen_v1_catalog.sql", "20260911041213_0053_staff_approval_on_behalf.sql"]);
+    expect(names.slice(-11)).toEqual(["20260911041204_0044_republish_after_published.sql", M0046, "20260911041207_0047_seed_our_wedding_story_v1_catalog.sql", "20260911041208_0048_seed_vietnamese_heritage_romantic_minimal_v1_catalog.sql", "20260911041209_0049_invitation_public_aliases.sql", "20260911041210_0050_seed_vietnamese_heritage_v2_catalog.sql", "20260911041211_0051_seed_our_wedding_story_v2_catalog.sql", "20260911041212_0052_seed_se_duyen_v1_catalog.sql", "20260911041213_0053_staff_approval_on_behalf.sql", "20260911041214_0054_seed_se_duyen_v2_catalog.sql", "20260911041215_0055_rsvp_invitation_source.sql"]);
     expect(sql).toContain("AUTHORING ONLY — not applied.");
   });
 

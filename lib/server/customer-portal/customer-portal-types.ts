@@ -53,6 +53,14 @@ export interface PortalProjectRecord {
 export interface PortalRsvpRecord {
   /** `rsvps.guest_display_name_snapshot` — the typed response name; never identity. */
   typedName: string | null;
+  /**
+   * RSVP-P0-02 — `rsvps.invitation_id` (0055): the invitation this response
+   * was submitted through, recorded server-side at submit time. `null` for
+   * every pre-0055 row; the use case resolves it against the Project's own
+   * invitations and never infers a side. Used only to derive the row's
+   * source and never carried into the view.
+   */
+  invitationId: string | null;
   attendance: RsvpAttendanceStatus;
   partySize: number;
   message: string | null;
@@ -83,6 +91,14 @@ export interface CustomerPortalInvitationCard {
 }
 
 /**
+ * RSVP-P0-02 — where a response actually came from, as recorded by the
+ * database at submit time (`rsvps.invitation_id`, migration 0055) and
+ * resolved against the Project's own invitations. `UNKNOWN` means the source
+ * was never recorded (every pre-0055 row); it is never a guess.
+ */
+export type PortalRsvpSource = InvitationVariant | "UNKNOWN";
+
+/**
  * One RSVP response as the customer sees it (Task 033D). PERSONALIZED: the
  * canonical Guest `display_name` is the identity; `respondedAs` is the typed
  * name only when it differs. GENERIC: the typed name is all there is. No ids.
@@ -91,7 +107,10 @@ export interface CustomerPortalRsvpRow {
   kind: "PERSONALIZED" | "GENERIC";
   guestName: string;
   respondedAs: string | null;
+  /** The personalized Guest's own side, when set. Guest identity — never the submission source. */
   invitationVariant: InvitationVariant | null;
+  /** RSVP-P0-02: the invitation link this response actually came through. */
+  source: PortalRsvpSource;
   attendance: RsvpAttendanceStatus;
   partySize: number;
   message: string | null;
@@ -105,14 +124,38 @@ export interface CustomerPortalRsvpSummary {
   people: Record<RsvpAttendanceStatus, number>;
 }
 
+/**
+ * RSVP-P0-02 — one Portal RSVP view: its own rows and its own summary.
+ *
+ * - `GROOM` / `BRIDE`: only the responses recorded as coming from that
+ *   invitation's public link.
+ * - `ALL`: every stored response of the Project, each counted exactly once.
+ *   Rows with no recorded source ("Chưa xác định nguồn") appear here only —
+ *   they are never assigned to a family.
+ */
+export interface CustomerPortalRsvpGroup {
+  key: "GROOM" | "BRIDE" | "ALL";
+  rows: CustomerPortalRsvpRow[];
+  summary: CustomerPortalRsvpSummary;
+}
+
+/**
+ * RSVP-P0-02 — `SINGLE` (COMMON package: the unchanged one-list experience,
+ * `groups` is exactly `[ALL]`) or `BY_SIDE` (SEPARATE package: exactly
+ * `[GROOM, BRIDE, ALL]`).
+ */
+export interface CustomerPortalRsvpView {
+  layout: "SINGLE" | "BY_SIDE";
+  groups: CustomerPortalRsvpGroup[];
+}
+
 export type CustomerPortalView =
   | { status: "NOT_READY" }
   | {
       status: "READY";
       invitations: CustomerPortalInvitationCard[];
       personalizedGuestEntitled: boolean;
-      rsvps: CustomerPortalRsvpRow[];
-      rsvpSummary: CustomerPortalRsvpSummary;
+      rsvps: CustomerPortalRsvpView;
       /** Task 033E-A: present only with an active PERSONALIZED_GUEST add-on. */
       guestTool: CustomerPortalGuestTool | null;
     };
