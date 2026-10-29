@@ -23,15 +23,28 @@ import { StatusBadge } from "../../_components/status-badge";
  * `projects` are rendered as stacked cards instead (CSS-only switch, no
  * viewport detection); md+ keeps the table unchanged.
  */
-export function ProjectsTable({ projects }: { projects: ProjectSummary[] }) {
+export function ProjectsTable({
+  projects,
+  presentation = "auto",
+}: {
+  projects: ProjectSummary[];
+  /**
+   * "auto" is the Projects list behaviour above. "cards" keeps the stacked
+   * cards at every width, for narrower contexts such as Tổng quan, where the
+   * 7-column table collides at laptop widths.
+   */
+  presentation?: "auto" | "cards";
+}) {
+  const cardsOnly = presentation === "cards";
+
   return (
     <>
-      <ul className="space-y-3 md:hidden" data-projects-mobile-list>
+      <ul className={cardsOnly ? "grid gap-3 sm:grid-cols-2" : "space-y-3 md:hidden"} data-projects-mobile-list>
         {projects.map((project) => (
           <ProjectCard key={project.id} project={project} />
         ))}
       </ul>
-      <ProjectsDesktopTable projects={projects} />
+      {!cardsOnly && <ProjectsDesktopTable projects={projects} />}
     </>
   );
 }
