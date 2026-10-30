@@ -30,10 +30,16 @@ import { FIXTURE_MEDIA_IDS } from "../fixtures/renderer-fixture-sources";
  * names, the extension mapping, and each renderer's own markup.
  */
 
-// next/font loaders only run under the Next compiler.
+// next/font loaders only run under the Next compiler, so every renderer's
+// font module is stubbed with the one class name it exports.
+vi.mock("../../wedding/elegant-editorial/v1/fonts", () => ({ ELEGANT_EDITORIAL_V1_FONT_VARIABLES_CLASS_NAME: "ee-fonts" }));
 vi.mock("../../wedding/vietnamese-heritage/v1/fonts", () => ({ VIETNAMESE_HERITAGE_V1_FONT_VARIABLES_CLASS_NAME: "vh1-fonts" }));
 vi.mock("../../wedding/vietnamese-heritage/v2/fonts", () => ({ VIETNAMESE_HERITAGE_V2_FONT_VARIABLES_CLASS_NAME: "vh2-fonts" }));
-vi.mock("../../wedding/elegant-editorial/v1/fonts", () => ({ ELEGANT_EDITORIAL_V1_FONT_VARIABLES_CLASS_NAME: "ee-fonts" }));
+vi.mock("../../wedding/romantic-minimal/v1/fonts", () => ({ ROMANTIC_MINIMAL_V1_FONT_VARIABLES_CLASS_NAME: "rm1-fonts" }));
+vi.mock("../../wedding/our-wedding-story/v1/fonts", () => ({ OUR_WEDDING_STORY_V1_FONT_VARIABLES_CLASS_NAME: "ows1-fonts" }));
+vi.mock("../../wedding/our-wedding-story/v2/fonts", () => ({ OUR_WEDDING_STORY_V2_FONT_VARIABLES_CLASS_NAME: "ows2-fonts" }));
+vi.mock("../../wedding/se-duyen/v1/fonts", () => ({ SE_DUYEN_V1_FONT_VARIABLES_CLASS_NAME: "sd1-fonts" }));
+vi.mock("../../wedding/se-duyen/v2/fonts", () => ({ SE_DUYEN_V2_FONT_VARIABLES_CLASS_NAME: "sd2-fonts" }));
 
 const QR: ResolvedMedia = { status: "RESOLVED", mediaId: FIXTURE_MEDIA_IDS.QR_GROOM, url: "https://example.test/a.webp", width: 600, height: 600 };
 
@@ -122,6 +128,12 @@ interface Published {
   readonly brideLabel: string;
   readonly load: () => Promise<{ default?: unknown } & Record<string, unknown>>;
   readonly component: string;
+  /**
+   * Se Duyên's envelope shows ONE family at a time behind a tab each
+   * (SD-V1-02C2), so a COMMON project has one control in the markup and the
+   * other behind its tab. Every other renderer lays both sides out at once.
+   */
+  readonly tabbedSides?: true;
 }
 
 const PUBLISHED: readonly Published[] = [
@@ -137,9 +149,9 @@ const PUBLISHED: readonly Published[] = [
     load: () => import("../../wedding/our-wedding-story/v1/our-wedding-story-v1") as never },
   { label: "our-wedding-story v2", component: "OurWeddingStoryV2", download: "Tải mã QR", groomLabel: "Nhà Trai", brideLabel: "Nhà Gái",
     load: () => import("../../wedding/our-wedding-story/v2/our-wedding-story-v2") as never },
-  { label: "se-duyen v1", component: "SeDuyenV1", download: "Tải mã QR", groomLabel: "Nhà Trai", brideLabel: "Nhà Gái",
+  { label: "se-duyen v1", component: "SeDuyenV1", download: "Tải mã QR", groomLabel: "Nhà Trai", brideLabel: "Nhà Gái", tabbedSides: true,
     load: () => import("../../wedding/se-duyen/v1/se-duyen-v1") as never },
-  { label: "se-duyen v2", component: "SeDuyenV2", download: "Tải mã QR", groomLabel: "Nhà Trai", brideLabel: "Nhà Gái",
+  { label: "se-duyen v2", component: "SeDuyenV2", download: "Tải mã QR", groomLabel: "Nhà Trai", brideLabel: "Nhà Gái", tabbedSides: true,
     load: () => import("../../wedding/se-duyen/v2/se-duyen-v2") as never },
 ];
 
@@ -153,8 +165,8 @@ async function renderWith(
     variant: options.variant,
     ...(options.unavailableMediaIds === undefined ? {} : { unavailableMediaIds: options.unavailableMediaIds }),
   });
-  const module = await entry.load();
-  const Renderer = module[entry.component] as (props: RendererProps) => unknown;
+  const loaded = await entry.load();
+  const Renderer = loaded[entry.component] as (props: RendererProps) => unknown;
   const download = capability();
   const html = renderToStaticMarkup(
     Renderer({
@@ -178,9 +190,17 @@ describe("C: each published renderer offers the right save, or none", () => {
     async (_label, entry) => {
       const { html, download } = await renderWith(entry, { variant: "COMMON" });
       const labels = downloadLabels(html, entry);
-      expect(labels).toHaveLength(2);
-      expect(labels.some((l) => l.endsWith(entry.groomLabel))).toBe(true);
-      expect(labels.some((l) => l.endsWith(entry.brideLabel))).toBe(true);
+      if (entry.tabbedSides === true) {
+        // One family is on the slip, the other is one tab away; each tab's
+        // panel carries that family's own control.
+        expect(labels).toStrictEqual([`${entry.download} ${entry.groomLabel}`]);
+        expect(html).toContain('role="tablist"');
+        expect(html).toContain(entry.brideLabel);
+      } else {
+        expect(labels).toHaveLength(2);
+        expect(labels.some((l) => l.endsWith(entry.groomLabel))).toBe(true);
+        expect(labels.some((l) => l.endsWith(entry.brideLabel))).toBe(true);
+      }
       // Rendering alone must never save anything.
       expect(download.saveImage).not.toHaveBeenCalled();
     },
@@ -203,7 +223,10 @@ describe("C: each published renderer offers the right save, or none", () => {
     async (_label, entry) => {
       const { html } = await renderWith(entry, { variant: "COMMON", unavailableMediaIds: [FIXTURE_MEDIA_IDS.QR_GROOM] });
       const labels = downloadLabels(html, entry);
-      expect(labels).toStrictEqual([`${entry.download} ${entry.brideLabel}`]);
+      // The groom side never offers a save it cannot honour. On the tabbed
+      // envelope that is the panel on the slip, so nothing is offered there.
+      expect(labels).toStrictEqual(entry.tabbedSides === true ? [] : [`${entry.download} ${entry.brideLabel}`]);
+      expect(labels.some((l) => l.endsWith(entry.groomLabel))).toBe(false);
 
       const none = await renderWith(entry, {
         variant: "COMMON",
@@ -236,6 +259,37 @@ describe("C: each published renderer offers the right save, or none", () => {
       expect(html).not.toContain("ma-qr-nha-gai");
     },
   );
+});
+
+const CSS_BY_RENDERER: readonly [string, string, string][] = [
+  ["elegant-editorial v1", "elegant-editorial/v1/elegant-editorial-v1.module.css", "qrDownload"],
+  ["vietnamese-heritage v1", "vietnamese-heritage/v1/vietnamese-heritage-v1.module.css", "giftQrDownload"],
+  ["vietnamese-heritage v2", "vietnamese-heritage/v2/vietnamese-heritage-v2.module.css", "giftQrDownload"],
+  ["romantic-minimal v1", "romantic-minimal/v1/romantic-minimal-v1.module.css", "giftQrDownload"],
+  ["our-wedding-story v1", "our-wedding-story/v1/our-wedding-story-v1.module.css", "qrDownload"],
+  ["our-wedding-story v2", "our-wedding-story/v2/our-wedding-story-v2.module.css", "qrDownload"],
+  ["se-duyen v1", "se-duyen/v1/se-duyen-v1.module.css", "giftQrDownload"],
+  ["se-duyen v2", "se-duyen/v2/se-duyen-v2.module.css", "giftQrDownload"],
+];
+
+describe("E: the control is small, sits under the plate, and shows keyboard focus", () => {
+  it.each(CSS_BY_RENDERER)("%s", (_label, file, cls) => {
+    const css = readFileSync(join(__dirname, "..", "..", "wedding", file), "utf8");
+    const block = css.slice(css.indexOf(`.${cls} {`), css.indexOf("}", css.indexOf(`.${cls} {`)));
+    expect(block, file).not.toBe("");
+    // A 44px tap target around a small glyph — never a large button.
+    expect(block).toMatch(/width:\s*44px/);
+    expect(block).toMatch(/height:\s*44px/);
+    // Below the plate, in normal flow: it can never sit over the scan area.
+    expect(block).toMatch(/margin:\s*\d+px auto 0/);
+    for (const overlay of ["position", "z-index", "transform", "inset", "float"]) {
+      expect(block, `${file}: ${overlay}`).not.toMatch(new RegExp(`(^|[;{\\s])${overlay}\\s*:`));
+    }
+    // Keyboard focus is visible.
+    expect(css).toMatch(new RegExp(`\\.${cls}:focus-visible \\{[^}]*outline:`));
+    // The glyph is sized for the target, not the other way round.
+    expect(css).toMatch(new RegExp(`\\.${cls}Glyph \\{[^}]*width:\\s*19px`));
+  });
 });
 
 describe("D: every variant is answered (Rule of Three)", () => {
