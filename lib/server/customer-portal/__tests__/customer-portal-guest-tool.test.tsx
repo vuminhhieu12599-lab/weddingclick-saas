@@ -692,7 +692,14 @@ describe("033E-B AG–AI: staff path, resolver and RSVP preserved", () => {
       "lib/server/supabase/public-guest-repository.ts",
       // app/api/v2/public/rsvp/route.ts: Task 035A wraps it with abuse-control guards only.
       // Task 035B narrowed only this test's "latest migration" checkpoint assertion.
+      // RSVP-P0-03 added the generic correction key to the public RSVP pipeline; the
+      // personalized guest-token flow it freezes here is itself untouched.
       ":!lib/server/public-guest/__tests__/personalized-guest-link.test.tsx",
+      ":!lib/server/public-rsvp/generic-rsvp-response-key.ts",
+      ":!lib/server/public-rsvp/public-rsvp-supabase.ts",
+      ":!lib/server/public-rsvp/public-rsvp-types.ts",
+      ":!lib/server/public-rsvp/submit-public-rsvp.ts",
+      ":!lib/server/public-rsvp/__tests__/generic-rsvp-correction.test.ts",
     ];
     expect(execFileSync("git", ["diff", "--name-only", "HEAD", "--", ...frozen], { cwd: ROOT, encoding: "utf8" })).toBe("");
     // Task 035B: the only migration allowed after 0042 is the owner-approved legacy V1 lockdown.
@@ -705,7 +712,10 @@ describe("033E-B AG–AI: staff path, resolver and RSVP preserved", () => {
     // OWS-V2-CATALOG-01 (checkpoint maintenance): exactly the data-only OWS v2 catalog seed 0051 may follow 0050.
     // SD-V1-CATALOG-01 / TE-06 (checkpoint maintenance): exactly the data-only Se Duyên v1
     // catalog seed 0052 may follow 0051, and exactly the additive staff-approval 0053 may follow 0052.
-    expect(readdirMigrations().slice(-13).map((name) => name.split("/").at(-1))).toEqual([
+    // SD-V2-CATALOG-01 / RSVP-P0-02 / RSVP-P0-03 (checkpoint maintenance): the data-only Se Duyên
+    // v2 catalog seed 0054, the additive RSVP invitation-source 0055 and the additive generic-RSVP
+    // correction key 0056 follow in that order.
+    expect(readdirMigrations().slice(-14).map((name) => name.split("/").at(-1))).toEqual([
       "20260911041202_0042_personalized_guest_link.sql",
       "20260911041203_0043_legacy_v1_lockdown.sql",
       "20260911041204_0044_republish_after_published.sql",
@@ -719,6 +729,7 @@ describe("033E-B AG–AI: staff path, resolver and RSVP preserved", () => {
       "20260911041213_0053_staff_approval_on_behalf.sql",
       "20260911041214_0054_seed_se_duyen_v2_catalog.sql",
       "20260911041215_0055_rsvp_invitation_source.sql",
+      "20260911041216_0056_generic_rsvp_response_key.sql",
     ]);
   });
 });

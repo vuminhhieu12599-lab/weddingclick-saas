@@ -271,7 +271,17 @@ describe("public /i/[slug] route resolution", () => {
 
   it("personalized guest links, RSVP API and frozen renderers are not changed by this feature", () => {
     const changed = execFileSync("git", ["diff", "--name-only", "origin/weddingclick-v2", "--", "app/i/[slug]/g", "app/api/v2/public", "templates", "lib/server/public-guest", "lib/server/public-rsvp", "proxy.ts", "app/i/[slug]/public-invitation-renderer.tsx", ":!**/__tests__/**"], { cwd: ROOT, encoding: "utf8" });
-    expect(changed.trim()).toBe("");
+    // RSVP-P0-03 later added the generic correction key through this same
+    // public RSVP pipeline. The friendly-URL feature still changes nothing
+    // here, and the personalized guest route, the route handler and every
+    // frozen renderer stay untouched — which is what this guard protects.
+    expect(changed.trim().split("\n").filter(Boolean).sort()).toStrictEqual([
+      "app/i/[slug]/public-invitation-renderer.tsx",
+      "lib/server/public-rsvp/generic-rsvp-response-key.ts",
+      "lib/server/public-rsvp/public-rsvp-supabase.ts",
+      "lib/server/public-rsvp/public-rsvp-types.ts",
+      "lib/server/public-rsvp/submit-public-rsvp.ts",
+    ]);
     const migrations = execFileSync("git", ["diff", "--name-only", "--diff-filter=MD", "origin/weddingclick-v2", "--", "supabase/migrations"], { cwd: ROOT, encoding: "utf8" });
     expect(migrations.trim()).toBe("");
   });

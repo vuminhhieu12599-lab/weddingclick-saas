@@ -990,13 +990,15 @@ The four response fields are validated with the canonical `isValidRsvpSubmitInpu
 
 Every response is `Cache-Control: no-store`. No database detail is returned; nothing about the request (slug, name, message) is logged.
 
-**Duplicates.** Non-personalized rows are unbounded (§2.20 / §J accepted limitation): every submission, including a "Sửa lại" resubmission, inserts a new row. No row is ever updated or matched by the typed name.
+**Duplicates.** Non-personalized rows are unbounded (§2.20 / §J accepted limitation): every submission, including a "Sửa lại" resubmission, inserts a new row. No row is ever updated or matched by the typed name. *Superseded for keyed requests by RSVP-P0-03 (§41): a generic request that carries a `responseKey` corrects the one row that key owns. A request without one still behaves exactly as described here.*
 
 **Client capability.** `app/i/[slug]/public-invitation-renderer.tsx` (client) builds the RSVP capability in the client graph and passes it to the host core. Mapping: 201 with `recorded: true` → `SUCCESS`; 400 → `INVALID`; 404 → `UNAVAILABLE`; any other status, unexpected body or network error → `FAILED`. Staff Preview and Customer Review keep the UNAVAILABLE-only wrapper and never write.
 
 **Not in this task.** Personalized guest tokens / guest resolve (*since added by §22, Task 033B1; this generic contract is unchanged*), RSVP read/portal/summary, rate limiting (Task 035 pre-production gate), Open Graph (Task 032B), analytics, republish lifecycle.
 
 *Since RSVP-P0-02 (§40): the RPC also stores the invitation it resolved in `rsvps.invitation_id`. The request body, status codes and duplicate rule above are unchanged.*
+
+*Since RSVP-P0-03 (§41): the generic body may also carry a sixth key, `responseKey`. It is optional; everything above is the contract for a request without one.*
 
 ## 21. Task 032B — Open Graph + Social Share Cover for `/i/[slug]`
 
@@ -1641,3 +1643,32 @@ The browser never supplies an invitation id or variant: there is no such paramet
 **Unchanged.** PORTAL token authorization and Project scoping (§23/§24), guest-token resolution and variant rule (§22.2, §7.3), personalized one-current-row (0018), the `count: "exact"` truncation guard, read-only presentation with no controls or ids, §23 metadata/privacy, both public RSVP HTTP contracts, the RSVP success screen and every renderer.
 
 **Not in RSVP-P0-02.** Backfilling historical attribution, per-side export/filter/sort, staff-side RSVP views, and the separate RSVP-P0-01 / P0-03 tasks.
+
+## 41. RSVP-P0-03 — Generic RSVP correction (`responseKey`)
+
+A guest who presses "Sửa lại hồi âm" on a generic published invitation and submits again must CORRECT their stored response, not add a second one. The correlator is a **response key**: 32 CSPRNG bytes minted by `app/i/[slug]/public-invitation-renderer.tsx` when the page mounts, held in React state for that one mounted page and sent only on the generic RSVP request. Contract: `docs/DECISIONS.md` "RSVP-P0-03 — Generic RSVP Correction Key"; migration 0056.
+
+**Request body** — the five keys of §20 plus exactly one more. `responseKey` with `guestToken` is 400: a personalized response is deduplicated by guest identity (§22.3) and never by a browser-held key.
+
+| Key | Rule |
+|---|---|
+| `responseKey` | 43 characters, unpadded base64url (32 bytes). Optional; omitted → §20's unkeyed insert. Malformed → 400. Never identity, never authorization, never a guest name, an IP or a cookie |
+
+**Flow.** Route → `submitPublicRsvp` → SHA-256 of the key → `submit_public_rsvp_keyed` (migration 0056, `SECURITY DEFINER`, `SET search_path = ''`, `EXECUTE` for `service_role` only, via `lib/server/supabase/keyed-public-rsvp-repository.ts`). The RPC authorizes the write exactly as 0040 does — the slug's CURRENT `PUBLISHED` version, same invitation, same Project (else `PI001`) — then runs ONE `INSERT ... ON CONFLICT (rsvps_response_key_hash_key) DO UPDATE`, guarded by `project_id` + `invitation_id` + `guest_id IS NULL`. The recorded `invitation_id` (§40) is never rewritten. Existing RSVPs are never read, `guests` is never touched, and only the digest is ever passed.
+
+| Condition | Result |
+|---|---|
+| First submission of this key | 201 `{ data: { recorded: true } }`, one new row |
+| Correction, repeat, retry or concurrent duplicate of this key | 201, the SAME row updated — never a second row |
+| Malformed `responseKey`, `responseKey` with `guestToken`, or any §20 validation failure (`RS001` included) | 400 `{ error: "Invalid RSVP request" }`, nothing written |
+| Malformed, unknown or never-published slug | 404 `{ error: "Invitation not found" }`, nothing written |
+| A key that belongs to another invitation or Project (`RK001`) | 404 `{ error: "Invitation not found" }`, nothing inserted and nothing updated |
+| Keyed gateway unconfigured, `PI001`, DB error, unexpected shape | 500 `{ error: "Internal server error" }` — never a fallback to an unkeyed insert |
+
+Client mapping, `Cache-Control: no-store`, the per-IP `PUBLIC_WRITE_IP` guard (§31) and the "no detail returned, nothing about the request logged" rule are exactly as in §20; the raw key is additionally never logged, never put in a URL and never returned.
+
+**Independence.** A new visit, tab or device mints a new key and is a separate response, even for an identical typed name. If the Web Crypto CSPRNG is unavailable the page sends no key and the request is served by §20 unchanged.
+
+**Unchanged.** `RsvpCapabilityV1`'s four-field input and status-only result (K15–K17), every renderer, the personalized contract (§22.3) and its one-current-row rule, Portal reads and statistics (§24, §40) — which never select this column — rate limits, RLS and table grants.
+
+**Not in RSVP-P0-03.** Backfilling or deduplicating historical rows, a correction window across visits or devices, RSVP-P0-01 (the success heading), any general-purpose token system, and applying 0056 anywhere.
