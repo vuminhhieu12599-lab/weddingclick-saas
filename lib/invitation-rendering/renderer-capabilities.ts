@@ -7,7 +7,8 @@ import type { RsvpCapabilityV1 } from "./rsvp-capability";
  * Shared Client Capabilities Contract Clarification" K14, K21–K26, K35).
  *
  * Types and expected-result vocabularies only. Concrete browser adapters
- * (clipboard, audio, clock) are later integration and never live here.
+ * (clipboard, audio, clock, media download) are later integration and never
+ * live here.
  */
 
 // ---------------------------------------------------------------------------
@@ -59,6 +60,38 @@ export function isMusicCapabilityPermittedV1(audio: MediaResolution | undefined)
 }
 
 // ---------------------------------------------------------------------------
+// Media download (WC-GIFT-QR-01, K21-shaped)
+// ---------------------------------------------------------------------------
+
+export const MEDIA_DOWNLOAD_RESULT_STATUSES = ["SUCCESS", "UNAVAILABLE", "FAILED"] as const;
+
+export type MediaDownloadResultStatusV1 = (typeof MEDIA_DOWNLOAD_RESULT_STATUSES)[number];
+
+/** Status-only discriminated union. `SUCCESS` means the file really reached the browser. */
+export type MediaDownloadResultV1 = {
+  [S in MediaDownloadResultStatusV1]: { readonly status: S };
+}[MediaDownloadResultStatusV1];
+
+/**
+ * Saves an already-RESOLVED runtime media URL to the guest's device, byte for
+ * byte. Shaped exactly like the clipboard capability (K21–K22) and for the
+ * same reason: a renderer island may not touch `fetch`, `document` or object
+ * URLs itself (RF-06D), so the one browser adapter behind this interface owns
+ * them.
+ *
+ * `baseName` is a fixed, non-identifying file name stem chosen by the caller
+ * from a closed set; the adapter appends the extension it derives from the
+ * bytes it actually received. The adapter never re-encodes, redraws or
+ * rasterizes anything, and never puts a URL, token, customer name or account
+ * number in the file name. `UNAVAILABLE` means the browser cannot save files
+ * at all; `FAILED` covers an expired or rejected URL and every other expected
+ * failure. Unexpected faults may reject; a rejection is never success.
+ */
+export interface MediaDownloadCapabilityV1 {
+  saveImage(url: string, baseName: string): Promise<MediaDownloadResultV1>;
+}
+
+// ---------------------------------------------------------------------------
 // Clock (K26)
 // ---------------------------------------------------------------------------
 
@@ -80,4 +113,11 @@ export interface InvitationRendererCapabilitiesV1 {
   readonly clipboard?: ClipboardCapabilityV1;
   readonly music?: MusicCapabilityV1;
   readonly clock?: ClockCapabilityV1;
+  /**
+   * WC-GIFT-QR-01. Added to the closed K14 set the same way `clipboard` was:
+   * a browser API a renderer needs but may not reach itself. Every existing
+   * member keeps its meaning, and a renderer that ignores this one behaves
+   * exactly as before.
+   */
+  readonly download?: MediaDownloadCapabilityV1;
 }

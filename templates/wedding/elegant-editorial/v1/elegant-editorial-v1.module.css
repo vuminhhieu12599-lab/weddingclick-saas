@@ -2509,3 +2509,46 @@
     transform: none;
   }
 }
+
+/* ---------------------------------------------------------------------- */
+/* WC-GIFT-QR-01 — saving this family's own QR.                            */
+/* A 44px target under the plate, never over it, so the scan area stays    */
+/* clear. The editorial square, at the copy control's weight and colour.   */
+/* ---------------------------------------------------------------------- */
+.qrDownload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 8px auto 0;
+  padding: 0;
+  border: 1px solid var(--ee-accent);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ee-accent);
+  cursor: pointer;
+}
+
+.qrDownload:focus-visible {
+  outline: 2px solid var(--ee-accent-deep);
+  outline-offset: 2px;
+}
+
+.qrDownloadGlyph {
+  display: block;
+  width: 19px;
+  height: 19px;
+}
+
+.qrDownloadNote {
+  display: block;
+  max-width: 260px;
+  margin: 6px auto 0;
+  font-family: var(--ee-sans);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--ee-muted);
+  overflow-wrap: anywhere;
+}

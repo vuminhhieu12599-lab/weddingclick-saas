@@ -46,6 +46,7 @@ const RSVP: RsvpCapabilityV1 = { submit: async () => ({ status: "UNAVAILABLE" })
 const CLIPBOARD: ClipboardCapabilityV1 = { copyText: async () => ({ status: "SUCCESS" }) };
 const MUSIC: MusicCapabilityV1 = { status: "PAUSED", play: async () => {}, pause: async () => {} };
 const CLOCK: ClockCapabilityV1 = { nowEpochMs: 1 };
+const DOWNLOAD = Object.freeze({ saveImage: async () => ({ status: "SUCCESS" }) as const });
 
 let fetchSpy: ReturnType<typeof vi.fn>;
 let audioConstructed: number;
@@ -80,14 +81,14 @@ function lastCapabilities(): InvitationRendererCapabilitiesV1 {
 
 describe("composeRendererCapabilities (K14 closed object)", () => {
   it("all absent → a frozen empty object", () => {
-    const capabilities = composeRendererCapabilities({ rsvp: undefined, clipboard: undefined, music: undefined, clock: undefined });
+    const capabilities = composeRendererCapabilities({ rsvp: undefined, clipboard: undefined, music: undefined, clock: undefined, download: undefined });
     expect(Reflect.ownKeys(capabilities)).toStrictEqual([]);
     expect(Object.isFrozen(capabilities)).toBe(true);
     expect(Object.getPrototypeOf(capabilities)).toBe(Object.prototype);
   });
 
   it("copies each present member by name and omits absent ones (no undefined-valued keys)", () => {
-    const capabilities = composeRendererCapabilities({ rsvp: undefined, clipboard: CLIPBOARD, music: undefined, clock: CLOCK });
+    const capabilities = composeRendererCapabilities({ rsvp: undefined, clipboard: CLIPBOARD, music: undefined, clock: CLOCK, download: undefined });
     expect(Reflect.ownKeys(capabilities)).toStrictEqual(["clipboard", "clock"]);
     expect(capabilities.clipboard).toBe(CLIPBOARD);
     expect(capabilities.clock).toBe(CLOCK);
@@ -95,19 +96,25 @@ describe("composeRendererCapabilities (K14 closed object)", () => {
     expect("music" in capabilities).toBe(false);
   });
 
-  it("all four present → exactly the four K14 keys", () => {
-    const capabilities = composeRendererCapabilities({ rsvp: RSVP, clipboard: CLIPBOARD, music: MUSIC, clock: CLOCK });
+  it("all five present → exactly the five K14 keys, in order", () => {
+    const capabilities = composeRendererCapabilities({ rsvp: RSVP, clipboard: CLIPBOARD, music: MUSIC, clock: CLOCK, download: DOWNLOAD });
+    expect(Reflect.ownKeys(capabilities)).toStrictEqual(["rsvp", "clipboard", "music", "clock", "download"]);
+  });
+
+  it("an absent download is omitted, never set to undefined (WC-GIFT-QR-01)", () => {
+    const capabilities = composeRendererCapabilities({ rsvp: RSVP, clipboard: CLIPBOARD, music: MUSIC, clock: CLOCK, download: undefined });
     expect(Reflect.ownKeys(capabilities)).toStrictEqual(["rsvp", "clipboard", "music", "clock"]);
+    expect("download" in capabilities).toBe(false);
   });
 
   it("never carries over an unknown key smuggled into the parts object", () => {
-    const parts = { rsvp: undefined, clipboard: undefined, music: undefined, clock: undefined, share: () => {}, capabilityOverrides: {} };
+    const parts = { rsvp: undefined, clipboard: undefined, music: undefined, clock: undefined, download: undefined, share: () => {}, capabilityOverrides: {} };
     const capabilities = composeRendererCapabilities(parts);
     expect(Reflect.ownKeys(capabilities)).toStrictEqual([]);
   });
 
   it("returns a fresh object each call", () => {
-    const parts = { rsvp: undefined, clipboard: CLIPBOARD, music: undefined, clock: undefined };
+    const parts = { rsvp: undefined, clipboard: CLIPBOARD, music: undefined, clock: undefined, download: undefined };
     expect(composeRendererCapabilities(parts)).not.toBe(composeRendererCapabilities(parts));
   });
 });

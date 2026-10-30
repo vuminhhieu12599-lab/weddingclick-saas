@@ -1,10 +1,11 @@
 import { useId, useState } from "react";
 
 import { copyWithFeedback, type CopyFeedback } from "../../../../../lib/invitation-rendering/clipboard-copy-feedback";
-import type { ClipboardCapabilityV1 } from "../../../../../lib/invitation-rendering/renderer-capabilities";
+import type { ClipboardCapabilityV1, MediaDownloadCapabilityV1 } from "../../../../../lib/invitation-rendering/renderer-capabilities";
 import { SE_DUYEN_V2_COPY } from "../copy";
 import styles from "../se-duyen-v2.module.css";
 import { accountNumberOf, type GiftPanel, type GiftRow } from "../sections/gift-panels";
+import { QrDownloadButton } from "./qr-download-button";
 
 const COPY = SE_DUYEN_V2_COPY.gift;
 
@@ -101,6 +102,8 @@ interface GiftEnvelopeProps {
   readonly panels: readonly GiftPanel[];
   /** `capabilities.clipboard`, passed through by the root only. */
   readonly clipboard: ClipboardCapabilityV1 | undefined;
+  /** `capabilities.download`, passed through by the root only; absent → no QR download control. */
+  readonly download: MediaDownloadCapabilityV1 | undefined;
 }
 
 /**
@@ -126,7 +129,7 @@ interface GiftEnvelopeProps {
  * The copy feedback is keyed to the panel it belongs to, so switching family
  * cannot carry a stale "copied" mark onto a different number.
  */
-export function GiftEnvelope({ panels, clipboard }: GiftEnvelopeProps) {
+export function GiftEnvelope({ panels, clipboard, download }: GiftEnvelopeProps) {
   const fieldId = useId();
   const [open, setOpen] = useState(false);
   const [sideIndex, setSideIndex] = useState(0);
@@ -197,6 +200,14 @@ export function GiftEnvelope({ panels, clipboard }: GiftEnvelopeProps) {
               draggable={false}
             />
           </figure>
+        )}
+        {/* WC-GIFT-QR-01: under the 148px plate, never over the scan area,
+            and only for THIS side's own RESOLVED code. */}
+        {panel.qr === undefined || download === undefined ? null : (
+          // Keyed by side, exactly as AccountRow is: switching family must
+          // start that family's control fresh, never carry a SUCCESS, FAILED
+          // or PENDING mark from the other house onto it.
+          <QrDownloadButton key={panel.side} download={download} qr={panel.qr} side={panel.side} sideLabel={sideLabel} />
         )}
 
         <dl

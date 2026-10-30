@@ -1,4 +1,4 @@
-import type { ClipboardCapabilityV1 } from "../../../../../lib/invitation-rendering/renderer-capabilities";
+import type { ClipboardCapabilityV1, MediaDownloadCapabilityV1 } from "../../../../../lib/invitation-rendering/renderer-capabilities";
 import { SE_DUYEN_V1_COPY } from "../copy";
 import { GiftEnvelope } from "../interactive/gift-envelope";
 import styles from "../se-duyen-v1.module.css";
@@ -10,6 +10,8 @@ interface GiftProps {
   /** From `giftPanels`: only operational sides with honest content, never empty. */
   readonly panels: readonly GiftPanel[];
   readonly clipboard: ClipboardCapabilityV1 | undefined;
+  /** `capabilities.download`, passed through by the root only; absent → no QR download control. */
+  readonly download: MediaDownloadCapabilityV1 | undefined;
 }
 
 /**
@@ -25,7 +27,7 @@ interface GiftProps {
  * gift-note field, so making it customer-editable is a scoped product
  * decision rather than a renderer change.
  */
-export function Gift({ panels, clipboard }: GiftProps) {
+export function Gift({ panels, clipboard, download }: GiftProps) {
   return (
     <section className={styles.gift} aria-labelledby="sd-gift-heading">
       <span className={styles.giftGlow} aria-hidden="true" />
@@ -39,7 +41,7 @@ export function Gift({ panels, clipboard }: GiftProps) {
         <p className={styles.giftNote}>{COPY.note}</p>
       </div>
 
-      <GiftEnvelope panels={panels} clipboard={clipboard} />
+      <GiftEnvelope panels={panels} clipboard={clipboard} download={download} />
     </section>
   );
 }

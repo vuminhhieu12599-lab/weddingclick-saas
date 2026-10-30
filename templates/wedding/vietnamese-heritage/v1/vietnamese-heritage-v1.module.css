@@ -2728,3 +2728,46 @@
     scale: 0.88;
   }
 }
+
+/* ---------------------------------------------------------------------- */
+/* WC-GIFT-QR-01 — saving this family's own QR.                            */
+/* A 44px target under the plate, never over it, so the scan area stays    */
+/* clear. Same house geometry as the copy control, this template's colour. */
+/* ---------------------------------------------------------------------- */
+.giftQrDownload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 6px auto 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: color-mix(in srgb, var(--vh-vermilion) 65%, transparent);
+  cursor: pointer;
+}
+
+.giftQrDownload:focus-visible {
+  outline: 2px solid var(--vh-gold-deep);
+  outline-offset: 3px;
+}
+
+.giftQrDownloadGlyph {
+  display: block;
+  width: 19px;
+  height: 19px;
+}
+
+.giftQrDownloadNote {
+  display: block;
+  max-width: 260px;
+  margin: 2px auto 0;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 13.5px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--vh-vermilion-deep);
+}

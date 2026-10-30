@@ -115,7 +115,7 @@ export function OurWeddingStoryV1({ viewModel, sections, capabilities }: Invitat
           <RsvpGift
             number={pages.rsvpGift}
             rsvp={capabilities.rsvp === undefined ? null : <Rsvp rsvp={capabilities.rsvp} />}
-            gift={panels.length === 0 ? null : <Gift panels={panels} clipboard={capabilities.clipboard} />}
+            gift={panels.length === 0 ? null : <Gift panels={panels} clipboard={capabilities.clipboard} download={capabilities.download} />}
           />
         )}
         {pages.thanks === undefined ? null : <ThankYou number={pages.thanks} people={people} ceremonyDate={ceremonyDate} photo={thankYouPhoto} />}

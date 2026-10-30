@@ -5,6 +5,7 @@ import type {
   ClipboardCapabilityV1,
   ClockCapabilityV1,
   InvitationRendererCapabilitiesV1,
+  MediaDownloadCapabilityV1,
   MusicCapabilityV1,
   MusicPlaybackStatusV1,
 } from "../../../lib/invitation-rendering/renderer-capabilities";
@@ -12,6 +13,7 @@ import type { RendererEffectiveSections } from "../../../lib/invitation-renderin
 import type { RsvpCapabilityV1 } from "../../../lib/invitation-rendering/rsvp-capability";
 import { BROWSER_CLIPBOARD_CAPABILITY, isBrowserClipboardAvailable } from "./clipboard-capability";
 import { BROWSER_CLOCK_SOURCE, startClockTicker } from "./clock-capability";
+import { BROWSER_MEDIA_DOWNLOAD_CAPABILITY, isBrowserDownloadAvailable } from "./media-download-capability";
 import { createBrowserAudio, createMusicController, resolveMusicSourceUrl } from "./music-capability";
 
 /**
@@ -28,20 +30,24 @@ import { createBrowserAudio, createMusicController, resolveMusicSourceUrl } from
  * - clock: absent in server render and the first client render, present
  *   after mount, refreshed about every second, stopped on unmount (P36);
  * - rsvp: only what the client-graph caller passed; never constructed here.
+ * - download: present once a client is observed that can save a file
+ *   (WC-GIFT-QR-01), on exactly the clipboard's terms — absent in server
+ *   render and hydration, so a control that cannot work is never drawn.
  */
 
-/** All four closed K14 members, each explicitly present or `undefined`. */
+/** All five closed K14 members, each explicitly present or `undefined`. */
 export interface RendererCapabilityPartsV1 {
   readonly rsvp: RsvpCapabilityV1 | undefined;
   readonly clipboard: ClipboardCapabilityV1 | undefined;
   readonly music: MusicCapabilityV1 | undefined;
   readonly clock: ClockCapabilityV1 | undefined;
+  readonly download: MediaDownloadCapabilityV1 | undefined;
 }
 
 type MutableCapabilities = { -readonly [K in keyof InvitationRendererCapabilitiesV1]: InvitationRendererCapabilitiesV1[K] };
 
 /**
- * K14: a fresh, frozen, closed object holding only the four known members,
+ * K14: a fresh, frozen, closed object holding only the five known members,
  * each copied by name and omitted (not set to `undefined`) when absent.
  * Nothing else from `parts` is ever carried over.
  */
@@ -51,6 +57,7 @@ export function composeRendererCapabilities(parts: RendererCapabilityPartsV1): I
   if (parts.clipboard !== undefined) capabilities.clipboard = parts.clipboard;
   if (parts.music !== undefined) capabilities.music = parts.music;
   if (parts.clock !== undefined) capabilities.clock = parts.clock;
+  if (parts.download !== undefined) capabilities.download = parts.download;
   return Object.freeze(capabilities);
 }
 
@@ -65,6 +72,15 @@ function serverClipboardAvailable(): boolean {
 function useClipboardCapability(): ClipboardCapabilityV1 | undefined {
   const available = useSyncExternalStore(subscribeNever, isBrowserClipboardAvailable, serverClipboardAvailable);
   return available ? BROWSER_CLIPBOARD_CAPABILITY : undefined;
+}
+
+function serverDownloadAvailable(): boolean {
+  return false;
+}
+
+function useDownloadCapability(): MediaDownloadCapabilityV1 | undefined {
+  const available = useSyncExternalStore(subscribeNever, isBrowserDownloadAvailable, serverDownloadAvailable);
+  return available ? BROWSER_MEDIA_DOWNLOAD_CAPABILITY : undefined;
 }
 
 function pausedStatus(): MusicPlaybackStatusV1 {
@@ -110,8 +126,9 @@ export function useInvitationRendererCapabilities(
   const clipboard = useClipboardCapability();
   const music = useMusicCapability(resolveMusicSourceUrl(sections.music, viewModel.media.audio));
   const clock = useClockCapability();
+  const download = useDownloadCapability();
   return useMemo(
-    () => composeRendererCapabilities({ rsvp, clipboard, music, clock }),
-    [rsvp, clipboard, music, clock],
+    () => composeRendererCapabilities({ rsvp, clipboard, music, clock, download }),
+    [rsvp, clipboard, music, clock, download],
   );
 }

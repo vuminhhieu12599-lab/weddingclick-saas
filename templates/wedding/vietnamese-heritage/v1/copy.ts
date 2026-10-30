@@ -134,6 +134,11 @@ export const VIETNAMESE_HERITAGE_V1_COPY = Object.freeze({
     accountName: "Chủ tài khoản",
     accountNumber: "Số tài khoản",
     qrAlt: "Mã QR chuyển khoản",
+    /** WC-GIFT-QR-01 — saving this family's own QR image. */
+    qrDownload: "Tải mã QR",
+    qrDownloaded: "Đã bắt đầu tải mã QR",
+    qrDownloadFailed: "Chưa tải được mã QR. Bạn vẫn có thể quét mã ngay trên thiệp.",
+    qrDownloadUnavailable: "Trình duyệt không hỗ trợ tải ảnh. Bạn vẫn có thể quét mã ngay trên thiệp.",
     /** Task 029 copy control wording. */
     copy: "Sao chép",
     copied: "Đã sao chép",

@@ -105,7 +105,7 @@ export function VietnameseHeritageV2({ viewModel, sections, capabilities }: Invi
         </Ceremonial>
         {loveStory !== null ? <LoveStory story={loveStory} photo={loveStoryPhoto} /> : null}
         {capabilities.rsvp !== undefined ? <Rsvp rsvp={capabilities.rsvp} /> : null}
-        {sections.gift ? <Gift operationalSides={operationalSides} gift={gift} qr={media.qr} clipboard={capabilities.clipboard} /> : null}
+        {sections.gift ? <Gift operationalSides={operationalSides} gift={gift} qr={media.qr} clipboard={capabilities.clipboard} download={capabilities.download} /> : null}
         {dressCode !== null ? <DressCode dressCode={dressCode} /> : null}
         {sections.gallery ? <Gallery gallery={gallery} /> : null}
         <Closing people={people} ceremonyDate={ceremonyDate} />

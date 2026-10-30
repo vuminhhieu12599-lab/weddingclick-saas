@@ -280,12 +280,15 @@ const RF06C_DIR = "templates/core/client";
 const RF06C_CLIPBOARD_MODULE = `${RF06C_DIR}/clipboard-capability.ts`;
 const RF06C_MUSIC_MODULE = `${RF06C_DIR}/music-capability.ts`;
 const RF06C_CLOCK_MODULE = `${RF06C_DIR}/clock-capability.ts`;
+/** WC-GIFT-QR-01: the one owner of fetch, document and object URLs for saving a file. */
+const RF06C_MEDIA_DOWNLOAD_MODULE = `${RF06C_DIR}/media-download-capability.ts`;
 const RF06C_RUNTIME_MODULE = `${RF06C_DIR}/runtime-capabilities.ts`;
 const RF06C_HOST_CORE_MODULE = `${RF06C_DIR}/invitation-renderer-host-core.tsx`;
 const RF06C_FILES = [
   RF06C_CLIPBOARD_MODULE,
   RF06C_MUSIC_MODULE,
   RF06C_CLOCK_MODULE,
+  RF06C_MEDIA_DOWNLOAD_MODULE,
   RF06C_RUNTIME_MODULE,
   RF06C_HOST_CORE_MODULE,
 ] as const;
@@ -302,6 +305,8 @@ const RF06D_COUNTDOWN = `${RF06D_DIR}/countdown.tsx`;
 const RF06D_MUSIC = `${RF06D_DIR}/music-control.tsx`;
 const RF06D_GIFT_DIALOG = `${RF06D_DIR}/gift-dialog.tsx`;
 const RF06D_COPY_BUTTON = `${RF06D_DIR}/copy-account-button.tsx`;
+/** WC-GIFT-QR-01: saving this family's own gift QR. */
+const RF06D_QR_DOWNLOAD = `${RF06D_DIR}/qr-download-button.tsx`;
 const RF06D_RSVP = `${RF06D_DIR}/rsvp.tsx`;
 // EE-V1-UI-01: the album grid and its lightbox.
 const RF06D_GALLERY_LIGHTBOX = `${RF06D_DIR}/gallery-lightbox.tsx`;
@@ -310,6 +315,7 @@ const RF06D_RSVP_MODEL = `${RF06D_DIR}/rsvp-model.ts`;
 /** RF-06D visual/interaction remediation: Task029 section reveal (Design Baseline B5 item 19). */
 const RF06D_REVEAL = `${RF06D_DIR}/section-reveal.tsx`;
 const RF06D_ISLAND_FILES = [
+  RF06D_QR_DOWNLOAD,
   RF06D_OPENING,
   RF06D_COUNTDOWN,
   RF06D_MUSIC,
@@ -546,8 +552,10 @@ const RF06B_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06B_CODE_FILES)[number], 
     `${LIB}/wedding-domain-types`,
     ...SECTION_COMMON,
     `${V1}/sections/media-image`,
-    // RF-06D: the sides render inside the dialog island, with the copy island.
+    // RF-06D: the sides render inside the dialog island, with the copy island
+    // and (WC-GIFT-QR-01) the QR download island.
     `${V1}/interactive/copy-account-button`,
+    `${V1}/interactive/qr-download-button`,
     `${V1}/interactive/gift-dialog`,
   ],
   [`${V1}/sections/hero.tsx`]: [
@@ -774,6 +782,7 @@ describe("RF-06B template files", () => {
       [
         "capabilities.clipboard",
         "capabilities.clock",
+        "capabilities.download",
         "capabilities.clock",
         "capabilities.music",
         "capabilities.music",
@@ -790,7 +799,7 @@ describe("RF-06B template files", () => {
     // Micro-Checkpoint 10: RSVP receives only the capability; no guest data (the name input always starts empty).
     expect(code).toContain("{capabilities.rsvp !== undefined ? <Rsvp rsvp={capabilities.rsvp} /> : null}");
     expect(code.match(/<SectionReveal \/>/g)).toHaveLength(1);
-    expect(code).toMatch(/clipboard=\{capabilities\.clipboard\}/);
+    expect(code).toMatch(/clipboard=\{capabilities\.clipboard\} download=\{capabilities\.download\}/);
   });
 });
 
@@ -1491,6 +1500,7 @@ const RF06C_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06C_FILES)[number], reado
   [RF06C_CLIPBOARD_MODULE]: [`${LIB}/renderer-capabilities`],
   [RF06C_MUSIC_MODULE]: [`${LIB}/invitation-view-model-types`, `${LIB}/renderer-capabilities`],
   [RF06C_CLOCK_MODULE]: [],
+  [RF06C_MEDIA_DOWNLOAD_MODULE]: [`${LIB}/renderer-capabilities`],
   [RF06C_RUNTIME_MODULE]: [
     "react",
     `${LIB}/invitation-view-model-types`,
@@ -1498,6 +1508,7 @@ const RF06C_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06C_FILES)[number], reado
     `${LIB}/renderer-selection`,
     `${LIB}/rsvp-capability`,
     RF06C_CLIPBOARD_MODULE.replace(/\.ts$/, ""),
+    RF06C_MEDIA_DOWNLOAD_MODULE.replace(/\.ts$/, ""),
     RF06C_CLOCK_MODULE.replace(/\.ts$/, ""),
     RF06C_MUSIC_MODULE.replace(/\.ts$/, ""),
   ],
@@ -1520,17 +1531,16 @@ const RF06C_FORBIDDEN: readonly [string, RegExp][] = [
   ["DB client", /createClient|\bpg\b|postgres/i],
   ["process.env", /process\.env/],
   ["secret", /SECRET|API_KEY/],
-  ["network", /\bfetch\b|XMLHttpRequest|sendBeacon|WebSocket|EventSource/],
+  ["network", /XMLHttpRequest|sendBeacon|WebSocket|EventSource/],
   ["persistence", /localStorage|sessionStorage|indexedDB|\bcookie|caches\./i],
   ["window", /\bwindow\b/],
-  ["document", /\bdocument\b/],
   ["execCommand", /execCommand/],
   ["Date construction/parsing", /\bnew Date\b|\bDate\(|Date\.parse|Date\.UTC/],
   ["Intl / locale formatting", /\bIntl\b|toLocale/],
   ["Date getters", /get(UTC)?(Day|Date|Month|FullYear|Hours)\b/],
   ["performance.now", /performance\.now/],
   ["randomness", /Math\.random|randomUUID|getRandomValues/],
-  ["other timers", /setTimeout|requestAnimationFrame|requestIdleCallback/],
+  ["other timers", /requestAnimationFrame|requestIdleCallback/],
   ["observers / media queries (RF-06D)", /IntersectionObserver|matchMedia/],
   ["dynamic import / require / import.meta", /\bimport\s*\(|\brequire\s*\(|import\.meta/],
   ["filesystem", /["']node:|["']fs["']|readdir|readFile/],
@@ -1557,6 +1567,13 @@ const RF06C_BROWSER_PRIVILEGE: readonly [string, RegExp, readonly string[]][] = 
   ["Audio", /\bAudio\b|HTMLAudioElement/, [RF06C_MUSIC_MODULE]],
   ["Date.now", /Date\.now/, [RF06C_CLOCK_MODULE]],
   ["setInterval / clearInterval", /\b(set|clear)Interval\b/, [RF06C_CLOCK_MODULE]],
+  // WC-GIFT-QR-01: saving a file needs the bytes, an anchor and one turn of
+  // the event loop to revoke the object URL. Still one owner, and still
+  // forbidden everywhere else in RF-06A/B/C.
+  ["fetch", /\bfetch\b/, [RF06C_MEDIA_DOWNLOAD_MODULE]],
+  ["document", /\bdocument\b/, [RF06C_MEDIA_DOWNLOAD_MODULE]],
+  ["object URL", /createObjectURL|revokeObjectURL/, [RF06C_MEDIA_DOWNLOAD_MODULE]],
+  ["setTimeout", /\bsetTimeout\b/, [RF06C_MEDIA_DOWNLOAD_MODULE]],
   [
     "React hooks",
     /\buse(State|Effect|LayoutEffect|InsertionEffect|Ref|Memo|Callback|Reducer|SyncExternalStore|Context|Transition|Optimistic|ActionState)\b/,
@@ -1568,7 +1585,7 @@ const RF06C_WIRING_PRIVILEGE: readonly [string, RegExp, readonly string[]][] = [
   ["react import", /from\s+["']react["']/, [RF06C_RUNTIME_MODULE]],
   ["component resolution", /resolveInvitationRendererComponent|PRODUCTION_RENDERER_BINDING_REGISTRY/, [RF06C_HOST_CORE_MODULE]],
   ["capability composition", /composeRendererCapabilities|useInvitationRendererCapabilities/, [RF06C_RUNTIME_MODULE, RF06C_HOST_CORE_MODULE]],
-  ["SUCCESS literal", /["']SUCCESS["']/, [RF06C_CLIPBOARD_MODULE]],
+  ["SUCCESS literal", /["']SUCCESS["']/, [RF06C_CLIPBOARD_MODULE, RF06C_MEDIA_DOWNLOAD_MODULE]],
 ];
 
 function nonTestSources(dir: string): string[] {
@@ -1737,6 +1754,7 @@ const RF06D_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06D_FILES)[number], reado
   [RF06D_GIFT_DIALOG]: ["react", `${LIB}/wedding-domain-types`, `${V1}/copy`, CSS_MODULE],
   [RF06D_GALLERY_LIGHTBOX]: ["react", `${LIB}/invitation-view-model-types`, `${V1}/copy`, CSS_MODULE, `${V1}/sections/media-image`],
   [RF06D_COPY_BUTTON]: ["react", `${LIB}/renderer-capabilities`, `${V1}/copy`, CSS_MODULE],
+  [RF06D_QR_DOWNLOAD]: ["react", `${LIB}/media-download-feedback`, `${LIB}/renderer-capabilities`, `${V1}/copy`, CSS_MODULE, `${LIB}/invitation-view-model-types`, `${LIB}/wedding-domain-types`],
   [RF06D_RSVP]: [
     "react",
     "lib/domain",
@@ -1795,7 +1813,7 @@ const ALL_HOOKS =
  */
 const RF06D_PRIVILEGE: readonly [string, RegExp, readonly string[]][] = [
   // EE-V1-UI-01 adds the album island: it holds the open photo and its dialog.
-  ["useState", /\buseState\b/, [RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX]],
+  ["useState", /\buseState\b/, [RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX, RF06D_QR_DOWNLOAD]],
   ["useReducer", /\buseReducer\b/, [RF06D_OPENING, RF06D_RSVP]],
   // RF-06D remediation: RSVP manages focus around "Sửa lại" (D11); the reveal observes once after mount.
   ["useRef", /\buseRef\b/, [RF06D_OPENING, RF06D_GIFT_DIALOG, RF06D_RSVP, RF06D_REVEAL, RF06D_GALLERY_LIGHTBOX]],
@@ -1805,8 +1823,8 @@ const RF06D_PRIVILEGE: readonly [string, RegExp, readonly string[]][] = [
     /\buse(LayoutEffect|InsertionEffect|Memo|Callback|SyncExternalStore|Context|Transition|Optimistic|ActionState|Id|DeferredValue|ImperativeHandle)\b/,
     [],
   ],
-  ["button element", /<button\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX]],
-  ["click handler", /\bonClick\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX]],
+  ["button element", /<button\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX, RF06D_QR_DOWNLOAD]],
+  ["click handler", /\bonClick\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX, RF06D_QR_DOWNLOAD]],
   ["dialog element / API", /<dialog\b|role="dialog"|showModal|HTMLDialogElement|\.close\(\)|onClose\b|onCancel\b/, [RF06D_GIFT_DIALOG, RF06D_GALLERY_LIGHTBOX]],
   // The album island returns focus to the tile that opened the viewer.
   ["programmatic focus", /\.focus\(/, [RF06D_OPENING, RF06D_GIFT_DIALOG, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX]],
@@ -1967,6 +1985,7 @@ const VH_DATE = `${LIB}/event-date-time-presentation`;
 const VH02B_RSVP = `${VH}/interactive/rsvp.tsx`;
 const VH02B_GIFT_DIALOG = `${VH}/interactive/gift-dialog.tsx`;
 const VH02B_COPY_BUTTON = `${VH}/interactive/copy-account-button.tsx`;
+const VH02B_QR_DOWNLOAD = `${VH}/interactive/qr-download-button.tsx`;
 /** VH-02B-M1: the split-door opening, music control and countdown islands, and the pure opening model. */
 const VH02B_OPENING = `${VH}/interactive/opening-interaction.tsx`;
 const VH02B_MUSIC = `${VH}/interactive/music-control.tsx`;
@@ -1977,6 +1996,7 @@ const VH02B_LIGHTBOX = `${VH}/interactive/gallery-lightbox.tsx`;
 const VH02B_REVEAL = `${VH}/interactive/section-reveal.tsx`;
 const VH02B_SHARED_REVEAL = `${LIB}/section-reveal-controller.ts`;
 const VH02B_ISLAND_FILES = [
+  VH02B_QR_DOWNLOAD,
   VH02B_COPY_BUTTON,
   VH02B_COUNTDOWN,
   VH02B_GIFT_DIALOG,
@@ -2072,6 +2092,7 @@ const VH01_ALLOWED_IMPORTS: Readonly<Record<string, readonly string[]>> = {
     `${LIB}/wedding-domain-types`,
     ...VH_SECTION_COMMON,
     `${VH}/interactive/copy-account-button`,
+    `${VH}/interactive/qr-download-button`,
     `${VH}/interactive/gift-dialog`,
     `${VH}/sections/media-image`,
   ],
@@ -2165,6 +2186,7 @@ describe("VH-01 Vietnamese Heritage v1 files", () => {
       "clock",
       "clock",
       "clock",
+      "download",
       "music",
       "rsvp",
       "rsvp",
@@ -2177,7 +2199,7 @@ describe("VH-01 Vietnamese Heritage v1 files", () => {
     expect(code).toMatch(/\{\.\.\.\(music === undefined \? \{\} : \{ onOpen: startMusicOnOpen\(music\) \}\)\}/);
     expect(code).toMatch(/\{capabilities\.clock !== undefined \? <Countdown ceremony=\{ceremony\} clock=\{capabilities\.clock\} \/> : null\}/);
     expect(code).toMatch(/\{capabilities\.rsvp !== undefined \? <Rsvp rsvp=\{capabilities\.rsvp\} \/> : null\}/);
-    expect(code).toMatch(/\{sections\.gift \? <Gift [^>]*clipboard=\{capabilities\.clipboard\} \/> : null\}/);
+    expect(code).toMatch(/\{sections\.gift \? <Gift [^>]*clipboard=\{capabilities\.clipboard\} download=\{capabilities\.download\} \/> : null\}/);
   });
 
   it("only the binding module imports the VH renderer component, and no VH file imports a template outside its own tree", () => {
@@ -2276,6 +2298,7 @@ describe("VH-02B-E1 islands", () => {
     [VH02B_RSVP]: ["react", "lib/domain", `${LIB}/rsvp-capability`, `${LIB}/rsvp-form-model`, `${VH}/copy`, VH_DECOR, VH_CSS],
     [VH02B_GIFT_DIALOG]: ["react", `${LIB}/wedding-domain-types`, `${VH}/copy`, VH_DECOR, VH_CSS],
     [VH02B_COPY_BUTTON]: ["react", `${LIB}/clipboard-copy-feedback`, `${LIB}/renderer-capabilities`, `${VH}/copy`, VH_CSS],
+    [VH02B_QR_DOWNLOAD]: ["react", `${LIB}/media-download-feedback`, `${LIB}/renderer-capabilities`, `${VH}/copy`, VH_CSS, `${LIB}/invitation-view-model-types`, `${LIB}/wedding-domain-types`],
     [VH02B_OPENING]: ["react", `${VH}/copy`, `${VH}/interactive/opening-state`, VH_CSS],
     [VH02B_MUSIC]: ["react", `${LIB}/music-control-model`, `${LIB}/renderer-capabilities`, `${VH}/copy`, VH_CSS],
     [VH02B_COUNTDOWN]: [`${LIB}/ceremony-countdown`, VH_TYPES, `${LIB}/renderer-capabilities`, `${VH}/copy`, VH_CSS],
@@ -2285,7 +2308,7 @@ describe("VH-02B-E1 islands", () => {
 
   /** Each interaction primitive only in its owning VH island (least privilege, as RF-06D). */
   const PRIVILEGE: readonly [string, RegExp, readonly string[]][] = [
-    ["useState", /\buseState\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_COPY_BUTTON, VH02B_MUSIC, VH02B_LIGHTBOX]],
+    ["useState", /\buseState\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_COPY_BUTTON, VH02B_MUSIC, VH02B_LIGHTBOX, VH02B_QR_DOWNLOAD]],
     ["useReducer", /\buseReducer\b/, [VH02B_RSVP, VH02B_OPENING]],
     ["useRef", /\buseRef\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_OPENING, VH02B_LIGHTBOX, VH02B_REVEAL]],
     ["useEffect", /\buseEffect\b/, [VH02B_RSVP, VH02B_GIFT_DIALOG, VH02B_LIGHTBOX, VH02B_REVEAL]],
@@ -2307,6 +2330,7 @@ describe("VH-02B-E1 islands", () => {
     ["preventDefault", /preventDefault/, [VH02B_RSVP, VH02B_LIGHTBOX]],
     ["form controls", /<form\b|<input\b|<select\b|<textarea\b|<fieldset\b|<label\b/, [VH02B_RSVP]],
     ["clipboard capability action", /copyWithFeedback|copyText/, [VH02B_COPY_BUTTON]],
+    ["download capability action", /downloadQrWithFeedback|saveImage/, [VH02B_QR_DOWNLOAD]],
     ["RSVP capability action", /\.submit\(|gate\.run\(/, [VH02B_RSVP]],
     ["music capability action", /\.play\(|\.pause\(|runMusicToggle|MusicCapabilityV1/, [VH02B_MUSIC]],
     ["clock capability consumption", /nowEpochMs|ClockCapabilityV1|deriveCeremonyCountdownV1/, [VH02B_COUNTDOWN]],
@@ -2338,7 +2362,9 @@ describe("VH-02B-E1 islands", () => {
       }
       expect(pattern.test(code), `${file}: ${label}`).toBe(false);
     }
-    expect(/<img\b|<svg\b/.test(code), file).toBe(false);
+    expect(/<img\b/.test(code), file).toBe(false);
+    // WC-GIFT-QR-01: the approved icon-only download control draws its own glyph.
+    expect(/<svg\b/.test(code), file).toBe(file.endsWith("/interactive/qr-download-button.tsx"));
   });
 
   it.each(PRIVILEGE)("interaction: %s appears only in its owning VH island(s), never in a VH static file", (_label, pattern, owners) => {
@@ -2613,6 +2639,7 @@ const RM02_CODE_FILES = [
 const RM02_ISLAND_FILES = [
   `${RM}/interactive/album-viewer.tsx`,
   `${RM}/interactive/copy-account-button.tsx`,
+  `${RM}/interactive/qr-download-button.tsx`,
   `${RM}/interactive/countdown.tsx`,
   `${RM}/interactive/gift-dialog.tsx`,
   `${RM}/interactive/music-control.tsx`,
@@ -2718,7 +2745,9 @@ describe("RM-01/RM-02 Romantic Minimal v1 files", () => {
     for (const [label, pattern] of [...RF06D_FORBIDDEN, ...RM02_EXTRA_FORBIDDEN]) {
       expect(pattern.test(code), `${file}: ${label}`).toBe(false);
     }
-    expect(/<img\b|<svg\b/.test(code), file).toBe(false);
+    expect(/<img\b/.test(code), file).toBe(false);
+    // WC-GIFT-QR-01: the approved icon-only download control draws its own glyph.
+    expect(/<svg\b/.test(code), file).toBe(file.endsWith("/interactive/qr-download-button.tsx"));
     expect(/IntersectionObserver/.test(code), file).toBe(file === `${RM}/interactive/section-reveal.tsx`);
     expect(/nowEpochMs|deriveCeremonyCountdownV1/.test(code), file).toBe(file === `${RM}/interactive/countdown.tsx`);
     expect(/gate\.run\(|createRsvpSubmissionGate/.test(code), file).toBe(file === `${RM}/interactive/rsvp.tsx`);
@@ -2751,6 +2780,7 @@ describe("RM-01/RM-02 Romantic Minimal v1 files", () => {
       "clock",
       "clock",
       "clock",
+      "download",
       "music",
       "rsvp",
       "rsvp",
@@ -2760,7 +2790,7 @@ describe("RM-01/RM-02 Romantic Minimal v1 files", () => {
     }
     expect(code).toMatch(/const music = sections\.music \? capabilities\.music : undefined;/);
     expect(code).toMatch(/\{capabilities\.rsvp === undefined \? null : <Rsvp rsvp=\{capabilities\.rsvp\} \/>\}/);
-    expect(code).toMatch(/\{sections\.gift \? <Gift [^>]*clipboard=\{capabilities\.clipboard\} \/> : null\}/);
+    expect(code).toMatch(/\{sections\.gift \? <Gift [^>]*clipboard=\{capabilities\.clipboard\} download=\{capabilities\.download\} \/> : null\}/);
     expect(code).toMatch(/<SectionReveal hasCountdown=\{capabilities\.clock !== undefined\} \/>/);
   });
 
@@ -2881,6 +2911,7 @@ const OWS01_MODEL_FILES = [
 const OWS01_CODE_FILES = [...OWS01_RENDERER_FILES, ...OWS01_MODEL_FILES, `${OWS}/copy.ts`, OWS01_FONTS] as const;
 const OWS01_ISLAND_FILES = [
   `${OWS}/interactive/copy-account-button.tsx`,
+  `${OWS}/interactive/qr-download-button.tsx`,
   `${OWS}/interactive/countdown.tsx`,
   `${OWS}/interactive/gallery-viewer.tsx`,
   `${OWS}/interactive/gift-sheet.tsx`,
@@ -2977,7 +3008,12 @@ describe("OWS-01 Our Wedding Story v1 files", () => {
       expect(pattern.test(code), `${file}: ${label}`).toBe(false);
     }
     expect(/<img\b/.test(code), file).toBe(false);
-    expect(/<svg\b/.test(code), file).toBe(file === `${OWS}/interactive/music-control.tsx` || file === `${OWS}/interactive/gift-sheet.tsx`);
+    expect(/<svg\b/.test(code), file).toBe(
+      // GIFT-UI-01 / WC-GIFT-QR-01: an icon-only control draws its own glyph.
+      file.endsWith("/interactive/qr-download-button.tsx") ||
+        file === `${OWS}/interactive/music-control.tsx` ||
+        file === `${OWS}/interactive/gift-sheet.tsx`,
+    );
     expect(/IntersectionObserver/.test(code), file).toBe(file === `${OWS}/interactive/section-reveal.tsx`);
     expect(/nowEpochMs|deriveCeremonyCountdownV1/.test(code), file).toBe(file === `${OWS}/interactive/countdown.tsx`);
     expect(/gate\.run\(|createRsvpSubmissionGate/.test(code), file).toBe(file === `${OWS}/interactive/rsvp.tsx`);
@@ -3012,6 +3048,7 @@ describe("OWS-01 Our Wedding Story v1 files", () => {
       "clock",
       "clock",
       "clock",
+      "download",
       "music",
       "rsvp",
       "rsvp",
@@ -3328,7 +3365,11 @@ describe("OWS-V2-01 Our Wedding Story v2 files", () => {
       expect(pattern.test(code), `${file}: ${label}`).toBe(false);
     }
     expect(/<img\b/.test(code), file).toBe(false);
-    expect(/<svg\b/.test(code), file).toBe(file === `${OWS2}/interactive/music-control.tsx` || file === `${OWS2}/interactive/gift-sheet.tsx`);
+    expect(/<svg\b/.test(code), file).toBe(
+      file.endsWith("/interactive/qr-download-button.tsx") ||
+        file === `${OWS2}/interactive/music-control.tsx` ||
+        file === `${OWS2}/interactive/gift-sheet.tsx`,
+    );
     expect(/IntersectionObserver/.test(code), file).toBe(file === `${OWS2}/interactive/section-reveal.tsx`);
     expect(/nowEpochMs|deriveCeremonyCountdownV1/.test(code), file).toBe(file === `${OWS2}/interactive/countdown.tsx`);
     expect(/gate\.run\(|createRsvpSubmissionGate/.test(code), file).toBe(file === `${OWS2}/interactive/rsvp.tsx`);
@@ -3364,6 +3405,7 @@ describe("OWS-V2-01 Our Wedding Story v2 files", () => {
       "clock",
       "clock",
       "clock",
+      "download",
       "music",
       "rsvp",
       "rsvp",
@@ -3573,6 +3615,7 @@ const SD1_ISLAND_FILES = [
   `${SD1}/interactive/music-control.tsx`,
   // SD-V1-02C2: the approved envelope, its slip and the copy control.
   `${SD1}/interactive/gift-envelope.tsx`,
+  `${SD1}/interactive/qr-download-button.tsx`,
   // SD-V1-RSVP: the approved Hồi Âm card, on the public RSVP capability.
   `${SD1}/interactive/rsvp.tsx`,
   // SD-V1-MOTION-01: the interior scroll reveal, on the shared controller.
@@ -3633,6 +3676,7 @@ const SD2_ISLAND_FILES = [
   // SD-V2-01: the gilt disc, floated and started by the opening gesture.
   `${SD2}/interactive/music-control.tsx`,
   `${SD2}/interactive/gift-envelope.tsx`,
+  `${SD2}/interactive/qr-download-button.tsx`,
   `${SD2}/interactive/rsvp.tsx`,
   `${SD2}/interactive/section-reveal.tsx`,
 ] as const;

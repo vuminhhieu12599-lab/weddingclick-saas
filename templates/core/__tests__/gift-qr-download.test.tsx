@@ -1,0 +1,356 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
+
+import { INVITATION_VARIANTS } from "../../../lib/domain";
+import {
+  GIFT_QR_DOWNLOAD_BASE_NAME,
+  downloadQrWithFeedback,
+} from "../../../lib/invitation-rendering/media-download-feedback";
+import type { ResolvedMedia } from "../../../lib/invitation-rendering/invitation-view-model-types";
+import type {
+  MediaDownloadCapabilityV1,
+  MediaDownloadResultV1,
+} from "../../../lib/invitation-rendering/renderer-capabilities";
+import { extensionForImageBlob } from "../client/media-download-capability";
+import { buildRendererFixture } from "../fixtures/renderer-fixture-pipeline";
+import { FIXTURE_MEDIA_IDS } from "../fixtures/renderer-fixture-sources";
+
+/**
+ * WC-GIFT-QR-01 — saving the wedding-gift QR, across the eight published
+ * renderer versions (docs/DECISIONS.md "WC-GIFT-QR-01 …").
+ *
+ * The browser half (a real cross-origin fetch, a real anchor download, the
+ * saved bytes) cannot be exercised without a DOM, and this repository has no
+ * DOM test environment; it is covered by the recorded headless-Chrome run in
+ * the decision record. What is asserted here is everything that decides
+ * WHETHER and WITH WHAT a save is offered: the pure feedback model, the file
+ * names, the extension mapping, and each renderer's own markup.
+ */
+
+// next/font loaders only run under the Next compiler, so every renderer's
+// font module is stubbed with the one class name it exports.
+vi.mock("../../wedding/elegant-editorial/v1/fonts", () => ({ ELEGANT_EDITORIAL_V1_FONT_VARIABLES_CLASS_NAME: "ee-fonts" }));
+vi.mock("../../wedding/vietnamese-heritage/v1/fonts", () => ({ VIETNAMESE_HERITAGE_V1_FONT_VARIABLES_CLASS_NAME: "vh1-fonts" }));
+vi.mock("../../wedding/vietnamese-heritage/v2/fonts", () => ({ VIETNAMESE_HERITAGE_V2_FONT_VARIABLES_CLASS_NAME: "vh2-fonts" }));
+vi.mock("../../wedding/romantic-minimal/v1/fonts", () => ({ ROMANTIC_MINIMAL_V1_FONT_VARIABLES_CLASS_NAME: "rm1-fonts" }));
+vi.mock("../../wedding/our-wedding-story/v1/fonts", () => ({ OUR_WEDDING_STORY_V1_FONT_VARIABLES_CLASS_NAME: "ows1-fonts" }));
+vi.mock("../../wedding/our-wedding-story/v2/fonts", () => ({ OUR_WEDDING_STORY_V2_FONT_VARIABLES_CLASS_NAME: "ows2-fonts" }));
+vi.mock("../../wedding/se-duyen/v1/fonts", () => ({ SE_DUYEN_V1_FONT_VARIABLES_CLASS_NAME: "sd1-fonts" }));
+vi.mock("../../wedding/se-duyen/v2/fonts", () => ({ SE_DUYEN_V2_FONT_VARIABLES_CLASS_NAME: "sd2-fonts" }));
+
+const COPY_FILES: readonly [string, string][] = [
+  "elegant-editorial/v1", "vietnamese-heritage/v1", "vietnamese-heritage/v2", "romantic-minimal/v1",
+  "our-wedding-story/v1", "our-wedding-story/v2", "se-duyen/v1", "se-duyen/v2",
+].map((folder) => [folder, join(__dirname, "..", "..", "wedding", folder, "copy.ts")] as [string, string]);
+
+const QR: ResolvedMedia = { status: "RESOLVED", mediaId: FIXTURE_MEDIA_IDS.QR_GROOM, url: "https://example.test/a.webp", width: 600, height: 600 };
+
+function capability(result: MediaDownloadResultV1 | "reject" = { status: "SUCCESS" }) {
+  const saveImage = vi.fn(async (): Promise<MediaDownloadResultV1> => {
+    if (result === "reject") throw new Error("unexpected fault");
+    return result;
+  });
+  return { saveImage } as MediaDownloadCapabilityV1 & { saveImage: ReturnType<typeof vi.fn> };
+}
+
+// ---------------------------------------------------------------------------
+// A. The saved file: its name, its extension, its bytes
+// ---------------------------------------------------------------------------
+
+describe("A: the file a guest ends up with", () => {
+  it("is named per family side, and names nothing else", () => {
+    expect(GIFT_QR_DOWNLOAD_BASE_NAME).toStrictEqual({ GROOM: "ma-qr-nha-trai", BRIDE: "ma-qr-nha-gai" });
+    for (const name of Object.values(GIFT_QR_DOWNLOAD_BASE_NAME)) {
+      expect(name).toMatch(/^[a-z-]+$/);
+      expect(name).not.toMatch(/http|token|supabase|\d/i);
+    }
+  });
+
+  it("takes its extension from the bytes actually received, never from an assumption", () => {
+    expect(extensionForImageBlob("image/png")).toBe("png");
+    expect(extensionForImageBlob("image/jpeg")).toBe("jpg");
+    // The admin optimizer emits WebP, so this is the common real case.
+    expect(extensionForImageBlob("image/webp")).toBe("webp");
+    expect(extensionForImageBlob("IMAGE/WEBP; charset=binary")).toBe("webp");
+    // Anything else is refused outright: an unexpected type is never saved
+    // under a .png that would misdescribe its bytes.
+    for (const unsupported of ["application/pdf", "image/gif", "image/svg+xml", "image/avif", "text/html", ""]) {
+      expect(extensionForImageBlob(unsupported), unsupported).toBeNull();
+    }
+  });
+
+  it("the adapter saves the response bytes and never re-encodes them", () => {
+    const code = readFileSync(join(__dirname, "..", "client", "media-download-capability.ts"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(code).toMatch(/await response\.blob\(\)/);
+    expect(code).toMatch(/URL\.createObjectURL\(blob\)/);
+    // No canvas, no image decode, no resize, no re-encode, no proxy.
+    expect(code).not.toMatch(/canvas|getContext|toDataURL|toBlob|drawImage|new Image|\/api\/|proxy/i);
+    expect(code).toMatch(/credentials: "omit"/);
+    // An unsupported type is refused before any object URL is made.
+    expect(code).toMatch(/const extension = extensionForImageBlob\(blob\.type\);/);
+    expect(code).toMatch(/extension === null\) return FAILED;/);
+  });
+
+  it("says a download STARTED, never that the guest ended up with a file", () => {
+    // No web API reports whether the save completed, so no renderer claims it.
+    for (const [label, file] of COPY_FILES) {
+      const copy = readFileSync(file, "utf8");
+      expect(copy, label).toContain('qrDownloaded: "Đã bắt đầu tải mã QR"');
+      expect(copy, label).not.toMatch(/qrDownloaded: "Đã tải(?! mã QR nếu)/);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// B. Failure is never success
+// ---------------------------------------------------------------------------
+
+describe("B: the model never reports a save that did not happen", () => {
+  it.each([
+    ["SUCCESS", { status: "SUCCESS" } as const, "SUCCESS"],
+    ["UNAVAILABLE", { status: "UNAVAILABLE" } as const, "UNAVAILABLE"],
+    ["FAILED (expired or rejected URL)", { status: "FAILED" } as const, "FAILED"],
+  ])("%s passes through", async (_label, result, expected) => {
+    expect(await downloadQrWithFeedback(capability(result), QR, "GROOM")).toBe(expected);
+  });
+
+  it("a rejection, a malformed result or a missing status is FAILED, never SUCCESS", async () => {
+    expect(await downloadQrWithFeedback(capability("reject"), QR, "GROOM")).toBe("FAILED");
+    for (const malformed of [undefined, null, {}, { status: "OK" }, { status: "success" }, "SUCCESS"]) {
+      const rogue = { saveImage: async () => malformed } as unknown as MediaDownloadCapabilityV1;
+      expect(await downloadQrWithFeedback(rogue, QR, "GROOM")).toBe("FAILED");
+    }
+  });
+
+  it("asks for exactly this side's own URL and its own file name", async () => {
+    const groom = capability();
+    await downloadQrWithFeedback(groom, QR, "GROOM");
+    expect(groom.saveImage).toHaveBeenCalledWith(QR.url, "ma-qr-nha-trai");
+    const bride = capability();
+    await downloadQrWithFeedback(bride, { ...QR, url: "https://example.test/b.webp" }, "BRIDE");
+    expect(bride.saveImage).toHaveBeenCalledWith("https://example.test/b.webp", "ma-qr-nha-gai");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C. Every published renderer: when the control exists, and for which side
+// ---------------------------------------------------------------------------
+
+interface Published {
+  readonly label: string;
+  readonly download: string;
+  readonly groomLabel: string;
+  readonly brideLabel: string;
+  readonly load: () => Promise<{ default?: unknown } & Record<string, unknown>>;
+  readonly component: string;
+  /**
+   * Se Duyên's envelope shows ONE family at a time behind a tab each
+   * (SD-V1-02C2), so a COMMON project has one control in the markup and the
+   * other behind its tab. Every other renderer lays both sides out at once.
+   */
+  readonly tabbedSides?: true;
+}
+
+const PUBLISHED: readonly Published[] = [
+  { label: "elegant-editorial v1", component: "ElegantEditorialV1", download: "Tải mã QR", groomLabel: "Nhà Trai", brideLabel: "Nhà Gái",
+    load: () => import("../../wedding/elegant-editorial/v1/elegant-editorial-v1") as never },
+  { label: "vietnamese-heritage v1", component: "VietnameseHeritageV1", download: "Tải mã QR", groomLabel: "Nhà Trai", brideLabel: "Nhà Gái",
+    load: () => import("../../wedding/vietnamese-heritage/v1/vietnamese-heritage-v1") as never },
+  { label: "vietnamese-heritage v2", component: "VietnameseHeritageV2", download: "Tải mã QR", groomLabel: "Nhà Trai", brideLabel: "Nhà Gái",
+    load: () => import("../../wedding/vietnamese-heritage/v2/vietnamese-heritage-v2") as never },
+  { label: "romantic-minimal v1", component: "RomanticMinimalV1", download: "Tải mã QR", groomLabel: "Nhà Trai", brideLabel: "Nhà Gái",
+    load: () => import("../../wedding/romantic-minimal/v1/romantic-minimal-v1") as never },
+  { label: "our-wedding-story v1", component: "OurWeddingStoryV1", download: "Tải mã QR", groomLabel: "Nhà Trai", brideLabel: "Nhà Gái",
+    load: () => import("../../wedding/our-wedding-story/v1/our-wedding-story-v1") as never },
+  { label: "our-wedding-story v2", component: "OurWeddingStoryV2", download: "Tải mã QR", groomLabel: "Nhà Trai", brideLabel: "Nhà Gái",
+    load: () => import("../../wedding/our-wedding-story/v2/our-wedding-story-v2") as never },
+  { label: "se-duyen v1", component: "SeDuyenV1", download: "Tải mã QR", groomLabel: "Nhà Trai", brideLabel: "Nhà Gái", tabbedSides: true,
+    load: () => import("../../wedding/se-duyen/v1/se-duyen-v1") as never },
+  { label: "se-duyen v2", component: "SeDuyenV2", download: "Tải mã QR", groomLabel: "Nhà Trai", brideLabel: "Nhà Gái", tabbedSides: true,
+    load: () => import("../../wedding/se-duyen/v2/se-duyen-v2") as never },
+];
+
+type RendererProps = { viewModel: unknown; sections: unknown; capabilities: unknown };
+
+async function renderWith(
+  entry: Published,
+  options: { variant: "COMMON" | "GROOM" | "BRIDE"; unavailableMediaIds?: readonly string[]; withCapability?: boolean },
+) {
+  const fixture = await buildRendererFixture({
+    variant: options.variant,
+    ...(options.unavailableMediaIds === undefined ? {} : { unavailableMediaIds: options.unavailableMediaIds }),
+  });
+  const loaded = await entry.load();
+  const Renderer = loaded[entry.component] as (props: RendererProps) => unknown;
+  const download = capability();
+  const html = renderToStaticMarkup(
+    Renderer({
+      viewModel: fixture.viewModel,
+      sections: fixture.selection.effectiveSections,
+      capabilities: options.withCapability === false ? {} : { download },
+    }) as never,
+  );
+  return { html, download };
+}
+
+/** Every accessible name of a download control in the markup. */
+const downloadLabels = (html: string, entry: Published) =>
+  [...html.matchAll(/aria-label="([^"]*)"/g)]
+    .map((match) => match[1] as string)
+    .filter((label) => label.startsWith(entry.download));
+
+describe("C: each published renderer offers the right save, or none", () => {
+  it.each(PUBLISHED.map((entry) => [entry.label, entry] as const))(
+    "%s · COMMON offers each family its own QR",
+    async (_label, entry) => {
+      const { html, download } = await renderWith(entry, { variant: "COMMON" });
+      const labels = downloadLabels(html, entry);
+      if (entry.tabbedSides === true) {
+        // One family is on the slip, the other is one tab away; each tab's
+        // panel carries that family's own control.
+        expect(labels).toStrictEqual([`${entry.download} ${entry.groomLabel}`]);
+        expect(html).toContain('role="tablist"');
+        expect(html).toContain(entry.brideLabel);
+      } else {
+        expect(labels).toHaveLength(2);
+        expect(labels.some((l) => l.endsWith(entry.groomLabel))).toBe(true);
+        expect(labels.some((l) => l.endsWith(entry.brideLabel))).toBe(true);
+      }
+      // Rendering alone must never save anything.
+      expect(download.saveImage).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(PUBLISHED.map((entry) => [entry.label, entry] as const))(
+    "%s · SEPARATE shows only the operational side",
+    async (_label, entry) => {
+      for (const [variant, expected] of [["GROOM", entry.groomLabel], ["BRIDE", entry.brideLabel]] as const) {
+        const { html } = await renderWith(entry, { variant });
+        const labels = downloadLabels(html, entry);
+        expect(labels, `${entry.label} ${variant}`).toHaveLength(1);
+        expect(labels[0]).toBe(`${entry.download} ${expected}`);
+      }
+    },
+  );
+
+  it.each(PUBLISHED.map((entry) => [entry.label, entry] as const))(
+    "%s · an UNAVAILABLE QR draws no control, and the other side keeps its own",
+    async (_label, entry) => {
+      const { html } = await renderWith(entry, { variant: "COMMON", unavailableMediaIds: [FIXTURE_MEDIA_IDS.QR_GROOM] });
+      const labels = downloadLabels(html, entry);
+      // The groom side never offers a save it cannot honour. On the tabbed
+      // envelope that is the panel on the slip, so nothing is offered there.
+      expect(labels).toStrictEqual(entry.tabbedSides === true ? [] : [`${entry.download} ${entry.brideLabel}`]);
+      expect(labels.some((l) => l.endsWith(entry.groomLabel))).toBe(false);
+
+      const none = await renderWith(entry, {
+        variant: "COMMON",
+        unavailableMediaIds: [FIXTURE_MEDIA_IDS.QR_GROOM, FIXTURE_MEDIA_IDS.QR_BRIDE],
+      });
+      expect(downloadLabels(none.html, entry)).toStrictEqual([]);
+    },
+  );
+
+  it.each(PUBLISHED.map((entry) => [entry.label, entry] as const))(
+    "%s · without the capability there is no control at all",
+    async (_label, entry) => {
+      const { html } = await renderWith(entry, { variant: "COMMON", withCapability: false });
+      expect(downloadLabels(html, entry)).toStrictEqual([]);
+      expect(html).not.toContain("qrDownload");
+    },
+  );
+
+  it.each(PUBLISHED.map((entry) => [entry.label, entry] as const))(
+    "%s · the gift surface it belongs to is unchanged",
+    async (_label, entry) => {
+      const { html } = await renderWith(entry, { variant: "COMMON" });
+      // The QR image itself is still rendered and still scannable on the page.
+      expect(html).toMatch(/<img[^>]+alt="Mã QR chuyển khoản/);
+      // The control is a real button with a visible-focus class and a title.
+      expect(html).toMatch(/<button[^>]+aria-label="Tải mã QR/);
+      expect(html).toMatch(/title="Tải mã QR"/);
+      // It never carries the URL, and no file name leaks into the markup.
+      expect(html).not.toContain("ma-qr-nha-trai");
+      expect(html).not.toContain("ma-qr-nha-gai");
+    },
+  );
+});
+
+const CSS_BY_RENDERER: readonly [string, string, string][] = [
+  ["elegant-editorial v1", "elegant-editorial/v1/elegant-editorial-v1.module.css", "qrDownload"],
+  ["vietnamese-heritage v1", "vietnamese-heritage/v1/vietnamese-heritage-v1.module.css", "giftQrDownload"],
+  ["vietnamese-heritage v2", "vietnamese-heritage/v2/vietnamese-heritage-v2.module.css", "giftQrDownload"],
+  ["romantic-minimal v1", "romantic-minimal/v1/romantic-minimal-v1.module.css", "giftQrDownload"],
+  ["our-wedding-story v1", "our-wedding-story/v1/our-wedding-story-v1.module.css", "qrDownload"],
+  ["our-wedding-story v2", "our-wedding-story/v2/our-wedding-story-v2.module.css", "qrDownload"],
+  ["se-duyen v1", "se-duyen/v1/se-duyen-v1.module.css", "giftQrDownload"],
+  ["se-duyen v2", "se-duyen/v2/se-duyen-v2.module.css", "giftQrDownload"],
+];
+
+describe("E: the control is small, sits under the plate, and shows keyboard focus", () => {
+  it.each(CSS_BY_RENDERER)("%s", (_label, file, cls) => {
+    const css = readFileSync(join(__dirname, "..", "..", "wedding", file), "utf8");
+    const block = css.slice(css.indexOf(`.${cls} {`), css.indexOf("}", css.indexOf(`.${cls} {`)));
+    expect(block, file).not.toBe("");
+    // A 44px tap target around a small glyph — never a large button.
+    expect(block).toMatch(/width:\s*44px/);
+    expect(block).toMatch(/height:\s*44px/);
+    // Below the plate, in normal flow: it can never sit over the scan area.
+    expect(block).toMatch(/margin:\s*\d+px auto 0/);
+    for (const overlay of ["position", "z-index", "transform", "inset", "float"]) {
+      expect(block, `${file}: ${overlay}`).not.toMatch(new RegExp(`(^|[;{\\s])${overlay}\\s*:`));
+    }
+    // Keyboard focus is visible.
+    expect(css).toMatch(new RegExp(`\\.${cls}:focus-visible \\{[^}]*outline:`));
+    // The glyph is sized for the target, not the other way round.
+    expect(css).toMatch(new RegExp(`\\.${cls}Glyph \\{[^}]*width:\\s*19px`));
+  });
+});
+
+describe("F: the control sits outside the fixed QR plate, and is per family", () => {
+  it.each([
+    ["our-wedding-story v1", "our-wedding-story/v1", "bankQr"],
+    ["our-wedding-story v2", "our-wedding-story/v2", "bankQr"],
+    ["romantic-minimal v1", "romantic-minimal/v1", "giftQr"],
+    ["vietnamese-heritage v1", "vietnamese-heritage/v1", "giftQr"],
+    ["vietnamese-heritage v2", "vietnamese-heritage/v2", "giftQr"],
+  ])("%s: the plate holds the image alone", (_label, folder, plate) => {
+    const section = readFileSync(join(__dirname, "..", "..", "wedding", folder, "sections", "gift.tsx"), "utf8");
+    const open = section.indexOf(`<div className={styles.${plate}}>`);
+    expect(open, folder).toBeGreaterThan(-1);
+    const plateMarkup = section.slice(open, section.indexOf("</div>", open));
+    expect(plateMarkup).toContain("<MediaImage");
+    // The control is a SIBLING below it, never a child of the fixed square.
+    expect(plateMarkup).not.toContain("QrDownloadButton");
+    expect(section.indexOf("<QrDownloadButton", open)).toBeGreaterThan(section.indexOf("</div>", open));
+  });
+
+  it.each([["se-duyen v1", "se-duyen/v1"], ["se-duyen v2", "se-duyen/v2"]])(
+    "%s: the envelope keys the control by side, so family feedback never carries over",
+    (_label, folder) => {
+      const island = readFileSync(join(__dirname, "..", "..", "wedding", folder, "interactive", "gift-envelope.tsx"), "utf8");
+      expect(island).toMatch(/<QrDownloadButton key=\{panel\.side\}/);
+      // The account row already works this way; both now reset together.
+      expect(island).toMatch(/<AccountRow key=\{panel\.side\}/);
+    },
+  );
+
+  it("every renderer's control is a block-level flex box, so it centres in normal flow", () => {
+    for (const [label, file, cls] of CSS_BY_RENDERER) {
+      const css = readFileSync(join(__dirname, "..", "..", "wedding", file), "utf8");
+      const block = css.slice(css.indexOf(`.${cls} {`), css.indexOf("}", css.indexOf(`.${cls} {`)));
+      expect(block, label).toMatch(/display:\s*flex/);
+      expect(block, label).not.toMatch(/display:\s*inline-flex/);
+    }
+  });
+});
+
+describe("D: every variant is answered (Rule of Three)", () => {
+  it("COMMON, GROOM and BRIDE are all covered above", () => {
+    expect([...INVITATION_VARIANTS].sort()).toStrictEqual(["BRIDE", "COMMON", "GROOM"]);
+  });
+});

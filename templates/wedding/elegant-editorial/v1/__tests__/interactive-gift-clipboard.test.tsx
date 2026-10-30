@@ -74,7 +74,7 @@ function findElements(node: ReactNode, type: unknown): ReactElement<Record<strin
 }
 
 function giftTree(viewModel: InvitationViewModel, clip: ClipboardCapabilityV1 | undefined) {
-  return Gift({ operationalSides: viewModel.operationalSides, gift: viewModel.gift, qr: viewModel.media.qr, clipboard: clip });
+  return Gift({ operationalSides: viewModel.operationalSides, gift: viewModel.gift, qr: viewModel.media.qr, clipboard: clip, download: undefined });
 }
 
 function render(viewModel: InvitationViewModel, sections: RendererEffectiveSections, clip?: ClipboardCapabilityV1) {

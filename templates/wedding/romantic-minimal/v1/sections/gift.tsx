@@ -3,10 +3,11 @@ import type {
   MediaResolution,
   ViewModelGiftSide,
 } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
-import type { ClipboardCapabilityV1 } from "../../../../../lib/invitation-rendering/renderer-capabilities";
+import type { ClipboardCapabilityV1, MediaDownloadCapabilityV1 } from "../../../../../lib/invitation-rendering/renderer-capabilities";
 import type { CoupleSide } from "../../../../../lib/invitation-rendering/wedding-domain-types";
 import { ROMANTIC_MINIMAL_V1_COPY } from "../copy";
 import { CopyAccountButton } from "../interactive/copy-account-button";
+import { QrDownloadButton } from "../interactive/qr-download-button";
 import { GiftDialog } from "../interactive/gift-dialog";
 import styles from "../romantic-minimal-v1.module.css";
 import { Ornament } from "./invite";
@@ -41,15 +42,23 @@ function giftLines(gift: ViewModelGiftSide | undefined): GiftLine[] {
 }
 
 /** One side's honest details: its own `RESOLVED` QR on the white plate, then its canonical lines. */
-function GiftDetails({ panel, clipboard }: { panel: GiftPanel; clipboard: ClipboardCapabilityV1 | undefined }) {
+function GiftDetails({ panel, clipboard, download }: { panel: GiftPanel; clipboard: ClipboardCapabilityV1 | undefined; download: MediaDownloadCapabilityV1 | undefined }) {
   const sideLabel = COPY.identity.labelBySide[panel.side];
   const lines = giftLines(panel.gift);
   return (
     <div>
       {panel.qr?.status === "RESOLVED" ? (
-        <div className={styles.giftQr}>
-          <MediaImage media={panel.qr} alt={`${COPY.gift.qrAlt} ${sideLabel}`} className={styles.giftQrImage} />
-        </div>
+        <>
+          <div className={styles.giftQr}>
+            <MediaImage media={panel.qr} alt={`${COPY.gift.qrAlt} ${sideLabel}`} className={styles.giftQrImage} />
+          </div>
+          {/* WC-GIFT-QR-01: a sibling of the fixed QR plate, in normal flow
+              BELOW it — never inside, where it would sit on the code itself.
+              Only for THIS side's own RESOLVED QR. */}
+          {download === undefined ? null : (
+            <QrDownloadButton download={download} qr={panel.qr} side={panel.side} sideLabel={sideLabel} />
+          )}
+        </>
       ) : null}
       {lines.length > 0 ? (
         <dl className={styles.giftInfo}>
@@ -83,6 +92,8 @@ interface GiftProps {
   qr: InvitationViewModel["media"]["qr"];
   /** `capabilities.clipboard`, passed through by the root only; absent → no copy control. */
   clipboard: ClipboardCapabilityV1 | undefined;
+  /** `capabilities.download`, passed through by the root only; absent → no QR download control. */
+  download: MediaDownloadCapabilityV1 | undefined;
 }
 
 /**
@@ -92,7 +103,7 @@ interface GiftProps {
  * `RESOLVED` QR (no placeholder, no common QR) and its canonical lines. With
  * no side holding honest content the section renders nothing.
  */
-export function Gift({ operationalSides, gift, qr, clipboard }: GiftProps) {
+export function Gift({ operationalSides, gift, qr, clipboard, download }: GiftProps) {
   const panels = operationalSides
     .map((side): GiftPanel => (side === "GROOM" ? { side, gift: gift.groom, qr: qr.groom } : { side, gift: gift.bride, qr: qr.bride }))
     .filter((panel) => panel.qr?.status === "RESOLVED" || giftLines(panel.gift).length > 0);
@@ -110,7 +121,7 @@ export function Gift({ operationalSides, gift, qr, clipboard }: GiftProps) {
           panels={panels.map((panel) => ({
             side: panel.side,
             label: COPY.identity.labelBySide[panel.side],
-            content: <GiftDetails panel={panel} clipboard={clipboard} />,
+            content: <GiftDetails panel={panel} clipboard={clipboard} download={download} />,
           }))}
         />
       </div>
