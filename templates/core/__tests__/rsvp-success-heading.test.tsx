@@ -13,9 +13,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
  * PART A. "Xác nhận tham dự" is the form's invitation to answer. Left large
  * on screen after the answer is stored it reads as "you are attending",
  * which is simply false for a NOT_ATTENDING response. It therefore steps out
- * of sight once the response is recorded — and only then. It is never
- * unmounted: the element, its id and its text stay, so each section keeps
- * its accessible name and every `aria-labelledby` keeps a live target.
+ * of sight once the response is recorded — and only then — and its text
+ * becomes the neutral "Đã ghi nhận hồi âm", so a screen reader is not told
+ * "confirm your attendance" over a NOT_ATTENDING answer either. The element,
+ * its id and its heading level are never dropped, so each section keeps an
+ * accessible name and every `aria-labelledby` keeps a live target.
  *
  * HOW THE SUCCESS STATE IS REACHED HERE. The phase lives in each island's
  * own `useReducer`, and the repository has no DOM test environment, so these
@@ -95,6 +97,17 @@ interface GiftPanelLike {
 
 const island = async <T,>(load: Promise<unknown>): Promise<T> => (await load) as T;
 
+/** The heading element carrying `id`, open tag through close tag. */
+function headingElementOf(html: string, id: string): string {
+  const at = html.indexOf(`id="${id}"`);
+  expect(at, `no element with id="${id}"`).toBeGreaterThan(-1);
+  const open = Math.max(html.lastIndexOf("<h2", at), html.lastIndexOf("<h3", at));
+  const tag = html.slice(open + 1, open + 3);
+  const close = html.indexOf(`</${tag}>`, at);
+  expect(close, `heading ${id} is not closed`).toBeGreaterThan(-1);
+  return html.slice(open, close + tag.length + 3);
+}
+
 interface Published {
   readonly label: string;
   readonly dir: string;
@@ -104,6 +117,10 @@ interface Published {
   readonly displayClass: string;
   /** Every heading string a guest reads before answering. */
   readonly headingText: readonly string[];
+  /** The neutral name the section keeps once the answer is stored. */
+  readonly successHeading: string;
+  /** Copy that invites an answer and must not outlive the form. */
+  readonly formOnlyText?: string;
   /** Said only after the server confirmed the response. */
   readonly successText: readonly string[];
   /** The "edit my answer" action. */
@@ -128,6 +145,7 @@ const PUBLISHED: readonly Published[] = [
     headingId: "ee-rsvp-heading",
     displayClass: "rsvpHeading",
     headingText: [EE.ELEGANT_EDITORIAL_V1_COPY.rsvp.heading, EE.ELEGANT_EDITORIAL_V1_COPY.rsvp.headingSecondLine],
+    successHeading: EE.ELEGANT_EDITORIAL_V1_COPY.rsvp.successHeading,
     successText: [EE.ELEGANT_EDITORIAL_V1_COPY.rsvp.success.thanks],
     editText: EE.ELEGANT_EDITORIAL_V1_COPY.rsvp.edit,
     island: () => island<RsvpIsland>(import("../../wedding/elegant-editorial/v1/interactive/rsvp")),
@@ -139,6 +157,7 @@ const PUBLISHED: readonly Published[] = [
     headingId: "vh-rsvp-heading",
     displayClass: "rsvpTitle",
     headingText: [VH1.VIETNAMESE_HERITAGE_V1_COPY.rsvp.heading, VH1.VIETNAMESE_HERITAGE_V1_COPY.rsvp.headingSecondLine],
+    successHeading: VH1.VIETNAMESE_HERITAGE_V1_COPY.rsvp.successHeading,
     successText: [VH1.VIETNAMESE_HERITAGE_V1_COPY.rsvp.successThanks],
     editText: VH1.VIETNAMESE_HERITAGE_V1_COPY.rsvp.edit,
     island: () => island<RsvpIsland>(import("../../wedding/vietnamese-heritage/v1/interactive/rsvp")),
@@ -150,6 +169,7 @@ const PUBLISHED: readonly Published[] = [
     headingId: "vh-rsvp-heading",
     displayClass: "rsvpTitle",
     headingText: [VH2.VIETNAMESE_HERITAGE_V2_COPY.rsvp.heading, VH2.VIETNAMESE_HERITAGE_V2_COPY.rsvp.headingSecondLine],
+    successHeading: VH2.VIETNAMESE_HERITAGE_V2_COPY.rsvp.successHeading,
     successText: [VH2.VIETNAMESE_HERITAGE_V2_COPY.rsvp.successThanks],
     editText: VH2.VIETNAMESE_HERITAGE_V2_COPY.rsvp.edit,
     island: () => island<RsvpIsland>(import("../../wedding/vietnamese-heritage/v2/interactive/rsvp")),
@@ -161,6 +181,7 @@ const PUBLISHED: readonly Published[] = [
     headingId: "rm-rsvp-heading",
     displayClass: "rsvpTitle",
     headingText: [RM1.ROMANTIC_MINIMAL_V1_COPY.rsvp.heading, RM1.ROMANTIC_MINIMAL_V1_COPY.rsvp.headingSecondLine],
+    successHeading: RM1.ROMANTIC_MINIMAL_V1_COPY.rsvp.successHeading,
     successText: [RM1.ROMANTIC_MINIMAL_V1_COPY.rsvp.successThanks],
     editText: RM1.ROMANTIC_MINIMAL_V1_COPY.rsvp.edit,
     island: () => island<RsvpIsland>(import("../../wedding/romantic-minimal/v1/interactive/rsvp")),
@@ -172,6 +193,8 @@ const PUBLISHED: readonly Published[] = [
     headingId: "ows-rsvp-heading",
     displayClass: "rsvpTitle",
     headingText: [OWS1.OUR_WEDDING_STORY_V1_COPY.rsvp.title],
+    successHeading: OWS1.OUR_WEDDING_STORY_V1_COPY.rsvp.successHeading,
+    formOnlyText: OWS1.OUR_WEDDING_STORY_V1_COPY.rsvp.intro,
     successText: [OWS1.OUR_WEDDING_STORY_V1_COPY.rsvp.doneTitle],
     editText: OWS1.OUR_WEDDING_STORY_V1_COPY.rsvp.edit,
     island: () => island<RsvpIsland>(import("../../wedding/our-wedding-story/v1/interactive/rsvp")),
@@ -183,6 +206,8 @@ const PUBLISHED: readonly Published[] = [
     headingId: "ows-rsvp-heading",
     displayClass: "rsvpTitle",
     headingText: [OWS2.OUR_WEDDING_STORY_V2_COPY.rsvp.title],
+    successHeading: OWS2.OUR_WEDDING_STORY_V2_COPY.rsvp.successHeading,
+    formOnlyText: OWS2.OUR_WEDDING_STORY_V2_COPY.rsvp.intro,
     successText: [OWS2.OUR_WEDDING_STORY_V2_COPY.rsvp.doneTitle],
     editText: OWS2.OUR_WEDDING_STORY_V2_COPY.rsvp.edit,
     island: () => island<RsvpIsland>(import("../../wedding/our-wedding-story/v2/interactive/rsvp")),
@@ -194,6 +219,7 @@ const PUBLISHED: readonly Published[] = [
     headingId: "sd-rsvp-heading",
     displayClass: "rsvpHeading",
     headingText: [SD1.SE_DUYEN_V1_COPY.rsvp.heading],
+    successHeading: SD1.SE_DUYEN_V1_COPY.rsvp.successHeading,
     successText: [SD1.SE_DUYEN_V1_COPY.rsvp.thanks, SD1.SE_DUYEN_V1_COPY.rsvp.recorded],
     editText: SD1.SE_DUYEN_V1_COPY.rsvp.again,
     island: () => island<RsvpIsland>(import("../../wedding/se-duyen/v1/interactive/rsvp")),
@@ -205,6 +231,7 @@ const PUBLISHED: readonly Published[] = [
     headingId: "sd-rsvp-heading",
     displayClass: "rsvpHeading",
     headingText: [SD2.SE_DUYEN_V2_COPY.rsvp.heading],
+    successHeading: SD2.SE_DUYEN_V2_COPY.rsvp.successHeading,
     successText: [SD2.SE_DUYEN_V2_COPY.rsvp.thanks, SD2.SE_DUYEN_V2_COPY.rsvp.recorded],
     editText: SD2.SE_DUYEN_V2_COPY.rsvp.again,
     island: () => island<RsvpIsland>(import("../../wedding/se-duyen/v2/interactive/rsvp")),
@@ -242,8 +269,10 @@ describe("A: before SUCCESS the form heading is untouched", () => {
     expect(headingClassOf(html, entry.headingId)).toContain(`_${entry.displayClass}_`);
     expect(headingClassOf(html, entry.headingId)).not.toContain("_srOnly_");
     for (const text of entry.headingText) expect(html).toContain(escaped(text));
-    // Still the answerable form, and no success wording anywhere.
+    expect(html).not.toContain(escaped(entry.successHeading));
+    // Still the answerable form, with everything that invites an answer.
     expect(html).toContain("<form");
+    if (entry.formOnlyText !== undefined) expect(html).toContain(escaped(entry.formOnlyText));
     for (const text of entry.successText) expect(html).not.toContain(escaped(text));
     expect(html).not.toContain(escaped(entry.editText));
   });
@@ -259,9 +288,14 @@ describe("A: after SUCCESS the heading is out of sight but still the section's n
       expect(className).toContain("_srOnly_");
       expect(className).not.toContain(`_${entry.displayClass}_`);
 
-      // Never unmounted: same element, same id, same text, so the
-      // accessible name survives and aria-labelledby keeps a live target.
-      for (const text of entry.headingText) expect(html).toContain(escaped(text));
+      // Never unmounted: the element and its id survive, so the section
+      // keeps an accessible name and aria-labelledby keeps a live target —
+      // but that name no longer claims the guest is attending.
+      const heading = headingElementOf(html, entry.headingId);
+      expect(heading).toContain(escaped(entry.successHeading));
+      expect(html).not.toContain(escaped(entry.headingText[0] as string));
+      // Nothing left on screen still asks for an answer.
+      if (entry.formOnlyText !== undefined) expect(html).not.toContain(escaped(entry.formOnlyText));
       for (const id of [...html.matchAll(/aria-labelledby="([^"]+)"/g)].flatMap((match) => (match[1] as string).split(" "))) {
         expect(html, `aria-labelledby="${id}" has no target`).toContain(`id="${id}"`);
       }

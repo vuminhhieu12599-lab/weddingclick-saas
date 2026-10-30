@@ -143,6 +143,13 @@ export const ELEGANT_EDITORIAL_V1_COPY = Object.freeze({
   rsvp: Object.freeze({
     /** Task029 two-line heading (A); the "&" before the second line is template glyph. */
     heading: "Xác nhận tham dự",
+    /**
+     * WC-UI-P0-01: the recorded-response heading. Never painted — it is the
+     * visually hidden name the section keeps once the answer is stored, in
+     * place of the form's "answer me" heading, which would otherwise tell a
+     * NOT_ATTENDING guest they are attending.
+     */
+    successHeading: "Đã ghi nhận hồi âm",
     headingSecondLine: "Gửi lời chúc",
     /** Task029 select label (A). */
     attendanceLabel: "Bạn có thể tham dự không?",

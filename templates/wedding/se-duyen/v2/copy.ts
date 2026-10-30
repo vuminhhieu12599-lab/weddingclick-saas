@@ -91,6 +91,13 @@ export const SE_DUYEN_V2_COPY = Object.freeze({
   rsvp: Object.freeze({
     eyebrow: "Hồi Âm",
     heading: "Xác Nhận Tham Dự",
+    /**
+     * WC-UI-P0-01: the recorded-response heading. Never painted — it is the
+     * visually hidden name the section keeps once the answer is stored, in
+     * place of the form's "answer me" heading, which would otherwise tell a
+     * NOT_ATTENDING guest they are attending.
+     */
+    successHeading: "Đã ghi nhận hồi âm",
     intro: "Xin quý vị cho gia đình biết trước để chúng tôi chuẩn bị chu đáo.",
     nameLabel: "Tên của bạn",
     namePlaceholder: "Nhập tên bạn muốn hiển thị",

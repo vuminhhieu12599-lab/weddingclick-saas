@@ -73,6 +73,13 @@ export const ROMANTIC_MINIMAL_V1_COPY = Object.freeze({
   }),
   rsvp: Object.freeze({
     heading: "Xác Nhận Tham Dự",
+    /**
+     * WC-UI-P0-01: the recorded-response heading. Never painted — it is the
+     * visually hidden name the section keeps once the answer is stored, in
+     * place of the form's "answer me" heading, which would otherwise tell a
+     * NOT_ATTENDING guest they are attending.
+     */
+    successHeading: "Đã ghi nhận hồi âm",
     headingSecondLine: "Gửi Lời Chúc",
     guestNameLabel: "Tên của bạn",
     guestNamePlaceholder: "Tên của bạn",

@@ -137,13 +137,17 @@ export function Rsvp({ rsvp }: { rsvp: RsvpCapabilityV1 }) {
     <div className={styles.rsvpCard} data-rsvp-phase={phase.toLowerCase()}>
       {/* RSVP-P0-01: once the response is recorded, the big "Xác nhận
           tham dự" heading would read as "you are attending" over a
-          NOT_ATTENDING answer, so it steps out of sight. It stays mounted
-          with its id and text, so the section keeps its accessible name
-          and aria-labelledby stays valid. */}
+          NOT_ATTENDING answer, so it steps out of sight and its text
+          becomes the neutral one. The element, its id and its heading
+          level stay, so the section keeps an accessible name and
+          aria-labelledby stays valid. */}
       <h3 id={IDS.heading} className={succeeded ? styles.srOnly : styles.rsvpTitle}>
-        {COPY.title}
+        {succeeded ? COPY.successHeading : COPY.title}
       </h3>
-      <p className={styles.rsvpIntro}>{COPY.intro}</p>
+      {/* WC-UI-P0-01: the intro invites an answer ("your being there is our
+          joy"), so it belongs to the form, not to a recorded — possibly
+          NOT_ATTENDING — response. The approved copy itself is unchanged. */}
+      {succeeded ? null : <p className={styles.rsvpIntro}>{COPY.intro}</p>}
 
       {succeeded ? (
         <div className={styles.rsvpDone}>
