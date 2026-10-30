@@ -1,4 +1,4 @@
-import { useId, useReducer, useRef, useState } from "react";
+import { useEffect, useId, useReducer, useRef, useState } from "react";
 
 import {
   INITIAL_RSVP_DRAFT,
@@ -93,6 +93,37 @@ export function Rsvp({ rsvp }: { readonly rsvp: RsvpCapabilityV1 }) {
   const [phase, dispatch] = useReducer(rsvpPhaseReducer, "IDLE" as RsvpPhase);
   const [errors, setErrors] = useState<readonly RsvpDraftError[]>([]);
   const gateRef = useRef(createRsvpSubmissionGate());
+  const doneCardRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * WC-RSVP-MOBILE-SCROLL-01 — the recorded response is brought into view.
+   *
+   * The submit button is the last control on a card taller than a phone
+   * screen, so a guest taps it with the top of that card far above the
+   * viewport. The SUCCESS branch below is a much shorter card, and nothing
+   * moved the page: the collapse left the thank-you above the screen and the
+   * wedding-gift envelope that follows it in view, so a guest on 360-430px
+   * could not see that the response had been recorded at all.
+   *
+   * Only a SUCCESS the capability resolved moves anything. `nearest` scrolls
+   * just far enough to put the card back on screen and does nothing when it
+   * is already there, so a wide screen the collapse never pushed anything
+   * out of does not jump; `.rsvpCard`'s `scroll-margin-top` leaves a little
+   * lacquer above it. Focus follows, because the submit button the guest was
+   * standing on has just left the DOM, and `preventScroll` keeps that focus
+   * from scrolling a second time (the OWS-01 opening-stage precedent).
+   * INVALID, UNAVAILABLE and FAILED keep the form, its answers and its note
+   * exactly where the guest left them, and the edit action returning to the
+   * form moves nothing: the form is the taller card, so it is never the one
+   * that collapses out of sight.
+   */
+  useEffect(() => {
+    if (phase !== "SUCCESS") return;
+    const card = doneCardRef.current;
+    if (card === null) return;
+    card.scrollIntoView({ block: "nearest" });
+    card.focus({ preventScroll: true });
+  }, [phase]);
 
   const pending = phase === "PENDING";
   const takesPartySize = rsvpTakesPartySize(draft.attendance);
@@ -122,7 +153,7 @@ export function Rsvp({ rsvp }: { readonly rsvp: RsvpCapabilityV1 }) {
   if (phase === "SUCCESS") {
     return (
       <section className={styles.rsvp} aria-labelledby="sd-rsvp-heading">
-        <div className={styles.rsvpCard}>
+        <div className={styles.rsvpCard} ref={doneCardRef} tabIndex={-1}>
           <p className={styles.rsvpEyebrow}>{COPY.eyebrow}</p>
           {/* RSVP-P0-01: once the response is recorded, the big "Xác Nhận
               Tham Dự" heading would read as "you are attending" over a
