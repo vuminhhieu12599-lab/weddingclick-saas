@@ -58,14 +58,17 @@ function GiftDetails({ panel, clipboard, download }: { panel: GiftPanel; clipboa
   return (
     <div className={styles.giftDetails}>
       {panel.qr?.status === "RESOLVED" ? (
-        <div className={styles.giftQr}>
-          <MediaImage media={panel.qr} alt={`${COPY.gift.qrAlt} ${sideLabel}`} className={styles.giftQrImage} />
-          {/* WC-GIFT-QR-01: under the plate, never over the scan area, and
-              only for THIS side's own RESOLVED code. */}
+        <>
+          <div className={styles.giftQr}>
+            <MediaImage media={panel.qr} alt={`${COPY.gift.qrAlt} ${sideLabel}`} className={styles.giftQrImage} />
+          </div>
+          {/* WC-GIFT-QR-01: a sibling of the fixed QR plate, in normal flow
+              BELOW it — never inside, where it would sit on the code itself.
+              Only for THIS side's own RESOLVED QR. */}
           {download === undefined ? null : (
             <QrDownloadButton download={download} qr={panel.qr} side={panel.side} sideLabel={sideLabel} />
           )}
-        </div>
+        </>
       ) : null}
       <dl className={styles.giftLines}>
         {giftLines(panel.gift).map((line) => (

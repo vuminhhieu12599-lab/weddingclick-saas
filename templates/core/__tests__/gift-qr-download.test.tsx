@@ -41,6 +41,11 @@ vi.mock("../../wedding/our-wedding-story/v2/fonts", () => ({ OUR_WEDDING_STORY_V
 vi.mock("../../wedding/se-duyen/v1/fonts", () => ({ SE_DUYEN_V1_FONT_VARIABLES_CLASS_NAME: "sd1-fonts" }));
 vi.mock("../../wedding/se-duyen/v2/fonts", () => ({ SE_DUYEN_V2_FONT_VARIABLES_CLASS_NAME: "sd2-fonts" }));
 
+const COPY_FILES: readonly [string, string][] = [
+  "elegant-editorial/v1", "vietnamese-heritage/v1", "vietnamese-heritage/v2", "romantic-minimal/v1",
+  "our-wedding-story/v1", "our-wedding-story/v2", "se-duyen/v1", "se-duyen/v2",
+].map((folder) => [folder, join(__dirname, "..", "..", "wedding", folder, "copy.ts")] as [string, string]);
+
 const QR: ResolvedMedia = { status: "RESOLVED", mediaId: FIXTURE_MEDIA_IDS.QR_GROOM, url: "https://example.test/a.webp", width: 600, height: 600 };
 
 function capability(result: MediaDownloadResultV1 | "reject" = { status: "SUCCESS" }) {
@@ -70,9 +75,11 @@ describe("A: the file a guest ends up with", () => {
     // The admin optimizer emits WebP, so this is the common real case.
     expect(extensionForImageBlob("image/webp")).toBe("webp");
     expect(extensionForImageBlob("IMAGE/WEBP; charset=binary")).toBe("webp");
-    // Anything unexpected still names itself an image rather than lying.
-    expect(extensionForImageBlob("application/pdf")).toBe("png");
-    expect(extensionForImageBlob("")).toBe("png");
+    // Anything else is refused outright: an unexpected type is never saved
+    // under a .png that would misdescribe its bytes.
+    for (const unsupported of ["application/pdf", "image/gif", "image/svg+xml", "image/avif", "text/html", ""]) {
+      expect(extensionForImageBlob(unsupported), unsupported).toBeNull();
+    }
   });
 
   it("the adapter saves the response bytes and never re-encodes them", () => {
@@ -83,6 +90,18 @@ describe("A: the file a guest ends up with", () => {
     // No canvas, no image decode, no resize, no re-encode, no proxy.
     expect(code).not.toMatch(/canvas|getContext|toDataURL|toBlob|drawImage|new Image|\/api\/|proxy/i);
     expect(code).toMatch(/credentials: "omit"/);
+    // An unsupported type is refused before any object URL is made.
+    expect(code).toMatch(/const extension = extensionForImageBlob\(blob\.type\);/);
+    expect(code).toMatch(/extension === null\) return FAILED;/);
+  });
+
+  it("says a download STARTED, never that the guest ended up with a file", () => {
+    // No web API reports whether the save completed, so no renderer claims it.
+    for (const [label, file] of COPY_FILES) {
+      const copy = readFileSync(file, "utf8");
+      expect(copy, label).toContain('qrDownloaded: "Đã bắt đầu tải mã QR"');
+      expect(copy, label).not.toMatch(/qrDownloaded: "Đã tải(?! mã QR nếu)/);
+    }
   });
 });
 
@@ -289,6 +308,44 @@ describe("E: the control is small, sits under the plate, and shows keyboard focu
     expect(css).toMatch(new RegExp(`\\.${cls}:focus-visible \\{[^}]*outline:`));
     // The glyph is sized for the target, not the other way round.
     expect(css).toMatch(new RegExp(`\\.${cls}Glyph \\{[^}]*width:\\s*19px`));
+  });
+});
+
+describe("F: the control sits outside the fixed QR plate, and is per family", () => {
+  it.each([
+    ["our-wedding-story v1", "our-wedding-story/v1", "bankQr"],
+    ["our-wedding-story v2", "our-wedding-story/v2", "bankQr"],
+    ["romantic-minimal v1", "romantic-minimal/v1", "giftQr"],
+    ["vietnamese-heritage v1", "vietnamese-heritage/v1", "giftQr"],
+    ["vietnamese-heritage v2", "vietnamese-heritage/v2", "giftQr"],
+  ])("%s: the plate holds the image alone", (_label, folder, plate) => {
+    const section = readFileSync(join(__dirname, "..", "..", "wedding", folder, "sections", "gift.tsx"), "utf8");
+    const open = section.indexOf(`<div className={styles.${plate}}>`);
+    expect(open, folder).toBeGreaterThan(-1);
+    const plateMarkup = section.slice(open, section.indexOf("</div>", open));
+    expect(plateMarkup).toContain("<MediaImage");
+    // The control is a SIBLING below it, never a child of the fixed square.
+    expect(plateMarkup).not.toContain("QrDownloadButton");
+    expect(section.indexOf("<QrDownloadButton", open)).toBeGreaterThan(section.indexOf("</div>", open));
+  });
+
+  it.each([["se-duyen v1", "se-duyen/v1"], ["se-duyen v2", "se-duyen/v2"]])(
+    "%s: the envelope keys the control by side, so family feedback never carries over",
+    (_label, folder) => {
+      const island = readFileSync(join(__dirname, "..", "..", "wedding", folder, "interactive", "gift-envelope.tsx"), "utf8");
+      expect(island).toMatch(/<QrDownloadButton key=\{panel\.side\}/);
+      // The account row already works this way; both now reset together.
+      expect(island).toMatch(/<AccountRow key=\{panel\.side\}/);
+    },
+  );
+
+  it("every renderer's control is a block-level flex box, so it centres in normal flow", () => {
+    for (const [label, file, cls] of CSS_BY_RENDERER) {
+      const css = readFileSync(join(__dirname, "..", "..", "wedding", file), "utf8");
+      const block = css.slice(css.indexOf(`.${cls} {`), css.indexOf("}", css.indexOf(`.${cls} {`)));
+      expect(block, label).toMatch(/display:\s*flex/);
+      expect(block, label).not.toMatch(/display:\s*inline-flex/);
+    }
   });
 });
 

@@ -204,7 +204,10 @@ export function GiftEnvelope({ panels, clipboard, download }: GiftEnvelopeProps)
         {/* WC-GIFT-QR-01: under the 148px plate, never over the scan area,
             and only for THIS side's own RESOLVED code. */}
         {panel.qr === undefined || download === undefined ? null : (
-          <QrDownloadButton download={download} qr={panel.qr} side={panel.side} sideLabel={sideLabel} />
+          // Keyed by side, exactly as AccountRow is: switching family must
+          // start that family's control fresh, never carry a SUCCESS, FAILED
+          // or PENDING mark from the other house onto it.
+          <QrDownloadButton key={panel.side} download={download} qr={panel.qr} side={panel.side} sideLabel={sideLabel} />
         )}
 
         <dl

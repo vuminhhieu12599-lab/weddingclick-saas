@@ -4533,7 +4533,7 @@
 /* area stays clear. The slip's own gold, at the copy control's weight.    */
 /* ---------------------------------------------------------------------- */
 .giftQrDownload {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   width: 44px;

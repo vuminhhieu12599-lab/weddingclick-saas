@@ -22,14 +22,17 @@ function BankCard({ panel, clipboard, download }: { panel: GiftPanel; clipboard:
     <div className={styles.bankCard} data-side={panel.side}>
       <div className={styles.bankSide}>{sideLabel}</div>
       {panel.qr === undefined ? null : (
-        <div className={styles.bankQr}>
-          <MediaImage media={panel.qr} alt={`${COPY.gift.qrAlt} ${sideLabel}`} className={styles.containImage} />
-          {/* WC-GIFT-QR-01: under the plate, never over the scan area, and
-              only for THIS side's own RESOLVED code. */}
+        <>
+          <div className={styles.bankQr}>
+            <MediaImage media={panel.qr} alt={`${COPY.gift.qrAlt} ${sideLabel}`} className={styles.containImage} />
+          </div>
+          {/* WC-GIFT-QR-01: a sibling of the fixed QR plate, in normal flow
+              BELOW it — never inside, where it would sit on the code itself.
+              Only for THIS side's own RESOLVED QR. */}
           {download === undefined ? null : (
             <QrDownloadButton download={download} qr={panel.qr} side={panel.side} sideLabel={sideLabel} />
           )}
-        </div>
+        </>
       )}
       {panel.lines.length === 0 ? null : (
         <dl className={styles.bankRows}>

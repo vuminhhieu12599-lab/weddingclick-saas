@@ -22,8 +22,10 @@ import type {
  * `Access-Control-Allow-Origin: *`, so reading the bytes is permitted. No
  * proxy, no credentials, no cookies: `credentials: "omit"`.
  *
- * HONEST OUTCOMES (CLAUDE.md §22). `SUCCESS` only after the bytes arrived and
- * the anchor was activated. A signed URL that has expired (the runtime TTL is
+ * HONEST OUTCOMES (CLAUDE.md §22). `SUCCESS` means the bytes arrived and the
+ * download was HANDED TO THE BROWSER — it cannot mean the guest ended up with
+ * a file, because no web API reports that: the browser may still show a save
+ * sheet, a viewer, or nothing the page can observe. The copy says so. A signed URL that has expired (the runtime TTL is
  * one hour) answers 4xx and is `FAILED`, as is a network failure, an empty
  * body or anything that is not an image. `UNAVAILABLE` means this browser
  * cannot save a file at all. The QR itself stays on screen and scannable
@@ -36,9 +38,9 @@ const FAILED: MediaDownloadResultV1 = Object.freeze({ status: "FAILED" });
 
 /**
  * The extension for the bytes actually received, never for what was assumed.
- * These are the three image types the media policy accepts
- * (`IMAGE_MEDIA_MIME_TYPES`); anything else keeps the neutral `.png` so the
- * file still names itself as an image.
+ * These are exactly the three image types the media policy accepts
+ * (`IMAGE_MEDIA_MIME_TYPES`). Anything else is `null`: an unexpected type is
+ * refused rather than saved under a `.png` that would misdescribe its bytes.
  */
 const EXTENSION_BY_MIME_TYPE: Readonly<Record<string, string>> = Object.freeze({
   "image/png": "png",
@@ -46,8 +48,8 @@ const EXTENSION_BY_MIME_TYPE: Readonly<Record<string, string>> = Object.freeze({
   "image/webp": "webp",
 });
 
-export function extensionForImageBlob(type: string): string {
-  return EXTENSION_BY_MIME_TYPE[type.split(";")[0]?.trim().toLowerCase() ?? ""] ?? "png";
+export function extensionForImageBlob(type: string): string | null {
+  return EXTENSION_BY_MIME_TYPE[type.split(";")[0]?.trim().toLowerCase() ?? ""] ?? null;
 }
 
 /**
@@ -76,13 +78,16 @@ async function saveImage(url: string, baseName: string): Promise<MediaDownloadRe
   } catch {
     return FAILED;
   }
-  if (blob.size === 0 || !blob.type.toLowerCase().startsWith("image/")) return FAILED;
+  // The bytes are kept exactly as received; only their TYPE is checked, and
+  // an unsupported one is refused rather than saved under a wrong extension.
+  const extension = extensionForImageBlob(blob.type);
+  if (blob.size === 0 || extension === null) return FAILED;
 
   const objectUrl = URL.createObjectURL(blob);
   try {
     const anchor = document.createElement("a");
     anchor.href = objectUrl;
-    anchor.download = `${baseName}.${extensionForImageBlob(blob.type)}`;
+    anchor.download = `${baseName}.${extension}`;
     anchor.rel = "noopener";
     anchor.style.display = "none";
     document.body.append(anchor);

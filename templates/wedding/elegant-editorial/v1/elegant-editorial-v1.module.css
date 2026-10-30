@@ -2516,7 +2516,7 @@
 /* clear. The editorial square, at the copy control's weight and colour.   */
 /* ---------------------------------------------------------------------- */
 .qrDownload {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   width: 44px;

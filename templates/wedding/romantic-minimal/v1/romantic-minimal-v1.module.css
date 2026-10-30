@@ -2724,7 +2724,7 @@
 /* clear. Same house geometry as the copy control, this template's colour. */
 /* ---------------------------------------------------------------------- */
 .giftQrDownload {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   width: 44px;

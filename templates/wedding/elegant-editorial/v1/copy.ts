@@ -114,7 +114,7 @@ export const ELEGANT_EDITORIAL_V1_COPY = Object.freeze({
     qrAltPrefix: "Mã QR chuyển khoản",
     /** WC-GIFT-QR-01 — saving this family's own QR image. */
     qrDownload: "Tải mã QR",
-    qrDownloaded: "Đã tải mã QR",
+    qrDownloaded: "Đã bắt đầu tải mã QR",
     qrDownloadFailed: "Chưa tải được mã QR. Bạn vẫn có thể quét mã ngay trên thiệp.",
     qrDownloadUnavailable: "Trình duyệt không hỗ trợ tải ảnh. Bạn vẫn có thể quét mã ngay trên thiệp.",
     qrUnavailable: "Mã QR tạm thời chưa hiển thị",
