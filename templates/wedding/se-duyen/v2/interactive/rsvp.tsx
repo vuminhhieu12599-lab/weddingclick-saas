@@ -124,8 +124,14 @@ export function Rsvp({ rsvp }: { readonly rsvp: RsvpCapabilityV1 }) {
       <section className={styles.rsvp} aria-labelledby="sd-rsvp-heading">
         <div className={styles.rsvpCard}>
           <p className={styles.rsvpEyebrow}>{COPY.eyebrow}</p>
-          <h2 className={styles.rsvpHeading} id="sd-rsvp-heading">
-            {COPY.heading}
+          {/* RSVP-P0-01: once the response is recorded, the big "Xác Nhận
+              Tham Dự" heading would read as "you are attending" over a
+              NOT_ATTENDING answer, so it steps out of sight and its text
+              becomes the neutral one. The element, its id and its heading
+              level stay, so the section keeps an accessible name and
+              aria-labelledby stays valid. */}
+          <h2 className={styles.srOnly} id="sd-rsvp-heading">
+            {COPY.successHeading}
           </h2>
           <span className={styles.rsvpRule} aria-hidden="true" />
 

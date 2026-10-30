@@ -87,6 +87,13 @@ export const OUR_WEDDING_STORY_V2_COPY = Object.freeze({
   }),
   rsvp: Object.freeze({
     title: "Xác nhận tham dự",
+    /**
+     * WC-UI-P0-01: the recorded-response heading. Never painted — it is the
+     * visually hidden name the section keeps once the answer is stored, in
+     * place of the form's "answer me" heading, which would otherwise tell a
+     * NOT_ATTENDING guest they are attending.
+     */
+    successHeading: "Đã ghi nhận hồi âm",
     intro: "Sự có mặt của bạn là niềm vui lớn của chúng mình.",
     guestNameLabel: "Tên của bạn",
     attendanceLegend: "Bạn sẽ tham dự chứ?",

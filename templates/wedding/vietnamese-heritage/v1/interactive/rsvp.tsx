@@ -135,8 +135,20 @@ export function Rsvp({ rsvp }: { rsvp: RsvpCapabilityV1 }) {
     <section className={styles.rsvp} aria-labelledby={IDS.heading} data-rsvp-phase={phase.toLowerCase()}>
       <header className={styles.rsvpHeader}>
         <DecorImage decor="divider" className={styles.rsvpDivider} />
-        <h2 id={IDS.heading} className={styles.rsvpTitle}>
-          <span>{COPY.heading}</span> <span>{COPY.headingSecondLine}</span>
+        {/* RSVP-P0-01: once the response is recorded, the big "Xác nhận
+            tham dự" heading would read as "you are attending" over a
+            NOT_ATTENDING answer, so it steps out of sight and its text
+            becomes the neutral one. The element, its id and its heading
+            level stay, so the section keeps an accessible name and
+            aria-labelledby stays valid. */}
+        <h2 id={IDS.heading} className={succeeded ? styles.srOnly : styles.rsvpTitle}>
+          {succeeded ? (
+            COPY.successHeading
+          ) : (
+            <>
+              <span>{COPY.heading}</span> <span>{COPY.headingSecondLine}</span>
+            </>
+          )}
         </h2>
       </header>
       <div className={styles.rsvpPanel}>
