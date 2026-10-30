@@ -48,6 +48,14 @@ const PUBLISHED_INVITATION_MEDIA_SIGNER_PATH = "lib/server/supabase/published-in
  */
 const PUBLIC_RSVP_REPOSITORY_PATH = "lib/server/supabase/public-rsvp-repository.ts";
 /**
+ * RSVP-P0-03 compatibility addition: the generic RSVP correction's own
+ * narrow repository for the service_role-only 0056
+ * `submit_public_rsvp_keyed` RPC, deliberately separate from the 0040-only
+ * one above — see
+ * lib/server/public-rsvp/__tests__/generic-rsvp-correction.test.ts.
+ */
+const KEYED_PUBLIC_RSVP_REPOSITORY_PATH = "lib/server/supabase/keyed-public-rsvp-repository.ts";
+/**
  * Task 032B compatibility addition: the /i/[slug] metadata's own narrow
  * module for the read-only, service_role-only 0041
  * `get_public_social_share_cover` RPC and the signing of exactly that one
@@ -280,6 +288,7 @@ describe("Task 026 Phase 2 — service-role client import boundary (§7)", () =>
         PUBLIC_INVITATION_REPOSITORY_PATH,
         PUBLISHED_INVITATION_MEDIA_SIGNER_PATH,
         PUBLIC_RSVP_REPOSITORY_PATH,
+        KEYED_PUBLIC_RSVP_REPOSITORY_PATH,
         PUBLIC_SOCIAL_SHARE_REPOSITORY_PATH,
         PUBLIC_GUEST_REPOSITORY_PATH,
         CUSTOMER_PORTAL_REPOSITORY_PATH,
@@ -536,6 +545,7 @@ describe("Task 026 Phase 2 — indirect (transitive) client-reachability to serv
         PUBLIC_INVITATION_REPOSITORY_PATH,
         PUBLISHED_INVITATION_MEDIA_SIGNER_PATH,
         PUBLIC_RSVP_REPOSITORY_PATH,
+        KEYED_PUBLIC_RSVP_REPOSITORY_PATH,
         PUBLIC_SOCIAL_SHARE_REPOSITORY_PATH,
         PUBLIC_GUEST_REPOSITORY_PATH,
         CUSTOMER_PORTAL_REPOSITORY_PATH,

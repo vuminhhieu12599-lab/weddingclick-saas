@@ -3,7 +3,11 @@ import { hashAccessToken, isValidRawAccessTokenShape } from "../auth/access-toke
 import { ApiError } from "../errors/api-error";
 import type { PublicGuestRsvpGateway } from "../public-guest/public-guest-types";
 import { isWellFormedPublicSlug } from "../public-invitation/load-public-invitation";
-import type { PublicRsvpGateway } from "./public-rsvp-types";
+import {
+  hashGenericRsvpResponseKey,
+  isValidGenericRsvpResponseKeyShape,
+} from "./generic-rsvp-response-key";
+import type { KeyedPublicRsvpGateway, PublicRsvpGateway } from "./public-rsvp-types";
 
 /**
  * Task 033A — public RSVP submission use case (docs/DECISIONS.md "Task 033A
@@ -28,15 +32,31 @@ import type { PublicRsvpGateway } from "./public-rsvp-types";
  * RSVP. A malformed/unknown/other-Project token is 404 (never a silent
  * generic insert); a revoked guest is 410. The typed name stays response
  * data. `guestId`/`token`/`guest` keys remain rejected.
+ *
+ * RSVP-P0-03 — generic correction: the same generic body plus `responseKey`,
+ * the opaque page-instance key the public invitation page generated in the
+ * browser. It is hashed here (the raw key never reaches the database, a log
+ * or the Portal) and the 0056 RPC submits-or-corrects the one row that key
+ * owns inside the slug's current publication, so "Sửa lại hồi âm" stops
+ * creating duplicates. The key is NOT identity and NOT authorization: the
+ * write is still authorized by the slug alone, exactly as the unkeyed one
+ * is. A malformed key is 400 (never a silent fall back to a duplicate
+ * insert); a key belonging to another invitation/Project is 404 with nothing
+ * written. `responseKey` together with `guestToken` is rejected:
+ * personalized responses are deduplicated by guest identity and never by a
+ * browser-held key.
  */
 
 const BODY_KEYS = ["publicSlug", "attendance", "partySize", "message", "guestName"] as const;
 const PERSONALIZED_BODY_KEYS = [...BODY_KEYS, "guestToken"] as const;
+const KEYED_BODY_KEYS = [...BODY_KEYS, "responseKey"] as const;
 
 export interface SubmitPublicRsvpDependencies {
   rsvps: PublicRsvpGateway;
   /** Task 033B1 personalized writes; absent → a personalized request fails (500), never a generic insert. */
   guestRsvps?: PublicGuestRsvpGateway;
+  /** RSVP-P0-03 keyed generic writes; absent → a keyed request fails (500), never an unkeyed duplicate insert. */
+  keyedRsvps?: KeyedPublicRsvpGateway;
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
@@ -54,7 +74,8 @@ export async function submitPublicRsvp(body: unknown, deps: SubmitPublicRsvpDepe
     throw new ApiError("BAD_REQUEST", "Invalid RSVP request");
   }
   const personalized = hasExactKeys(body, PERSONALIZED_BODY_KEYS);
-  if (!personalized && !hasExactKeys(body, BODY_KEYS)) {
+  const keyed = hasExactKeys(body, KEYED_BODY_KEYS);
+  if (!personalized && !keyed && !hasExactKeys(body, BODY_KEYS)) {
     throw new ApiError("BAD_REQUEST", "Invalid RSVP request");
   }
   const { publicSlug, attendance, partySize, message, guestName } = body;
@@ -82,6 +103,25 @@ export async function submitPublicRsvp(body: unknown, deps: SubmitPublicRsvpDepe
     }
     const guestRsvpId = await deps.guestRsvps.submitPublicGuestRsvp(publicSlug, hashAccessToken(guestToken), canonical);
     if (guestRsvpId === null) {
+      throw new ApiError("NOT_FOUND", "Invitation not found");
+    }
+    return;
+  }
+
+  if (keyed) {
+    const { responseKey } = body;
+    if (typeof responseKey !== "string" || !isValidGenericRsvpResponseKeyShape(responseKey)) {
+      throw new ApiError("BAD_REQUEST", "Invalid RSVP request");
+    }
+    if (deps.keyedRsvps === undefined) {
+      throw new Error("Keyed generic RSVP gateway is not configured");
+    }
+    const keyedRsvpId = await deps.keyedRsvps.submitKeyedPublicRsvp(
+      publicSlug,
+      hashGenericRsvpResponseKey(responseKey),
+      canonical,
+    );
+    if (keyedRsvpId === null) {
       throw new ApiError("NOT_FOUND", "Invitation not found");
     }
     return;
