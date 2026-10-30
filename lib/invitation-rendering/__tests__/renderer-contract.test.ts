@@ -12,6 +12,7 @@ import {
   type ClipboardCopyResultStatusV1,
   type ClipboardCopyResultV1,
   type ClockCapabilityV1,
+  type MediaDownloadCapabilityV1,
   type InvitationRendererCapabilitiesV1,
   type MusicCapabilityV1,
   type MusicPlaybackStatusV1,
@@ -114,13 +115,15 @@ describe("InvitationRendererComponentV1", () => {
 // ---------------------------------------------------------------------------
 
 describe("InvitationRendererCapabilitiesV1", () => {
-  it("has exactly rsvp, clipboard, music and clock", () => {
-    expectTypeOf<keyof InvitationRendererCapabilitiesV1>().toEqualTypeOf<"rsvp" | "clipboard" | "music" | "clock">();
+  it("has exactly rsvp, clipboard, music, clock and download", () => {
+    // WC-GIFT-QR-01 added `download` on the clipboard's terms; the set stays closed.
+    expectTypeOf<keyof InvitationRendererCapabilitiesV1>().toEqualTypeOf<"rsvp" | "clipboard" | "music" | "clock" | "download">();
     expectTypeOf<Required<InvitationRendererCapabilitiesV1>>().toEqualTypeOf<{
       readonly rsvp: RsvpCapabilityV1;
       readonly clipboard: ClipboardCapabilityV1;
       readonly music: MusicCapabilityV1;
       readonly clock: ClockCapabilityV1;
+      readonly download: MediaDownloadCapabilityV1;
     }>();
   });
 
@@ -128,6 +131,7 @@ describe("InvitationRendererCapabilitiesV1", () => {
     expectTypeOf<IsOptional<InvitationRendererCapabilitiesV1, "rsvp">>().toEqualTypeOf<true>();
     expectTypeOf<IsOptional<InvitationRendererCapabilitiesV1, "clipboard">>().toEqualTypeOf<true>();
     expectTypeOf<IsOptional<InvitationRendererCapabilitiesV1, "music">>().toEqualTypeOf<true>();
+    expectTypeOf<IsOptional<InvitationRendererCapabilitiesV1, "download">>().toEqualTypeOf<true>();
     expectTypeOf<IsOptional<InvitationRendererCapabilitiesV1, "clock">>().toEqualTypeOf<true>();
     expectTypeOf<string extends keyof InvitationRendererCapabilitiesV1 ? true : false>().toEqualTypeOf<false>();
   });

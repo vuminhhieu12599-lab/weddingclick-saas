@@ -188,7 +188,7 @@ export function SeDuyenV2({ viewModel, sections, capabilities }: InvitationRende
           </Gallery>
         ) : null}
         {capabilities.rsvp === undefined ? null : <Rsvp rsvp={capabilities.rsvp} />}
-        {panels.length === 0 ? null : <Gift panels={panels} clipboard={capabilities.clipboard} />}
+        {panels.length === 0 ? null : <Gift panels={panels} clipboard={capabilities.clipboard} download={capabilities.download} />}
         <Closing people={people} photo={closingPhoto} photoAlt={photoAlt} />
       </OpeningStage>
     </div>

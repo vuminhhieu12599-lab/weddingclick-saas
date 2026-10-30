@@ -3,10 +3,11 @@ import type {
   MediaResolution,
   ViewModelGiftSide,
 } from "../../../../../lib/invitation-rendering/invitation-view-model-types";
-import type { ClipboardCapabilityV1 } from "../../../../../lib/invitation-rendering/renderer-capabilities";
+import type { ClipboardCapabilityV1, MediaDownloadCapabilityV1 } from "../../../../../lib/invitation-rendering/renderer-capabilities";
 import type { CoupleSide } from "../../../../../lib/invitation-rendering/wedding-domain-types";
 import { VIETNAMESE_HERITAGE_V2_COPY } from "../copy";
 import { CopyAccountButton } from "../interactive/copy-account-button";
+import { QrDownloadButton } from "../interactive/qr-download-button";
 import { GiftDialog } from "../interactive/gift-dialog";
 import { LotusMark } from "./decor";
 import styles from "../vietnamese-heritage-v2.module.css";
@@ -48,16 +49,23 @@ interface GiftProps {
   qr: InvitationViewModel["media"]["qr"];
   /** `capabilities.clipboard`, passed through by the root only; absent → no copy control. */
   clipboard: ClipboardCapabilityV1 | undefined;
+  /** `capabilities.download`, passed through by the root only; absent → no QR download control. */
+  download: MediaDownloadCapabilityV1 | undefined;
 }
 
 /** One side's honest details: its own `RESOLVED` QR in a white plate, then its canonical lines. */
-function GiftDetails({ panel, clipboard }: { panel: GiftPanel; clipboard: ClipboardCapabilityV1 | undefined }) {
+function GiftDetails({ panel, clipboard, download }: { panel: GiftPanel; clipboard: ClipboardCapabilityV1 | undefined; download: MediaDownloadCapabilityV1 | undefined }) {
   const sideLabel = COPY.ceremonial.labelBySide[panel.side];
   return (
     <div className={styles.giftDetails}>
       {panel.qr?.status === "RESOLVED" ? (
         <div className={styles.giftQr}>
           <MediaImage media={panel.qr} alt={`${COPY.gift.qrAlt} ${sideLabel}`} className={styles.giftQrImage} />
+          {/* WC-GIFT-QR-01: under the plate, never over the scan area, and
+              only for THIS side's own RESOLVED code. */}
+          {download === undefined ? null : (
+            <QrDownloadButton download={download} qr={panel.qr} side={panel.side} sideLabel={sideLabel} />
+          )}
         </div>
       ) : null}
       <dl className={styles.giftLines}>
@@ -98,7 +106,7 @@ function GiftDetails({ panel, clipboard }: { panel: GiftPanel; clipboard: Clipbo
  * VH-V2-01: a gold lotus (the gift sheet's own mark) frames the approved
  * intro, which is set larger and closer to the CTA.
  */
-export function Gift({ operationalSides, gift, qr, clipboard }: GiftProps) {
+export function Gift({ operationalSides, gift, qr, clipboard, download }: GiftProps) {
   const panels = operationalSides
     .map((side): GiftPanel => (side === "GROOM" ? { side, gift: gift.groom, qr: qr.groom } : { side, gift: gift.bride, qr: qr.bride }))
     .filter((panel) => panel.qr?.status === "RESOLVED" || giftLines(panel.gift).length > 0);
@@ -117,7 +125,7 @@ export function Gift({ operationalSides, gift, qr, clipboard }: GiftProps) {
         panels={panels.map((panel) => ({
           side: panel.side,
           label: COPY.ceremonial.labelBySide[panel.side],
-          content: <GiftDetails panel={panel} clipboard={clipboard} />,
+          content: <GiftDetails panel={panel} clipboard={clipboard} download={download} />,
         }))}
       />
     </section>

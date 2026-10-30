@@ -1232,7 +1232,7 @@ describe("H. wedding gift CTA and dialog (VH-02B-E1)", () => {
     bankQrMediaId: null,
   };
   const giftHtml = (props: Partial<GiftProps>) =>
-    renderToStaticMarkup(<Gift operationalSides={["GROOM"]} gift={{}} qr={{}} clipboard={undefined} {...props} />);
+    renderToStaticMarkup(<Gift operationalSides={["GROOM"]} gift={{}} qr={{}} clipboard={undefined} download={undefined} {...props} />);
 
   it("no honest gift content → nothing: no empty CTA, no empty dialog", () => {
     expect(giftHtml({})).toBe("");

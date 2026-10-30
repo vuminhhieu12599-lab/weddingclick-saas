@@ -87,7 +87,7 @@ export function RomanticMinimalV1({ viewModel, sections, capabilities }: Invitat
         {loveStory === null ? null : <OurLove story={loveStory} slot={ourLoveSlot} />}
         <Calendar ceremony={ceremony} />
         {capabilities.rsvp === undefined ? null : <Rsvp rsvp={capabilities.rsvp} />}
-        {sections.gift ? <Gift operationalSides={operationalSides} gift={gift} qr={media.qr} clipboard={capabilities.clipboard} /> : null}
+        {sections.gift ? <Gift operationalSides={operationalSides} gift={gift} qr={media.qr} clipboard={capabilities.clipboard} download={capabilities.download} /> : null}
         {sections.gallery && gallery.length > 0 ? <Album gallery={gallery} /> : null}
         <ThankYou people={people} ceremonyDate={ceremonyDate} photo={thankYouPhoto} />
         <SectionReveal hasCountdown={capabilities.clock !== undefined} />

@@ -140,6 +140,11 @@ export const SE_DUYEN_V2_COPY = Object.freeze({
     copyUnavailable: "Thiết bị không cho sao chép",
     /** Alt text of a side's own transfer QR, completed with the family. */
     qrAlt: "Mã QR chuyển khoản",
+    /** WC-GIFT-QR-01 — saving this family's own QR image. */
+    qrDownload: "Tải mã QR",
+    qrDownloaded: "Đã tải mã QR",
+    qrDownloadFailed: "Chưa tải được mã QR. Bạn vẫn có thể quét mã ngay trên thiệp.",
+    qrDownloadUnavailable: "Trình duyệt không hỗ trợ tải ảnh. Bạn vẫn có thể quét mã ngay trên thiệp.",
   }),
   closing: Object.freeze({
     eyebrow: "Lời Cảm Ơn",

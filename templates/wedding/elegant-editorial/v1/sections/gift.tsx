@@ -7,6 +7,7 @@ import type { CoupleSide } from "../../../../../lib/invitation-rendering/wedding
 import { ELEGANT_EDITORIAL_V1_COPY } from "../copy";
 import styles from "../elegant-editorial-v1.module.css";
 import { CopyAccountButton, type CopyAccountButtonProps } from "../interactive/copy-account-button";
+import { QrDownloadButton, type QrDownloadButtonProps } from "../interactive/qr-download-button";
 import { GiftDialog } from "../interactive/gift-dialog";
 import { MediaImage } from "./media-image";
 
@@ -18,6 +19,8 @@ interface GiftProps {
   qr: InvitationViewModel["media"]["qr"];
   /** RF-06D: `capabilities.clipboard` as given; absent means no copy control at all (P34). */
   clipboard: CopyAccountButtonProps["clipboard"] | undefined;
+  /** WC-GIFT-QR-01: `capabilities.download` as given; absent means no QR download control at all. */
+  download: QrDownloadButtonProps["download"] | undefined;
 }
 
 interface BankLine {
@@ -90,7 +93,7 @@ function sidePresentation(
  * control is added next to a non-blank canonical account number only when a
  * clipboard capability is present; the bank text stays selectable either way.
  */
-export function Gift({ operationalSides, gift, qr, clipboard }: GiftProps) {
+export function Gift({ operationalSides, gift, qr, clipboard, download }: GiftProps) {
   const sides = operationalSides
     .map((side) => sidePresentation(side, gift, qr))
     .filter((presentation): presentation is GiftSidePresentation => presentation !== undefined);
@@ -115,7 +118,14 @@ export function Gift({ operationalSides, gift, qr, clipboard }: GiftProps) {
               <article className={styles.giftSide} data-side={side}>
                 <h3 className={styles.srOnly}>{sideLabel}</h3>
                 {sideQr?.status === "RESOLVED" ? (
-                  <MediaImage media={sideQr} alt={`${COPY.gift.qrAltPrefix} ${sideLabel}`} className={styles.giftQr} />
+                  <>
+                    <MediaImage media={sideQr} alt={`${COPY.gift.qrAltPrefix} ${sideLabel}`} className={styles.giftQr} />
+                    {/* WC-GIFT-QR-01: under the plate, never over the scan
+                        area, and only for THIS side's own RESOLVED code. */}
+                    {download === undefined ? null : (
+                      <QrDownloadButton download={download} qr={sideQr} side={side} sideLabel={sideLabel} />
+                    )}
+                  </>
                 ) : null}
                 {lines.length > 0 ? (
                   <dl className={styles.giftLines}>

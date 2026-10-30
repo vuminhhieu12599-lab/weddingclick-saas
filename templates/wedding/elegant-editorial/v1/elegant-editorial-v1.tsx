@@ -100,7 +100,7 @@ export function ElegantEditorialV1({ viewModel, sections, capabilities }: Invita
         {loveStory !== null ? <LoveStory story={loveStory} photo={media.loveStoryPhoto} coupleText={coupleText} /> : null}
         {capabilities.rsvp !== undefined ? <Rsvp rsvp={capabilities.rsvp} /> : null}
         {sections.gift ? (
-          <Gift operationalSides={operationalSides} gift={gift} qr={media.qr} clipboard={capabilities.clipboard} />
+          <Gift operationalSides={operationalSides} gift={gift} qr={media.qr} clipboard={capabilities.clipboard} download={capabilities.download} />
         ) : null}
         {sections.dressCode && content.dressCode !== null ? <DressCode dressCode={content.dressCode} /> : null}
         {sections.gallery ? <Gallery gallery={media.gallery} coupleText={coupleText} /> : null}
