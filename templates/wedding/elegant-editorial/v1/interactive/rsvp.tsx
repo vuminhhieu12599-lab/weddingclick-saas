@@ -207,7 +207,12 @@ export function Rsvp({ rsvp }: RsvpProps) {
   return (
     <section className={styles.rsvpSection} aria-labelledby={IDS.heading} data-rsvp-phase={phase.toLowerCase()}>
       <div className={styles.rsvpCard}>
-        <h2 id={IDS.heading} className={styles.rsvpHeading}>
+        {/* RSVP-P0-01: once the response is recorded, the big "Xác nhận
+            tham dự" heading would read as "you are attending" over a
+            NOT_ATTENDING answer, so it steps out of sight. It stays mounted
+            with its id and text, so the section keeps its accessible name
+            and aria-labelledby stays valid. */}
+        <h2 id={IDS.heading} className={succeeded ? styles.srOnly : styles.rsvpHeading}>
           <span className={styles.rsvpHeadingLine}>{COPY.heading}</span>{" "}
           <span className={styles.rsvpHeadingLine}>
             <span className={styles.rsvpHeadingAmp}>&amp;</span>

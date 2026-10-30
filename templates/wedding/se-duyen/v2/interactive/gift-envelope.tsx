@@ -219,11 +219,28 @@ export function GiftEnvelope({ panels, clipboard }: GiftEnvelopeProps) {
         </dl>
       </div>
 
-      {/* Caption for the stage, not a second control: the envelope itself
-          carries the accessible name. */}
-      <p className={styles.giftHint} aria-hidden="true">
-        {open ? COPY.closeHint : COPY.openHint}
-      </p>
+      {/* WC-UI-P0-01: closed, this is still only a caption — the envelope
+          itself carries the accessible name, so the text stays an
+          aria-hidden paragraph. Open, "Gấp phong bì lại" is what a guest
+          reaches for to put the slip away, so it becomes a real control:
+          same type, colour, position and box, reachable by keyboard and by
+          touch, and it folds the envelope through the same `open` state, so
+          the closing animation is the envelope button's own. */}
+      {open ? (
+        <button
+          type="button"
+          className={`${styles.giftHint} ${styles.giftHintClose}`}
+          onClick={() => {
+            setOpen(false);
+          }}
+        >
+          {COPY.closeHint}
+        </button>
+      ) : (
+        <p className={styles.giftHint} aria-hidden="true">
+          {COPY.openHint}
+        </p>
+      )}
     </div>
   );
 }

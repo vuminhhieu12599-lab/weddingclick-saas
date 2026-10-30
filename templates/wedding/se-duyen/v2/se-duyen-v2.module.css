@@ -3744,6 +3744,28 @@
   color: rgba(228, 200, 138, 0.4);
 }
 
+/* WC-UI-P0-01: open, the caption IS the close control. A reset only — it
+   sets nothing `.giftHint` already owns (margin, size, weight, tracking,
+   indent, case, colour), so the two rules cannot fight whatever their
+   order, and the button is the same text in the same place rather than a
+   second piece of visible chrome. `font-family` and `line-height` are the
+   two the UA would otherwise take from the button default. */
+.giftHintClose {
+  appearance: none;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+
+/* The envelope's own ring, so keyboard focus is visible on both controls. */
+.giftHintClose:focus-visible {
+  outline: 2px solid rgba(228, 200, 138, 0.9);
+  outline-offset: 6px;
+}
+
 /* ---- Motion ---- */
 
 @media (prefers-reduced-motion: no-preference) {
