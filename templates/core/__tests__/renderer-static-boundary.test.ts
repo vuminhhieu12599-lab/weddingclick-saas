@@ -552,8 +552,10 @@ const RF06B_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06B_CODE_FILES)[number], 
     `${LIB}/wedding-domain-types`,
     ...SECTION_COMMON,
     `${V1}/sections/media-image`,
-    // RF-06D: the sides render inside the dialog island, with the copy island.
+    // RF-06D: the sides render inside the dialog island, with the copy island
+    // and (WC-GIFT-QR-01) the QR download island.
     `${V1}/interactive/copy-account-button`,
+    `${V1}/interactive/qr-download-button`,
     `${V1}/interactive/gift-dialog`,
   ],
   [`${V1}/sections/hero.tsx`]: [
@@ -1752,7 +1754,7 @@ const RF06D_ALLOWED_IMPORTS: Readonly<Record<(typeof RF06D_FILES)[number], reado
   [RF06D_GIFT_DIALOG]: ["react", `${LIB}/wedding-domain-types`, `${V1}/copy`, CSS_MODULE],
   [RF06D_GALLERY_LIGHTBOX]: ["react", `${LIB}/invitation-view-model-types`, `${V1}/copy`, CSS_MODULE, `${V1}/sections/media-image`],
   [RF06D_COPY_BUTTON]: ["react", `${LIB}/renderer-capabilities`, `${V1}/copy`, CSS_MODULE],
-  [RF06D_QR_DOWNLOAD]: ["react", `${LIB}/renderer-capabilities`, `${V1}/copy`, CSS_MODULE, `${LIB}/invitation-view-model-types`, `${LIB}/wedding-domain-types`],
+  [RF06D_QR_DOWNLOAD]: ["react", `${LIB}/media-download-feedback`, `${LIB}/renderer-capabilities`, `${V1}/copy`, CSS_MODULE, `${LIB}/invitation-view-model-types`, `${LIB}/wedding-domain-types`],
   [RF06D_RSVP]: [
     "react",
     "lib/domain",
@@ -1821,8 +1823,8 @@ const RF06D_PRIVILEGE: readonly [string, RegExp, readonly string[]][] = [
     /\buse(LayoutEffect|InsertionEffect|Memo|Callback|SyncExternalStore|Context|Transition|Optimistic|ActionState|Id|DeferredValue|ImperativeHandle)\b/,
     [],
   ],
-  ["button element", /<button\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX]],
-  ["click handler", /\bonClick\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX]],
+  ["button element", /<button\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX, RF06D_QR_DOWNLOAD]],
+  ["click handler", /\bonClick\b/, [RF06D_OPENING, RF06D_MUSIC, RF06D_GIFT_DIALOG, RF06D_COPY_BUTTON, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX, RF06D_QR_DOWNLOAD]],
   ["dialog element / API", /<dialog\b|role="dialog"|showModal|HTMLDialogElement|\.close\(\)|onClose\b|onCancel\b/, [RF06D_GIFT_DIALOG, RF06D_GALLERY_LIGHTBOX]],
   // The album island returns focus to the tile that opened the viewer.
   ["programmatic focus", /\.focus\(/, [RF06D_OPENING, RF06D_GIFT_DIALOG, RF06D_RSVP, RF06D_GALLERY_LIGHTBOX]],
@@ -2090,6 +2092,7 @@ const VH01_ALLOWED_IMPORTS: Readonly<Record<string, readonly string[]>> = {
     `${LIB}/wedding-domain-types`,
     ...VH_SECTION_COMMON,
     `${VH}/interactive/copy-account-button`,
+    `${VH}/interactive/qr-download-button`,
     `${VH}/interactive/gift-dialog`,
     `${VH}/sections/media-image`,
   ],
@@ -2360,8 +2363,8 @@ describe("VH-02B-E1 islands", () => {
       expect(pattern.test(code), `${file}: ${label}`).toBe(false);
     }
     expect(/<img\b/.test(code), file).toBe(false);
-    // GIFT-UI-01 / WC-GIFT-QR-01: an icon-only control draws its own glyph.
-    expect(/<svg\b/.test(code), file).toBe(/\/(copy-account-button|qr-download-button)\.tsx$/.test(file));
+    // WC-GIFT-QR-01: the approved icon-only download control draws its own glyph.
+    expect(/<svg\b/.test(code), file).toBe(file.endsWith("/interactive/qr-download-button.tsx"));
   });
 
   it.each(PRIVILEGE)("interaction: %s appears only in its owning VH island(s), never in a VH static file", (_label, pattern, owners) => {
@@ -2743,8 +2746,8 @@ describe("RM-01/RM-02 Romantic Minimal v1 files", () => {
       expect(pattern.test(code), `${file}: ${label}`).toBe(false);
     }
     expect(/<img\b/.test(code), file).toBe(false);
-    // GIFT-UI-01 / WC-GIFT-QR-01: an icon-only control draws its own glyph.
-    expect(/<svg\b/.test(code), file).toBe(/\/(copy-account-button|qr-download-button)\.tsx$/.test(file));
+    // WC-GIFT-QR-01: the approved icon-only download control draws its own glyph.
+    expect(/<svg\b/.test(code), file).toBe(file.endsWith("/interactive/qr-download-button.tsx"));
     expect(/IntersectionObserver/.test(code), file).toBe(file === `${RM}/interactive/section-reveal.tsx`);
     expect(/nowEpochMs|deriveCeremonyCountdownV1/.test(code), file).toBe(file === `${RM}/interactive/countdown.tsx`);
     expect(/gate\.run\(|createRsvpSubmissionGate/.test(code), file).toBe(file === `${RM}/interactive/rsvp.tsx`);
@@ -3007,7 +3010,7 @@ describe("OWS-01 Our Wedding Story v1 files", () => {
     expect(/<img\b/.test(code), file).toBe(false);
     expect(/<svg\b/.test(code), file).toBe(
       // GIFT-UI-01 / WC-GIFT-QR-01: an icon-only control draws its own glyph.
-      /\/(copy-account-button|qr-download-button)\.tsx$/.test(file) ||
+      file.endsWith("/interactive/qr-download-button.tsx") ||
         file === `${OWS}/interactive/music-control.tsx` ||
         file === `${OWS}/interactive/gift-sheet.tsx`,
     );
@@ -3363,7 +3366,7 @@ describe("OWS-V2-01 Our Wedding Story v2 files", () => {
     }
     expect(/<img\b/.test(code), file).toBe(false);
     expect(/<svg\b/.test(code), file).toBe(
-      /\/(copy-account-button|qr-download-button)\.tsx$/.test(file) ||
+      file.endsWith("/interactive/qr-download-button.tsx") ||
         file === `${OWS2}/interactive/music-control.tsx` ||
         file === `${OWS2}/interactive/gift-sheet.tsx`,
     );
