@@ -36,14 +36,22 @@ export const HONG_AN_V1_COPY = {
   invitation: {
     heading: "Hân Hoan Báo Tin",
     /**
+     * The invitation phrase now sits once, as the section's eyebrow above
+     * the heading, so neither the guest line nor the message below has to
+     * say it again (Product Owner, HA-FIX-02).
+     */
+    eyebrow: "Trân trọng kính mời",
+    /**
      * Shown only when the Project has no invitation wording of its own.
      * The Project's text always wins; this is template wording, never a
      * guest's name and never a substitute for missing customer data.
+     *
+     * It deliberately does not repeat the eyebrow's phrase: the eyebrow
+     * has already issued the invitation, so this line carries the warmth
+     * instead of restating it.
      */
     fallbackMessage:
-      "Trong niềm tín thác vào tình yêu Thiên Chúa, chúng con trân trọng kính mời quý vị đến chung vui trong ngày Hôn phối của chúng con.",
-    /** Label above the personalized guest line, when a guest overlay exists. */
-    guestLabel: "Trân trọng kính mời",
+      "Trong niềm tín thác vào tình yêu Thiên Chúa, chúng con hân hoan được đón quý vị trong ngày Hôn phối của chúng con.",
   },
 
   families: {
@@ -132,6 +140,11 @@ export const HONG_AN_V1_COPY = {
   gift: {
     heading: "Mừng Cưới",
     intro: "Tình cảm của quý vị là lời chúc phúc cho chúng con.",
+    /** The only gift control on the page; the details live in the dialog. */
+    openDialog: "Gửi mừng cưới",
+    closeDialog: "Đóng",
+    dialogHeading: "Gửi Mừng Cưới",
+    tabsLabel: "Chọn nhà trai hoặc nhà gái",
     sides: { GROOM: "Nhà Trai", BRIDE: "Nhà Gái" },
     rows: { bankName: "Ngân hàng", accountName: "Chủ tài khoản", accountNumber: "Số tài khoản" },
     copy: "Sao chép số tài khoản",

@@ -127,9 +127,15 @@ const HONG_AN_SLOT_MEDIA: Readonly<Record<string, readonly string[]>> = Object.f
  * and local. The slot keys come from the template's own editor manifest
  * rather than being hand-listed, so they cannot drift from it.
  */
-function toHongAnSource(input: BuildSnapshotPayloadInput): BuildSnapshotPayloadInput {
+function toHongAnSource(base: BuildSnapshotPayloadInput): BuildSnapshotPayloadInput {
   const { compatibility, design } = HONG_AN_V1_MANIFEST;
   const declared = HONG_AN_V1_EDITOR_MANIFEST.mediaSlots;
+  const shifted = shiftEventsIntoTheFuture(base);
+  const details = shifted.weddingDetails;
+  const input: BuildSnapshotPayloadInput =
+    details === null
+      ? shifted
+      : { ...shifted, weddingDetails: { ...details, invitationMessage: DEMO_INVITATION_MESSAGE } };
   return {
     ...input,
     design: {
@@ -146,6 +152,76 @@ function toHongAnSource(input: BuildSnapshotPayloadInput): BuildSnapshotPayloadI
     },
   };
 }
+
+/**
+ * HA-FIX-02 — the demo wedding is always about a month away.
+ *
+ * The shared fixtures pin the ceremony to a fixed calendar date, which has
+ * now gone past, so the countdown reviewed as "Ngày Hồng Ân đã đến" and
+ * could not be judged at all. Rather than freeze a new date that expires
+ * again in a few weeks, the preview shifts every fixture event by the SAME
+ * whole number of days, computed at request time, so the earliest ceremony
+ * lands this far ahead on every visit.
+ *
+ * The shift is whole days and `Asia/Ho_Chi_Minh` has no daylight saving,
+ * so each event keeps its exact local wall-clock time and the events keep
+ * their spacing relative to one another: one canonical instant per event,
+ * moved, never re-derived or re-written per field. The renderer's own
+ * date-time behaviour is untouched — it still reads `ceremony.startsAt`
+ * through the shared derivations, and a genuinely past wedding still
+ * reads "Ngày Hồng Ân đã đến".
+ */
+const DEMO_DAYS_UNTIL_CEREMONY = 30;
+
+const MS_PER_DAY = 86_400_000;
+
+/**
+ * The whole-day offset that puts the earliest fixture event
+ * `DEMO_DAYS_UNTIL_CEREMONY` days from today. Anchored on the earliest
+ * event so every later one keeps its own position after it.
+ */
+function demoDayShift(events: BuildSnapshotPayloadInput["events"]): number {
+  const times = events.map((event) => Date.parse(event.startsAt));
+  const earliest = Math.min(...times);
+  if (!Number.isFinite(earliest)) return 0;
+  const target = Date.now() + DEMO_DAYS_UNTIL_CEREMONY * MS_PER_DAY;
+  return Math.round((target - earliest) / MS_PER_DAY);
+}
+
+/**
+ * Applies that one offset to every event.
+ *
+ * `lunarDateDisplay` is dropped on a shifted event. It is staff-authored
+ * text describing a specific solar date, so carrying it across a shift
+ * would print a lunar date that does not correspond to the solar one
+ * beside it — exactly the kind of disagreement CLAUDE.md §7 exists to
+ * prevent. The `no-lunar` scenario still covers the absent case; a
+ * Project's real lunar text is of course never touched by any of this.
+ */
+function shiftEventsIntoTheFuture(input: BuildSnapshotPayloadInput): BuildSnapshotPayloadInput {
+  const shiftDays = demoDayShift(input.events);
+  if (shiftDays === 0) return input;
+  return {
+    ...input,
+    events: input.events.map((event) => ({
+      ...event,
+      startsAt: new Date(Date.parse(event.startsAt) + shiftDays * MS_PER_DAY).toISOString(),
+      lunarDateDisplay: null,
+    })),
+  };
+}
+
+/**
+ * HA-FIX-02 — the demo invitation wording.
+ *
+ * The shared fixture's message opens "Trân trọng kính mời …", which now
+ * repeats the section's own eyebrow. This replaces it for the preview
+ * only: it is demo content standing in for a customer's own wording, and
+ * a real Project's `invitationMessage` is never rewritten by the renderer
+ * or by anything else.
+ */
+const DEMO_INVITATION_MESSAGE =
+  "Sự hiện diện của quý vị là niềm vui và phúc lành đối với hai gia đình.";
 
 /** Production manifests plus Hồng Ân — preview only; the production registry is untouched. */
 const PREVIEW_REGISTRY = createProductionCompatibilityRegistry([

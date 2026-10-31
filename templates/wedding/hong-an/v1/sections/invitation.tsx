@@ -28,7 +28,15 @@ export function Invitation({
 
   return (
     <section className={styles.section} aria-labelledby="ha-invitation-heading" data-reveal="rise">
-      <SectionHeading id="ha-invitation-heading">{COPY.heading}</SectionHeading>
+      {/*
+        The invitation phrase is issued once, here, as the eyebrow. The
+        guest line below it is then simply the guest's name, and the
+        sentence under that carries the warmth instead of repeating the
+        phrase a second and third time (Product Owner, HA-FIX-02).
+      */}
+      <SectionHeading id="ha-invitation-heading" eyebrow={COPY.eyebrow}>
+        {COPY.heading}
+      </SectionHeading>
 
       {/*
         No plate here. The protruding arch read as an arbitrary bubble
@@ -41,7 +49,6 @@ export function Invitation({
       <div className={styles.invitationBlock}>
         {guestDisplayName === undefined ? null : (
           <p className={styles.guestLine}>
-            <span className={styles.guestLabel}>{COPY.guestLabel}</span>
             <span className={styles.guestName}>{guestDisplayName}</span>
           </p>
         )}
