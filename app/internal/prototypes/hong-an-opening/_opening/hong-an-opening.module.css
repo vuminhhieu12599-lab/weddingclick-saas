@@ -207,13 +207,17 @@
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
   font-size: clamp(9px, 2.5cqw, 11px);
-  font-weight: 500;
+  /* HA-OPEN-03 — 600 and a deeper warm brown. At 500/#65462b this line
+     was competing with the gold tracery behind it; the tracking and the
+     soft ivory halo are unchanged, so it still reads as fine print
+     rather than a label on a box. */
+  font-weight: 600;
   letter-spacing: 0.28em;
   /* Set in caps here rather than in the data, so the copy stays in its
      natural case for anything that reads it as text. */
   text-transform: uppercase;
   white-space: nowrap;
-  color: #65462b;
+  color: #493525;
   text-shadow: 0 1px 8px #fffaf3;
 }
 
@@ -355,8 +359,11 @@
   );
 }
 
+/* The hero's eyebrow sits on the photograph, not on the stonework, and
+   was approved as it is: it keeps the original weight and colour. */
 .heroTop .eyebrow {
   font-size: 9px;
+  font-weight: 500;
   color: #725337;
 }
 
