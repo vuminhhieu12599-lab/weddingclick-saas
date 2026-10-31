@@ -139,7 +139,9 @@ export const HONG_AN_V1_COPY = {
 
   gift: {
     heading: "Mừng Cưới",
-    intro: "Tình cảm của quý vị là lời chúc phúc cho chúng con.",
+    /** The wording the other production templates already use, verbatim. */
+    intro:
+      "Sự hiện diện của bạn là món quà quý giá nhất. Nếu không thể tham dự và muốn gửi quà chúc mừng, gia đình xin phép nhận tại đây.",
     /** The only gift control on the page; the details live in the dialog. */
     openDialog: "Gửi mừng cưới",
     closeDialog: "Đóng",

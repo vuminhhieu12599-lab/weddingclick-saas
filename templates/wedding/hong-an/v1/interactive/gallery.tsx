@@ -64,8 +64,16 @@ export function Gallery({ photos, altFor }: { readonly photos: readonly Resolved
   const current = index === null ? undefined : photos[index];
 
   return (
-    <section className={styles.section} aria-labelledby={headingId} data-reveal="rise">
-      <SectionHeading id={headingId}>{COPY.heading}</SectionHeading>
+    <section className={styles.section} aria-labelledby={headingId}>
+      {/*
+        The reveal mark sits on the content, never on the section: the
+        lightbox below is a `position: fixed` modal, and a transformed
+        ancestor would make it lay out against the section rather than the
+        viewport (see the gift dialog, HA-FIX-03).
+      */}
+      <div className={styles.galleryLead} data-reveal="rise">
+        <SectionHeading id={headingId}>{COPY.heading}</SectionHeading>
+      </div>
 
       <ul className={styles.galleryGrid}>
         {photos.map((photo, position) => (

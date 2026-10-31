@@ -236,19 +236,35 @@ export function Gift({
   }
 
   return (
-    <section className={styles.sectionWarm} aria-labelledby="ha-gift-heading" data-reveal="rise">
-      <SectionHeading id="ha-gift-heading">{COPY.heading}</SectionHeading>
-      <p className={styles.giftIntro}>{COPY.intro}</p>
+    <section className={styles.sectionWarm} aria-labelledby="ha-gift-heading">
+      {/*
+        HA-FIX-03 — THE REVEAL MARK IS ON THIS WRAPPER, NOT ON THE SECTION,
+        AND THAT IS LOAD-BEARING.
 
-      <button
-        ref={openerRef}
-        className={styles.giftOpen}
-        type="button"
-        aria-haspopup="dialog"
-        onClick={() => setOpen(true)}
-      >
-        {COPY.openDialog}
-      </button>
+        A reveal target carries `transform: translateY(...)` until it has
+        been scrolled into view, and a transformed element becomes the
+        containing block for `position: fixed` DESCENDANTS. With the mark
+        on the section, the modal below was laid out against the section at
+        document coordinates instead of against the viewport, so
+        `showModal()` scrolled the whole page up to bring it into view —
+        the guest landed back at the top of the invitation. Keeping the
+        dialog outside the animated box is the fix; nothing about the
+        reveal itself changes.
+      */}
+      <div className={styles.giftLead} data-reveal="rise">
+        <SectionHeading id="ha-gift-heading">{COPY.heading}</SectionHeading>
+        <p className={styles.giftIntro}>{COPY.intro}</p>
+
+        <button
+          ref={openerRef}
+          className={styles.giftOpen}
+          type="button"
+          aria-haspopup="dialog"
+          onClick={() => setOpen(true)}
+        >
+          {COPY.openDialog}
+        </button>
+      </div>
 
       <dialog
         ref={dialogRef}

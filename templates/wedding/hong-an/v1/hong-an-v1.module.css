@@ -26,7 +26,7 @@
 
   /* One rhythm for the whole scroll, fluid across the three mobile widths. */
   --gutter: clamp(20px, 6vw, 34px);
-  --section-gap: clamp(42px, 9.5vw, 66px);
+  --section-gap: clamp(38px, 8.6vw, 56px);
   --column: 560px;
 
   position: relative;
@@ -569,7 +569,9 @@
 .closing {
   position: relative;
   width: 100%;
-  padding: var(--section-gap) var(--gutter);
+  /* Half above, half below, so the boundary between two sections is
+     exactly one section gap instead of two stacked ones. */
+  padding: calc(var(--section-gap) / 2) var(--gutter);
 }
 
 .section > *,
@@ -600,14 +602,14 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-bottom: clamp(18px, 4.6vw, 26px);
+  margin-bottom: clamp(12px, 3.2vw, 18px);
 }
 
 /* The template's cross: two hairlines, never an image. */
 .cross {
   position: relative;
   width: 1px;
-  height: 22px;
+  height: 16px;
   background: linear-gradient(180deg, transparent, var(--gold), var(--gold-faint));
 }
 
@@ -623,7 +625,7 @@
 }
 
 .sectionEyebrow {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   font-size: clamp(9.5px, 2.8vw, 11px);
   font-weight: 500;
   letter-spacing: 0.26em;
@@ -632,7 +634,7 @@
 }
 
 .sectionHeading {
-  margin: 7px 0 0;
+  margin: 4px 0 0;
   text-wrap: balance;
   font-family: var(--ha-display), Georgia, serif;
   font-size: clamp(27px, 8vw, 36px);
@@ -648,7 +650,7 @@
 .headingRule {
   width: clamp(72px, 22vw, 110px);
   height: 1px;
-  margin-top: 11px;
+  margin-top: 9px;
   background: linear-gradient(90deg, transparent, var(--gold), transparent);
 }
 
@@ -737,8 +739,8 @@
 .countdownCross {
   display: block;
   width: 1px;
-  height: 20px;
-  margin: clamp(16px, 4.2vw, 22px) auto 0;
+  height: 14px;
+  margin: clamp(10px, 2.6vw, 14px) auto 0;
   background: linear-gradient(180deg, var(--gold), transparent);
 }
 
@@ -766,7 +768,7 @@
  */
 .invitationBlock {
   position: relative;
-  padding: clamp(22px, 5.6vw, 30px) clamp(10px, 3vw, 18px);
+  padding: clamp(13px, 3.4vw, 18px) clamp(10px, 3vw, 18px);
   text-align: center;
 }
 
@@ -788,7 +790,7 @@
   display: block;
   width: clamp(54px, 17vw, 78px);
   height: 1px;
-  margin: clamp(15px, 4vw, 20px) auto;
+  margin: clamp(11px, 2.8vw, 14px) auto;
   background: linear-gradient(90deg, transparent, var(--gold), transparent);
 }
 
@@ -1065,7 +1067,7 @@
 
 .storyFigure {
   position: relative;
-  margin: 0 auto clamp(18px, 4.6vw, 26px);
+  margin: 0 auto clamp(14px, 3.6vw, 20px);
   width: min(100%, 300px);
 }
 
@@ -1292,7 +1294,7 @@
 .scripture {
   background: linear-gradient(180deg, #fffdf8 0%, #fbf6ec 100%);
   text-align: center;
-  padding-block: clamp(54px, 12vw, 82px);
+  padding-block: clamp(40px, 9vw, 58px);
 }
 
 .scriptureCross {
@@ -1325,7 +1327,7 @@
 }
 
 .scriptureVerse {
-  margin: clamp(16px, 4.4vw, 23px) auto 0;
+  margin: clamp(13px, 3.4vw, 18px) auto 0;
   max-width: 24em;
 }
 
@@ -1351,7 +1353,7 @@
 /* ---- 12 · RSVP ---- */
 
 .rsvpIntro {
-  margin: 0 0 clamp(15px, 4vw, 20px);
+  margin: 0 0 clamp(12px, 3.2vw, 16px);
   text-align: center;
   font-size: clamp(13px, 3.7vw, 14.5px);
   line-height: 1.75;
@@ -1503,11 +1505,23 @@
 /* ---- 13 · gift ---- */
 
 .giftIntro {
-  margin: 0 0 clamp(18px, 4.6vw, 24px);
+  margin: 0 0 clamp(14px, 3.8vw, 19px);
+  /* The approved wording is two sentences; it must wrap evenly at 360. */
+  text-wrap: pretty;
   text-align: center;
   font-size: clamp(13px, 3.7vw, 14.5px);
   line-height: 1.75;
   color: var(--ink-soft);
+}
+
+/*
+ * The reveal wrapper. It exists so the section's own box stays
+ * untransformed and the modal below can be `position: fixed` against the
+ * viewport (HA-FIX-03); it adds no spacing of its own.
+ */
+.giftLead,
+.galleryLead {
+  display: block;
 }
 
 /* The one control the page shows for the wedding gift. */
@@ -1849,7 +1863,7 @@
 .closing {
   background: linear-gradient(180deg, var(--ivory) 0%, var(--cream) 55%, var(--stone) 100%);
   text-align: center;
-  padding-block: clamp(48px, 11vw, 74px) clamp(56px, 13vw, 84px);
+  padding-block: clamp(36px, 8vw, 52px) clamp(42px, 10vw, 60px);
 }
 
 .closingFigure {
@@ -1906,7 +1920,7 @@
 }
 
 .closingMessage {
-  margin: clamp(14px, 3.8vw, 19px) auto 0;
+  margin: clamp(11px, 3vw, 15px) auto 0;
   max-width: 26em;
   font-size: clamp(13.5px, 3.8vw, 15px);
   line-height: 1.85;
@@ -1919,7 +1933,7 @@
   align-items: baseline;
   justify-content: center;
   column-gap: 0.3em;
-  margin: clamp(19px, 5vw, 26px) 0 0;
+  margin: clamp(15px, 4vw, 20px) 0 0;
   font-family: var(--ha-display), Georgia, serif;
   font-style: italic;
   font-size: clamp(26px, 7.6vw, 34px);
@@ -1943,7 +1957,7 @@
   position: relative;
   width: 34px;
   height: 18px;
-  margin: clamp(17px, 4.4vw, 22px) auto 0;
+  margin: clamp(13px, 3.4vw, 17px) auto 0;
 }
 
 .closingLily::before,
@@ -2007,22 +2021,28 @@
   mask-image: linear-gradient(180deg, transparent, #000 85%);
 }
 
-/*
- * HA-FIX-02 — two plain ivory sections in a row are one continuous page,
- * not two, so their shared boundary is a single section gap rather than
- * two stacked ones. Sections that change tone keep their full breathing
- * room, because there the change of surface is the separation.
- */
-.section + .section {
-  padding-top: calc(var(--section-gap) * 0.4);
+/* The first interior section follows the full-height hero, so it keeps a
+   whole gap above it rather than half of one. */
+.interior section:first-of-type {
+  padding-top: var(--section-gap);
 }
 
-/* Everything the reader actually reads sits above the atmosphere. */
-.section > *,
-.sectionSacred > *,
-.sectionWarm > *,
-.scripture > *,
-.closing > * {
+/*
+ * Everything the reader actually reads sits above the atmosphere.
+ *
+ * `:not(dialog)` is load-bearing (HA-FIX-03). A modal `<dialog>` is a
+ * direct child of its section, and this rule's `position: relative` has
+ * the same specificity as the dialog's own `position: fixed` but comes
+ * later in the sheet, so it was winning: the modal was laid out in the
+ * section's flow instead of against the viewport, and opening it scrolled
+ * the page up to reach it. Dialogs are in the top layer and never need
+ * this stacking help anyway.
+ */
+.section > *:not(dialog),
+.sectionSacred > *:not(dialog),
+.sectionWarm > *:not(dialog),
+.scripture > *:not(dialog),
+.closing > *:not(dialog) {
   position: relative;
   z-index: 1;
 }
