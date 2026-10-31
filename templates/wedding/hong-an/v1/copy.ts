@@ -34,24 +34,31 @@ export const HONG_AN_V1_COPY = {
   },
 
   invitation: {
-    heading: "Hân Hoan Báo Tin",
     /**
-     * The invitation phrase now sits once, as the section's eyebrow above
-     * the heading, so neither the guest line nor the message below has to
-     * say it again (Product Owner, HA-FIX-02).
-     */
-    eyebrow: "Trân trọng kính mời",
-    /**
-     * Shown only when the Project has no invitation wording of its own.
-     * The Project's text always wins; this is template wording, never a
-     * guest's name and never a substitute for missing customer data.
+     * The four lines of the approved composition read as ONE sentence:
      *
-     * It deliberately does not repeat the eyebrow's phrase: the eyebrow
-     * has already issued the invitation, so this line carries the warmth
-     * instead of restating it.
+     *   TRONG HỒNG ÂN THIÊN CHÚA      (kicker)
+     *   Trân Trọng Kính Mời           (heading)
+     *   Anh Tuấn và gia đình          (the guest, from the overlay)
+     *   đến hiệp lời cầu nguyện …     (the body)
+     *
+     * The kicker and the heading are template-owned for V1; the body is
+     * the part a Project configures.
      */
-    fallbackMessage:
-      "Trong niềm tín thác vào tình yêu Thiên Chúa, chúng con hân hoan được đón quý vị trong ngày Hôn phối của chúng con.",
+    kicker: "Trong Hồng Ân Thiên Chúa",
+    heading: "Trân Trọng Kính Mời",
+    /**
+     * Shown only when the Project has configured no invitation wording of
+     * its own. A configured message always wins and is rendered exactly
+     * as authored; this is template wording, never a guest's name and
+     * never a stand-in for missing customer data.
+     *
+     * It is deliberately the CONTINUATION of the heading rather than a
+     * sentence of its own, so the composition reads "Trân trọng kính mời
+     * [guest] đến hiệp lời cầu nguyện…" and the invitation phrase is
+     * never said twice.
+     */
+    fallbackMessage: "đến hiệp lời cầu nguyện và chung vui trong ngày Hôn phối của chúng con.",
   },
 
   families: {

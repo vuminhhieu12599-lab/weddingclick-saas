@@ -127,15 +127,16 @@ const HONG_AN_SLOT_MEDIA: Readonly<Record<string, readonly string[]>> = Object.f
  * and local. The slot keys come from the template's own editor manifest
  * rather than being hand-listed, so they cannot drift from it.
  */
-function toHongAnSource(base: BuildSnapshotPayloadInput): BuildSnapshotPayloadInput {
+function toHongAnSource(
+  base: BuildSnapshotPayloadInput,
+  invitationMessage: string | null,
+): BuildSnapshotPayloadInput {
   const { compatibility, design } = HONG_AN_V1_MANIFEST;
   const declared = HONG_AN_V1_EDITOR_MANIFEST.mediaSlots;
   const shifted = shiftEventsIntoTheFuture(base);
   const details = shifted.weddingDetails;
   const input: BuildSnapshotPayloadInput =
-    details === null
-      ? shifted
-      : { ...shifted, weddingDetails: { ...details, invitationMessage: DEMO_INVITATION_MESSAGE } };
+    details === null ? shifted : { ...shifted, weddingDetails: { ...details, invitationMessage } };
   return {
     ...input,
     design: {
@@ -212,16 +213,24 @@ function shiftEventsIntoTheFuture(input: BuildSnapshotPayloadInput): BuildSnapsh
 }
 
 /**
- * HA-FIX-02 — the demo invitation wording.
+ * HA-FIX-04 — what each scenario's Project has configured as its
+ * invitation wording.
  *
- * The shared fixture's message opens "Trân trọng kính mời …", which now
- * repeats the section's own eyebrow. This replaces it for the preview
- * only: it is demo content standing in for a customer's own wording, and
- * a real Project's `invitationMessage` is never rewritten by the renderer
- * or by anything else.
+ * `null` means the Project configured none, which is the canonical empty
+ * case: the renderer then shows Hồng Ân's own template sentence. A string
+ * is customer-authored content and must come back out of the renderer
+ * byte for byte.
+ *
+ * The shared fixture's own message opens "Trân trọng kính mời …", which
+ * would now repeat the section's own heading, so the preview overrides it
+ * rather than leaving a demo that reads badly. Nothing here touches a
+ * real Project: this is fixture input to the same canonical pipeline.
  */
-const DEMO_INVITATION_MESSAGE =
-  "Sự hiện diện của quý vị là niềm vui và phúc lành đối với hai gia đình.";
+const CUSTOM_INVITATION_MESSAGE = [
+  "Chúng con là Minh Khôi và Ngọc Hân,",
+  "kính mời quý vị đến hiệp dâng Thánh Lễ Hôn Phối",
+  "và chung chia niềm vui cùng hai họ.",
+].join("\n");
 
 /** Production manifests plus Hồng Ân — preview only; the production registry is untouched. */
 const PREVIEW_REGISTRY = createProductionCompatibilityRegistry([
@@ -234,6 +243,12 @@ interface PreviewScenarioDefinition {
   readonly source: RendererFixtureSourceOptions;
   readonly guest?: GuestOverlay;
   readonly unavailableMediaIds?: readonly string[];
+  /**
+   * What this scenario's Project configured as its invitation message.
+   * Omitted means `null` — no configured wording, so the renderer uses
+   * its own template sentence.
+   */
+  readonly invitationMessage?: string;
 }
 
 /**
@@ -306,6 +321,12 @@ export const HONG_AN_PREVIEW_SCENARIOS = Object.freeze({
     label: "Không có ngày âm lịch",
     source: { variant: "COMMON", ...SLOT_MEDIA_PRESENT, ceremonyLunar: "ABSENT" },
   },
+  "invitation-custom": {
+    label: "Lời mời do khách tự soạn",
+    source: { variant: "COMMON", ...SLOT_MEDIA_PRESENT },
+    guest: FIXTURE_GUESTS.NORMAL,
+    invitationMessage: CUSTOM_INVITATION_MESSAGE,
+  },
   "no-timeline": {
     label: "Không có lịch trình",
     source: { variant: "COMMON", ...SLOT_MEDIA_PRESENT, timeline: "ABSENT" },
@@ -332,7 +353,10 @@ export interface HongAnPreviewData {
 
 export async function buildHongAnPreviewData(id: HongAnPreviewScenarioId): Promise<HongAnPreviewData> {
   const scenario: PreviewScenarioDefinition = HONG_AN_PREVIEW_SCENARIOS[id];
-  const source = toHongAnSource(buildRendererFixtureSourceInput(scenario.source));
+  const source = toHongAnSource(
+    buildRendererFixtureSourceInput(scenario.source),
+    scenario.invitationMessage ?? null,
+  );
   const fixture = await runRendererFixturePipeline(source, {
     resolver: createHongAnPreviewResolver(scenario.unavailableMediaIds),
     registry: PREVIEW_REGISTRY,

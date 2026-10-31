@@ -1,21 +1,36 @@
 import { HONG_AN_V1_COPY } from "../copy";
 import styles from "../hong-an-v1.module.css";
-import { SectionHeading } from "./arch";
 
 const COPY = HONG_AN_V1_COPY.invitation;
 
 /**
- * Section 04 — "Hân Hoan Báo Tin" (HA-TEMPLATE-01).
+ * Section 04 — the invitation itself (HA-TEMPLATE-01; composition
+ * corrected in HA-FIX-04).
  *
- * The Project's own invitation wording, centred inside the template's arch.
- * The customer's text always wins; the template's wording appears only when
- * the Project has none, and is never mixed with it.
+ * Four lines that read as ONE ceremonial sentence:
  *
- * GUEST PERSONALIZATION. The guest line is the authorized overlay's
- * free-form `display_name`, printed exactly as given (CLAUDE.md §10): no
- * honorific is added, no name is parsed or title-cased, and nothing here is
- * identity or authorization. With no overlay the line is simply absent —
- * never "Quý khách", never a placeholder.
+ *   TRONG HỒNG ÂN THIÊN CHÚA   the small Catholic kicker
+ *   Trân Trọng Kính Mời        the dominant heading
+ *   Anh Tuấn và gia đình       the authorized guest overlay
+ *   đến hiệp lời cầu nguyện…   the configurable body
+ *
+ * There is no card, no arch and no stack of dividers: a single gold
+ * cross sits above the kicker and nothing else decorates the block.
+ *
+ * THE BODY IS THE PROJECT'S. It comes from the canonical
+ * `content.invitationMessage`, through the Snapshot and the ViewModel,
+ * and is rendered exactly as authored — never trimmed of meaning, never
+ * merged with the template's wording, never rewritten. The template's
+ * own sentence appears only when a Project has configured none, which is
+ * the contract's own empty case. Multi-line wording is preserved: the
+ * stylesheet keeps the author's own line breaks.
+ *
+ * GUEST PERSONALIZATION STAYS SEPARATE from the message. The guest line
+ * is the authorized overlay's free-form `display_name`, printed exactly
+ * as given (CLAUDE.md §10): no honorific is added, no name is parsed or
+ * title-cased, and nothing here is identity or authorization. With no
+ * overlay the line is simply absent — never "Quý khách", never a
+ * placeholder — and the remaining three lines still read as a sentence.
  */
 export function Invitation({
   message,
@@ -24,37 +39,27 @@ export function Invitation({
   readonly message: string | null;
   readonly guestDisplayName: string | undefined;
 }) {
+  // A configured message wins outright. The template's sentence is used
+  // only for the contract's empty case, never to "complete" a short one.
   const body = message === null || message.trim() === "" ? COPY.fallbackMessage : message;
 
   return (
-    <section className={styles.section} aria-labelledby="ha-invitation-heading" data-reveal="rise">
-      {/*
-        The invitation phrase is issued once, here, as the eyebrow. The
-        guest line below it is then simply the guest's name, and the
-        sentence under that carries the warmth instead of repeating the
-        phrase a second and third time (Product Owner, HA-FIX-02).
-      */}
-      <SectionHeading id="ha-invitation-heading" eyebrow={COPY.eyebrow}>
-        {COPY.heading}
-      </SectionHeading>
+    <section className={styles.sectionInvitation} aria-labelledby="ha-invitation-heading">
+      <div className={styles.invitationBlock} data-reveal="rise">
+        {/* The one decorative accent this section is allowed. */}
+        <span className={styles.cross} aria-hidden="true" />
 
-      {/*
-        No plate here. The protruding arch read as an arbitrary bubble
-        rather than architecture, so the wording now sits in open air
-        between two gold hairlines, over a soft ivory wash that fades out
-        at its own edges — the same device the opening cover uses for its
-        copy, and the quietest thing this template can do at its most
-        ceremonial moment.
-      */}
-      <div className={styles.invitationBlock}>
+        <p className={styles.invitationKicker}>{COPY.kicker}</p>
+
+        <h2 className={styles.invitationHeading} id="ha-invitation-heading">
+          {COPY.heading}
+        </h2>
+
         {guestDisplayName === undefined ? null : (
-          <p className={styles.guestLine}>
-            <span className={styles.guestName}>{guestDisplayName}</span>
-          </p>
+          <p className={styles.guestName}>{guestDisplayName}</p>
         )}
-        <span className={styles.invitationRule} aria-hidden="true" />
+
         <p className={styles.invitationMessage}>{body}</p>
-        <span className={styles.invitationRule} aria-hidden="true" />
       </div>
     </section>
   );

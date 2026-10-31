@@ -565,6 +565,7 @@
 .section,
 .sectionSacred,
 .sectionWarm,
+.sectionInvitation,
 .scripture,
 .closing {
   position: relative;
@@ -577,6 +578,7 @@
 .section > *,
 .sectionSacred > *,
 .sectionWarm > *,
+.sectionInvitation > *,
 .scripture > *,
 .closing > * {
   max-width: var(--column);
@@ -624,13 +626,18 @@
   background: linear-gradient(90deg, transparent, var(--gold), transparent);
 }
 
+/*
+ * The small ceremonial headings read as part of the rite, so they are
+ * sized and weighted to be read rather than merely sensed — still clearly
+ * subordinate to the serif title beneath them (HA-FIX-04).
+ */
 .sectionEyebrow {
   margin: 8px 0 0;
-  font-size: clamp(9.5px, 2.8vw, 11px);
-  font-weight: 500;
-  letter-spacing: 0.26em;
+  font-size: clamp(11.5px, 3.3vw, 13px);
+  font-weight: 600;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: var(--gold);
 }
 
 .sectionHeading {
@@ -758,25 +765,54 @@
 /* ---- 04 · invitation message ---- */
 
 /*
- * "Hân Hoan Báo Tin" — a text block, not a card.
+ * The invitation — one ceremonial sentence over four lines, with a single
+ * gold cross above it and no other ornament (HA-FIX-04).
  *
- * The earlier pointed-arch plate protruded above the copy and read as a
- * UI bubble rather than part of the architecture. The wording now sits in
- * open air between two gold hairlines, over a feathered ivory wash that
- * has no edge of its own, which is the same readability device the
- * approved opening cover uses.
+ * No card, no arch and no stack of dividers: the type carries the
+ * section, over a feathered ivory wash with no edge of its own, which is
+ * the same readability device the approved opening cover uses.
  */
+.sectionInvitation {
+  background: linear-gradient(180deg, var(--ivory) 0%, #fffdf8 55%, var(--ivory) 100%);
+}
+
 .invitationBlock {
   position: relative;
-  padding: clamp(13px, 3.4vw, 18px) clamp(10px, 3vw, 18px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(10px, 2.6vw, 14px) clamp(10px, 3vw, 18px);
   text-align: center;
+}
+
+/* Small Catholic kicker: present and legible, never competing with the heading. */
+.invitationKicker {
+  margin: clamp(10px, 2.8vw, 14px) 0 0;
+  font-family: var(--ha-sans), system-ui, sans-serif;
+  font-size: clamp(12.5px, 3.6vw, 15px);
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-wrap: balance;
+}
+
+.invitationHeading {
+  margin: clamp(9px, 2.4vw, 12px) 0 0;
+  font-family: var(--ha-display), Georgia, serif;
+  font-style: italic;
+  font-size: clamp(27px, 7.8vw, 34px);
+  font-weight: 500;
+  line-height: 1.16;
+  color: var(--ink);
+  text-wrap: balance;
 }
 
 .invitationBlock::before {
   content: "";
   position: absolute;
   z-index: -1;
-  inset: 0 clamp(-22px, -6vw, -10px);
+  inset: -6% clamp(-22px, -6vw, -10px);
   pointer-events: none;
   background: radial-gradient(
     ellipse 62% 58% at 50% 50%,
@@ -786,57 +822,33 @@
   );
 }
 
-.invitationRule {
-  display: block;
-  width: clamp(54px, 17vw, 78px);
-  height: 1px;
-  margin: clamp(11px, 2.8vw, 14px) auto;
-  background: linear-gradient(90deg, transparent, var(--gold), transparent);
-}
-
-/* A small cross centred on the upper hairline, so the block still reads sacred. */
-.invitationRule:first-of-type::after {
-  content: "";
-  display: block;
-  position: relative;
-  top: -4px;
-  left: 50%;
-  width: 1px;
-  height: 9px;
-  transform: translateX(-50%);
-  background: var(--gold-hairline);
-}
-
-.guestLine {
-  margin: 0 0 clamp(16px, 4vw, 22px);
-}
-
-.guestLabel {
-  display: block;
-  font-size: clamp(9.5px, 2.8vw, 11px);
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-}
-
+/* The guest line: distinguished from the message, quieter than the heading. */
 .guestName {
-  display: block;
-  margin-top: 7px;
-  text-wrap: balance;
+  margin: clamp(13px, 3.4vw, 17px) 0 0;
   font-family: var(--ha-display), Georgia, serif;
-  font-size: clamp(20px, 6vw, 25px);
+  font-size: clamp(20px, 5.8vw, 24px);
   font-style: italic;
+  line-height: 1.3;
   color: var(--ink);
+  text-wrap: balance;
   /* A free-form guest line may be long; it wraps rather than overflowing. */
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
+/*
+ * The configurable body. `pre-line` keeps a customer's own line breaks
+ * and `pretty` balances the rest, so multi-line Vietnamese wording
+ * renders as authored at every width.
+ */
 .invitationMessage {
-  margin: 0;
-  font-size: clamp(14px, 3.9vw, 16px);
-  line-height: 1.85;
+  max-width: 30em;
+  margin: clamp(11px, 3vw, 15px) 0 0;
+  font-size: clamp(15px, 4.1vw, 17px);
+  line-height: 1.72;
   color: var(--ink-soft);
   white-space: pre-line;
+  text-wrap: pretty;
+  overflow-wrap: break-word;
 }
 
 /* ---- 05 · families ---- */
@@ -1319,11 +1331,11 @@
 
 .scriptureHeading {
   margin: 13px 0 0;
-  font-size: clamp(9.5px, 2.8vw, 11px);
+  font-size: clamp(11.5px, 3.3vw, 13px);
   font-weight: 600;
-  letter-spacing: 0.3em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: var(--gold);
 }
 
 .scriptureVerse {
@@ -1912,11 +1924,11 @@
 
 .closingHeading {
   margin: 12px 0 0;
-  font-size: clamp(9.5px, 2.8vw, 11px);
+  font-size: clamp(11.5px, 3.3vw, 13px);
   font-weight: 600;
-  letter-spacing: 0.3em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: var(--gold);
 }
 
 .closingMessage {
@@ -2041,6 +2053,7 @@
 .section > *:not(dialog),
 .sectionSacred > *:not(dialog),
 .sectionWarm > *:not(dialog),
+.sectionInvitation > *:not(dialog),
 .scripture > *:not(dialog),
 .closing > *:not(dialog) {
   position: relative;
