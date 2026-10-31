@@ -26,7 +26,7 @@
 
   /* One rhythm for the whole scroll, fluid across the three mobile widths. */
   --gutter: clamp(20px, 6vw, 34px);
-  --section-gap: clamp(56px, 13vw, 92px);
+  --section-gap: clamp(42px, 9.5vw, 66px);
   --column: 560px;
 
   position: relative;
@@ -281,6 +281,8 @@
   flex-direction: column;
   align-items: center;
   margin: 0;
+  /* Already stacked; this only balances a name long enough to wrap itself. */
+  text-wrap: balance;
   font-size: clamp(28px, 8.2cqw, 35px);
   font-weight: 500;
   line-height: 1.08;
@@ -404,14 +406,33 @@
   color: #725337;
 }
 
+/*
+ * The pair folds at the ampersand, never inside a name: each name is an
+ * unbreakable unit, so a long Vietnamese pair becomes three tidy lines
+ * instead of dropping one orphaned syllable. Short pairs still fit on one.
+ */
 .heroNames {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  column-gap: 0.3em;
   margin: 7px 0 0;
   font-family: var(--ha-display), Georgia, serif;
   font-style: italic;
   font-size: clamp(25px, 7cqw, 30px);
   font-weight: 500;
-  line-height: 1.18;
+  line-height: 1.2;
   text-shadow: 0 1px 16px #fffaf2;
+}
+
+.heroName {
+  white-space: nowrap;
+}
+
+.heroAmp {
+  color: #b48b4e;
+  font-size: 0.78em;
 }
 
 .heroDate {
@@ -579,7 +600,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-bottom: clamp(26px, 7vw, 40px);
+  margin-bottom: clamp(18px, 4.6vw, 26px);
 }
 
 /* The template's cross: two hairlines, never an image. */
@@ -602,7 +623,7 @@
 }
 
 .sectionEyebrow {
-  margin: 14px 0 0;
+  margin: 10px 0 0;
   font-size: clamp(9.5px, 2.8vw, 11px);
   font-weight: 500;
   letter-spacing: 0.26em;
@@ -611,7 +632,8 @@
 }
 
 .sectionHeading {
-  margin: 12px 0 0;
+  margin: 7px 0 0;
+  text-wrap: balance;
   font-family: var(--ha-display), Georgia, serif;
   font-size: clamp(27px, 8vw, 36px);
   font-weight: 500;
@@ -626,14 +648,14 @@
 .headingRule {
   width: clamp(72px, 22vw, 110px);
   height: 1px;
-  margin-top: 16px;
+  margin-top: 11px;
   background: linear-gradient(90deg, transparent, var(--gold), transparent);
 }
 
 /* The one card shape: a pointed arch drawn in gold hairline. */
 .archPanel {
   position: relative;
-  padding: clamp(28px, 8vw, 42px) clamp(20px, 6vw, 32px) clamp(24px, 6vw, 34px);
+  padding: clamp(22px, 6vw, 32px) clamp(18px, 5vw, 28px) clamp(20px, 5vw, 28px);
   border-radius: clamp(90px, 28vw, 150px) clamp(90px, 28vw, 150px) 6px 6px;
   background: #fffdf9;
   box-shadow: 0 2px 22px rgba(123, 98, 60, 0.07);
@@ -716,7 +738,7 @@
   display: block;
   width: 1px;
   height: 20px;
-  margin: clamp(22px, 6vw, 32px) auto 0;
+  margin: clamp(16px, 4.2vw, 22px) auto 0;
   background: linear-gradient(180deg, var(--gold), transparent);
 }
 
@@ -733,8 +755,54 @@
 
 /* ---- 04 · invitation message ---- */
 
-.invitationPanel {
-  margin-inline: auto;
+/*
+ * "Hân Hoan Báo Tin" — a text block, not a card.
+ *
+ * The earlier pointed-arch plate protruded above the copy and read as a
+ * UI bubble rather than part of the architecture. The wording now sits in
+ * open air between two gold hairlines, over a feathered ivory wash that
+ * has no edge of its own, which is the same readability device the
+ * approved opening cover uses.
+ */
+.invitationBlock {
+  position: relative;
+  padding: clamp(22px, 5.6vw, 30px) clamp(10px, 3vw, 18px);
+  text-align: center;
+}
+
+.invitationBlock::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0 clamp(-22px, -6vw, -10px);
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 62% 58% at 50% 50%,
+    rgba(255, 253, 247, 0.95) 0%,
+    rgba(255, 252, 244, 0.72) 46%,
+    rgba(255, 251, 241, 0) 86%
+  );
+}
+
+.invitationRule {
+  display: block;
+  width: clamp(54px, 17vw, 78px);
+  height: 1px;
+  margin: clamp(15px, 4vw, 20px) auto;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+/* A small cross centred on the upper hairline, so the block still reads sacred. */
+.invitationRule:first-of-type::after {
+  content: "";
+  display: block;
+  position: relative;
+  top: -4px;
+  left: 50%;
+  width: 1px;
+  height: 9px;
+  transform: translateX(-50%);
+  background: var(--gold-hairline);
 }
 
 .guestLine {
@@ -751,7 +819,8 @@
 
 .guestName {
   display: block;
-  margin-top: 8px;
+  margin-top: 7px;
+  text-wrap: balance;
   font-family: var(--ha-display), Georgia, serif;
   font-size: clamp(20px, 6vw, 25px);
   font-style: italic;
@@ -789,7 +858,7 @@
 
 .house {
   position: relative;
-  padding: clamp(26px, 7vw, 34px) clamp(6px, 2.5vw, 14px) clamp(14px, 4vw, 20px);
+  padding: clamp(22px, 5.6vw, 28px) clamp(6px, 2.5vw, 14px) clamp(10px, 3vw, 14px);
   text-align: center;
 }
 
@@ -822,34 +891,52 @@
   list-style: none;
 }
 
+/*
+ * Honorific above, name below. The honorific can never be stranded on a
+ * line with half a name, and `balance` splits a long name into even lines
+ * rather than leaving its last word alone.
+ */
 .houseParent {
+  margin-bottom: 9px;
   font-family: var(--ha-display), Georgia, serif;
   font-size: clamp(16px, 4.6vw, 20px);
-  line-height: 1.5;
+  line-height: 1.38;
   color: var(--ink);
-  overflow-wrap: anywhere;
+}
+
+.houseParent:last-child {
+  margin-bottom: 0;
+}
+
+.houseParentName {
+  display: block;
+  text-wrap: balance;
+  overflow-wrap: break-word;
 }
 
 .houseHonorific {
+  display: block;
+  margin-bottom: 1px;
   font-family: var(--ha-sans), system-ui, sans-serif;
-  font-size: 0.6em;
-  letter-spacing: 0.1em;
+  font-size: 0.5em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: var(--gold);
 }
 
 .houseAddress {
-  margin: 10px 0 0;
+  margin: 9px 0 0;
   font-size: clamp(11.5px, 3.2vw, 13px);
-  line-height: 1.65;
+  line-height: 1.6;
   color: var(--ink-soft);
+  text-wrap: pretty;
 }
 
 /* ---- 06 / 07 · ceremony and reception ---- */
 
 .eventCards {
   display: grid;
-  gap: clamp(18px, 5vw, 26px);
+  gap: clamp(13px, 3.4vw, 18px);
 }
 
 .eventCards[data-count="2"] {
@@ -870,7 +957,7 @@
 }
 
 .eventWeekday {
-  margin: clamp(14px, 4vw, 20px) 0 0;
+  margin: clamp(10px, 2.8vw, 14px) 0 0;
   font-size: clamp(10px, 2.9vw, 11.5px);
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -908,7 +995,7 @@
   display: block;
   width: clamp(48px, 16vw, 70px);
   height: 1px;
-  margin: clamp(16px, 4.5vw, 22px) auto;
+  margin: clamp(12px, 3.2vw, 16px) auto;
   background: linear-gradient(90deg, transparent, var(--gold), transparent);
 }
 
@@ -916,17 +1003,19 @@
   margin: 0;
   font-family: var(--ha-display), Georgia, serif;
   font-size: clamp(17px, 4.8vw, 21px);
-  line-height: 1.45;
+  line-height: 1.4;
   color: var(--ink);
-  overflow-wrap: anywhere;
+  text-wrap: balance;
+  overflow-wrap: break-word;
 }
 
 .eventAddress {
-  margin: 8px 0 0;
+  margin: 7px 0 0;
   font-size: clamp(12px, 3.4vw, 13.5px);
-  line-height: 1.7;
+  line-height: 1.62;
   color: var(--ink-soft);
-  overflow-wrap: anywhere;
+  text-wrap: pretty;
+  overflow-wrap: break-word;
 }
 
 .eventMap {
@@ -934,7 +1023,7 @@
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  margin-top: clamp(14px, 4vw, 20px);
+  margin-top: clamp(11px, 3vw, 15px);
   padding: 0 22px;
   border: 1px solid var(--gold-hairline);
   border-radius: 999px;
@@ -955,7 +1044,7 @@
   display: block;
   width: clamp(44px, 13vw, 58px);
   height: 1px;
-  margin: 0 auto clamp(22px, 6vw, 30px);
+  margin: 0 auto clamp(15px, 4vw, 20px);
   background: linear-gradient(90deg, transparent, var(--gold), transparent);
   position: relative;
 }
@@ -976,7 +1065,7 @@
 
 .storyFigure {
   position: relative;
-  margin: 0 auto clamp(26px, 7vw, 36px);
+  margin: 0 auto clamp(18px, 4.6vw, 26px);
   width: min(100%, 300px);
 }
 
@@ -1203,7 +1292,7 @@
 .scripture {
   background: linear-gradient(180deg, #fffdf8 0%, #fbf6ec 100%);
   text-align: center;
-  padding-block: clamp(72px, 18vw, 120px);
+  padding-block: clamp(54px, 12vw, 82px);
 }
 
 .scriptureCross {
@@ -1227,7 +1316,7 @@
 }
 
 .scriptureHeading {
-  margin: 18px 0 0;
+  margin: 13px 0 0;
   font-size: clamp(9.5px, 2.8vw, 11px);
   font-weight: 600;
   letter-spacing: 0.3em;
@@ -1236,7 +1325,7 @@
 }
 
 .scriptureVerse {
-  margin: clamp(22px, 6vw, 32px) auto 0;
+  margin: clamp(16px, 4.4vw, 23px) auto 0;
   max-width: 24em;
 }
 
@@ -1251,7 +1340,7 @@
 
 .scriptureRef {
   display: block;
-  margin-top: clamp(16px, 4.5vw, 22px);
+  margin-top: clamp(12px, 3.2vw, 16px);
   font-family: var(--ha-sans), system-ui, sans-serif;
   font-size: clamp(10.5px, 3vw, 12px);
   font-style: normal;
@@ -1262,7 +1351,7 @@
 /* ---- 12 · RSVP ---- */
 
 .rsvpIntro {
-  margin: 0 0 clamp(20px, 5.5vw, 28px);
+  margin: 0 0 clamp(15px, 4vw, 20px);
   text-align: center;
   font-size: clamp(13px, 3.7vw, 14.5px);
   line-height: 1.75;
@@ -1414,7 +1503,7 @@
 /* ---- 13 · gift ---- */
 
 .giftIntro {
-  margin: 0 0 clamp(22px, 6vw, 30px);
+  margin: 0 0 clamp(15px, 4vw, 20px);
   text-align: center;
   font-size: clamp(13px, 3.7vw, 14.5px);
   line-height: 1.75;
@@ -1423,7 +1512,7 @@
 
 .giftPanels {
   display: grid;
-  gap: clamp(18px, 5vw, 26px);
+  gap: clamp(14px, 3.6vw, 20px);
 }
 
 .giftPanel {
@@ -1618,12 +1707,12 @@
 .closing {
   background: linear-gradient(180deg, var(--ivory) 0%, var(--cream) 55%, var(--stone) 100%);
   text-align: center;
-  padding-block: clamp(64px, 16vw, 104px) clamp(72px, 18vw, 110px);
+  padding-block: clamp(48px, 11vw, 74px) clamp(56px, 13vw, 84px);
 }
 
 .closingFigure {
   position: relative;
-  margin: 0 auto clamp(28px, 7vw, 38px);
+  margin: 0 auto clamp(20px, 5vw, 27px);
   width: min(100%, 260px);
 }
 
@@ -1666,7 +1755,7 @@
 }
 
 .closingHeading {
-  margin: 16px 0 0;
+  margin: 12px 0 0;
   font-size: clamp(9.5px, 2.8vw, 11px);
   font-weight: 600;
   letter-spacing: 0.3em;
@@ -1675,7 +1764,7 @@
 }
 
 .closingMessage {
-  margin: clamp(18px, 5vw, 24px) auto 0;
+  margin: clamp(14px, 3.8vw, 19px) auto 0;
   max-width: 26em;
   font-size: clamp(13.5px, 3.8vw, 15px);
   line-height: 1.85;
@@ -1683,17 +1772,27 @@
 }
 
 .closingNames {
-  margin: clamp(26px, 7vw, 36px) 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  column-gap: 0.3em;
+  margin: clamp(19px, 5vw, 26px) 0 0;
   font-family: var(--ha-display), Georgia, serif;
   font-style: italic;
   font-size: clamp(26px, 7.6vw, 34px);
   font-weight: 500;
-  line-height: 1.3;
+  line-height: 1.26;
   color: var(--ink);
+}
+
+.closingName {
+  white-space: nowrap;
 }
 
 .closingAmp {
   color: var(--gold);
+  font-size: 0.78em;
 }
 
 /* A lily, drawn as three hairline petals rather than an image. */
@@ -1702,7 +1801,7 @@
   position: relative;
   width: 34px;
   height: 18px;
-  margin: clamp(24px, 6vw, 32px) auto 0;
+  margin: clamp(17px, 4.4vw, 22px) auto 0;
 }
 
 .closingLily::before,
@@ -1724,6 +1823,114 @@
 .closingLily::after {
   right: 0;
   transform: rotate(12deg) scaleX(-1);
+}
+
+/* ============================================ sacred decorative atmosphere */
+
+/*
+ * The architecture, continued as atmosphere.
+ *
+ * Two inline-SVG motifs — a pointed-arch lattice with a quatrefoil, and a
+ * plain cross — both drawn from the shapes the approved artwork already
+ * uses, so the interior reads as the same building rather than as a
+ * decorated page. No new image file: they are vectors in this stylesheet.
+ *
+ * They are kept at 3–6% opacity and are purely behind the type. Every one
+ * is `aria-hidden` by construction (a pseudo-element), none intercepts a
+ * tap, and none is ever placed where a photograph, a form control or a
+ * body paragraph has to be read across it.
+ */
+.page {
+  --tracery: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='168' viewBox='0 0 120 168'%3E%3Cg fill='none' stroke='%23c9a96b' stroke-width='1.6' opacity='0.9'%3E%3Cpath d='M0 168 V96 Q0 48 30 20 Q60 48 60 96 V168'/%3E%3Cpath d='M60 168 V96 Q60 48 90 20 Q120 48 120 96 V168'/%3E%3Ccircle cx='60' cy='14' r='11'/%3E%3Cpath d='M54 14 q0 -6 6 -6 q6 0 6 6 q0 6 -6 6 q-6 0 -6 -6 Z'/%3E%3C/g%3E%3C/svg%3E");
+  --cross-motif: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='88' viewBox='0 0 64 88'%3E%3Cg fill='none' stroke='%23c9a96b' stroke-width='1.6' opacity='0.9'%3E%3Cpath d='M32 18 V70 M18 32 H46'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/*
+ * A faint lattice rising from the foot of each ivory section, fading out
+ * well before the text. `::after` so it cannot disturb a section that
+ * already uses `::before` for its own wash.
+ */
+.section::after,
+.sectionSacred::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: auto 0 0;
+  height: clamp(104px, 28vw, 168px);
+  pointer-events: none;
+  background-image: var(--tracery);
+  background-size: clamp(100px, 27vw, 128px) auto;
+  background-position: center bottom;
+  background-repeat: repeat-x;
+  opacity: 0.13;
+  mask-image: linear-gradient(180deg, transparent, #000 85%);
+}
+
+/* Everything the reader actually reads sits above the atmosphere. */
+.section > *,
+.sectionSacred > *,
+.sectionWarm > *,
+.scripture > *,
+.closing > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* The warm sections get a gentler wash instead of the lattice. */
+.sectionWarm::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 80% 46% at 50% 0%, rgba(201, 169, 107, 0.07), transparent 70%);
+}
+
+/*
+ * The Scripture is the one quiet pause in the scroll, so it carries a
+ * single large cross behind the verse rather than a lattice.
+ */
+.scripture::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--cross-motif);
+  background-size: auto clamp(180px, 46vw, 260px);
+  /* Low enough that its upright does not run through the verse lines. */
+  background-position: center 72%;
+  background-repeat: no-repeat;
+  opacity: 0.09;
+}
+
+/* A soft gold light at the head of every sacred field, as if from a window. */
+.sectionSacred::before,
+.scripture::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0 0 auto;
+  height: clamp(120px, 30vw, 190px);
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 100% at 50% 0%, rgba(201, 169, 107, 0.1), transparent 72%);
+}
+
+/* The closing keeps its stone gradient and takes only the lattice, inverted. */
+.closing::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0 0 auto;
+  height: clamp(80px, 22vw, 130px);
+  pointer-events: none;
+  background-image: var(--tracery);
+  background-size: clamp(100px, 27vw, 128px) auto;
+  background-position: center top;
+  background-repeat: repeat-x;
+  opacity: 0.1;
+  transform: scaleY(-1);
+  mask-image: linear-gradient(180deg, transparent, #000 85%);
 }
 
 /* ================================================ interior motion (reveal) */
@@ -1788,7 +1995,7 @@
 @media (min-width: 760px) {
   .page {
     --column: 620px;
-    --section-gap: clamp(88px, 7vw, 120px);
+    --section-gap: clamp(64px, 5.2vw, 88px);
   }
 
   .stage {

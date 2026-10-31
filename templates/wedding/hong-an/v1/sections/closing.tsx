@@ -48,8 +48,13 @@ export function Closing({
         {COPY.heading}
       </h2>
       <p className={styles.closingMessage}>{COPY.message}</p>
+      {/* Breaks at the ampersand, never inside a name. */}
       <p className={styles.closingNames}>
-        {primaryName} <span className={styles.closingAmp} aria-hidden="true">&amp;</span> {secondaryName}
+        <span className={styles.closingName}>{primaryName}</span>
+        <span className={styles.closingAmp} aria-hidden="true">
+          &amp;
+        </span>
+        <span className={styles.closingName}>{secondaryName}</span>
       </p>
       <span className={styles.closingLily} aria-hidden="true" />
     </section>

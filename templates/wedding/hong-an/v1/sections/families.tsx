@@ -45,14 +45,21 @@ function House({
       <span className={styles.houseArch} aria-hidden="true" />
       <p className={styles.houseLabel}>{label}</p>
       <ul className={styles.houseParents}>
+        {/*
+          The honorific sits on its own line so it never shares a line
+          break with the name, and the name itself is balanced, so a long
+          one splits into even lines rather than orphaning its last word.
+        */}
         {father === undefined ? null : (
           <li className={styles.houseParent}>
-            <span className={styles.houseHonorific}>{COPY.father}</span> {father}
+            <span className={styles.houseHonorific}>{COPY.father}</span>
+            <span className={styles.houseParentName}>{father}</span>
           </li>
         )}
         {mother === undefined ? null : (
           <li className={styles.houseParent}>
-            <span className={styles.houseHonorific}>{COPY.mother}</span> {mother}
+            <span className={styles.houseHonorific}>{COPY.mother}</span>
+            <span className={styles.houseParentName}>{mother}</span>
           </li>
         )}
       </ul>

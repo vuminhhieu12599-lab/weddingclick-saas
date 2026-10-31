@@ -1,6 +1,6 @@
 import { HONG_AN_V1_COPY } from "../copy";
 import styles from "../hong-an-v1.module.css";
-import { ArchPanel, SectionHeading } from "./arch";
+import { SectionHeading } from "./arch";
 
 const COPY = HONG_AN_V1_COPY.invitation;
 
@@ -30,15 +30,25 @@ export function Invitation({
     <section className={styles.section} aria-labelledby="ha-invitation-heading" data-reveal="rise">
       <SectionHeading id="ha-invitation-heading">{COPY.heading}</SectionHeading>
 
-      <ArchPanel className={styles.invitationPanel}>
+      {/*
+        No plate here. The protruding arch read as an arbitrary bubble
+        rather than architecture, so the wording now sits in open air
+        between two gold hairlines, over a soft ivory wash that fades out
+        at its own edges — the same device the opening cover uses for its
+        copy, and the quietest thing this template can do at its most
+        ceremonial moment.
+      */}
+      <div className={styles.invitationBlock}>
         {guestDisplayName === undefined ? null : (
           <p className={styles.guestLine}>
             <span className={styles.guestLabel}>{COPY.guestLabel}</span>
             <span className={styles.guestName}>{guestDisplayName}</span>
           </p>
         )}
+        <span className={styles.invitationRule} aria-hidden="true" />
         <p className={styles.invitationMessage}>{body}</p>
-      </ArchPanel>
+        <span className={styles.invitationRule} aria-hidden="true" />
+      </div>
     </section>
   );
 }

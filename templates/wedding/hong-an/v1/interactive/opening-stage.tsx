@@ -238,8 +238,18 @@ export function OpeningStage({
         >
           <div className={styles.heroTop}>
             <p className={styles.heroEyebrow}>{eyebrow}</p>
+            {/*
+              Each name is one unbreakable unit with the ampersand between
+              them, so a long Vietnamese pair folds to "Name / & / Name"
+              instead of dropping a single orphaned syllable onto its own
+              line. Short names still sit on one line.
+            */}
             <h1 className={styles.heroNames}>
-              {primaryName} &amp; {secondaryName}
+              <span className={styles.heroName}>{primaryName}</span>
+              <span className={styles.heroAmp} aria-hidden="true">
+                &amp;
+              </span>
+              <span className={styles.heroName}>{secondaryName}</span>
             </h1>
             <p className={styles.heroDate}>
               <time dateTime={dateTime}>{dateLine}</time>
