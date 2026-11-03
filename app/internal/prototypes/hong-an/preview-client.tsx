@@ -1,19 +1,19 @@
 "use client";
 
-import { useInvitationRendererCapabilities } from "../../../../templates/core/client/runtime-capabilities";
 import type { InvitationViewModel } from "../../../../lib/invitation-rendering/invitation-view-model-types";
 import type { RendererEffectiveSections } from "../../../../lib/invitation-rendering/renderer-selection";
 import type { RsvpCapabilityV1, RsvpSubmitResultV1 } from "../../../../lib/invitation-rendering/rsvp-capability";
-import { HongAnV1 } from "../../../../templates/wedding/hong-an/v1/hong-an-v1";
+import { InvitationRendererHostCore } from "../../../../templates/core/client/invitation-renderer-host-core";
 
 /**
  * HA-TEMPLATE-01 — the Hồng Ân preview's one client entry.
  *
- * It receives only serializable render data, builds the real browser
- * capabilities with the SAME shared hook the production host uses
- * (clipboard, music, clock, download), and renders the renderer with
- * exactly the frozen RF-05 K6 props. Nothing production-authoritative
- * imports this file.
+ * It receives only serializable render data and renders through the SAME
+ * host core the public, Staff-preview and showroom wrappers use
+ * (HA-INTEGRATION-01): the renderer is resolved from the production
+ * binding registry by its key and loaded lazily, and the host builds the
+ * real browser capabilities (clipboard, music, clock, download). Nothing
+ * production-authoritative imports this file.
  *
  * RSVP IS HONESTLY UNAVAILABLE HERE. The preview supplies the same
  * `UNAVAILABLE`-only capability the internal harness does: the card is
@@ -31,12 +31,20 @@ const PREVIEW_RSVP_UNAVAILABLE: RsvpCapabilityV1 = Object.freeze({
 });
 
 export function HongAnPreviewClient({
+  rendererKey,
   viewModel,
   sections,
 }: {
+  readonly rendererKey: string;
   readonly viewModel: InvitationViewModel;
   readonly sections: RendererEffectiveSections;
 }) {
-  const capabilities = useInvitationRendererCapabilities(viewModel, sections, PREVIEW_RSVP_UNAVAILABLE);
-  return <HongAnV1 viewModel={viewModel} sections={sections} capabilities={capabilities} />;
+  return (
+    <InvitationRendererHostCore
+      rendererKey={rendererKey}
+      viewModel={viewModel}
+      sections={sections}
+      rsvp={PREVIEW_RSVP_UNAVAILABLE}
+    />
+  );
 }

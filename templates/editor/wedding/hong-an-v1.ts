@@ -97,7 +97,9 @@ export const HONG_AN_V1_EDITOR_MANIFEST: TemplateEditorManifestV1 = {
       recommendedCount: 1,
       maxCount: 1,
       orientation: "PORTRAIT",
-      aspectRatioHint: "9:19.5",
+      // HA-INTEGRATION-01: the full-screen phone frame (9:19.5) as the
+      // equal whole-number ratio the shared "W:H" contract requires.
+      aspectRatioHint: "6:13",
       sectionKey: null,
     },
     {

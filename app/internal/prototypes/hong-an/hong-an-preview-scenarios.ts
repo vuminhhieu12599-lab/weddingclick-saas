@@ -9,10 +9,7 @@ import type {
   BuildSnapshotPayloadInput,
   SnapshotDesignSettingValue,
 } from "../../../../lib/invitation-rendering/snapshot-payload-types";
-import {
-  PRODUCTION_RENDERER_MANIFESTS,
-  createProductionCompatibilityRegistry,
-} from "../../../../templates/core/production-renderer-manifests";
+import { PRODUCTION_COMPATIBILITY_REGISTRY } from "../../../../templates/core/production-renderer-manifests";
 import { runRendererFixturePipeline } from "../../../../templates/core/fixtures/renderer-fixture-pipeline";
 import {
   FIXTURE_EVENT_IDS,
@@ -21,7 +18,6 @@ import {
   buildRendererFixtureSourceInput,
   type RendererFixtureSourceOptions,
 } from "../../../../templates/core/fixtures/renderer-fixture-sources";
-import { HONG_AN_V1_EDITOR_MANIFEST } from "../../../../templates/editor/wedding/hong-an-v1";
 import { HONG_AN_V1_MANIFEST } from "../../../../templates/wedding/hong-an/v1/manifest";
 
 /**
@@ -117,19 +113,27 @@ const HONG_AN_GALLERY_IDS: readonly string[] = Object.freeze([
 /**
  * Hồng Ân's four slots, each filled from a fixture id of a slot-assignable
  * media type. Fictional fixture ids only.
+ *
+ * HA-INTEGRATION-01: the slot keys are listed here rather than read from the
+ * editor manifest, because no invitation-facing module may import editor
+ * manifest values (the TE-02 static boundary). They cannot drift
+ * silently: the Snapshot builder rejects a slot the editor manifest does
+ * not declare, and the catalog seed test pins the four frozen keys.
  */
+const HONG_AN_GALLERY_SLOT_KEY = "gallery";
+
 const HONG_AN_SLOT_MEDIA: Readonly<Record<string, readonly string[]>> = Object.freeze({
   openingPhoto: [FIXTURE_MEDIA_IDS.COVER],
   storyPhoto: [FIXTURE_MEDIA_IDS.LOVE_STORY_PHOTO],
-  gallery: HONG_AN_GALLERY_IDS,
+  [HONG_AN_GALLERY_SLOT_KEY]: HONG_AN_GALLERY_IDS,
   closingPhoto: [FIXTURE_MEDIA_IDS.PORTRAIT_GROOM],
 });
 
 /**
  * Re-points a built fixture input at `wedding.hong-an.v1`: the design keys
  * its own manifest declares and the TEMPLATE_SLOTS assignments above. Pure
- * and local. The slot keys come from the template's own editor manifest
- * rather than being hand-listed, so they cannot drift from it.
+ * and local. Every one of the four slots is assigned (see
+ * `HONG_AN_SLOT_MEDIA` for why the keys are listed there).
  */
 function toHongAnSource(
   base: BuildSnapshotPayloadInput,
@@ -137,7 +141,6 @@ function toHongAnSource(
   eventOverrides: PreviewEventOverrides = {},
 ): BuildSnapshotPayloadInput {
   const { compatibility, design } = HONG_AN_V1_MANIFEST;
-  const declared = HONG_AN_V1_EDITOR_MANIFEST.mediaSlots;
   const shifted = shiftEventsIntoTheFuture(withEventOverrides(base, eventOverrides));
   const details = shifted.weddingDetails;
   const input: BuildSnapshotPayloadInput =
@@ -152,9 +155,8 @@ function toHongAnSource(
     },
     templateVersion: { ...input.templateVersion, rendererKey: compatibility.rendererKey },
     templateMedia: {
-      // Every declared slot, so an unfilled one is `[]` rather than missing.
-      slots: Object.fromEntries(declared.map((slot) => [slot.key, HONG_AN_SLOT_MEDIA[slot.key] ?? []])),
-      gallerySlotKeys: declared.filter((slot) => slot.sectionKey === "gallery").map((slot) => slot.key),
+      slots: { ...HONG_AN_SLOT_MEDIA },
+      gallerySlotKeys: [HONG_AN_GALLERY_SLOT_KEY],
     },
   };
 }
@@ -273,11 +275,12 @@ const CATHOLIC_MASS_EVENTS: PreviewEventOverrides = Object.freeze({
   },
 });
 
-/** Production manifests plus Hồng Ân — preview only; the production registry is untouched. */
-const PREVIEW_REGISTRY = createProductionCompatibilityRegistry([
-  ...PRODUCTION_RENDERER_MANIFESTS,
-  HONG_AN_V1_MANIFEST,
-]);
+/**
+ * HA-INTEGRATION-01: Hồng Ân is now a registered production renderer, so the
+ * preview runs the fixture through the real production registry rather than
+ * a throwaway one of its own.
+ */
+const PREVIEW_REGISTRY = PRODUCTION_COMPATIBILITY_REGISTRY;
 
 interface PreviewScenarioDefinition {
   readonly label: string;
@@ -396,6 +399,8 @@ export function isHongAnPreviewScenarioId(value: string): value is HongAnPreview
 
 /** Exactly the serializable data the preview client receives. */
 export interface HongAnPreviewData {
+  /** Read from the manifest, never spelled out here; the host resolves it through the binding registry. */
+  readonly rendererKey: string;
   readonly viewModel: InvitationViewModel;
   readonly sections: RendererEffectiveSections;
 }
@@ -412,5 +417,9 @@ export async function buildHongAnPreviewData(id: HongAnPreviewScenarioId): Promi
     registry: PREVIEW_REGISTRY,
     ...(scenario.guest === undefined ? {} : { guest: { displayName: scenario.guest.displayName } }),
   });
-  return { viewModel: fixture.viewModel, sections: fixture.selection.effectiveSections };
+  return {
+    rendererKey: HONG_AN_V1_MANIFEST.compatibility.rendererKey,
+    viewModel: fixture.viewModel,
+    sections: fixture.selection.effectiveSections,
+  };
 }

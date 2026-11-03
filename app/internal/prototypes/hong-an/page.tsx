@@ -54,7 +54,7 @@ export default async function HongAnPreviewPage({
           </Link>
         ))}
       </nav>
-      <HongAnPreviewClient viewModel={data.viewModel} sections={data.sections} />
+      <HongAnPreviewClient rendererKey={data.rendererKey} viewModel={data.viewModel} sections={data.sections} />
     </>
   );
 }
