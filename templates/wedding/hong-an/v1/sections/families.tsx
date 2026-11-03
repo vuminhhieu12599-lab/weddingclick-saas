@@ -76,7 +76,7 @@ export function Families({ families }: { readonly families: { groom: ViewModelFa
   if (groom === null && bride === null) return null;
 
   return (
-    <section className={styles.section} aria-labelledby="ha-families-heading" data-reveal="rise">
+    <section className={`${styles.section} ${styles.sectionLinen}`} aria-labelledby="ha-families-heading" data-reveal="rise">
       <SectionHeading id="ha-families-heading">{COPY.heading}</SectionHeading>
       <div className={styles.houses} data-houses={groom !== null && bride !== null ? "both" : "one"}>
         {groom === null ? null : <House family={families.groom} label={COPY.groom} content={groom} />}

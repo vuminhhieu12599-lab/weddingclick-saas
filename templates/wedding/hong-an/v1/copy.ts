@@ -112,18 +112,18 @@ export const HONG_AN_V1_COPY = {
   },
 
   rsvp: {
-    heading: "Hồi Âm",
+    heading: "Hồi Âm & Lời Chúc",
     intro: "Sự hiện diện của quý vị là món quà quý giá nhất với chúng con.",
     nameLabel: "Tên của bạn",
     namePlaceholder: "Tên hiển thị trong danh sách khách mời",
     attendanceLabel: "Bạn sẽ đến chứ?",
     attendance: {
       ATTENDING: "Sẽ tham dự",
-      MAYBE: "Chưa chắc chắn",
-      NOT_ATTENDING: "Không thể tham dự",
+      MAYBE: "Có thể tham dự",
+      NOT_ATTENDING: "Không tham dự",
     },
     partySizeLabel: "Số người tham dự",
-    messageLabel: "Lời nhắn (không bắt buộc)",
+    messageLabel: "Lời chúc (không bắt buộc)",
     messagePlaceholder: "Gửi đôi lời chúc tới cô dâu chú rể…",
     submit: "Gửi hồi âm",
     submitting: "Đang gửi…",

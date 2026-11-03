@@ -23,7 +23,7 @@ import { SectionHeading } from "../sections/arch";
 const COPY = HONG_AN_V1_COPY.rsvp;
 
 /**
- * Section 12 — "Hồi Âm" (HA-TEMPLATE-01).
+ * Section 12 — "Hồi Âm & Lời Chúc" (HA-TEMPLATE-01; presentation HA-DESIGN-02).
  *
  * Presentation only. Every rule that decides what a valid reply is, what
  * happens to it and what the guest is told lives in the shared
@@ -39,6 +39,11 @@ const COPY = HONG_AN_V1_COPY.rsvp;
  * a double submit impossible. Where the host supplies no RSVP capability
  * the section is not rendered at all, so a card that cannot record a reply
  * is never drawn.
+ *
+ * PRESENTATION (HA-DESIGN-02): an ivory stationery sheet with a pointed
+ * Gothic arch crest and a lily sprig at its foot. Both are aria-hidden
+ * spans with no pointer events; the wedding wish is the existing optional
+ * guest-message field, never a second store or submission.
  *
  * NEUTRAL CONFIRMATION. The success copy is "Cảm ơn bạn đã gửi hồi âm" —
  * a guest who answered "không thể tham dự" must not be thanked for
@@ -82,12 +87,14 @@ export function Rsvp({ rsvp }: { readonly rsvp: RsvpCapabilityV1 }) {
       <section className={styles.sectionSacred} aria-labelledby="ha-rsvp-heading" data-reveal="rise">
         <SectionHeading id="ha-rsvp-heading">{COPY.heading}</SectionHeading>
         <div className={styles.rsvpCard}>
+          <span className={styles.rsvpCrest} aria-hidden="true" />
           <p className={styles.rsvpSuccess} role="status">
             {COPY.success}
           </p>
           <button className={styles.rsvpEdit} type="button" onClick={() => dispatch({ type: "EDIT" })}>
             {COPY.edit}
           </button>
+          <span className={styles.rsvpSprig} aria-hidden="true" />
         </div>
       </section>
     );
@@ -99,6 +106,7 @@ export function Rsvp({ rsvp }: { readonly rsvp: RsvpCapabilityV1 }) {
       <p className={styles.rsvpIntro}>{COPY.intro}</p>
 
       <form className={styles.rsvpCard} onSubmit={submit} noValidate>
+        <span className={styles.rsvpCrest} aria-hidden="true" />
         <label className={styles.rsvpLabel} htmlFor={nameId}>
           {COPY.nameLabel}
         </label>
@@ -155,7 +163,7 @@ export function Rsvp({ rsvp }: { readonly rsvp: RsvpCapabilityV1 }) {
         <textarea
           className={styles.rsvpTextarea}
           id={messageId}
-          rows={3}
+          rows={4}
           value={draft.message}
           maxLength={RSVP_MESSAGE_MAX_LENGTH}
           placeholder={COPY.messagePlaceholder}
@@ -180,6 +188,7 @@ export function Rsvp({ rsvp }: { readonly rsvp: RsvpCapabilityV1 }) {
         <button className={styles.rsvpSubmit} type="submit" disabled={pending}>
           {pending ? COPY.submitting : COPY.submit}
         </button>
+        <span className={styles.rsvpSprig} aria-hidden="true" />
       </form>
     </section>
   );

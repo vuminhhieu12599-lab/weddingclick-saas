@@ -85,6 +85,8 @@ export function Ceremony({
 
   return (
     <section className={styles.sectionSacred} aria-labelledby="ha-ceremony-heading" data-reveal="rise">
+      {/* HA-DESIGN-02: the Gothic portal behind the heading; decorative only. */}
+      <span className={styles.ceremonyArch} aria-hidden="true" />
       <SectionHeading id="ha-ceremony-heading" eyebrow={ceremony.title}>
         {heading}
       </SectionHeading>

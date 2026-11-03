@@ -743,23 +743,15 @@
   color: var(--ink);
 }
 
+/* HA-DESIGN-02: a small Gothic rose window closes the counters. */
 .countdownCross {
   display: block;
-  width: 1px;
-  height: 14px;
-  margin: clamp(10px, 2.6vw, 14px) auto 0;
-  background: linear-gradient(180deg, var(--gold), transparent);
-}
-
-.countdownCross::before {
-  content: "";
-  display: block;
-  position: relative;
-  top: 6px;
-  left: -6px;
-  width: 13px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  width: clamp(38px, 11vw, 46px);
+  aspect-ratio: 1;
+  margin: clamp(12px, 3vw, 16px) auto 0;
+  background: var(--ha-img-rose-window) center / contain no-repeat;
+  opacity: 0.92;
+  pointer-events: none;
 }
 
 /* ---- 04 · invitation message ---- */
@@ -1054,25 +1046,14 @@
 }
 
 /* A restrained celebration mark, so the reception reads differently. */
+/* HA-DESIGN-02: the warm sections speak in lilies and olive, not stone. */
 .chalice {
   display: block;
-  width: clamp(44px, 13vw, 58px);
-  height: 1px;
-  margin: 0 auto clamp(15px, 4vw, 20px);
-  background: linear-gradient(90deg, transparent, var(--gold), transparent);
-  position: relative;
-}
-
-.chalice::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: -7px;
-  width: 13px;
-  height: 13px;
-  transform: translateX(-50%) rotate(45deg);
-  border: 1px solid var(--gold-hairline);
-  border-radius: 2px;
+  width: clamp(210px, 66vw, 290px);
+  aspect-ratio: 600 / 53;
+  margin: 0 auto clamp(14px, 3.8vw, 19px);
+  background: var(--ha-img-lily-divider) center / contain no-repeat;
+  pointer-events: none;
 }
 
 /* ---- 08 · love story ---- */
@@ -1372,23 +1353,58 @@
   color: var(--ink-soft);
 }
 
+/*
+ * HA-DESIGN-02 — "Trang Lời Chúc Phúc": an ivory stationery sheet. A
+ * champagne hairline border with a second, inset gold rule (an inset
+ * shadow, so it never scrolls or intercepts a tap), a pointed Gothic arch
+ * crest rising from the top edge, and a lily sprig at its foot.
+ */
 .rsvpCard {
+  position: relative;
   display: flex;
   flex-direction: column;
-  padding: clamp(22px, 6vw, 32px) clamp(18px, 5vw, 26px);
+  margin-top: 34px;
+  padding: 46px clamp(20px, 5.4vw, 28px) clamp(20px, 5vw, 26px);
   border: 1px solid var(--gold-hairline);
   border-radius: 4px;
-  background: #fffdf9;
+  background:
+    radial-gradient(ellipse 90% 40% at 50% 0%, rgba(199, 163, 106, 0.08), transparent 70%),
+    linear-gradient(180deg, #fffdf8 0%, #fcf7ee 100%);
+  box-shadow:
+    inset 0 0 0 6px rgba(255, 253, 248, 0.6),
+    inset 0 0 0 7px rgba(199, 163, 106, 0.32),
+    0 18px 40px -26px rgba(79, 57, 45, 0.35);
+}
+
+.rsvpCrest {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  width: 80px;
+  height: 64px;
+  transform: translateX(-50%);
+  background: var(--ha-rsvp-crest) center / contain no-repeat;
+  pointer-events: none;
+}
+
+.rsvpSprig {
+  display: block;
+  align-self: center;
+  width: min(78%, 250px);
+  aspect-ratio: 600 / 53;
+  margin-top: clamp(16px, 4.4vw, 20px);
+  background: var(--ha-img-lily-divider) center / contain no-repeat;
+  pointer-events: none;
 }
 
 .rsvpLabel {
   margin: 0 0 8px;
   padding: 0;
   font-size: clamp(10.5px, 3vw, 12px);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: var(--deep);
 }
 
 .rsvpInput,
@@ -1398,18 +1414,29 @@
   min-height: 46px;
   margin-bottom: clamp(18px, 5vw, 24px);
   padding: 11px 14px;
-  border: 1px solid var(--stone);
+  border: 1px solid #e2d4bf;
   border-radius: 3px;
-  background: var(--ivory);
-  color: var(--ink);
+  background: #fffefb;
+  color: var(--deep);
   font-family: inherit;
   font-size: 16px; /* 16px keeps iOS from zooming the field on focus. */
   line-height: 1.5;
 }
 
+/* The wish is written on faintly ruled stationery; the rules scroll with the text. */
 .rsvpTextarea {
-  min-height: 92px;
+  min-height: 122px;
   resize: vertical;
+  line-height: 24px;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 23px, rgba(199, 163, 106, 0.22) 23px 24px) 0 11px / 100% 24px local,
+    #fffefb;
+}
+
+.rsvpInput::placeholder,
+.rsvpTextarea::placeholder {
+  color: #a08a74;
+  font-style: italic;
 }
 
 .rsvpInput:focus-visible,
@@ -1435,10 +1462,11 @@
   gap: 11px;
   min-height: 48px;
   padding: 0 15px;
-  border: 1px solid var(--stone);
+  border: 1px solid #e2d4bf;
   border-radius: 3px;
-  background: var(--ivory);
-  font-size: 14.5px;
+  background: #fffefb;
+  color: var(--deep);
+  font-size: 15px;
   cursor: pointer;
   transition:
     border-color 180ms ease,
@@ -1447,14 +1475,21 @@
 
 /* The calm warm sage of the approved palette marks the chosen answer. */
 .rsvpChoice[data-selected="true"] {
-  border-color: var(--sage);
-  background: linear-gradient(0deg, rgba(201, 210, 195, 0.3), rgba(201, 210, 195, 0.3)), var(--ivory);
+  border-color: var(--gold);
+  background: linear-gradient(0deg, rgba(199, 208, 197, 0.32), rgba(199, 208, 197, 0.32)), #fffefb;
+  box-shadow: inset 3px 0 0 var(--gold);
 }
 
 .rsvpChoice input {
-  width: 17px;
-  height: 17px;
-  accent-color: var(--ink-soft);
+  width: 18px;
+  height: 18px;
+  flex: none;
+  accent-color: var(--deep);
+}
+
+.rsvpChoice:has(input:focus-visible) {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
 }
 
 .rsvpErrors {
@@ -1472,12 +1507,16 @@
   color: #8c3a2a;
 }
 
+/* The one action: deep brown with a fine inset gold rule. */
 .rsvpSubmit {
-  min-height: 50px;
-  border: 1px solid var(--gold);
+  min-height: 52px;
+  border: 1px solid var(--deep);
   border-radius: 999px;
-  background: linear-gradient(180deg, #fffaf0, #f6ecd9);
-  color: var(--ink);
+  background: linear-gradient(180deg, #5d4536, var(--deep));
+  box-shadow:
+    inset 0 0 0 3px var(--deep),
+    inset 0 0 0 4px rgba(199, 163, 106, 0.75);
+  color: #fbf6ec;
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
@@ -1963,34 +2002,14 @@
   font-size: 0.78em;
 }
 
-/* A lily, drawn as three hairline petals rather than an image. */
+/* HA-DESIGN-02: a light altar arcade with white lilies ends the scroll. */
 .closingLily {
   display: block;
-  position: relative;
-  width: 34px;
-  height: 18px;
-  margin: clamp(13px, 3.4vw, 17px) auto 0;
-}
-
-.closingLily::before,
-.closingLily::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  width: 15px;
-  height: 15px;
-  border: 1px solid var(--gold-hairline);
-  border-radius: 50% 0 50% 0;
-}
-
-.closingLily::before {
-  left: 0;
-  transform: rotate(-12deg);
-}
-
-.closingLily::after {
-  right: 0;
-  transform: rotate(12deg) scaleX(-1);
+  width: min(86%, 300px);
+  aspect-ratio: 600 / 264;
+  margin: clamp(14px, 3.6vw, 18px) auto 0;
+  background: var(--ha-img-altar-frieze) center / contain no-repeat;
+  pointer-events: none;
 }
 
 /* ============================================ sacred decorative atmosphere */
@@ -2010,7 +2029,21 @@
  */
 .page {
   --tracery: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='168' viewBox='0 0 120 168'%3E%3Cg fill='none' stroke='%23c9a96b' stroke-width='1.6' opacity='0.9'%3E%3Cpath d='M0 168 V96 Q0 48 30 20 Q60 48 60 96 V168'/%3E%3Cpath d='M60 168 V96 Q60 48 90 20 Q120 48 120 96 V168'/%3E%3Ccircle cx='60' cy='14' r='11'/%3E%3Cpath d='M54 14 q0 -6 6 -6 q6 0 6 6 q0 6 -6 6 q-6 0 -6 -6 Z'/%3E%3C/g%3E%3C/svg%3E");
-  --cross-motif: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='88' viewBox='0 0 64 88'%3E%3Cg fill='none' stroke='%23c9a96b' stroke-width='1.6' opacity='0.9'%3E%3Cpath d='M32 18 V70 M18 32 H46'/%3E%3C/g%3E%3C/svg%3E");
+  /* HA-DESIGN-02 — the selected interior ornament pack, optimized to
+     display size. Absolute public paths: they load only where a rule of
+     this module paints them, so only on a Hồng Ân page. */
+  --ha-img-gothic-arch: url("/renderers/wedding/hong-an/v1/interior/gothic-arch.webp");
+  --ha-img-gothic-window: url("/renderers/wedding/hong-an/v1/interior/gothic-window.webp");
+  --ha-img-quatrefoil: url("/renderers/wedding/hong-an/v1/interior/quatrefoil.webp");
+  --ha-img-rose-window: url("/renderers/wedding/hong-an/v1/interior/rose-window.webp");
+  --ha-img-altar-frieze: url("/renderers/wedding/hong-an/v1/interior/altar-frieze.webp");
+  --ha-img-gold-divider: url("/renderers/wedding/hong-an/v1/interior/gold-divider.webp");
+  --ha-img-lily-divider: url("/renderers/wedding/hong-an/v1/interior/lily-divider.webp");
+  /* The RSVP crest: a pointed arch with a quatrefoil, drawn as a vector. */
+  --ha-rsvp-crest: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='64' viewBox='0 0 80 64'%3E%3Cpath d='M8 64 V36 C8 20 20 8 40 2 C60 8 72 20 72 36 V64' fill='%23fffdf8' stroke='%23c9a96b' stroke-width='1.3'/%3E%3Cpath d='M16 64 V38 C16 26 25 16 40 11 C55 16 64 26 64 38 V64' fill='none' stroke='%23c9a96b' stroke-width='0.8' opacity='0.7'/%3E%3Cg fill='none' stroke='%23c9a96b' stroke-width='1'%3E%3Ccircle cx='40' cy='31.5' r='4.2'/%3E%3Ccircle cx='40' cy='40.5' r='4.2'/%3E%3Ccircle cx='35.5' cy='36' r='4.2'/%3E%3Ccircle cx='44.5' cy='36' r='4.2'/%3E%3C/g%3E%3Ccircle cx='40' cy='36' r='1.4' fill='%23c9a96b'/%3E%3C/svg%3E");
+  /* Interior accents from the approved "Thánh Đường Ánh Sớm" palette. */
+  --linen: #ede1cf;
+  --deep: #4f392d;
 }
 
 /*
@@ -2080,17 +2113,17 @@
   z-index: 0;
   inset: 0;
   pointer-events: none;
-  background-image: var(--cross-motif);
-  background-size: auto clamp(180px, 46vw, 260px);
-  /* Low enough that its upright does not run through the verse lines. */
-  background-position: center 72%;
+  /* HA-DESIGN-02: Gothic quatrefoil tracery behind the verse, faint
+     enough that every line keeps its full contrast. */
+  background-image: var(--ha-img-quatrefoil);
+  background-size: clamp(230px, 66vw, 310px) auto;
+  background-position: center 66%;
   background-repeat: no-repeat;
-  opacity: 0.09;
+  opacity: 0.13;
 }
 
 /* A soft gold light at the head of every sacred field, as if from a window. */
-.sectionSacred::before,
-.scripture::before {
+.sectionSacred::before {
   content: "";
   position: absolute;
   z-index: 0;
@@ -2115,6 +2148,168 @@
   opacity: 0.1;
   transform: scaleY(-1);
   mask-image: linear-gradient(180deg, transparent, #000 85%);
+}
+
+/* ================================== HA-DESIGN-02 · Thánh Đường Ánh Sớm */
+
+/*
+ * Interior polish from the approved ornament pack. One dominant and at
+ * most one supporting motif per section, and never the same motif
+ * stamped down the page:
+ *
+ *   countdown    rose window (closing the counters)
+ *   invitation   lancet windows in the margins + gold separator
+ *   families     linen field + arched plates (CSS)
+ *   ceremony     the Gothic portal behind the heading
+ *   reception    lily-and-olive sprig
+ *   gallery      gold apex knots on the arches (CSS)
+ *   scripture    quatrefoil tracery + warm window light
+ *   RSVP         pointed-arch crest (vector) + lily sprig
+ *   gift         lily-and-olive sprig; dialog gets an inset gold rule
+ *   closing      altar arcade with lilies
+ *
+ * Every ornament is an aria-hidden span or a pseudo-element with no
+ * pointer events and a fixed aspect ratio (no layout shift), sits behind
+ * or beside the type, and never over a photograph or a control.
+ */
+
+/* ---- 04 · invitation: two faint lancet windows in the margins ---- */
+.sectionInvitation::before,
+.sectionInvitation::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: calc(var(--section-gap) / 2 + 6px);
+  width: clamp(32px, 9.4vw, 52px);
+  aspect-ratio: 140 / 357;
+  pointer-events: none;
+  background: var(--ha-img-gothic-window) center / contain no-repeat;
+  opacity: 0.5;
+}
+
+.sectionInvitation::before {
+  left: max(3px, calc(50% - var(--column) / 2 - 64px));
+}
+
+.sectionInvitation::after {
+  right: max(3px, calc(50% - var(--column) / 2 - 64px));
+  transform: scaleX(-1);
+}
+
+.invitationOrnament {
+  display: block;
+  width: clamp(150px, 46vw, 200px);
+  aspect-ratio: 480 / 55;
+  margin-top: clamp(10px, 2.8vw, 13px);
+  background: var(--ha-img-gold-divider) center / contain no-repeat;
+  pointer-events: none;
+}
+
+/* ---- 05 · families: a linen field and two arched plates ---- */
+.sectionLinen {
+  background: linear-gradient(180deg, var(--ivory) 0%, #f3eadc 24%, #f1e7d7 76%, var(--ivory) 100%);
+}
+
+.house::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border: 1px solid rgba(199, 163, 106, 0.34);
+  border-radius: 60px 60px 4px 4px;
+  background: linear-gradient(180deg, rgba(255, 253, 248, 0.95) 0%, rgba(255, 251, 243, 0.7) 100%);
+  pointer-events: none;
+}
+
+/* The hairline arch becomes the inner rule of the plate's crown. */
+.houseArch {
+  top: 5px;
+  width: calc(100% - 10px);
+  height: clamp(44px, 12vw, 56px);
+  border-color: rgba(199, 163, 106, 0.4);
+  border-radius: 55px 55px 0 0;
+  mask-image: linear-gradient(180deg, #000 55%, transparent);
+}
+
+/* ---- 06 · ceremony: the Gothic portal rising behind the heading ---- */
+.page .sectionSacred > .ceremonyArch {
+  position: absolute;
+  z-index: 0;
+  /* The portal's own cross stands in the section's top margin, above the
+     eyebrow, in place of the heading's hairline cross. */
+  top: calc(var(--section-gap) / 2 - 26px);
+  left: 50%;
+  width: min(94%, 400px);
+  max-width: none;
+  aspect-ratio: 420 / 631;
+  margin: 0;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: var(--ha-img-gothic-arch) center top / contain no-repeat;
+  opacity: 0.42;
+  mask-image: linear-gradient(180deg, #000 34%, transparent 80%);
+}
+
+/* One cross only: the portal's. The hairline keeps its box, so nothing moves. */
+.ceremonyArch ~ .sectionHead > .cross {
+  visibility: hidden;
+}
+
+/* The heading reads over the portal on a feathered ivory wash, as the invitation does. */
+.ceremonyArch ~ .sectionHead::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 18px -6% -6px;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 56% 62% at 50% 55%,
+    rgba(255, 253, 248, 0.94) 0%,
+    rgba(255, 252, 245, 0.7) 50%,
+    rgba(255, 251, 241, 0) 88%
+  );
+}
+
+/* ---- 09 · gallery: a gold knot at the crown of every arch ---- */
+.galleryArch::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  transform: translateX(-50%) rotate(45deg);
+  border: 1px solid var(--gold);
+  background: var(--ivory);
+}
+
+/* ---- 11 · Scripture: warm window light over the tracery ---- */
+.scripture::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 72% 52% at 50% 0%, rgba(199, 163, 106, 0.16), transparent 72%),
+    radial-gradient(ellipse 60% 42% at 50% 58%, rgba(255, 250, 238, 0.85), transparent 75%);
+}
+
+/* ---- 13 · gift: a sprig over the one control, and a framed dialog ---- */
+.giftSprig {
+  display: block;
+  width: clamp(180px, 56vw, 236px);
+  aspect-ratio: 600 / 53;
+  margin: 0 auto clamp(14px, 3.8vw, 18px);
+  background: var(--ha-img-lily-divider) center / contain no-repeat;
+  pointer-events: none;
+}
+
+.giftDialogPanel {
+  box-shadow:
+    inset 0 0 0 6px rgba(255, 253, 249, 0.6),
+    inset 0 0 0 7px rgba(199, 163, 106, 0.3),
+    0 26px 54px -22px rgba(70, 53, 37, 0.45);
 }
 
 /* ================================================ interior motion (reveal) */

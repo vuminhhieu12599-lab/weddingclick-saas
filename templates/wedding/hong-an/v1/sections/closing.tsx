@@ -8,7 +8,8 @@ const COPY = HONG_AN_V1_COPY.closing;
  * Section 14 — "Lời Cảm Ơn" (HA-TEMPLATE-01).
  *
  * The calm end of the scroll: the couple's names once more over a bright
- * stone field, a small cross and a lily, and the thank-you. The closing
+ * stone field, a small cross, the thank-you, and a light altar arcade
+ * with white lilies beneath the names (HA-DESIGN-02). The closing
  * photograph is drawn only when the Project assigned one to this slot;
  * without it the composition simply closes on type, which is how the
  * approved direction looks with no photograph at all.

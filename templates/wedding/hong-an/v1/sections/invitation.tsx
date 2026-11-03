@@ -14,8 +14,10 @@ const COPY = HONG_AN_V1_COPY.invitation;
  *   Anh Tuấn và gia đình       the authorized guest overlay
  *   đến hiệp lời cầu nguyện…   the configurable body
  *
- * There is no card, no arch and no stack of dividers: a single gold
- * cross sits above the kicker and nothing else decorates the block.
+ * There is no card and no stack of dividers: a single gold cross sits
+ * above the kicker, one gold separator sits under the heading, and two
+ * faint Gothic lancet windows stand in the margins beside the kicker and
+ * heading (HA-DESIGN-02) — never behind the guest line or the message.
  *
  * THE BODY IS THE PROJECT'S. It comes from the canonical
  * `content.invitationMessage`, through the Snapshot and the ViewModel,
@@ -54,6 +56,9 @@ export function Invitation({
         <h2 className={styles.invitationHeading} id="ha-invitation-heading">
           {COPY.heading}
         </h2>
+
+        {/* HA-DESIGN-02: the refined gold separator under the heading. */}
+        <span className={styles.invitationOrnament} aria-hidden="true" />
 
         {guestDisplayName === undefined ? null : (
           <p className={styles.guestName}>{guestDisplayName}</p>

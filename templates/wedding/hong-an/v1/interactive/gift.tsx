@@ -254,6 +254,8 @@ export function Gift({
       <div className={styles.giftLead} data-reveal="rise">
         <SectionHeading id="ha-gift-heading">{COPY.heading}</SectionHeading>
         <p className={styles.giftIntro}>{COPY.intro}</p>
+        {/* HA-DESIGN-02: a lily-and-olive sprig over the one control; decorative only. */}
+        <span className={styles.giftSprig} aria-hidden="true" />
 
         <button
           ref={openerRef}
