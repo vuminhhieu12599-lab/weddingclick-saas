@@ -8,6 +8,7 @@ import type { TemplateEditorManifestV1 } from "../../../../../../templates/core/
 import { DressCodeEditor } from "./dress-code-editor";
 import { FamilyEditor } from "./family-editor";
 import { GiftContentEditor } from "./gift-content-editor";
+import { InvitationMessageEditor } from "./invitation-message-editor";
 import { MediaEditor } from "./media-editor";
 import { TemplateMediaSlotEditor } from "./template-media-slot-editor";
 import { TimelineEditor } from "./timeline-editor";
@@ -81,6 +82,7 @@ export function OptionalInvitationContent({
       <h4 className="mt-5 text-xs font-medium uppercase tracking-wide text-slate-400">Nội dung</h4>
       <div className="mt-2 space-y-3">
         {editors.families && <FamilyEditor projectId={projectId} onSaved={onSaved} />}
+        {editors.invitationMessage && <InvitationMessageEditor projectId={projectId} onSaved={onSaved} />}
         {editors.timeline && <TimelineEditor projectId={projectId} onSaved={onSaved} />}
         {editors.dressCode && <DressCodeEditor projectId={projectId} onSaved={onSaved} />}
         {(editors.loveStory || editors.gift) && (

@@ -45,6 +45,7 @@ export interface ContentEditorVisibility {
   readonly dressCode: boolean;
   readonly loveStory: boolean;
   readonly gift: boolean;
+  readonly invitationMessage: boolean;
 }
 
 /** Optional content editors the selected template uses (COUPLE/EVENTS stay in the required-data flow). */
@@ -55,5 +56,6 @@ export function contentEditorsFor(manifest: TemplateEditorManifestV1): ContentEd
     dressCode: hasContent(manifest, "DRESS_CODE"),
     loveStory: hasContent(manifest, "LOVE_STORY"),
     gift: hasContent(manifest, "GIFT"),
+    invitationMessage: hasContent(manifest, "INVITATION_MESSAGE"),
   };
 }

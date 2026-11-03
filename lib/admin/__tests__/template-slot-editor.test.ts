@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { lookupTemplateEditorManifest } from "../../../templates/core/production-editor-manifests";
+import { HONG_AN_V1_EDITOR_MANIFEST } from "../../../templates/editor/wedding/hong-an-v1";
 import type { TemplateEditorManifestV1, TemplateEditorMediaSlotV1 } from "../../../templates/core/editor-manifest";
 import { MEDIA_EDITOR_ROLES } from "../optional-content-editor";
 import { contentEditorsFor, findCatalogVersion, legacyMediaRolesFor } from "../template-editor-presentation";
@@ -94,9 +95,19 @@ describe("media model presentation", () => {
   });
 
   it("content editors follow manifest content items", () => {
-    expect(contentEditorsFor(VH)).toEqual({ families: true, timeline: true, dressCode: true, loveStory: true, gift: true });
+    expect(contentEditorsFor(VH)).toEqual({ families: true, timeline: true, dressCode: true, loveStory: true, gift: true, invitationMessage: false });
     const minimal: TemplateEditorManifestV1 = { ...VH, contentItems: VH.contentItems.filter((item) => ["COUPLE", "EVENTS", "GIFT"].includes(item.key)) };
-    expect(contentEditorsFor(minimal)).toEqual({ families: false, timeline: false, dressCode: false, loveStory: false, gift: true });
+    expect(contentEditorsFor(minimal)).toEqual({ families: false, timeline: false, dressCode: false, loveStory: false, gift: true, invitationMessage: false });
+  });
+
+  it("the invitation-message editor follows only the INVITATION_MESSAGE content item", () => {
+    const withMessage: TemplateEditorManifestV1 = {
+      ...VH,
+      contentItems: [...VH.contentItems, { key: "INVITATION_MESSAGE", label: "Lời mời", hint: "", requirement: "OPTIONAL", sectionKey: "invitationMessage" }],
+    };
+    expect(contentEditorsFor(withMessage)).toEqual({ ...contentEditorsFor(VH), invitationMessage: true });
+    expect(contentEditorsFor(EE).invitationMessage).toBe(false);
+    expect(contentEditorsFor(HONG_AN_V1_EDITOR_MANIFEST).invitationMessage).toBe(true);
   });
 
   it("finds the exact pinned catalog version only", () => {
