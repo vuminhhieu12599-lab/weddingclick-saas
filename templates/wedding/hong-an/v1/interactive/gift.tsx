@@ -136,7 +136,14 @@ function SaveQrButton({
   );
 }
 
-/** One family's canonical details, as shown inside the dialog. */
+/**
+ * One family's canonical details, as shown inside the dialog.
+ *
+ * HA-DESIGN-03: the QR and the bank details are ONE plate — the code on its
+ * own white quiet zone, then the details beneath it — and the copy control
+ * sits directly beside the account number it copies. Markup order only;
+ * the data, the copy and the download capabilities are unchanged.
+ */
 function GiftPanelBody({
   panel,
   clipboard,
@@ -150,33 +157,40 @@ function GiftPanelBody({
 
   return (
     <div className={styles.giftBody}>
-      <dl className={styles.giftRows}>
-        {panel.rows.map((row) => (
-          <div key={row.key} className={styles.giftRow} data-row={row.key}>
-            <dt className={styles.giftRowLabel}>{COPY.rows[row.key]}</dt>
-            <dd className={styles.giftRowValue}>{row.value}</dd>
-          </div>
-        ))}
-      </dl>
+      <div className={styles.giftPlate}>
+        {panel.qr === undefined ? null : (
+          <figure className={styles.giftQr}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- opaque runtime MediaResolver URL, not a build-known asset */}
+            <img
+              className={styles.giftQrImage}
+              src={panel.qr.url}
+              alt={COPY.qrAlt(COPY.sides[panel.side])}
+              width={panel.qr.width ?? undefined}
+              height={panel.qr.height ?? undefined}
+              loading="lazy"
+              decoding="async"
+            />
+          </figure>
+        )}
 
-      {accountNumber === undefined || clipboard === undefined ? null : (
-        <CopyAccountButton clipboard={clipboard} accountNumber={accountNumber} />
-      )}
-
-      {panel.qr === undefined ? null : (
-        <figure className={styles.giftQr}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- opaque runtime MediaResolver URL, not a build-known asset */}
-          <img
-            className={styles.giftQrImage}
-            src={panel.qr.url}
-            alt={COPY.qrAlt(COPY.sides[panel.side])}
-            width={panel.qr.width ?? undefined}
-            height={panel.qr.height ?? undefined}
-            loading="lazy"
-            decoding="async"
-          />
-        </figure>
-      )}
+        <dl className={styles.giftRows}>
+          {panel.rows.map((row) => (
+            <div key={row.key} className={styles.giftRow} data-row={row.key}>
+              <dt className={styles.giftRowLabel}>{COPY.rows[row.key]}</dt>
+              <dd className={styles.giftRowValue}>
+                {row.key === "accountNumber" && accountNumber !== undefined && clipboard !== undefined ? (
+                  <>
+                    <span className={styles.giftAccountNumber}>{row.value}</span>
+                    <CopyAccountButton clipboard={clipboard} accountNumber={accountNumber} />
+                  </>
+                ) : (
+                  row.value
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
 
       {download === undefined ? null : <SaveQrButton download={download} panel={panel} />}
     </div>

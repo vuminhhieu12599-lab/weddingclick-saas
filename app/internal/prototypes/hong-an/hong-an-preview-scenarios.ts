@@ -15,6 +15,7 @@ import {
 } from "../../../../templates/core/production-renderer-manifests";
 import { runRendererFixturePipeline } from "../../../../templates/core/fixtures/renderer-fixture-pipeline";
 import {
+  FIXTURE_EVENT_IDS,
   FIXTURE_GUESTS,
   FIXTURE_MEDIA_IDS,
   buildRendererFixtureSourceInput,
@@ -60,7 +61,10 @@ import { HONG_AN_V1_MANIFEST } from "../../../../templates/wedding/hong-an/v1/ma
 const PREVIEW_MEDIA_FILES: Readonly<Record<string, string>> = Object.freeze({
   [FIXTURE_MEDIA_IDS.COVER]: "/prototypes/hong-an/opening/hero-photo.jpg",
   [FIXTURE_MEDIA_IDS.LOVE_STORY_PHOTO]: "/showroom/demo/romantic-minimal/photos/03-our-love-bride-golden-garden.webp",
-  [FIXTURE_MEDIA_IDS.PORTRAIT_GROOM]: "/showroom/demo/romantic-minimal/photos/10-thank-you-ivory-bow.webp",
+  // HA-DESIGN-03: the closing frame. The fixture declares this row as a
+  // 900×1200 portrait, so the demo file must be a portrait too; the earlier
+  // landscape file was cropped to its centre and lost the groom.
+  [FIXTURE_MEDIA_IDS.PORTRAIT_GROOM]: "/showroom/demo/romantic-minimal/photos/09-wedding-couple-steps.webp",
   [FIXTURE_MEDIA_IDS.GALLERY_1]: "/showroom/demo/elegant-editorial/photos/01-cover-couple-portrait.webp",
   [FIXTURE_MEDIA_IDS.GALLERY_2]: "/showroom/demo/elegant-editorial/photos/04-ceremony-couple.webp",
   [FIXTURE_MEDIA_IDS.GALLERY_3]: "/showroom/demo/romantic-minimal/photos/07-garden-wedding-vows.webp",
@@ -130,10 +134,11 @@ const HONG_AN_SLOT_MEDIA: Readonly<Record<string, readonly string[]>> = Object.f
 function toHongAnSource(
   base: BuildSnapshotPayloadInput,
   invitationMessage: string | null,
+  eventOverrides: PreviewEventOverrides = {},
 ): BuildSnapshotPayloadInput {
   const { compatibility, design } = HONG_AN_V1_MANIFEST;
   const declared = HONG_AN_V1_EDITOR_MANIFEST.mediaSlots;
-  const shifted = shiftEventsIntoTheFuture(base);
+  const shifted = shiftEventsIntoTheFuture(withEventOverrides(base, eventOverrides));
   const details = shifted.weddingDetails;
   const input: BuildSnapshotPayloadInput =
     details === null ? shifted : { ...shifted, weddingDetails: { ...details, invitationMessage } };
@@ -232,6 +237,42 @@ const CUSTOM_INVITATION_MESSAGE = [
   "và chung chia niềm vui cùng hai họ.",
 ].join("\n");
 
+type PreviewEvent = BuildSnapshotPayloadInput["events"][number];
+
+/** Demo-only replacements for a fixture event's display fields, keyed by fixture event id. */
+type PreviewEventOverrides = Readonly<
+  Record<string, Partial<Pick<PreviewEvent, "title" | "venueName" | "address" | "mapUrl" | "startsAt" | "description">>>
+>;
+
+/** Applies a scenario's demo event fields before the date shift. Pure; ids and sides never change. */
+function withEventOverrides(input: BuildSnapshotPayloadInput, overrides: PreviewEventOverrides): BuildSnapshotPayloadInput {
+  if (Object.keys(overrides).length === 0) return input;
+  return {
+    ...input,
+    events: input.events.map((event) => (hasOwn(overrides, event.id) ? { ...event, ...overrides[event.id] } : event)),
+  };
+}
+
+/**
+ * HA-DESIGN-03 — a Catholic church wedding, for reviewing the ceremony
+ * section as it is meant to be seen. DEMO CONTENT ONLY: the parish, the
+ * address and the map link are illustrative and deliberately marked as
+ * such; they are not a real, verified church. The canonical event TITLE is
+ * what establishes the Mass ("Thánh Lễ Hôn Phối …"), so the renderer's own
+ * honest rule turns the heading into "Thánh Lễ Hôn Phối" — nothing in the
+ * renderer is told this is a Catholic scenario. The ceremony keeps the
+ * fixture's own day; 09:30 local (UTC+7) is 02:30Z.
+ */
+const CATHOLIC_MASS_EVENTS: PreviewEventOverrides = Object.freeze({
+  [FIXTURE_EVENT_IDS.THANH_HON_GROOM]: {
+    title: "Thánh Lễ Hôn Phối tại Nhà thờ Giáo xứ",
+    venueName: "Nhà thờ Giáo xứ Thánh Giuse (minh hoạ)",
+    address: "Địa chỉ minh hoạ — không phải địa điểm thật",
+    mapUrl: "https://maps.example.invalid/catholic-parish-demo",
+    startsAt: "2026-10-18T02:30:00.000Z",
+  },
+});
+
 /** Production manifests plus Hồng Ân — preview only; the production registry is untouched. */
 const PREVIEW_REGISTRY = createProductionCompatibilityRegistry([
   ...PRODUCTION_RENDERER_MANIFESTS,
@@ -249,6 +290,8 @@ interface PreviewScenarioDefinition {
    * its own template sentence.
    */
   readonly invitationMessage?: string;
+  /** Demo-only event display fields (see `CATHOLIC_MASS_EVENTS`). */
+  readonly eventOverrides?: PreviewEventOverrides;
 }
 
 /**
@@ -331,6 +374,12 @@ export const HONG_AN_PREVIEW_SCENARIOS = Object.freeze({
     label: "Không có lịch trình",
     source: { variant: "COMMON", ...SLOT_MEDIA_PRESENT, timeline: "ABSENT" },
   },
+  "catholic-mass": {
+    label: "Thánh Lễ Hôn Phối tại nhà thờ (minh hoạ)",
+    source: { variant: "GROOM", ...SLOT_MEDIA_PRESENT },
+    guest: FIXTURE_GUESTS.NORMAL,
+    eventOverrides: CATHOLIC_MASS_EVENTS,
+  },
 } as const satisfies Record<string, PreviewScenarioDefinition>);
 
 export type HongAnPreviewScenarioId = keyof typeof HONG_AN_PREVIEW_SCENARIOS;
@@ -356,6 +405,7 @@ export async function buildHongAnPreviewData(id: HongAnPreviewScenarioId): Promi
   const source = toHongAnSource(
     buildRendererFixtureSourceInput(scenario.source),
     scenario.invitationMessage ?? null,
+    scenario.eventOverrides,
   );
   const fixture = await runRendererFixturePipeline(source, {
     resolver: createHongAnPreviewResolver(scenario.unavailableMediaIds),
