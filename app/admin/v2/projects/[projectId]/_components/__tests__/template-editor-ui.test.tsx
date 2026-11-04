@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { lookupTemplateEditorManifest } from "../../../../../../../templates/core/production-editor-manifests";
+import { PRODUCTION_RENDERER_MANIFESTS } from "../../../../../../../templates/core/production-renderer-manifests";
 import type { EditorReadiness } from "../../../../../../../lib/server/template-editor/editor-readiness";
 import type { PhotoLibraryItem } from "../../../../../../../lib/server/template-editor/photo-library";
 
@@ -33,6 +34,10 @@ const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
 const VERSION_ID = "22222222-2222-4222-8222-222222222222";
 const VH = lookupTemplateEditorManifest("wedding.vietnamese-heritage.v1")!;
 const EE = lookupTemplateEditorManifest("wedding.elegant-editorial.v1")!;
+/** HA-CONTENT-01: the design manifest the catalog would carry for a renderer key. */
+const designManifestOf = (rendererKey: string) =>
+  PRODUCTION_RENDERER_MANIFESTS.find((entry) => entry.compatibility.rendererKey === rendererKey)!.design;
+
 const noop = () => {};
 
 function photo(n: number, mediaType: PhotoLibraryItem["mediaType"] = "PHOTO", previewUrl: string | null = `https://signed.example/${n}`): PhotoLibraryItem {
@@ -106,14 +111,14 @@ describe("PhotoPicker", () => {
 
 describe("OptionalInvitationContent media model", () => {
   it("TEMPLATE_SLOTS shows the slot editor and no legacy layout role editor", () => {
-    const html = renderToStaticMarkup(<OptionalInvitationContent projectId={PROJECT_ID} templateVersionId={VERSION_ID} manifest={VH} />);
+    const html = renderToStaticMarkup(<OptionalInvitationContent projectId={PROJECT_ID} templateVersionId={VERSION_ID} manifest={VH} designManifest={designManifestOf("wedding.vietnamese-heritage.v1")} />);
     expect(html).toContain('data-media-model="TEMPLATE_SLOTS"');
     expect(html).toContain("Ảnh của mẫu thiệp");
     expect(html).toContain("Âm thanh &amp; ảnh chia sẻ");
   });
 
   it("LEGACY_ROLES keeps the legacy media editor and no slot editor", () => {
-    const html = renderToStaticMarkup(<OptionalInvitationContent projectId={PROJECT_ID} templateVersionId={VERSION_ID} manifest={EE} />);
+    const html = renderToStaticMarkup(<OptionalInvitationContent projectId={PROJECT_ID} templateVersionId={VERSION_ID} manifest={EE} designManifest={designManifestOf("wedding.elegant-editorial.v1")} />);
     expect(html).toContain('data-media-model="LEGACY_ROLES"');
     expect(html).toContain("Ảnh &amp; âm thanh");
     expect(html).not.toContain("Ảnh của mẫu thiệp");

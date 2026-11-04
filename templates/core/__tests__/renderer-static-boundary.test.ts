@@ -57,6 +57,10 @@ const ALLOWED_IMPORTS: Readonly<Record<(typeof RF06A_FILES)[number], readonly st
     "templates/wedding/se-duyen/v1/manifest",
     // SD-V2-01: the eighth explicit production manifest.
     "templates/wedding/se-duyen/v2/manifest",
+    // HA-INTEGRATION-01: the ninth explicit production manifest.
+    "templates/wedding/hong-an/v1/manifest",
+    // HA-CONTENT-01: the tenth explicit production manifest.
+    "templates/wedding/hong-an/v2/manifest",
     "templates/core/renderer-manifest",
   ],
   "templates/wedding/elegant-editorial/v1/manifest.ts": ["templates/core/renderer-manifest"],
@@ -138,6 +142,10 @@ const RS01_LAZY_ROOTS = [
   "templates/wedding/se-duyen/v1/se-duyen-v1",
   // SD-V2-01: the eighth production renderer root.
   "templates/wedding/se-duyen/v2/se-duyen-v2",
+  // HA-INTEGRATION-01: the ninth production renderer root.
+  "templates/wedding/hong-an/v1/hong-an-v1",
+  // HA-CONTENT-01: the tenth production renderer root.
+  "templates/wedding/hong-an/v2/hong-an-v2",
 ] as const;
 
 /** Resolves a relative specifier from `file` to a repository-relative module path. */
@@ -258,7 +266,7 @@ describe("RF-06A files", () => {
     const code = stripComments(readRepoFile("templates/core/production-renderer-manifests.ts"));
     // VH-01: still one explicit, ordered literal list, now with the second manifest; RM-02: and the third; OWS-01: and the fourth.
     expect(code).toMatch(
-      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*OUR_WEDDING_STORY_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V2_MANIFEST,\s*OUR_WEDDING_STORY_V2_MANIFEST,\s*SE_DUYEN_V1_MANIFEST,\s*SE_DUYEN_V2_MANIFEST,\s*\]\)/,
+      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*OUR_WEDDING_STORY_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V2_MANIFEST,\s*OUR_WEDDING_STORY_V2_MANIFEST,\s*SE_DUYEN_V1_MANIFEST,\s*SE_DUYEN_V2_MANIFEST,\s*HONG_AN_V1_MANIFEST,\s*HONG_AN_V2_MANIFEST,\s*\]\)/,
     );
     expect(/["'`]wedding\.[\w-]+\.v\d+/.test(code)).toBe(false);
   });
@@ -354,6 +362,8 @@ describe("templates/** production tree (P39)", () => {
   // OWS-01 extension: plus exactly the Our Wedding Story v1 manifests and renderer files (rules at the end of this file).
   // SD-V1-01 extension: plus exactly the Se Duyên v1 renderer files (rules at the end of this file).
   // SD-V2-01 extension: plus exactly the Se Duyên v2 renderer files (rules at the end of this file).
+  // HA-INTEGRATION-01 extension: plus exactly the Hồng Ân v1 renderer files (rules at the end of this file).
+  // HA-CONTENT-01 extension: plus exactly the Hồng Ân v2 renderer files (same rules; it is v1's successor).
   it("templates/** contains exactly the RF-06A, RF-06B, RF-06C, RF-06D, VH-01, TE-02, RM-01, RM-02 and OWS-01 files", () => {
     expect([...sources].sort()).toStrictEqual(
       [
@@ -372,6 +382,8 @@ describe("templates/** production tree (P39)", () => {
         ...OWS2_FILES,
         ...SD1_FILES,
         ...SD2_FILES,
+        ...HA1_FILES,
+        ...HA2_FILES,
       ].sort(),
     );
   });
@@ -680,12 +692,16 @@ describe("RF-06B template files", () => {
           ...SD1_TSX_FILES,
           SD2_CSS_FILE,
           ...SD2_TSX_FILES,
+          HA1_CSS_FILE,
+          ...HA1_TSX_FILES,
+          HA2_CSS_FILE,
+          ...HA2_TSX_FILES,
         ],
         file,
       ).toContain(file);
     }
     expect(sources.filter((source) => source.endsWith(".css")).sort()).toStrictEqual(
-      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE, VH2_CSS_FILE, OWS2_CSS_FILE, SD1_CSS_FILE, SD2_CSS_FILE].sort(),
+      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE, VH2_CSS_FILE, OWS2_CSS_FILE, SD1_CSS_FILE, SD2_CSS_FILE, HA1_CSS_FILE, HA2_CSS_FILE].sort(),
     );
   });
 
@@ -1006,9 +1022,11 @@ describe("RF-06B decor and provenance (P4–P6)", () => {
   it("the production asset path holds exactly the recorded decor set", () => {
     expect(readdirSync(join(REPO_ROOT, "public", "renderers"))).toEqual(["wedding"]);
     // VH-02A: the Vietnamese Heritage v1 sibling directory is verified in the VH section below (RM-02: Romantic Minimal likewise;
-    // SD-V1-01: Se Duyên's own set is verified in the SD-V1-01 section at the end of this file).
+    // SD-V1-01: Se Duyên's own set is verified in the SD-V1-01 section at the end of this file;
+    // HA-INTEGRATION-01: Hồng Ân's likewise, in its own section).
     expect(readdirSync(join(REPO_ROOT, "public", "renderers", "wedding")).sort()).toEqual([
       "elegant-editorial",
+      "hong-an",
       "romantic-minimal",
       "se-duyen",
       "vietnamese-heritage",
@@ -1154,6 +1172,8 @@ const STAFF_PREVIEW_WRAPPER = "app/admin/preview-frame/staff-preview-renderer.ts
 const PUBLIC_INVITATION_WRAPPER = "app/i/[slug]/public-invitation-renderer.tsx";
 /** LAUNCH-P0-04 public showroom demo wrapper: fictional demo data, UNAVAILABLE-only RSVP. */
 const SHOWROOM_DEMO_WRAPPER = "app/mau-thiep/_components/demo-invitation-renderer.tsx";
+/** HA-INTEGRATION-01: the internal Hồng Ân review preview, fixture data only, UNAVAILABLE-only RSVP. */
+const HONG_AN_PREVIEW_WRAPPER = "app/internal/prototypes/hong-an/preview-client.tsx";
 const HARNESS_SCENARIOS = `${HARNESS_ROOT}/harness-scenarios.ts`;
 const HARNESS_FILES = [HARNESS_GATE, HARNESS_PAGE, HARNESS_WRAPPER, HARNESS_SCENARIOS] as const;
 /** RF-06D: provenance note for the harness-only audio tone (not code). */
@@ -1411,13 +1431,13 @@ describe("RS-01 renderer-key lazy loading", () => {
 
   it("the binding module owns exactly one literal import() per production renderer root, nothing else", () => {
     const { specifiers, total } = dynamicImportsOf(readRepoFile(BINDINGS_MODULE));
-    expect(total).toBe(8);
+    expect(total).toBe(10);
     expect(specifiers.map((specifier) => resolveSpecifier(BINDINGS_MODULE, specifier))).toStrictEqual([...RS01_LAZY_ROOTS]);
     const code = codeOf(BINDINGS_MODULE);
     // No template literal, concatenation, variable or discovery in a specifier.
     expect(code).not.toMatch(/import\(\s*[^"'\s]|import\(`|import\([^)]*\+|readdir|glob|require\(/);
     // next/dynamic with no options: SSR on, no `loading` (no Suspense boundary, no placeholder content).
-    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(8);
+    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(10);
     expect(code).not.toMatch(/ssr:|loading:|suspense/i);
     // Each lazy root binds its own export only.
     expect(code).toMatch(/import\("\.\.\/wedding\/elegant-editorial\/v1\/elegant-editorial-v1"\)\.then\(\(module\) => module\.ElegantEditorialV1\)/);
@@ -1428,6 +1448,8 @@ describe("RS-01 renderer-key lazy loading", () => {
     expect(code).toMatch(/import\("\.\.\/wedding\/our-wedding-story\/v2\/our-wedding-story-v2"\)\.then\(\(module\) => module\.OurWeddingStoryV2\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/se-duyen\/v1\/se-duyen-v1"\)\.then\(\(module\) => module\.SeDuyenV1\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/se-duyen\/v2\/se-duyen-v2"\)\.then\(\(module\) => module\.SeDuyenV2\)/);
+    expect(code).toMatch(/import\("\.\.\/wedding\/hong-an\/v1\/hong-an-v1"\)\.then\(\(module\) => module\.HongAnV1\)/);
+    expect(code).toMatch(/import\("\.\.\/wedding\/hong-an\/v2\/hong-an-v2"\)\.then\(\(module\) => module\.HongAnV2\)/);
     expect(code).not.toMatch(/\bcatch\b|\.catch\(/);
   });
 
@@ -1441,6 +1463,8 @@ describe("RS-01 renderer-key lazy loading", () => {
     // Only the data-only production manifests (static by design) — never a renderer implementation.
     expect(eager.files.filter((file) => file.startsWith("templates/wedding/")).sort()).toStrictEqual([
       "templates/wedding/elegant-editorial/v1/manifest.ts",
+      "templates/wedding/hong-an/v1/manifest.ts",
+      "templates/wedding/hong-an/v2/manifest.ts",
       "templates/wedding/our-wedding-story/v1/manifest.ts",
       "templates/wedding/our-wedding-story/v2/manifest.ts",
       "templates/wedding/romantic-minimal/v1/manifest.ts",
@@ -1673,12 +1697,12 @@ describe("RF-06C boundaries across the repository", () => {
   const appSources = nonTestSources("app");
   const productionSources = [...nonTestSources("templates"), ...nonTestSources("lib"), ...appSources];
 
-  it("only the production host, the harness wrapper, the staff preview wrapper, the Task 033A public wrapper and the LAUNCH-P0-04 showroom demo wrapper render the host core", () => {
+  it("only the production host, the harness wrapper, the staff preview wrapper, the Task 033A public wrapper, the LAUNCH-P0-04 showroom demo wrapper and the HA-INTEGRATION-01 Hồng Ân preview wrapper render the host core", () => {
     const importers = productionSources.filter((file) =>
       resolvedImportsOf(file).includes(RF06C_HOST_CORE_MODULE.replace(/\.tsx$/, "")),
     );
     expect(importers.sort()).toStrictEqual(
-      [HARNESS_WRAPPER, HOST_MODULE, PUBLIC_INVITATION_WRAPPER, SHOWROOM_DEMO_WRAPPER, STAFF_PREVIEW_WRAPPER].sort(),
+      [HARNESS_WRAPPER, HOST_MODULE, PUBLIC_INVITATION_WRAPPER, SHOWROOM_DEMO_WRAPPER, STAFF_PREVIEW_WRAPPER, HONG_AN_PREVIEW_WRAPPER].sort(),
     );
     for (const importer of importers) expect(readRepoFile(importer).startsWith('"use client";\n'), importer).toBe(true);
   });
@@ -1701,14 +1725,18 @@ describe("RF-06C boundaries across the repository", () => {
     }
   });
 
-  it("an RSVP capability is constructed only in the harness, staff preview, Task 033A public and showroom demo wrappers; preview and demo ones only as UNAVAILABLE", () => {
+  it("an RSVP capability is constructed only in the harness, staff preview, Task 033A public, showroom demo and Hồng Ân preview wrappers; preview and demo ones only as UNAVAILABLE", () => {
     for (const file of productionSources) {
       const constructs = /:\s*RsvpCapabilityV1\s*=/.test(codeOf(file));
       expect(constructs, file).toBe(
-        file === HARNESS_WRAPPER || file === STAFF_PREVIEW_WRAPPER || file === PUBLIC_INVITATION_WRAPPER || file === SHOWROOM_DEMO_WRAPPER,
+        file === HARNESS_WRAPPER ||
+          file === STAFF_PREVIEW_WRAPPER ||
+          file === PUBLIC_INVITATION_WRAPPER ||
+          file === SHOWROOM_DEMO_WRAPPER ||
+          file === HONG_AN_PREVIEW_WRAPPER,
       );
     }
-    for (const unavailableOnly of [STAFF_PREVIEW_WRAPPER, SHOWROOM_DEMO_WRAPPER]) {
+    for (const unavailableOnly of [STAFF_PREVIEW_WRAPPER, SHOWROOM_DEMO_WRAPPER, HONG_AN_PREVIEW_WRAPPER]) {
       const code = codeOf(unavailableOnly);
       expect(code, unavailableOnly).toMatch(/Object\.freeze\(\{ status: "UNAVAILABLE" \}\)/);
       expect(code, unavailableOnly).not.toMatch(/"SUCCESS"|fetch\(|supabase|"rsvps"|method:/i);
@@ -3882,5 +3910,300 @@ describe("SD-V1-01 Se Duyên v1 files", () => {
     expect(css).toMatch(/\.root\[data-phase="opening"\] \.openingClock \{\s*animation-duration: 2150ms;/);
     const island = codeOf(`${SD1}/interactive/opening-stage.tsx`);
     expect(/\d{3,4}\s*(ms|\))/.test(island), "no timing constant in the island").toBe(false);
+  });
+});
+
+// ===========================================================================
+// HA-INTEGRATION-01 extension — Hồng Ân v1 (`wedding.hong-an.v1`).
+//
+// The Product-Owner-approved and frozen Catholic invitation, registered
+// ninth. Every rule above stays as is; Hồng Ân gets the same boundary with
+// its own tree, modelled on the Se Duyên v1 section.
+//
+// RECORDED DEVIATIONS (frozen renderer, not changed by registration — each
+// is pinned to its exact current use so it cannot spread, and is reported
+// for a Product Owner / architecture decision):
+//   1. `interactive/opening-stage.tsx` reads `window.matchMedia` for the
+//      reduced-motion preference and ends the door travel on ONE
+//      `setTimeout` (cleared on unmount / reduced motion). Se Duyên ends its
+//      opening on the CSS animation's own event instead.
+//   2. The six client islands declare `"use client"`; the Se Duyên files
+//      declare no boundary. Redundant under the client host core.
+//   3. `interactive/section-reveal.tsx` hands the whole `window` to the
+//      shared reveal controller as its environment; Se Duyên hands it only
+//      `{ IntersectionObserver }` (least privilege). Same behaviour.
+// ===========================================================================
+
+const HA1 = "templates/wedding/hong-an/v1";
+const HA1_MANIFEST_FILE = `${HA1}/manifest.ts`;
+const HA1_ROOT = `${HA1}/hong-an-v1.tsx`;
+const HA1_FONTS = `${HA1}/fonts.ts`;
+const HA1_CSS_FILE = `${HA1}/hong-an-v1.module.css`;
+const HA1_PROVENANCE_FILE = `${HA1}/PROVENANCE.md`;
+const HA1_EDITOR_FILE = "templates/editor/wedding/hong-an-v1.ts";
+/** Static modules: no hooks, no interaction, no capability. */
+const HA1_CODE_FILES = [
+  HA1_MANIFEST_FILE,
+  HA1_ROOT,
+  `${HA1}/copy.ts`,
+  HA1_FONTS,
+  `${HA1}/sections/arch.tsx`,
+  `${HA1}/sections/ceremony.tsx`,
+  `${HA1}/sections/closing.tsx`,
+  `${HA1}/sections/event-selection.ts`,
+  `${HA1}/sections/families.tsx`,
+  `${HA1}/sections/gift-panels.ts`,
+  `${HA1}/sections/invitation.tsx`,
+  `${HA1}/sections/love-story.tsx`,
+  `${HA1}/sections/photo-frame.ts`,
+  `${HA1}/sections/reception.tsx`,
+  `${HA1}/sections/scripture.tsx`,
+  `${HA1}/sections/timeline.tsx`,
+] as const;
+/** The interactive islands (the countdown is a capability consumer without hooks). */
+const HA1_ISLAND_FILES = [
+  `${HA1}/interactive/opening-stage.tsx`,
+  `${HA1}/interactive/countdown.tsx`,
+  `${HA1}/interactive/gallery.tsx`,
+  `${HA1}/interactive/gift.tsx`,
+  `${HA1}/interactive/music-control.tsx`,
+  `${HA1}/interactive/rsvp.tsx`,
+  `${HA1}/interactive/section-reveal.tsx`,
+] as const;
+/** Pure geometry behind the opening island. */
+const HA1_MODEL_FILES = [`${HA1}/interactive/opening-geometry.ts`] as const;
+const HA1_RENDERER_TREE = [...HA1_CODE_FILES, ...HA1_ISLAND_FILES, ...HA1_MODEL_FILES, HA1_CSS_FILE, HA1_PROVENANCE_FILE];
+const HA1_FILES = [...HA1_RENDERER_TREE, HA1_EDITOR_FILE];
+const HA1_TSX_FILES = HA1_FILES.filter((file) => file.endsWith(".tsx"));
+const HA1_OPENING = `${HA1}/interactive/opening-stage.tsx`;
+const HA1_REVEAL = `${HA1}/interactive/section-reveal.tsx`;
+const HA1_CLIENT_ISLANDS = HA1_ISLAND_FILES.filter((file) => file !== `${HA1}/interactive/countdown.tsx`);
+/** The recorded deviations above, as the exact RF06D_FORBIDDEN labels each file is excused from (pinned by their own tests). */
+function ha1RecordedDeviation(file: string, label: string): boolean {
+  if (label === "use client / use server" && (HA1_CLIENT_ISLANDS as readonly string[]).includes(file)) return true;
+  if (file === HA1_OPENING) return label === "window" || label === "timers" || label === "observers / media queries";
+  if (file === HA1_REVEAL) return label === "window";
+  return false;
+}
+
+/** The decorative artwork, under the renderer's own immutable version path. */
+const HA1_ASSET_DIR = "public/renderers/wedding/hong-an/v1";
+const HA1_OPENING_ASSETS = ["door-left.webp", "door-reveal.webp", "door-right.webp", "foreground-flowers.webp", "frame-static.webp"] as const;
+const HA1_INTERIOR_ASSETS = [
+  "altar-frieze.webp",
+  "gold-divider.webp",
+  "gothic-arch.webp",
+  "gothic-window.webp",
+  "lily-divider.webp",
+  "quatrefoil.webp",
+  "rose-window.webp",
+] as const;
+
+// ===========================================================================
+// HA-CONTENT-01 extension — Hồng Ân v2 (`wedding.hong-an.v2`).
+//
+// v1's presentation-identical successor, registered tenth. Its only
+// difference is the Staff-configurable Scripture quote, so it inherits every
+// v1 rule and every v1 recorded deviation unchanged, and it is covered by the
+// generic describes above exactly as Se Duyên v2 is — no separate boundary
+// section, because there is no separate boundary.
+//
+// It introduces NO new decorative file: both modules that name artwork read
+// v1's own immutable `public/renderers/wedding/hong-an/v1/` paths, so there
+// is no v2 asset directory and no v2 asset list here (see
+// templates/wedding/hong-an/v2/PROVENANCE.md).
+// ===========================================================================
+
+const HA2 = "templates/wedding/hong-an/v2";
+const HA2_MANIFEST_FILE = `${HA2}/manifest.ts`;
+const HA2_ROOT = `${HA2}/hong-an-v2.tsx`;
+const HA2_FONTS = `${HA2}/fonts.ts`;
+const HA2_CSS_FILE = `${HA2}/hong-an-v2.module.css`;
+const HA2_PROVENANCE_FILE = `${HA2}/PROVENANCE.md`;
+/** The editor manifest, outside the renderer-version directory. */
+const HA2_EDITOR_FILE = "templates/editor/wedding/hong-an-v2.ts";
+/** Static modules: no hooks, no interaction, no capability. */
+const HA2_CODE_FILES = [
+  HA2_MANIFEST_FILE,
+  HA2_ROOT,
+  `${HA2}/copy.ts`,
+  HA2_FONTS,
+  `${HA2}/sections/arch.tsx`,
+  `${HA2}/sections/ceremony.tsx`,
+  `${HA2}/sections/closing.tsx`,
+  `${HA2}/sections/event-selection.ts`,
+  `${HA2}/sections/families.tsx`,
+  `${HA2}/sections/gift-panels.ts`,
+  `${HA2}/sections/invitation.tsx`,
+  `${HA2}/sections/love-story.tsx`,
+  `${HA2}/sections/photo-frame.ts`,
+  `${HA2}/sections/reception.tsx`,
+  `${HA2}/sections/scripture.tsx`,
+  // HA-CONTENT-01: the one place the configured quote is resolved. Pure.
+  `${HA2}/sections/scripture-quote.ts`,
+  `${HA2}/sections/timeline.tsx`,
+] as const;
+/** The interactive islands (the countdown is a capability consumer without hooks). */
+const HA2_ISLAND_FILES = [
+  `${HA2}/interactive/opening-stage.tsx`,
+  `${HA2}/interactive/countdown.tsx`,
+  `${HA2}/interactive/gallery.tsx`,
+  `${HA2}/interactive/gift.tsx`,
+  `${HA2}/interactive/music-control.tsx`,
+  `${HA2}/interactive/rsvp.tsx`,
+  `${HA2}/interactive/section-reveal.tsx`,
+] as const;
+/** Pure geometry behind the opening island. */
+const HA2_MODEL_FILES = [`${HA2}/interactive/opening-geometry.ts`] as const;
+const HA2_RENDERER_TREE = [...HA2_CODE_FILES, ...HA2_ISLAND_FILES, ...HA2_MODEL_FILES, HA2_CSS_FILE, HA2_PROVENANCE_FILE];
+const HA2_FILES = [...HA2_RENDERER_TREE, HA2_EDITOR_FILE];
+const HA2_TSX_FILES = HA2_FILES.filter((file) => file.endsWith(".tsx"));
+
+describe("HA-INTEGRATION-01 Hồng Ân v1 files", () => {
+  const productionSources = () =>
+    [...listSources(TEMPLATES_ROOT), ...nonTestSources("app"), ...nonTestSources("lib")].filter((file) => /\.(ts|tsx)$/.test(file));
+
+  it("every listed file exists, and the tree holds nothing else", () => {
+    for (const file of HA1_FILES) expect(() => readRepoFile(file), file).not.toThrow();
+    expect(listSources(join(TEMPLATES_ROOT, "wedding", "hong-an")).sort()).toStrictEqual(
+      [...HA1_RENDERER_TREE, ...HA2_RENDERER_TREE].sort(),
+    );
+  });
+
+  it("the manifest is data only, imports its type only, and declares exactly the sections the renderer renders", () => {
+    expect(importsOf(readRepoFile(HA1_MANIFEST_FILE))).toStrictEqual([{ specifier: "../../../core/renderer-manifest", typeOnly: true }]);
+    const code = codeOf(HA1_MANIFEST_FILE);
+    expect(/["']use (client|server)["']|\bReact\b|next\/|\.css["']/.test(code)).toBe(false);
+    for (const key of ["dressCode", "photoStory"]) expect(code, key).toMatch(new RegExp(`${key}: false`));
+    for (const key of ["invitationMessage", "loveStory", "gallery", "timeline", "music", "gift"]) {
+      expect(code, key).toMatch(new RegExp(`${key}: true`));
+    }
+  });
+
+  it("the renderer key literal appears only in its own two manifests and the binding table", () => {
+    const withLiteral = productionSources().filter((file) => /["'`]wedding\.hong-an\.v1["'`]/.test(codeOf(file)));
+    expect(withLiteral.sort()).toStrictEqual([HA1_MANIFEST_FILE, HA1_EDITOR_FILE, BINDINGS_MODULE].sort());
+  });
+
+  it("the production lists import its manifests, the internal preview reads the data-only manifest, and only the binding module loads the root (lazily)", () => {
+    const importersOf = (target: string) =>
+      productionSources().filter((file) => importsOf(readRepoFile(file)).some((statement) => resolveSpecifier(file, statement.specifier) === target));
+    // The internal review preview (fixture data only) reads the renderer
+    // manifest for its renderer key and design keys — never the root, CSS or fonts.
+    expect(importersOf(`${HA1}/manifest`).sort()).toStrictEqual(
+      ["app/internal/prototypes/hong-an/hong-an-preview-scenarios.ts", "templates/core/production-renderer-manifests.ts"].sort(),
+    );
+    expect(importersOf("templates/editor/wedding/hong-an-v1")).toStrictEqual(["templates/core/production-editor-manifests.ts"]);
+    expect(importersOf(`${HA1}/hong-an-v1`)).toStrictEqual([]);
+    const lazyLoaders = productionSources().filter((file) =>
+      dynamicImportsOf(readRepoFile(file)).specifiers.some((specifier) => resolveSpecifier(file, specifier) === `${HA1}/hong-an-v1`),
+    );
+    expect(lazyLoaders).toStrictEqual([BINDINGS_MODULE]);
+  });
+
+  it("imports only its own tree, the shared lib/ contracts, react and (fonts only) next/font/google", () => {
+    for (const file of [...HA1_CODE_FILES, ...HA1_ISLAND_FILES, ...HA1_MODEL_FILES]) {
+      for (const modulePath of resolvedImportsOf(file)) {
+        const allowed =
+          modulePath.startsWith(`${HA1}/`) ||
+          modulePath.startsWith(`${LIB}/`) ||
+          modulePath === "lib/domain" ||
+          modulePath === "react" ||
+          (file === HA1_MANIFEST_FILE && modulePath === "templates/core/renderer-manifest") ||
+          (file === HA1_FONTS && modulePath === "next/font/google") ||
+          modulePath === HA1_CSS_FILE;
+        expect(allowed, `${file} → ${modulePath}`).toBe(true);
+      }
+    }
+  });
+
+  it.each(HA1_CODE_FILES)("%s (static) has no forbidden runtime, data, browser, prototype or hook code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of RF06B_FORBIDDEN) {
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+    expect(ALL_HOOKS.test(code), `${file}: hooks`).toBe(false);
+    expect(/ResizeObserver|IntersectionObserver|\bonAnimationEnd\b/.test(code), `${file}: observers`).toBe(false);
+  });
+
+  it.each([...HA1_ISLAND_FILES, ...HA1_MODEL_FILES])("%s has no data, network, persistence, time or prototype code", (file) => {
+    const code = codeOf(file);
+    for (const [label, pattern] of RF06D_FORBIDDEN) {
+      // Recorded deviations 1–3 only, each pinned to its exact use below.
+      if (ha1RecordedDeviation(file, label)) continue;
+      expect(pattern.test(code), `${file}: ${label}`).toBe(false);
+    }
+    // Single owners of each shared capability or platform feature.
+    // The reveal delegates to the shared controller, so no island names the observer itself.
+    expect(/IntersectionObserver/.test(code), file).toBe(false);
+    expect(/startSectionReveal/.test(code), file).toBe(file === HA1_REVEAL);
+    expect(/gate\.run\(|createRsvpSubmissionGate/.test(code), file).toBe(file === `${HA1}/interactive/rsvp.tsx`);
+    expect(/copyWithFeedback|downloadQrWithFeedback/.test(code), file).toBe(file === `${HA1}/interactive/gift.tsx`);
+    // Only the music control commands playback, and only through the capability.
+    expect(/\.(play|pause)\(/.test(code), file).toBe(file === `${HA1}/interactive/music-control.tsx`);
+    expect(/nowEpochMs|deriveCeremonyCountdownV1/.test(code), file).toBe(file === `${HA1}/interactive/countdown.tsx`);
+    expect(/showModal|<dialog\b/.test(code), file).toBe(file === `${HA1}/interactive/gallery.tsx` || file === `${HA1}/interactive/gift.tsx`);
+  });
+
+  it("recorded deviation 1 is pinned: the opening reads only the reduced-motion query and owns one cleared timer", () => {
+    const code = codeOf(HA1_OPENING);
+    expect(code.match(/\bwindow\b/g)).toHaveLength(2);
+    expect(code.match(/window\.matchMedia\(REDUCED_MOTION_QUERY\)/g)).toHaveLength(2);
+    expect(/ResizeObserver|MutationObserver|setInterval|requestAnimationFrame|requestIdleCallback|\bdocument\b/.test(code)).toBe(false);
+    expect(code.match(/\bsetTimeout\(/g)).toHaveLength(1);
+    expect(code.match(/\bclearTimeout\(/g)).toHaveLength(2);
+  });
+
+  it("recorded deviation 2 is pinned: only the six client islands declare a boundary, never a server one; only fonts touch next/font", () => {
+    for (const file of [...HA1_CODE_FILES, ...HA1_ISLAND_FILES, ...HA1_MODEL_FILES]) {
+      const code = codeOf(file);
+      expect(/["']use server["']/.test(code), file).toBe(false);
+      expect(/["']use client["']/.test(code), file).toBe((HA1_CLIENT_ISLANDS as readonly string[]).includes(file));
+      expect(/next\/font/.test(code), file).toBe(file === HA1_FONTS);
+    }
+  });
+
+  it("recorded deviation 3 is pinned: the reveal touches window exactly once, as the shared controller's environment", () => {
+    const code = codeOf(HA1_REVEAL);
+    expect(code.match(/\bwindow\b/g)).toHaveLength(1);
+    expect(code).toMatch(/window as unknown as RevealEnvironment/);
+    expect(/\bdocument\b|matchMedia|set(Timeout|Interval)/.test(code)).toBe(false);
+  });
+
+  it("the stylesheet names only this renderer's own immutable interior assets, and no demo photograph", () => {
+    const css = readRepoFile(HA1_CSS_FILE);
+    const urls = [...css.matchAll(/url\("(\/[^"]+)"\)/g)].map((match) => match[1] as string);
+    expect([...new Set(urls)].sort()).toStrictEqual(HA1_INTERIOR_ASSETS.map((file) => `/renderers/wedding/hong-an/v1/interior/${file}`));
+    expect(/prototypes|showroom/.test(stripComments(css))).toBe(false);
+  });
+
+  it("the opening geometry names exactly the five opening layers under the same path", () => {
+    const code = codeOf(`${HA1}/interactive/opening-geometry.ts`);
+    const paths = [...code.matchAll(/["'](\/renderers\/[^"']+)["']/g)].map((match) => match[1] as string).sort();
+    expect(paths).toStrictEqual(HA1_OPENING_ASSETS.map((file) => `/renderers/wedding/hong-an/v1/${file}`));
+    expect(/prototypes|showroom/.test(code)).toBe(false);
+  });
+
+  it("the asset path holds exactly the twelve recorded files, each hashed in PROVENANCE.md", () => {
+    expect(readdirSync(join(REPO_ROOT, HA1_ASSET_DIR)).sort()).toStrictEqual([...HA1_OPENING_ASSETS, "interior"].sort());
+    expect(readdirSync(join(REPO_ROOT, HA1_ASSET_DIR, "interior")).sort()).toStrictEqual([...HA1_INTERIOR_ASSETS]);
+    const provenance = readRepoFile(HA1_PROVENANCE_FILE);
+    for (const file of [...HA1_OPENING_ASSETS, ...HA1_INTERIOR_ASSETS.map((name) => `interior/${name}`)]) {
+      const bytes = readFileSync(join(REPO_ROOT, HA1_ASSET_DIR, file));
+      expect(bytes.byteLength, file).toBeGreaterThan(0);
+      expect(provenance, file).toContain(createHash("sha256").update(bytes).digest("hex"));
+    }
+  });
+
+  it("its lazy subgraph is confined to its own tree, fonts and one CSS module; no other renderer reaches it", () => {
+    const roots = RS01_LAZY_ROOTS.map((root) => resolveModuleFile(root) as string);
+    const ha = clientGraph(resolveModuleFile(`${HA1}/hong-an-v1`) as string, { followLazy: true }).files;
+    expect(ha.some((file) => /templates\/wedding\/(?!hong-an\/)[\w-]+\//.test(file))).toBe(false);
+    expect(ha).toContain(HA1_FONTS);
+    expect(ha.filter((file) => file.endsWith(".css"))).toStrictEqual([HA1_CSS_FILE]);
+    for (const root of roots.filter((root) => !root.startsWith(`${HA1}/`))) {
+      const graph = clientGraph(root, { followLazy: true }).files;
+      expect(graph.some((file) => file.startsWith(`${HA1}/`)), root).toBe(false);
+    }
   });
 });

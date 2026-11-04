@@ -1,4 +1,5 @@
 import { lookupTemplateEditorManifest } from "../../../../../../../templates/core/production-editor-manifests";
+import { PRODUCTION_RENDERER_MANIFESTS } from "../../../../../../../templates/core/production-renderer-manifests";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -120,7 +121,12 @@ describe("FamilyEditorView", () => {
 describe("OptionalInvitationContent", () => {
   it("shows no preview link before any confirmed save", () => {
     const manifest = lookupTemplateEditorManifest("wedding.elegant-editorial.v1")!;
-    const html = renderToStaticMarkup(<OptionalInvitationContent projectId={PROJECT_ID} templateVersionId={PROJECT_ID} manifest={manifest} />);
+    const designManifest = PRODUCTION_RENDERER_MANIFESTS.find(
+      (entry) => entry.compatibility.rendererKey === "wedding.elegant-editorial.v1",
+    )!.design;
+    const html = renderToStaticMarkup(
+      <OptionalInvitationContent projectId={PROJECT_ID} templateVersionId={PROJECT_ID} manifest={manifest} designManifest={designManifest} />,
+    );
     expect(html).toContain("Ảnh &amp; âm thanh");
     expect(html).not.toContain("Xem trước thiệp");
   });

@@ -1,0 +1,501 @@
+/*
+ * HA-OPEN-02 — the approved Hồng Ân V4 opening.
+ *
+ * Three beats on one screen:
+ *   closed   the full-bleed cathedral, live text on its quiet panel
+ *   opening  both leaves swing out on their hinges, warm light in the seam
+ *   open     the stonework dissolves off the photograph behind it
+ *
+ * Every measurement comes in as a custom property from `layer-geometry.ts`,
+ * which reads the artwork's own manifest. Nothing here is a magic number.
+ */
+
+.stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  background: #f8f2e8;
+  color: #60462f;
+  /* The unit basis for everything below: the stage, not the browser window.
+     The prototype runs inside a phone frame on a wide page, so viewport
+     units would size the type against the desktop. */
+  container-type: size;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+/* ---------------------------------------------------------------- photo */
+
+/*
+ * The photograph is at the back of the stack from the first frame. The
+ * doors reveal it by uncovering it, which is why the hero needs no second
+ * copy of the picture and no arch-shaped mask.
+ */
+.photo {
+  z-index: 1;
+  object-fit: cover;
+  object-position: 50% 50%;
+  filter: saturate(0.96) brightness(1.035);
+  transform: scale(1);
+  transition: transform 2800ms ease-out;
+}
+
+.photoVeil {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 600ms ease 200ms;
+  background: linear-gradient(
+    180deg,
+    rgba(70, 49, 32, 0.12) 0%,
+    transparent 42%,
+    rgba(45, 27, 18, 0.11) 100%
+  );
+}
+
+/* --------------------------------------------------------------- facade */
+
+/*
+ * One canvas-shaped box, sized to cover the stage. Because every layer
+ * shares the 1440×3120 registration and this box keeps that ratio, the
+ * hinge percentages land on the same pixels at any width — which they
+ * would not if the images were covered individually.
+ */
+.scene {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  width: max(100cqw, calc(100cqh * var(--ha-canvas-ratio)));
+  aspect-ratio: var(--ha-canvas-ratio);
+  transform: translate(-50%, -50%);
+  transform-style: preserve-3d;
+  perspective: var(--ha-perspective);
+  perspective-origin: var(--ha-split-x) var(--ha-aperture-centre-y);
+  pointer-events: none;
+}
+
+.layer {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* The arch underside and jambs, seen only while the doors stand open. */
+.reveal {
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+/*
+ * Warm light in the seam. A CSS gradient, not an asset, so it can bloom
+ * as the leaves part. `screen` keeps it light rather than milky.
+ */
+.light {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  mix-blend-mode: screen;
+  transition: opacity 480ms ease 150ms;
+  background: radial-gradient(
+    ellipse 12% 48% at var(--ha-split-x) var(--ha-aperture-centre-y),
+    rgba(255, 248, 219, 0.72),
+    rgba(255, 226, 145, 0.21) 42%,
+    transparent 100%
+  );
+}
+
+/* All the stationary architecture. It never moves; only the leaves do. */
+.frame {
+  z-index: 3;
+  opacity: 1;
+  transition:
+    opacity 680ms ease,
+    transform 1100ms cubic-bezier(0.2, 0.72, 0.18, 1);
+}
+
+/*
+ * The leaves sit above the frame because they open outward, towards the
+ * reader: a leaf swinging this way passes in front of its own jamb.
+ */
+.leaf {
+  z-index: 4;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  filter: drop-shadow(0 0 0 transparent);
+  transition:
+    transform 1250ms cubic-bezier(0.42, 0, 0.56, 1),
+    filter 1120ms ease,
+    opacity 480ms ease;
+}
+
+.leafLeft {
+  transform-origin: var(--ha-hinge-left) 50%;
+}
+
+.leafRight {
+  transform-origin: var(--ha-hinge-right) 50%;
+}
+
+/* In front of the leaves, so the lilies stay planted as the doors swing. */
+.flowers {
+  z-index: 5;
+  opacity: 1;
+  transition:
+    opacity 700ms ease,
+    transform 1100ms ease;
+}
+
+/* ---------------------------------------------------------------- cover */
+
+.cover {
+  position: absolute;
+  z-index: 11;
+  inset: 31% 9% auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  pointer-events: none;
+  opacity: 1;
+  /* Text clears before the doors move, so nothing is read off a moving
+     surface — the V4 handoff is explicit about this order. */
+  transition: opacity 220ms ease;
+}
+
+/*
+ * The readability device, and the reason there is no opaque card: a
+ * feathered wash of the artwork's own ivory. The stonework still reads
+ * through it; the type sits on light rather than on a panel.
+ */
+.cover::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  /*
+   * Reaches past the date. V4's wash stopped above the verse, which left
+   * the reference and the date to be read off the gold tracery — they
+   * broke up at 360 and 390. Carrying it down is the whole fix; the
+   * feathering is unchanged, so there is still no panel edge anywhere.
+   */
+  inset: -6% -16% -2%;
+  pointer-events: none;
+  filter: blur(8px);
+  background: radial-gradient(
+    ellipse 58% 52% at 50% 54%,
+    rgba(255, 251, 242, 0.93) 0%,
+    rgba(255, 250, 238, 0.87) 30%,
+    rgba(255, 248, 235, 0.6) 56%,
+    rgba(255, 247, 231, 0) 86%
+  );
+}
+
+.crossRule {
+  width: 37px;
+  height: 1px;
+  margin: 0 auto 9%;
+  background: linear-gradient(90deg, transparent, #b79a66, transparent);
+}
+
+.eyebrow {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(9px, 2.5cqw, 11px);
+  /* HA-OPEN-03 — 600 and a deeper warm brown. At 500/#65462b this line
+     was competing with the gold tracery behind it; the tracking and the
+     soft ivory halo are unchanged, so it still reads as fine print
+     rather than a label on a box. */
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  /* Set in caps here rather than in the data, so the copy stays in its
+     natural case for anything that reads it as text. */
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #493525;
+  text-shadow: 0 1px 8px #fffaf3;
+}
+
+/*
+ * The template name is present but subordinate: smaller than the couple
+ * and in a lighter colour. The card is still theirs.
+ */
+.brand {
+  margin: 2% 0 0;
+  font-style: italic;
+  font-size: clamp(24px, 7.1cqw, 31px);
+  font-weight: 400;
+  line-height: 1.3;
+  color: #80603d;
+}
+
+.rule {
+  width: 65px;
+  height: 1px;
+  margin: 4% 0 6%;
+  background: linear-gradient(90deg, transparent, #bd9e6e, transparent);
+}
+
+.couple {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  font-size: clamp(28px, 8.2cqw, 35px);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  color: #52351f;
+  text-shadow: 0 1px 12px #fffaf0c9;
+}
+
+.ampersand {
+  font-style: italic;
+  font-size: 0.72em;
+  line-height: 1.2;
+  color: #b48b4e;
+}
+
+.verse {
+  max-width: 270px;
+  margin: 6% 0 0;
+  font-style: italic;
+  font-size: clamp(11.5px, 3.1cqw, 13px);
+  line-height: 1.48;
+  color: #6b4d34;
+  text-shadow: 0 1px 6px #fff9ebcf;
+}
+
+.verseRef {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.9em;
+}
+
+.coverDate {
+  margin: 5% 0 0;
+  font-size: clamp(11px, 3.1cqw, 14px);
+  letter-spacing: 0.14em;
+  color: #704d2d;
+}
+
+/* ------------------------------------------------------------------ cta */
+
+/*
+ * Anchored to the stage, not to the artwork, so it can never be pushed
+ * off-screen by a viewport the canvas does not match.
+ */
+.cta {
+  position: absolute;
+  z-index: 12;
+  left: 50%;
+  bottom: 6.6%;
+  width: min(72%, 252px);
+  min-height: 47px;
+  transform: translateX(-50%);
+  border: 1px solid #b7935b;
+  border-radius: 999px;
+  background: #fff8ea;
+  box-shadow: 0 5px 24px #73502822;
+  color: #594029;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.095em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease;
+}
+
+.cta:hover {
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.cta:focus-visible,
+.hero:focus-visible {
+  outline: 3px solid #695037;
+  outline-offset: 3px;
+}
+
+/* ----------------------------------------------------------------- hero */
+
+.hero {
+  position: absolute;
+  z-index: 13;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11% 5% 12%;
+  text-align: center;
+  color: #4a321f;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 600ms ease 180ms;
+}
+
+/* Keeps the type legible over whatever photograph the Project supplies. */
+.hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 251, 241, 0.89) 0%,
+    rgba(255, 251, 241, 0.38) 22%,
+    transparent 40%,
+    transparent 64%,
+    rgba(255, 250, 239, 0.62) 82%,
+    rgba(255, 246, 230, 0.92) 100%
+  );
+}
+
+/* The hero's eyebrow sits on the photograph, not on the stonework, and
+   was approved as it is: it keeps the original weight and colour. */
+.heroTop .eyebrow {
+  font-size: 9px;
+  font-weight: 500;
+  color: #725337;
+}
+
+.heroNames {
+  margin: 7px 0 0;
+  font-style: italic;
+  font-size: clamp(25px, 7cqw, 29px);
+  font-weight: 400;
+  line-height: 1.18;
+  white-space: nowrap;
+  text-shadow: 0 1px 16px #fffaf2;
+}
+
+.heroDate {
+  margin: 11px 0 0;
+  font-size: 14px;
+  letter-spacing: 0.09em;
+}
+
+.heroVerse {
+  max-width: 295px;
+  margin: 0;
+  font-style: italic;
+  font-size: clamp(12px, 3.1cqw, 14px);
+  line-height: 1.5;
+}
+
+.heroVerse .verseRef {
+  margin-top: 5px;
+  font-size: 11px;
+}
+
+.scrollHint {
+  position: absolute;
+  z-index: 15;
+  left: 50%;
+  bottom: 3%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: #795737;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 350ms ease 800ms;
+}
+
+/* ------------------------------------------------------- the two beats */
+
+/* Beat one — the leaves swing out and the seam fills with light. */
+.stage[data-phase="opening"] .cover,
+.stage[data-phase="open"] .cover,
+.stage[data-phase="opening"] .cta,
+.stage[data-phase="open"] .cta {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stage[data-phase="opening"] .leafLeft,
+.stage[data-phase="open"] .leafLeft {
+  transform: rotateY(calc(var(--ha-open-angle) * -1));
+  filter: drop-shadow(3px 0 10px #64401644);
+}
+
+.stage[data-phase="opening"] .leafRight,
+.stage[data-phase="open"] .leafRight {
+  transform: rotateY(var(--ha-open-angle));
+  filter: drop-shadow(-3px 0 10px #64401644);
+}
+
+.stage[data-phase="opening"] .light,
+.stage[data-phase="open"] .light {
+  opacity: 1;
+}
+
+.stage[data-phase="opening"] .reveal {
+  opacity: 0.8;
+}
+
+/* Beat two — the stonework dissolves off the photograph. */
+.stage[data-phase="open"] .reveal {
+  opacity: 0;
+}
+
+.stage[data-phase="open"] .leaf {
+  opacity: 0;
+}
+
+.stage[data-phase="open"] .frame {
+  opacity: 0;
+  transform: scale(var(--ha-facade-exit-scale));
+}
+
+.stage[data-phase="open"] .flowers {
+  opacity: 0;
+  transform: scale(1.04);
+}
+
+.stage[data-phase="open"] .photo {
+  transform: scale(var(--ha-hero-photo-scale));
+}
+
+.stage[data-phase="open"] .photoVeil,
+.stage[data-phase="open"] .hero,
+.stage[data-phase="open"] .scrollHint {
+  opacity: 1;
+}
+
+.stage[data-phase="open"] .hero {
+  pointer-events: auto;
+}
+
+/* --------------------------------------------------------- reduced motion */
+
+/*
+ * The composition is preserved and the travel removed: the reader still
+ * gets the finished invitation, not a broken one. The component skips
+ * straight to `open`, so there is no interval to sit through either.
+ */
+.stage[data-motion="reduced"] .photo,
+.stage[data-motion="reduced"] .photoVeil,
+.stage[data-motion="reduced"] .reveal,
+.stage[data-motion="reduced"] .light,
+.stage[data-motion="reduced"] .frame,
+.stage[data-motion="reduced"] .leaf,
+.stage[data-motion="reduced"] .flowers,
+.stage[data-motion="reduced"] .cover,
+.stage[data-motion="reduced"] .cta,
+.stage[data-motion="reduced"] .hero,
+.stage[data-motion="reduced"] .scrollHint {
+  transition: none;
+}
+
+.stage[data-motion="reduced"][data-phase="open"] .photo {
+  transform: none;
+}

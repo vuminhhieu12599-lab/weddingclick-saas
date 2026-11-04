@@ -1,0 +1,142 @@
+{
+  "project": "WeddingClick V2 / Hong An opening",
+  "version": "v4 visual review; UI and cinematic handoff corrected",
+  "canvas": [
+    1440,
+    3120
+  ],
+  "source_master": "source-closed.png",
+  "layers": [
+    "frame-static.png",
+    "door-left.png",
+    "door-right.png",
+    "foreground-flowers.png",
+    "door-reveal.png"
+  ],
+  "hingeX": [
+    349,
+    1061
+  ],
+  "splitX": 699,
+  "aperturePolygon": [
+    [
+      699,
+      933
+    ],
+    [
+      644,
+      952
+    ],
+    [
+      588,
+      1004
+    ],
+    [
+      538,
+      1062
+    ],
+    [
+      490,
+      1131
+    ],
+    [
+      448,
+      1215
+    ],
+    [
+      409,
+      1314
+    ],
+    [
+      378,
+      1416
+    ],
+    [
+      355,
+      1530
+    ],
+    [
+      349,
+      1655
+    ],
+    [
+      349,
+      2745
+    ],
+    [
+      1061,
+      2745
+    ],
+    [
+      1061,
+      1655
+    ],
+    [
+      1053,
+      1530
+    ],
+    [
+      1032,
+      1416
+    ],
+    [
+      1002,
+      1314
+    ],
+    [
+      961,
+      1215
+    ],
+    [
+      919,
+      1131
+    ],
+    [
+      867,
+      1062
+    ],
+    [
+      814,
+      1004
+    ],
+    [
+      760,
+      952
+    ],
+    [
+      699,
+      933
+    ]
+  ],
+  "plaqueRect": [
+    150,
+    1040,
+    1290,
+    1850
+  ],
+  "composeOrder": [
+    "weddingPhoto behind aperture",
+    "door-reveal.png",
+    "door-left.png",
+    "door-right.png",
+    "frame-static.png",
+    "foreground-flowers.png",
+    "live HTML text/button"
+  ],
+  "cssNotes": {
+    "leaves": "rotateY from left and right hinge, text fades before door rotates",
+    "hero": "actual wedding photo, not a church-interior still",
+    "open": "light gradient CSS only",
+    "reducedMotion": "skip swing, show photo hero immediately"
+  },
+  "notes": [
+    "All alpha masks originate from registered V3 master, with NO layer geometry changes.",
+    "Text is live HTML; original illustrative church art not redecorated.",
+    "Hero is the SAME full-size wedding photograph behind doors, then stonework dissolves (no duplicate reveal shot).",
+    "Demo photo is concept stand-in; replace with customer licensed photo."
+  ],
+  "alphaTest": "Exact opaque reconstruction: max RGBA pixel delta 0 (lossless PNG, verified)",
+  "assetUsage": "Preview quality ONLY; final visual quality requires PO approval",
+  "demoPhoto": "demo-photo.jpg, generated illustration stand-in only, replace with customer wedding photo",
+  "preview": "index.html"
+}

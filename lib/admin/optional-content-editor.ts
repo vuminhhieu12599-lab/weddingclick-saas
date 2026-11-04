@@ -256,7 +256,7 @@ export function giftContentFormFrom(details: WeddingDetailsRecord | null): GiftC
  */
 export function buildWeddingDetailsPatchBody(
   current: WeddingDetailsRecord | null,
-  edits: { form?: GiftContentForm; family?: FamilyForm; qr?: GiftQrPatch },
+  edits: { form?: GiftContentForm; family?: FamilyForm; qr?: GiftQrPatch; invitationMessage?: string },
 ): FormResult<SaveWeddingDetailsInput> {
   if (current === null) {
     return { ok: false, error: "Cần lưu tên cô dâu và chú rể trước." };
@@ -274,6 +274,11 @@ export function buildWeddingDetailsPatchBody(
       const value = edits.family[field].trim();
       body[field] = value === "" ? null : value;
     }
+  }
+  if (edits.invitationMessage !== undefined) {
+    // Inner line breaks are kept; only outer whitespace is trimmed (server contract).
+    const value = edits.invitationMessage.trim();
+    body.invitationMessage = value === "" ? null : value;
   }
   if (edits.qr) {
     if ("groomBankQrMediaId" in edits.qr) body.groomBankQrMediaId = edits.qr.groomBankQrMediaId ?? null;

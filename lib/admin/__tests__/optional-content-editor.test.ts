@@ -208,6 +208,34 @@ describe("gift / love story wedding_details body", () => {
     expect(result.value.groomBankQrMediaId).toBe(current.groomBankQrMediaId);
   });
 
+  it("an invitation-message edit changes only invitationMessage, keeping inner line breaks", () => {
+    const result = buildWeddingDetailsPatchBody(current, { invitationMessage: "  Dòng một\n\nDòng hai  " });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // Every canonical field is re-sent exactly as saved; only invitationMessage differs.
+    const expected: Record<string, unknown> = { ...current, invitationMessage: "Dòng một\n\nDòng hai" };
+    for (const metadata of ["id", "projectId", "createdAt", "updatedAt"]) delete expected[metadata];
+    expect(result.value).toEqual(expected);
+  });
+
+  it("a blank or whitespace-only invitation message clears it to null", () => {
+    for (const blank of ["", "  \n\t "]) {
+      const result = buildWeddingDetailsPatchBody(current, { invitationMessage: blank });
+      expect(result.ok && result.value.invitationMessage).toBeNull();
+    }
+  });
+
+  it("Gift / Love Story, family and QR saves preserve the saved invitation message", () => {
+    const gift = buildWeddingDetailsPatchBody(current, { form: { ...giftContentFormFrom(current), loveStory: "Mới" } });
+    expect(gift.ok && gift.value.invitationMessage).toBe("Lời mời");
+    const qr = buildWeddingDetailsPatchBody(current, { qr: { groomBankQrMediaId: null } });
+    expect(qr.ok && qr.value.invitationMessage).toBe("Lời mời");
+  });
+
+  it("an invitation-message edit requires saved wedding details", () => {
+    expect(buildWeddingDetailsPatchBody(null, { invitationMessage: "Lời mời" }).ok).toBe(false);
+  });
+
   it("a QR patch changes only its own side — never copies one side's QR to the other", () => {
     const id = "33333333-3333-4333-8333-333333333333";
     const result = buildWeddingDetailsPatchBody(current, { qr: { brideBankQrMediaId: id } });
