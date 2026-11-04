@@ -3006,6 +3006,17 @@
   cursor: pointer;
 }
 
+/* PRODUCTION ADDITION (WC-RSVP-MOBILE-SCROLL-01) — where the recorded
+   response lands.
+
+   The thank-you card is shorter than the form it replaces, so the island
+   brings it back on screen once the response is recorded. This gap is read
+   by that one scroll and by nothing else: it changes no layout, no spacing
+   and nothing a guest sees before or after it. */
+.rsvpCard {
+  scroll-margin-top: 18px;
+}
+
 @container (max-width: 365px) {
   .rsvp {
     padding: 64px 14px 82px;
