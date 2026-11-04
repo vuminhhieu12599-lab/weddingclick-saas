@@ -4,6 +4,7 @@ import {
 } from "../../lib/invitation-rendering/renderer-registry";
 import { ELEGANT_EDITORIAL_V1_MANIFEST } from "../wedding/elegant-editorial/v1/manifest";
 import { HONG_AN_V1_MANIFEST } from "../wedding/hong-an/v1/manifest";
+import { HONG_AN_V2_MANIFEST } from "../wedding/hong-an/v2/manifest";
 import { OUR_WEDDING_STORY_V1_MANIFEST } from "../wedding/our-wedding-story/v1/manifest";
 import { OUR_WEDDING_STORY_V2_MANIFEST } from "../wedding/our-wedding-story/v2/manifest";
 import { ROMANTIC_MINIMAL_V1_MANIFEST } from "../wedding/romantic-minimal/v1/manifest";
@@ -86,6 +87,7 @@ export const PRODUCTION_RENDERER_MANIFESTS: readonly RendererProductionManifestV
     SE_DUYEN_V1_MANIFEST,
     SE_DUYEN_V2_MANIFEST,
     HONG_AN_V1_MANIFEST,
+    HONG_AN_V2_MANIFEST,
   ]);
 
 /**

@@ -30,9 +30,11 @@ const SD_EDITOR = "templates/editor/wedding/se-duyen-v1.ts";
 const SD2_EDITOR = "templates/editor/wedding/se-duyen-v2.ts";
 // HA-INTEGRATION-01: the Hồng Ân v1 editor manifest, registered ninth.
 const HA_EDITOR = "templates/editor/wedding/hong-an-v1.ts";
-const TE02_FILES = [EDITOR_MANIFEST, PRODUCTION_EDITOR_MANIFESTS, EE_EDITOR, VH_EDITOR, RM_EDITOR, OWS_EDITOR, VH2_EDITOR, OWS2_EDITOR, SD_EDITOR, HA_EDITOR] as const;
+// HA-CONTENT-01: the Hồng Ân v2 editor manifest, registered tenth.
+const HA2_EDITOR = "templates/editor/wedding/hong-an-v2.ts";
+const TE02_FILES = [EDITOR_MANIFEST, PRODUCTION_EDITOR_MANIFESTS, EE_EDITOR, VH_EDITOR, RM_EDITOR, OWS_EDITOR, VH2_EDITOR, OWS2_EDITOR, SD_EDITOR, HA_EDITOR, HA2_EDITOR] as const;
 /** The editor manifests the production list registers, in its order. */
-const TE02_REGISTERED_EDITORS = [EE_EDITOR, VH_EDITOR, RM_EDITOR, OWS_EDITOR, VH2_EDITOR, OWS2_EDITOR, SD_EDITOR, HA_EDITOR] as const;
+const TE02_REGISTERED_EDITORS = [EE_EDITOR, VH_EDITOR, RM_EDITOR, OWS_EDITOR, VH2_EDITOR, OWS2_EDITOR, SD_EDITOR, HA_EDITOR, HA2_EDITOR] as const;
 
 /** Exact import allowlist per file, as repository-relative module paths (no extension). */
 const ALLOWED_IMPORTS: Readonly<Record<(typeof TE02_FILES)[number], readonly string[]>> = {
@@ -47,6 +49,7 @@ const ALLOWED_IMPORTS: Readonly<Record<(typeof TE02_FILES)[number], readonly str
     "templates/editor/wedding/se-duyen-v1",
     "templates/editor/wedding/se-duyen-v2",
     "templates/editor/wedding/hong-an-v1",
+    "templates/editor/wedding/hong-an-v2",
     "templates/core/editor-manifest",
     "templates/core/production-renderer-manifests",
     "templates/core/renderer-manifest",
@@ -59,6 +62,7 @@ const ALLOWED_IMPORTS: Readonly<Record<(typeof TE02_FILES)[number], readonly str
   [OWS2_EDITOR]: ["templates/core/editor-manifest"],
   [SD_EDITOR]: ["templates/core/editor-manifest"],
   [HA_EDITOR]: ["templates/core/editor-manifest"],
+  [HA2_EDITOR]: ["templates/core/editor-manifest"],
 };
 
 const FORBIDDEN: readonly [string, RegExp][] = [
@@ -125,12 +129,12 @@ describe("TE-02 editor-manifest static boundary", () => {
     }
   });
 
-  it("templates/editor/** contains exactly the nine registered editor manifests", () => {
+  it("templates/editor/** contains exactly the ten registered editor manifests", () => {
     const files = readdirSync(join(REPO_ROOT, "templates", "editor"), { recursive: true, withFileTypes: true })
       .filter((entry) => entry.isFile())
       .map((entry) => toPosix(relative(REPO_ROOT, join(entry.parentPath, entry.name))))
       .sort();
-    expect(files).toStrictEqual([EE_EDITOR, HA_EDITOR, OWS_EDITOR, OWS2_EDITOR, RM_EDITOR, SD_EDITOR, SD2_EDITOR, VH_EDITOR, VH2_EDITOR]);
+    expect(files).toStrictEqual([EE_EDITOR, HA_EDITOR, HA2_EDITOR, OWS_EDITOR, OWS2_EDITOR, RM_EDITOR, SD_EDITOR, SD2_EDITOR, VH_EDITOR, VH2_EDITOR]);
   });
 
   // SD-V1: the Se Duyên editor manifest is now the seventh registered one.
@@ -145,6 +149,7 @@ describe("TE-02 editor-manifest static boundary", () => {
   it("the Hồng Ân editor manifest is registered last, after Se Duyên v2", () => {
     const code = stripComments(readRepoFile(PRODUCTION_EDITOR_MANIFESTS));
     expect(code.indexOf("SE_DUYEN_V2_EDITOR_MANIFEST,")).toBeLessThan(code.indexOf("HONG_AN_V1_EDITOR_MANIFEST,"));
+    expect(code.indexOf("HONG_AN_V1_EDITOR_MANIFEST,")).toBeLessThan(code.indexOf("HONG_AN_V2_EDITOR_MANIFEST,"));
   });
 
   it("no editor manifest lives inside a renderer-version directory", () => {
@@ -157,6 +162,7 @@ describe("TE-02 editor-manifest static boundary", () => {
       "templates/wedding/our-wedding-story/v2",
       "templates/wedding/se-duyen/v1",
       "templates/wedding/hong-an/v1",
+      "templates/wedding/hong-an/v2",
     ]) {
       const names = readdirSync(join(REPO_ROOT, dir), { recursive: true }).map(String);
       expect(names.some((name) => /editor-manifest/.test(name)), dir).toBe(false);
@@ -189,7 +195,7 @@ describe("TE-02 editor-manifest static boundary", () => {
   it("the production editor list is explicit and in production renderer order", () => {
     const code = stripComments(readRepoFile(PRODUCTION_EDITOR_MANIFESTS));
     expect(code).toMatch(
-      /\[\s*ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST,\s*ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST,\s*OUR_WEDDING_STORY_V1_EDITOR_MANIFEST,\s*VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST,\s*OUR_WEDDING_STORY_V2_EDITOR_MANIFEST,\s*SE_DUYEN_V1_EDITOR_MANIFEST,\s*SE_DUYEN_V2_EDITOR_MANIFEST,\s*HONG_AN_V1_EDITOR_MANIFEST,\s*\]/,
+      /\[\s*ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_EDITOR_MANIFEST,\s*ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST,\s*OUR_WEDDING_STORY_V1_EDITOR_MANIFEST,\s*VIETNAMESE_HERITAGE_V2_EDITOR_MANIFEST,\s*OUR_WEDDING_STORY_V2_EDITOR_MANIFEST,\s*SE_DUYEN_V1_EDITOR_MANIFEST,\s*SE_DUYEN_V2_EDITOR_MANIFEST,\s*HONG_AN_V1_EDITOR_MANIFEST,\s*HONG_AN_V2_EDITOR_MANIFEST,\s*\]/,
     );
     expect(/["'`]wedding\.[\w-]+\.v\d+/.test(code)).toBe(false);
   });

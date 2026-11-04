@@ -9,6 +9,7 @@ import { ROMANTIC_MINIMAL_V1_MANIFEST } from "../../wedding/romantic-minimal/v1/
 import { SE_DUYEN_V1_MANIFEST } from "../../wedding/se-duyen/v1/manifest";
 import { SE_DUYEN_V2_MANIFEST } from "../../wedding/se-duyen/v2/manifest";
 import { HONG_AN_V1_MANIFEST } from "../../wedding/hong-an/v1/manifest";
+import { HONG_AN_V2_MANIFEST } from "../../wedding/hong-an/v2/manifest";
 import { VIETNAMESE_HERITAGE_V1_MANIFEST } from "../../wedding/vietnamese-heritage/v1/manifest";
 import { VIETNAMESE_HERITAGE_V2_MANIFEST } from "../../wedding/vietnamese-heritage/v2/manifest";
 import { OUR_WEDDING_STORY_V2_MANIFEST } from "../../wedding/our-wedding-story/v2/manifest";
@@ -48,6 +49,7 @@ const OWS2_KEY = "wedding.our-wedding-story.v2";
 const SD_KEY = "wedding.se-duyen.v1";
 const SD2_KEY = "wedding.se-duyen.v2";
 const HA_KEY = "wedding.hong-an.v1";
+const HA2_KEY = "wedding.hong-an.v2";
 
 function isDeepFrozen(value: unknown): boolean {
   if (typeof value !== "object" || value === null) return true;
@@ -178,8 +180,9 @@ describe("P27 — production manifest list and derived keys", () => {
   // SD-V1 generalization: Se Duyên v1 is appended seventh; the first six keep their positions.
   // SD-V2-01 generalization: Se Duyên v2 is appended eighth; the first seven keep their positions.
   // HA-INTEGRATION-01 generalization: Hồng Ân v1 is appended ninth; the first eight keep their positions.
-  it("contains exactly Elegant Editorial v1, Vietnamese Heritage v1, Romantic Minimal v1, Our Wedding Story v1, Vietnamese Heritage v2, Our Wedding Story v2, Se Duyên v1, Se Duyên v2 then Hồng Ân v1, validated and deeply frozen", () => {
-    expect(PRODUCTION_RENDERER_MANIFESTS).toHaveLength(9);
+  // HA-CONTENT-01 generalization: Hồng Ân v2 is appended tenth; the first nine keep their positions.
+  it("contains exactly Elegant Editorial v1, Vietnamese Heritage v1, Romantic Minimal v1, Our Wedding Story v1, Vietnamese Heritage v2, Our Wedding Story v2, Se Duyên v1, Se Duyên v2, Hồng Ân v1 then Hồng Ân v2, validated and deeply frozen", () => {
+    expect(PRODUCTION_RENDERER_MANIFESTS).toHaveLength(10);
     expect(PRODUCTION_RENDERER_MANIFESTS[0]).toStrictEqual(ELEGANT_EDITORIAL_V1_MANIFEST);
     expect(PRODUCTION_RENDERER_MANIFESTS[0]).not.toBe(ELEGANT_EDITORIAL_V1_MANIFEST);
     expect(PRODUCTION_RENDERER_MANIFESTS[1]).toStrictEqual(VIETNAMESE_HERITAGE_V1_MANIFEST);
@@ -198,6 +201,8 @@ describe("P27 — production manifest list and derived keys", () => {
     expect(PRODUCTION_RENDERER_MANIFESTS[7]).not.toBe(SE_DUYEN_V2_MANIFEST);
     expect(PRODUCTION_RENDERER_MANIFESTS[8]).toStrictEqual(HONG_AN_V1_MANIFEST);
     expect(PRODUCTION_RENDERER_MANIFESTS[8]).not.toBe(HONG_AN_V1_MANIFEST);
+    expect(PRODUCTION_RENDERER_MANIFESTS[9]).toStrictEqual(HONG_AN_V2_MANIFEST);
+    expect(PRODUCTION_RENDERER_MANIFESTS[9]).not.toBe(HONG_AN_V2_MANIFEST);
     expect(isDeepFrozen(PRODUCTION_RENDERER_MANIFESTS)).toBe(true);
   });
 
@@ -205,7 +210,7 @@ describe("P27 — production manifest list and derived keys", () => {
     expect(PRODUCTION_RENDERER_KEYS).toStrictEqual(
       PRODUCTION_RENDERER_MANIFESTS.map((manifest) => manifest.compatibility.rendererKey),
     );
-    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([EE_KEY, VH_KEY, RM_KEY, OWS_KEY, VH2_KEY, OWS2_KEY, SD_KEY, SD2_KEY, HA_KEY]);
+    expect(PRODUCTION_RENDERER_KEYS).toStrictEqual([EE_KEY, VH_KEY, RM_KEY, OWS_KEY, VH2_KEY, OWS2_KEY, SD_KEY, SD2_KEY, HA_KEY, HA2_KEY]);
     expect(Object.isFrozen(PRODUCTION_RENDERER_KEYS)).toBe(true);
   });
 

@@ -59,6 +59,8 @@ const ALLOWED_IMPORTS: Readonly<Record<(typeof RF06A_FILES)[number], readonly st
     "templates/wedding/se-duyen/v2/manifest",
     // HA-INTEGRATION-01: the ninth explicit production manifest.
     "templates/wedding/hong-an/v1/manifest",
+    // HA-CONTENT-01: the tenth explicit production manifest.
+    "templates/wedding/hong-an/v2/manifest",
     "templates/core/renderer-manifest",
   ],
   "templates/wedding/elegant-editorial/v1/manifest.ts": ["templates/core/renderer-manifest"],
@@ -142,6 +144,8 @@ const RS01_LAZY_ROOTS = [
   "templates/wedding/se-duyen/v2/se-duyen-v2",
   // HA-INTEGRATION-01: the ninth production renderer root.
   "templates/wedding/hong-an/v1/hong-an-v1",
+  // HA-CONTENT-01: the tenth production renderer root.
+  "templates/wedding/hong-an/v2/hong-an-v2",
 ] as const;
 
 /** Resolves a relative specifier from `file` to a repository-relative module path. */
@@ -262,7 +266,7 @@ describe("RF-06A files", () => {
     const code = stripComments(readRepoFile("templates/core/production-renderer-manifests.ts"));
     // VH-01: still one explicit, ordered literal list, now with the second manifest; RM-02: and the third; OWS-01: and the fourth.
     expect(code).toMatch(
-      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*OUR_WEDDING_STORY_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V2_MANIFEST,\s*OUR_WEDDING_STORY_V2_MANIFEST,\s*SE_DUYEN_V1_MANIFEST,\s*SE_DUYEN_V2_MANIFEST,\s*HONG_AN_V1_MANIFEST,\s*\]\)/,
+      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*OUR_WEDDING_STORY_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V2_MANIFEST,\s*OUR_WEDDING_STORY_V2_MANIFEST,\s*SE_DUYEN_V1_MANIFEST,\s*SE_DUYEN_V2_MANIFEST,\s*HONG_AN_V1_MANIFEST,\s*HONG_AN_V2_MANIFEST,\s*\]\)/,
     );
     expect(/["'`]wedding\.[\w-]+\.v\d+/.test(code)).toBe(false);
   });
@@ -359,6 +363,7 @@ describe("templates/** production tree (P39)", () => {
   // SD-V1-01 extension: plus exactly the Se Duyên v1 renderer files (rules at the end of this file).
   // SD-V2-01 extension: plus exactly the Se Duyên v2 renderer files (rules at the end of this file).
   // HA-INTEGRATION-01 extension: plus exactly the Hồng Ân v1 renderer files (rules at the end of this file).
+  // HA-CONTENT-01 extension: plus exactly the Hồng Ân v2 renderer files (same rules; it is v1's successor).
   it("templates/** contains exactly the RF-06A, RF-06B, RF-06C, RF-06D, VH-01, TE-02, RM-01, RM-02 and OWS-01 files", () => {
     expect([...sources].sort()).toStrictEqual(
       [
@@ -378,6 +383,7 @@ describe("templates/** production tree (P39)", () => {
         ...SD1_FILES,
         ...SD2_FILES,
         ...HA1_FILES,
+        ...HA2_FILES,
       ].sort(),
     );
   });
@@ -688,12 +694,14 @@ describe("RF-06B template files", () => {
           ...SD2_TSX_FILES,
           HA1_CSS_FILE,
           ...HA1_TSX_FILES,
+          HA2_CSS_FILE,
+          ...HA2_TSX_FILES,
         ],
         file,
       ).toContain(file);
     }
     expect(sources.filter((source) => source.endsWith(".css")).sort()).toStrictEqual(
-      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE, VH2_CSS_FILE, OWS2_CSS_FILE, SD1_CSS_FILE, SD2_CSS_FILE, HA1_CSS_FILE].sort(),
+      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE, VH2_CSS_FILE, OWS2_CSS_FILE, SD1_CSS_FILE, SD2_CSS_FILE, HA1_CSS_FILE, HA2_CSS_FILE].sort(),
     );
   });
 
@@ -1423,13 +1431,13 @@ describe("RS-01 renderer-key lazy loading", () => {
 
   it("the binding module owns exactly one literal import() per production renderer root, nothing else", () => {
     const { specifiers, total } = dynamicImportsOf(readRepoFile(BINDINGS_MODULE));
-    expect(total).toBe(9);
+    expect(total).toBe(10);
     expect(specifiers.map((specifier) => resolveSpecifier(BINDINGS_MODULE, specifier))).toStrictEqual([...RS01_LAZY_ROOTS]);
     const code = codeOf(BINDINGS_MODULE);
     // No template literal, concatenation, variable or discovery in a specifier.
     expect(code).not.toMatch(/import\(\s*[^"'\s]|import\(`|import\([^)]*\+|readdir|glob|require\(/);
     // next/dynamic with no options: SSR on, no `loading` (no Suspense boundary, no placeholder content).
-    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(9);
+    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(10);
     expect(code).not.toMatch(/ssr:|loading:|suspense/i);
     // Each lazy root binds its own export only.
     expect(code).toMatch(/import\("\.\.\/wedding\/elegant-editorial\/v1\/elegant-editorial-v1"\)\.then\(\(module\) => module\.ElegantEditorialV1\)/);
@@ -1441,6 +1449,7 @@ describe("RS-01 renderer-key lazy loading", () => {
     expect(code).toMatch(/import\("\.\.\/wedding\/se-duyen\/v1\/se-duyen-v1"\)\.then\(\(module\) => module\.SeDuyenV1\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/se-duyen\/v2\/se-duyen-v2"\)\.then\(\(module\) => module\.SeDuyenV2\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/hong-an\/v1\/hong-an-v1"\)\.then\(\(module\) => module\.HongAnV1\)/);
+    expect(code).toMatch(/import\("\.\.\/wedding\/hong-an\/v2\/hong-an-v2"\)\.then\(\(module\) => module\.HongAnV2\)/);
     expect(code).not.toMatch(/\bcatch\b|\.catch\(/);
   });
 
@@ -1455,6 +1464,7 @@ describe("RS-01 renderer-key lazy loading", () => {
     expect(eager.files.filter((file) => file.startsWith("templates/wedding/")).sort()).toStrictEqual([
       "templates/wedding/elegant-editorial/v1/manifest.ts",
       "templates/wedding/hong-an/v1/manifest.ts",
+      "templates/wedding/hong-an/v2/manifest.ts",
       "templates/wedding/our-wedding-story/v1/manifest.ts",
       "templates/wedding/our-wedding-story/v2/manifest.ts",
       "templates/wedding/romantic-minimal/v1/manifest.ts",
@@ -3989,13 +3999,75 @@ const HA1_INTERIOR_ASSETS = [
   "rose-window.webp",
 ] as const;
 
+// ===========================================================================
+// HA-CONTENT-01 extension — Hồng Ân v2 (`wedding.hong-an.v2`).
+//
+// v1's presentation-identical successor, registered tenth. Its only
+// difference is the Staff-configurable Scripture quote, so it inherits every
+// v1 rule and every v1 recorded deviation unchanged, and it is covered by the
+// generic describes above exactly as Se Duyên v2 is — no separate boundary
+// section, because there is no separate boundary.
+//
+// It introduces NO new decorative file: both modules that name artwork read
+// v1's own immutable `public/renderers/wedding/hong-an/v1/` paths, so there
+// is no v2 asset directory and no v2 asset list here (see
+// templates/wedding/hong-an/v2/PROVENANCE.md).
+// ===========================================================================
+
+const HA2 = "templates/wedding/hong-an/v2";
+const HA2_MANIFEST_FILE = `${HA2}/manifest.ts`;
+const HA2_ROOT = `${HA2}/hong-an-v2.tsx`;
+const HA2_FONTS = `${HA2}/fonts.ts`;
+const HA2_CSS_FILE = `${HA2}/hong-an-v2.module.css`;
+const HA2_PROVENANCE_FILE = `${HA2}/PROVENANCE.md`;
+/** The editor manifest, outside the renderer-version directory. */
+const HA2_EDITOR_FILE = "templates/editor/wedding/hong-an-v2.ts";
+/** Static modules: no hooks, no interaction, no capability. */
+const HA2_CODE_FILES = [
+  HA2_MANIFEST_FILE,
+  HA2_ROOT,
+  `${HA2}/copy.ts`,
+  HA2_FONTS,
+  `${HA2}/sections/arch.tsx`,
+  `${HA2}/sections/ceremony.tsx`,
+  `${HA2}/sections/closing.tsx`,
+  `${HA2}/sections/event-selection.ts`,
+  `${HA2}/sections/families.tsx`,
+  `${HA2}/sections/gift-panels.ts`,
+  `${HA2}/sections/invitation.tsx`,
+  `${HA2}/sections/love-story.tsx`,
+  `${HA2}/sections/photo-frame.ts`,
+  `${HA2}/sections/reception.tsx`,
+  `${HA2}/sections/scripture.tsx`,
+  // HA-CONTENT-01: the one place the configured quote is resolved. Pure.
+  `${HA2}/sections/scripture-quote.ts`,
+  `${HA2}/sections/timeline.tsx`,
+] as const;
+/** The interactive islands (the countdown is a capability consumer without hooks). */
+const HA2_ISLAND_FILES = [
+  `${HA2}/interactive/opening-stage.tsx`,
+  `${HA2}/interactive/countdown.tsx`,
+  `${HA2}/interactive/gallery.tsx`,
+  `${HA2}/interactive/gift.tsx`,
+  `${HA2}/interactive/music-control.tsx`,
+  `${HA2}/interactive/rsvp.tsx`,
+  `${HA2}/interactive/section-reveal.tsx`,
+] as const;
+/** Pure geometry behind the opening island. */
+const HA2_MODEL_FILES = [`${HA2}/interactive/opening-geometry.ts`] as const;
+const HA2_RENDERER_TREE = [...HA2_CODE_FILES, ...HA2_ISLAND_FILES, ...HA2_MODEL_FILES, HA2_CSS_FILE, HA2_PROVENANCE_FILE];
+const HA2_FILES = [...HA2_RENDERER_TREE, HA2_EDITOR_FILE];
+const HA2_TSX_FILES = HA2_FILES.filter((file) => file.endsWith(".tsx"));
+
 describe("HA-INTEGRATION-01 Hồng Ân v1 files", () => {
   const productionSources = () =>
     [...listSources(TEMPLATES_ROOT), ...nonTestSources("app"), ...nonTestSources("lib")].filter((file) => /\.(ts|tsx)$/.test(file));
 
   it("every listed file exists, and the tree holds nothing else", () => {
     for (const file of HA1_FILES) expect(() => readRepoFile(file), file).not.toThrow();
-    expect(listSources(join(TEMPLATES_ROOT, "wedding", "hong-an")).sort()).toStrictEqual([...HA1_RENDERER_TREE].sort());
+    expect(listSources(join(TEMPLATES_ROOT, "wedding", "hong-an")).sort()).toStrictEqual(
+      [...HA1_RENDERER_TREE, ...HA2_RENDERER_TREE].sort(),
+    );
   });
 
   it("the manifest is data only, imports its type only, and declares exactly the sections the renderer renders", () => {

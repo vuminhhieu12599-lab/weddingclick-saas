@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 
+import { declaresScriptureSettings } from "../../../../../../lib/admin/scripture-settings-editor";
 import { contentEditorsFor, legacyMediaRolesFor } from "../../../../../../lib/admin/template-editor-presentation";
+import type { TemplateDesignManifestV1 } from "../../../../../../lib/domain";
 import type { TemplateEditorManifestV1 } from "../../../../../../templates/core/editor-manifest";
 import { DressCodeEditor } from "./dress-code-editor";
 import { FamilyEditor } from "./family-editor";
 import { GiftContentEditor } from "./gift-content-editor";
 import { InvitationMessageEditor } from "./invitation-message-editor";
 import { MediaEditor } from "./media-editor";
+import { ScriptureEditor } from "./scripture-editor";
 import { TemplateMediaSlotEditor } from "./template-media-slot-editor";
 import { TimelineEditor } from "./timeline-editor";
 
@@ -21,16 +24,24 @@ import { TimelineEditor } from "./timeline-editor";
  * semantic media (music when used, social share cover). Each section of the
  * invitation still appears only when the frozen Snapshot builder finds real
  * data for it; there is no manual "show section" switch here.
+ *
+ * HA-CONTENT-01: template-approved copy a Project may configure comes from
+ * the version's DESIGN manifest instead — a card appears only when that
+ * manifest declares the settings it edits, so no renderer key is named here
+ * and a later version declaring the same settings needs no change.
  */
 export function OptionalInvitationContent({
   projectId,
   templateVersionId,
   manifest,
+  designManifest,
   onSaved: onSavedOuter,
 }: {
   projectId: string;
   templateVersionId: string;
   manifest: TemplateEditorManifestV1;
+  /** The exact pinned version's validated design manifest; decides the design-settings cards. */
+  designManifest: TemplateDesignManifestV1;
   onSaved?: () => void;
 }) {
   const [savedAny, setSavedAny] = useState(false);
@@ -41,6 +52,7 @@ export function OptionalInvitationContent({
   const editors = contentEditorsFor(manifest);
   const roles = legacyMediaRolesFor(manifest);
   const usesSlots = manifest.mediaModel === "TEMPLATE_SLOTS";
+  const showScripture = declaresScriptureSettings(designManifest);
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5" data-media-model={manifest.mediaModel}>
@@ -88,6 +100,7 @@ export function OptionalInvitationContent({
         {(editors.loveStory || editors.gift) && (
           <GiftContentEditor projectId={projectId} onSaved={onSaved} showLoveStory={editors.loveStory} showGift={editors.gift} />
         )}
+        {showScripture && <ScriptureEditor projectId={projectId} templateVersionId={templateVersionId} onSaved={onSaved} />}
       </div>
     </section>
   );

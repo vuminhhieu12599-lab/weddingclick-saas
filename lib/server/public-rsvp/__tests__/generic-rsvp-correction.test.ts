@@ -340,10 +340,11 @@ describe("E: migration 0056 is additive, atomic and service_role-only", () => {
   const signature = "public.submit_public_rsvp_keyed(text, bytea, text, integer, text, text)";
 
   it("is the one 0056 and the head migration, authored only", () => {
-    // HA-INTEGRATION-01: 0057 (the Hồng Ân v1 catalog seed) is now the head.
-    expect(names.at(-1)).toBe("20260911041217_0057_seed_hong_an_v1_catalog.sql");
-    expect(names.at(-2)).toBe(file);
-    expect(names.at(-3)).toBe("20260911041215_0055_rsvp_invitation_source.sql");
+    // HA-CONTENT-01: 0058 (the Hồng Ân v2 catalog seed) is now the head.
+    expect(names.at(-1)).toBe("20260911041218_0058_seed_hong_an_v2_catalog.sql");
+    expect(names.at(-2)).toBe("20260911041217_0057_seed_hong_an_v1_catalog.sql");
+    expect(names.at(-3)).toBe(file);
+    expect(names.at(-4)).toBe("20260911041215_0055_rsvp_invitation_source.sql");
     expect(names.filter((name) => /_0056_/.test(name))).toStrictEqual([file]);
     expect(sql).toMatch(/AUTHORING ONLY — not applied/);
   });

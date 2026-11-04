@@ -105,6 +105,7 @@ function TemplateContent({ projectId, onNavigate }: { projectId: string; onNavig
         projectId={projectId}
         templateVersionId={selected.version.id}
         manifest={selected.version.editorManifest}
+        designManifest={selected.version.designManifest}
         onSaved={bump}
       />
     </>
