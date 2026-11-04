@@ -3272,6 +3272,6 @@ Product Owner approved an **additive, optional** extension of the frozen K14 clo
 
 10. **Not done here.** `0058` is **not applied** to DEV or Production. DEV project `WC-2026-000059` is untouched: it stays on v1, and its Review #1 and published invitation are not modified or republished. Hồng Ân stays **inactive** in the catalog — `0058` never reads, sets or asserts `is_active` — and the showroom is not touched. Moving a Project to v2 is a Staff design-assignment action, never a side effect of the migration.
 
-11. **Open before activation.** Everything HA-INTEGRATION-01 item 7 lists, unchanged (the Product Owner rights confirmation for the Hồng Ân artwork is still **not recorded**); then applying `0057` and `0058`, in that order.
+11. **Open before activation.** The Product Owner rights confirmation HA-INTEGRATION-01 item 7 listed is now **recorded** (2026-11-03): all Hồng Ân opening artwork and interior assets are authorized for commercial use in the WeddingClick wedding invitation service, recorded in `templates/wedding/hong-an/v1/PROVENANCE.md` and extended to v2, which introduces no new asset. Usage rights only; no copyright-ownership claim. Still open: a decision on item 5's three recorded island-boundary deviations, template activation, and applying `0057` then `0058`, in that order.
 
 12. **Pre-existing upstream failures, unchanged.** The six `renderer-static-boundary` and one TE-02 failures HA-INTEGRATION-01 item 6 records still fail, for the same reasons, and are still left for their own owners.

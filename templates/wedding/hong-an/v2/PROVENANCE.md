@@ -31,14 +31,17 @@ SHA-256 hashes — is `../v1/PROVENANCE.md`, and it applies unchanged.**
    Our Wedding Story v2 likewise ship no `public/renderers/.../v2/`
    directory and read their v1 asset paths.
 
-## Open item — inherited from v1, still required before activation
+## Allowed production use
 
-- **Product Owner rights confirmation: NOT RECORDED.** No repository record
-  yet states that public and commercial use of the Hồng Ân opening artwork
-  and interior ornament pack is authorized. This is unchanged by v2 and is
-  not resolved by it. Both catalog seeds (migrations 0057 and 0058) register
-  the template INACTIVE; this confirmation should be recorded in
-  `../v1/PROVENANCE.md` before it is activated.
+- **Extended to `wedding.hong-an.v2` on the Product Owner's 2026-11-03
+  authorization**, which covers all Hồng Ân opening artwork and interior
+  assets for commercial use in the WeddingClick wedding invitation service
+  and is recorded in `../v1/PROVENANCE.md`. No new grant was needed, because
+  v2 introduces no new asset and reuses exactly v1's twelve files.
+- That record states the confirmed usage rights only; it asserts no copyright
+  ownership of the artwork.
+- Activating the template remains a separate Product Owner decision, and
+  migrations `0057`/`0058` stay unapplied until they are explicitly applied.
 
 ## Personal / customer data
 

@@ -1,23 +1,38 @@
 # Hồng Ân v1 — decor provenance
 
 Provenance note for `wedding.hong-an.v1` (HA-INTEGRATION-01). It records the
-factual source history of the decorative files. It makes no legal conclusion
-about copyright ownership and records no rights decision that has not been
-made.
+factual source history of the decorative files and the Product Owner's
+production-use decision. It makes no legal conclusion about copyright
+ownership and records no rights decision that has not been made.
 
 Version path: `public/renderers/wedding/hong-an/v1/` (immutable once used by
 a published invitation, P6 / CLAUDE.md §9). Two modules name these files,
 each by exact literal path: `interactive/opening-geometry.ts` (the five
 opening layers) and `hong-an-v1.module.css` (the seven interior ornaments).
 
-## Open item — required before activation
+## Allowed production use
 
-- **Product Owner rights confirmation: NOT RECORDED.** Unlike Se Duyên (whose
-  Product Owner grant of 2026-10-20 is recorded in its own PROVENANCE.md), no
-  repository record yet states that public and commercial use of the Hồng Ân
-  opening artwork and interior ornament pack is authorized. The catalog seed
-  (migration 0057) registers the template INACTIVE; this confirmation should
-  be recorded here before it is activated.
+- **Product Owner decision (2026-11-03): RECORDED.** Public and commercial
+  use of all Hồng Ân opening artwork and interior assets in the WeddingClick
+  wedding invitation service is explicitly authorized. The grant covers the
+  twelve files listed below — the five opening layers and the seven interior
+  ornaments — in the exact form shipped here.
+- This records the confirmed **usage rights only**. It asserts no copyright
+  ownership of the artwork, and it makes no legal conclusion beyond the
+  authorization stated above.
+- The files must not be redrawn, re-cropped or replaced; the 2026-10-01
+  Product Owner ruling to use the exact approved assets applies, and the
+  version path is immutable once a published invitation uses it (P6 /
+  CLAUDE.md §9).
+- **Extended to `wedding.hong-an.v2`.** v2 (HA-CONTENT-01) introduces no new
+  decorative file: it reuses exactly these twelve files, by the same literal
+  paths under `public/renderers/wedding/hong-an/v1/`. No separate grant was
+  needed, because no new asset exists. See
+  `../v2/PROVENANCE.md`.
+- This authorization was the one open item HA-INTEGRATION-01 recorded against
+  activation. Activating the template (`templates.is_active`) remains a
+  separate Product Owner decision, and migrations `0057`/`0058` stay
+  unapplied until they are explicitly applied.
 
 ## Opening artwork (5 files)
 
