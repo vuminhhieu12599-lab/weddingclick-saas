@@ -190,6 +190,23 @@ export const SHOWROOM_TEMPLATE_ENTRIES: readonly ShowroomTemplateEntry[] = [
     visibility: "PUBLIC",
     categories: ["truyen-thong"],
   },
+  {
+    // WC-SHOWROOM-HA-01: one public card for Hồng Ân; use the approved v2 renderer.
+    templateCode: "hong-an",
+    versionNumber: 2,
+    nameVi: "Hồng Ân",
+    nameEn: "Hồng Ân",
+    taglineVi: "Cổng vòm Gothic, sắc ngà và hoa ly trang trọng cho ngày hôn lễ.",
+    descriptionVi:
+      "Thiệp cưới Công giáo lấy cảm hứng từ kiến trúc nhà thờ Gothic, ánh vàng ngà và hoa ly. Lời Chúa được trình bày trang trọng; nhân viên có thể tùy chỉnh câu trích dẫn cho từng đôi uyên ương.",
+    moodVi: ["Công giáo", "Gothic", "Trang trọng"],
+    accent: "#a58b5a",
+    ...screenshots("hong-an", "Hồng Ân"),
+    sortOrder: 60,
+    visibility: "PUBLIC",
+    categories: ["cong-giao", "trang-trong"],
+  },
+
 ];
 
 /**
