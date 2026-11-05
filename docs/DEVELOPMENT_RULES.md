@@ -370,3 +370,9 @@ A task is not done until:
 - security impact reviewed;
 - documentation synchronized when required;
 - known limitations stated.
+
+---
+
+## 21. Production Template Showroom Gate (2026-11-05)
+
+A Production template release is not complete until its approved version also appears on the public showroom with distinct real cover/inside screenshots and validated demo routes. Follow `CLAUDE.md §36` and `lib/showroom/showroom-catalog.ts`; do not duplicate v1/v2 cards or expose an unverified template. Production URL: `https://weddingclick.vercel.app`, not the retired custom domain.
