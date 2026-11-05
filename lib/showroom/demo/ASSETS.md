@@ -184,11 +184,30 @@ kept byte-for-byte, so its hash below is unchanged.
 | our-wedding-story-inside.webp | invitation card | 724b2888147fe787dda0c44ce1d9434b9ab4c27c7b2657dc2a53aa5cbe6562a7 |
 | se-duyen-cover.webp | opened hero: couple in áo dài on lacquer red | 9a0abccb4f61a6efd0166f74da9fd23044fe8c035a42fc69517f506176ea028d |
 | se-duyen-inside.webp | invitation card: Lễ Thành Hôn, date, time, lunar date | 79114db672d990f098430ceb60337a1f74e159ad38bacc855947e23ea7762ffe |
+| hong-an-cover.webp | opened hero past the church doors: names, date — **no couple, see below** | 1b8a0557cd71f00ccadb7235b75651b701a96d2a1790d0f17871f72b8d8ee0bb |
+| hong-an-inside.webp | ceremony: Nghi Lễ Hôn Phối, Lễ Thành Hôn and Lễ Vu Quy cards | 55b93bac4c9a9606da787fd4989a79755b7aeeead36537f380018d0e67beab04 |
 
 
 `vietnamese-heritage-inside.webp` was re-captured on 2026-10-26 (SHOWROOM-CARD-HERO-01). The previous file had been shot before its portrait cluster loaded, so the three frames held the renderer's bokeh placeholder instead of the groom, couple and bride photographs — visible on the card's hover state. Same section, same framing, same 780×1688; only the three photographs are now real. This is the capture that motivated the settle rule above.
 
 The two `se-duyen-*.webp` captures are real captures of `/mau-thiep/se-duyen` running the production Se Duyên v1 renderer on the demo data above: the cover (re-captured 2026-10-26, SHOWROOM-CARD-HERO-01) is the opened hero — the couple in áo dài on lacquer red under the gilt names — and the inside shot (SD-V1-SHOWROOM-01, 2026-10-23) is the invitation card. No placeholder art and no broken media in either.
+
+The two `hong-an-*.webp` captures (WC-SHOWROOM-HA-01, 2026-11-05) are real captures of `/mau-thiep/hong-an`
+running the production Hồng Ân v2 renderer on the demo wedding above, taken by the standard recipe: local
+production build, headless Chrome, 390×844 CSS px at DPR 2, `prefers-reduced-motion: reduce`, demo bar and
+floating contact hidden, one full scroll pass before each shot, WebP quality 78. The cover is the opened hero
+one tap past the church doors (`MỞ THIỆP CƯỚI`); the inside shot is the ceremony section at its own top offset,
+holding both the Lễ Thành Hôn and the Lễ Vu Quy card with their dates, lunar dates and venues.
+
+**Hồng Ân has no demo photo set, and its cover therefore shows no couple.** `wedding.hong-an.v2` has no entry in
+`DEMO_TEMPLATE_SLOT_PHOTO_SETS`, so every photo slot — `openingPhoto`, `storyPhoto`, `gallery`, `closingPhoto` —
+falls back to the abstract mood images, and the hero behind the names is champagne bokeh rather than a
+photograph. This is the one card of the six that does not satisfy the SHOWROOM-CARD-HERO-01 intent above
+("with the couple in frame"). Choosing demo photography is a Product Owner decision for every other template
+in this file (see the DECISIONS.md amendments of 2026-10-13), so none was invented here. **When a Hồng Ân photo
+set is approved, add it to `demo-media.ts` and re-capture both files**; the slot keys the renderer declares are
+`openingPhoto` (1), `storyPhoto` (1), `gallery` (unbounded) and `closingPhoto` (1), from
+`templates/editor/wedding/hong-an-v2.ts`.
 
 ## Social share image — `public/showroom/og-weddingclick.jpg`
 
