@@ -161,6 +161,46 @@ Wired only for `wedding.se-duyen.v1` through `DEMO_TEMPLATE_SLOT_PHOTO_SETS`, ke
 
 Se Duyên declares **no person-bound slot**: every frame is a layout position, identical for COMMON, GROOM and BRIDE, so no photograph is presented as "the groom's" or "the bride's". The album's approved composition is four frames — a lead, a tall/small pair, then a wide foot frame — and the renderer draws the first four of the slot in order, so the landscape tea ceremony (05) is placed last, where the wide crop belongs. The renderer is unchanged: its frames cover-crop and the viewer shows every photo whole.
 
+## Hồng Ân demo photos — reused, no new files
+
+WC-SHOWROOM-HA-02 (Product Owner, 2026-11-05). The Hồng Ân showroom demo introduces **no new image files**. It
+references the Elegant Editorial WebPs above (`public/showroom/demo/elegant-editorial/photos/`) by path:
+`demo-media.ts` maps the existing `EE_*` constants into `DEMO_TEMPLATE_SLOT_PHOTO_SETS`, so there is one set of
+bytes, one licence and one provenance entry — the Elegant Editorial section above, whose fictional-origin and
+rights statement covers this use unchanged. They are fictional showroom photographs, never a real couple,
+wedding or client portfolio, and never a fallback for a customer invitation.
+
+Why that set: it is the committed showroom photography shot in a white gown and dark formal suit under pale
+editorial light, with lilies, white blossom and warm chandeliers — the closest match to Hồng Ân's ivory,
+champagne and gold direction (Công giáo / Gothic / Trang trọng). The Vietnamese Heritage set, which Se Duyên
+reuses, is áo dài against lacquer red and would fight this palette. Copying the files into a `hong-an/` folder
+would have doubled identical bytes and split one provenance record in two.
+
+The **Elegant Editorial v1 mapping is unchanged**: `DEMO_LEGACY_ROLE_PHOTO_SETS` still wires the same ten photos
+into `wedding.elegant-editorial.v1` exactly as before. Only a second, independent mapping was added.
+
+Wired for `wedding.hong-an.v2` through `DEMO_TEMPLATE_SLOT_PHOTO_SETS`, keyed by `registeredRendererKey("hong-an", 2)`
+because the renderer static boundary forbids that key literal outside the renderer's own files. Mapping, against
+the v2 editor manifest's declared slots and `maxCount`:
+
+| Slot | maxCount | Photo |
+|---|---|---|
+| `openingPhoto` | 1 | 01 — waits behind the two church doors and becomes the full-bleed hero when they open |
+| `storyPhoto` | 1 | 02 — the single frame inside the pointed-arch cutout beside the love story |
+| `gallery` | null (no limit) | 03, 04, 09, 06, 07, 05 |
+| `closingPhoto` | 1 | 05 — above the thank-you line, the same bytes as the album's last tile |
+
+Hồng Ân declares **no person-bound slot**: every frame is a layout position, identical for COMMON, GROOM and
+BRIDE, so no photograph is presented as "the groom's" or "the bride's". `EE_GROOM` and `EE_BRIDE` are the
+Elegant Editorial constant names for two solo frames (04 and 09); in this album they are positions only. The
+gallery takes six — the slot's `recommendedCount` — in uniform 4:5 arch-topped tiles, two per row on mobile and
+three above the breakpoint, and opens on frames not already used above it. Every photo is portrait 1122×1402, so
+nothing is lost to the tiles' 4:5 crop. The renderer, its CSS and the showroom catalog are unchanged.
+
+Opening-hero crop, checked at 390×844 CSS px at DPR 2 (the slot declares PORTRAIT with a `6:13` hint, and the
+renderer sets `object-fit: cover; object-position: 50% 42%`): both faces fall clear of the name block, the names,
+date and scripture line stay legible over the renderer's veil, and no face is cut by the frame.
+
 ## Template screenshots — `public/showroom/templates/`
 
 Real screenshots of the public demo pages (`/mau-thiep/<code>`, demo bar removed) from a local production build, headless Chrome, 390×844 CSS px at 2× (780×1688), WebP quality 78. `<code>-cover.webp` is the **first opened screen** — the hero the guest meets once the envelope, door or box is past, with the couple in frame; `<code>-inside.webp` is a further inner section. Re-capture whenever a renderer version, the demo data or the demo images change, and for every new template. **Before every shot, scroll the whole document once and wait until every `<img>` reports `naturalWidth > 0`**: the renderers lazy-load below-the-fold photography behind a soft placeholder, and a capture taken too early bakes that placeholder into the asset.
@@ -184,7 +224,7 @@ kept byte-for-byte, so its hash below is unchanged.
 | our-wedding-story-inside.webp | invitation card | 724b2888147fe787dda0c44ce1d9434b9ab4c27c7b2657dc2a53aa5cbe6562a7 |
 | se-duyen-cover.webp | opened hero: couple in áo dài on lacquer red | 9a0abccb4f61a6efd0166f74da9fd23044fe8c035a42fc69517f506176ea028d |
 | se-duyen-inside.webp | invitation card: Lễ Thành Hôn, date, time, lunar date | 79114db672d990f098430ceb60337a1f74e159ad38bacc855947e23ea7762ffe |
-| hong-an-cover.webp | opened hero past the church doors: names, date — **no couple, see below** | 1b8a0557cd71f00ccadb7235b75651b701a96d2a1790d0f17871f72b8d8ee0bb |
+| hong-an-cover.webp | opened hero past the church doors: couple under the names | 5a32a4278324006480cb0016d32e3eca631f8d9ce592149fbe925ccb9607f735 |
 | hong-an-inside.webp | ceremony: Nghi Lễ Hôn Phối, Lễ Thành Hôn and Lễ Vu Quy cards | 55b93bac4c9a9606da787fd4989a79755b7aeeead36537f380018d0e67beab04 |
 
 
@@ -199,15 +239,15 @@ floating contact hidden, one full scroll pass before each shot, WebP quality 78.
 one tap past the church doors (`MỞ THIỆP CƯỚI`); the inside shot is the ceremony section at its own top offset,
 holding both the Lễ Thành Hôn and the Lễ Vu Quy card with their dates, lunar dates and venues.
 
-**Hồng Ân has no demo photo set, and its cover therefore shows no couple.** `wedding.hong-an.v2` has no entry in
-`DEMO_TEMPLATE_SLOT_PHOTO_SETS`, so every photo slot — `openingPhoto`, `storyPhoto`, `gallery`, `closingPhoto` —
-falls back to the abstract mood images, and the hero behind the names is champagne bokeh rather than a
-photograph. This is the one card of the six that does not satisfy the SHOWROOM-CARD-HERO-01 intent above
-("with the couple in frame"). Choosing demo photography is a Product Owner decision for every other template
-in this file (see the DECISIONS.md amendments of 2026-10-13), so none was invented here. **When a Hồng Ân photo
-set is approved, add it to `demo-media.ts` and re-capture both files**; the slot keys the renderer declares are
-`openingPhoto` (1), `storyPhoto` (1), `gallery` (unbounded) and `closingPhoto` (1), from
-`templates/editor/wedding/hong-an-v2.ts`.
+**Amendment (WC-SHOWROOM-HA-02, 2026-11-05).** `hong-an-cover.webp` was re-captured after the Product Owner
+decided to reuse the Elegant Editorial photographs for this demo (section above). The first capture had no
+couple in frame, because Hồng Ân then had no photo set and every slot fell back to the abstract mood images;
+the hero behind the names was champagne bokeh. It now carries photo 01, so the sixth card satisfies the
+SHOWROOM-CARD-HERO-01 intent like the other five. Same framing, same recipe, same 780×1688; it grew from 19 KB
+to 70 KB because photographs compress less than flat bokeh. `hong-an-inside.webp` is **kept byte-for-byte**: it
+is framed on the ceremony section, which declares no media slot, so a fresh capture of that frame differs from
+the committed file only by WebP compression noise (mean absolute difference 1.2/255), the same reasoning that
+kept `our-wedding-story-inside.webp` unchanged.
 
 ## Social share image — `public/showroom/og-weddingclick.jpg`
 

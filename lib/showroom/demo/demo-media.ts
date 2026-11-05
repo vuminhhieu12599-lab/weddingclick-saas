@@ -257,6 +257,39 @@ export const DEMO_TEMPLATE_SLOT_PHOTO_SETS: Readonly<Record<string, DemoTemplate
     // The closing frame fades into the lacquer ground under the thank-you line.
     closingPhoto: Object.freeze([nth(SD_PHOTOS, 10)]),
   }),
+  /**
+   * WC-SHOWROOM-HA-02 (Product Owner, 2026-11-05): Hồng Ân v2 reuses the
+   * Elegant Editorial photographs rather than copying them, the same way
+   * Se Duyên reuses Vietnamese Heritage. They are the committed showroom set
+   * shot in a white gown and dark formal suit against pale editorial light,
+   * which is the closest match to this direction's ivory-and-gold palette,
+   * and referencing the same files keeps one set of bytes and one provenance
+   * entry (`lib/showroom/demo/ASSETS.md`). No new image is introduced, and
+   * the Elegant Editorial v1 mapping above is untouched.
+   *
+   * Keyed through the production registry because the renderer static
+   * boundary forbids this renderer's key literal outside its own files.
+   *
+   * Hồng Ân declares no person-bound slot, so every frame below is a layout
+   * position, identical for COMMON, GROOM and BRIDE. `EE_GROOM` and
+   * `EE_BRIDE` are the Elegant Editorial constant names for two solo frames;
+   * here they are album positions only, never "the groom's" or "the bride's"
+   * photograph.
+   */
+  [registeredRendererKey("hong-an", 2)]: Object.freeze({
+    // Behind the two church doors from the first frame; it becomes the
+    // full-bleed hero when they open, so it carries the whole first screen.
+    openingPhoto: Object.freeze([EE_COVER]),
+    // The single frame inside the pointed-arch cutout beside the love story.
+    storyPhoto: Object.freeze([EE_SEATED]),
+    // Six tiles — the slot's recommended count — in uniform 4:5 arch-topped
+    // cells, two per row on mobile and three above the breakpoint. Opens on
+    // frames not already used above so the album stays fresh.
+    gallery: Object.freeze([EE_JOYFUL, EE_GROOM, EE_BRIDE, EE_GAZE, EE_INTIMATE, EE_CLOSE]),
+    // Closes the invitation above the thank-you line; the same bytes as the
+    // album's last tile, as Romantic Minimal and Our Wedding Story do.
+    closingPhoto: Object.freeze([EE_CLOSE]),
+  }),
 });
 
 export function lookupDemoTemplateSlotPhotoSet(rendererKey: string): DemoTemplateSlotPhotoSet | undefined {
