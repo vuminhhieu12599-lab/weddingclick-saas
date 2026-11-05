@@ -878,6 +878,19 @@ Optimize for:
 
 When a shortcut conflicts with a documented architectural rule, follow the architectural rule.
 
+
+## 36. Production Template → Public Showroom Synchronization
+
+**Product Owner decision, 2026-11-05.** Whenever a wedding template (or a new approved public version) is released and activated on Production, that release workflow **must also update the public showroom** at `https://weddingclick.vercel.app/#mau-thiep`.
+
+- Use **one card per template code** in `lib/showroom/showroom-catalog.ts`, pointing at the latest approved Production version. Do not create separate v1/v2 cards.
+- Capture two **real and distinct 780×1688 WebP screenshots** of the exact fictional showroom demo and commit them to `public/showroom/templates/<code>-cover.webp` and `<code>-inside.webp`. Never substitute another template, a prototype, a placeholder, or real customer data.
+- Verify COMMON/GROOM/BRIDE demo routes, links, screenshot dimensions and mobile 390 px before merging to the auto-deploying `weddingclick-v2` branch.
+- A Production template release is complete only when its showroom card is public and checked; if this is blocked, call it PARTIAL until resolved.
+- The active public Production domain is `weddingclick.vercel.app`. The retired `weddingclick.online` domain must not be used.
+
+This rule does not authorize unapproved renderer design changes or publishing unapproved templates.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
