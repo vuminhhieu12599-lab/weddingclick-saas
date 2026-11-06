@@ -63,7 +63,7 @@ function webpSize(bytes: Buffer): { readonly width: number; readonly height: num
 }
 
 describe("LAUNCH-P0-04 showroom catalog", () => {
-  it("publishes exactly the five released templates, in display order", () => {
+  it("publishes exactly the six released templates, in display order", () => {
     expect(PUBLIC_SHOWROOM_TEMPLATES.map((template) => template.templateCode)).toStrictEqual([
       "elegant-editorial",
       "vietnamese-heritage",
@@ -71,6 +71,7 @@ describe("LAUNCH-P0-04 showroom catalog", () => {
       "our-wedding-story",
       // SD-V1-SHOWROOM-01: Se Duyên is the fifth card, sortOrder 50.
       "se-duyen",
+      "hong-an",
     ]);
     expect(PUBLIC_SHOWROOM_TEMPLATES.map((template) => template.nameVi)).toStrictEqual([
       "Nét Thanh Lịch",
@@ -78,6 +79,7 @@ describe("LAUNCH-P0-04 showroom catalog", () => {
       "Dịu Dàng",
       "Chuyện Chúng Mình",
       "Se Duyên",
+      "Hồng Ân",
     ]);
   });
 

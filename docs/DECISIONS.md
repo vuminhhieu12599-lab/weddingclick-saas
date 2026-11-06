@@ -3275,3 +3275,23 @@ Product Owner approved an **additive, optional** extension of the frozen K14 clo
 11. **Open before activation.** The Product Owner rights confirmation HA-INTEGRATION-01 item 7 listed is now **recorded** (2026-11-03): all Hồng Ân opening artwork and interior assets are authorized for commercial use in the WeddingClick wedding invitation service, recorded in `templates/wedding/hong-an/v1/PROVENANCE.md` and extended to v2, which introduces no new asset. Usage rights only; no copyright-ownership claim. Still open: a decision on item 5's three recorded island-boundary deviations, template activation, and applying `0057` then `0058`, in that order.
 
 12. **Pre-existing upstream failures, unchanged.** The six `renderer-static-boundary` and one TE-02 failures HA-INTEGRATION-01 item 6 records still fail, for the same reasons, and are still left for their own owners.
+
+---
+
+## WC-SHOWROOM-HA-02 — Hồng Ân v2 Demo Reuses the Elegant Editorial Photographs (2026-11-06)
+
+**Status:** approved by the Product Owner on 2026-11-05 and implemented on PR #29 (branch `showroom-06-hong-an-v2`), covering WC-SHOWROOM-HA-01, WC-SHOWROOM-HA-02 and WC-SHOWROOM-HA-QA-03.
+
+1. **The decision.** The Hồng Ân v2 **public demo** uses the existing fictional Elegant Editorial v1 photo set. Our Wedding Story's photographs were considered and explicitly **not** chosen. This settles the gap WC-SHOWROOM-HA-01 recorded, where Hồng Ân was the only PUBLIC card with no demo photo set and fell back to the abstract mood images.
+
+2. **Reuse, never duplication.** The mapping is one new entry in `DEMO_TEMPLATE_SLOT_PHOTO_SETS`, keyed through `registeredRendererKey("hong-an", 2)` because the renderer static boundary forbids that key literal outside the renderer's own files. It points at the existing `EE_*` constants: `openingPhoto` `EE_COVER`; `storyPhoto` `EE_SEATED`; `gallery` `EE_JOYFUL`, `EE_GROOM`, `EE_BRIDE`, `EE_GAZE`, `EE_INTIMATE`, `EE_CLOSE`; `closingPhoto` `EE_CLOSE`. **No image file is copied, added or moved**, and Elegant Editorial's own mapping is untouched — the same pattern Se Duyên already uses with Vietnamese Heritage.
+
+3. **Scope of the mapping.** It applies to the `/mau-thiep/hong-an` public demo only. It is showroom demo data, reaches no Project, no `project_media` row and no published invitation, and uses **fictional demo content only — no customer data**.
+
+4. **No person-bound slots.** Hồng Ân declares none, so every frame is a layout position, identical for COMMON, GROOM and BRIDE. `EE_GROOM` and `EE_BRIDE` are Elegant Editorial's constant names for two solo frames; here they are album positions only, never "the groom's" or "the bride's" photograph.
+
+5. **The approved design is unchanged.** No renderer, CSS, layout or copy change was made for this. The tall 6:13 opening hero was reviewed at 390 px before the mapping was accepted: both faces sit clear of the name block and the names, date and Scripture line stay legible over the renderer's own veil, so no crop exception was needed.
+
+6. **Screenshots.** `public/showroom/templates/hong-an-cover.webp` was **re-captured** from the new hero (sha256 `5a32a4278324006480cb0016d32e3eca631f8d9ce592149fbe925ccb9607f735`). `public/showroom/templates/hong-an-inside.webp` is **kept byte-for-byte** from WC-SHOWROOM-HA-01 (sha256 `55b93bac4c9a9606da787fd4989a79755b7aeeead36537f380018d0e67beab04`): it frames the ceremony section, which declares no media slot, so a photo set cannot change it. Provenance, the mapping and both hashes are recorded in `lib/showroom/demo/ASSETS.md`.
+
+7. **Verification.** Focused showroom tests (46), typecheck and production build all passed, and WC-SHOWROOM-HA-QA-03 confirmed the Vercel Preview for commit `bc1bef9`: six cards with Hồng Ân sixth at 390 px and 1280 px, the cover showing the fictional couple, the cover/inside transition, all three demo routes with the correct Lễ Thành Hôn / Lễ Vu Quy wording, no broken image, no horizontal overflow and a clean console. The pre-existing `renderer-static-boundary` / `editor-manifest-static-boundary` failures and the legacy V1 lint errors are unchanged by this work and remain with their own owners.
