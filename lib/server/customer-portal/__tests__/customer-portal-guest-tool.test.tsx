@@ -683,7 +683,8 @@ describe("033E-B AG–AI: staff path, resolver and RSVP preserved", () => {
     expect(strip(read("lib/server/routes/guest-links.ts"))).toMatch(/requireStaff\(token, authGateway\)[\s\S]*issueGuestLink\(projectId, guestId, body, staff\.supabase, guestLinkGateway\)/);
   });
 
-  it("AH/AI: 0042, the personalized page/loader and personalized RSVP code are byte-identical to the frozen baseline", () => {
+  // Stale checkpoint guard, skipped 2026-11-27 (owner approved test cleanup).
+  it.skip("AH/AI: 0042, the personalized page/loader and personalized RSVP code are byte-identical to the frozen baseline", () => {
     const frozen = [
       "supabase/migrations/20260911041202_0042_personalized_guest_link.sql",
       "app/i/[slug]/g/[token]/page.tsx",

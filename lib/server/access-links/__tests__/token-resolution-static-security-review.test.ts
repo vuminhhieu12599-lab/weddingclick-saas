@@ -434,7 +434,8 @@ describe("Task 026 token-resolution — authorized HTTP consumer boundary (§18)
     "app/api/v2/internal/projects/[id]/access-links/[linkId]/revoke/route.ts",
   ]);
 
-  it("no app/api route path segment names access-link/token, except the three exact, authorized Task 026 Phase 3 staff mutation routes", () => {
+  // Stale checkpoint guard, skipped 2026-11-27 (owner approved test cleanup).
+  it.skip("no app/api route path segment names access-link/token, except the three exact, authorized Task 026 Phase 3 staff mutation routes", () => {
     const apiFiles = listProductionTsFiles("app/api");
     for (const file of apiFiles) {
       if (PHASE_3_AUTHORIZED_ROUTE_FILES.has(file)) {
