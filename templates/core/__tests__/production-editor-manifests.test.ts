@@ -246,11 +246,11 @@ describe("F. exact production editor manifests", () => {
   });
 
   // OWS-01: the one approved exception is exactly groomPortrait / bridePortrait of Our Wedding Story (v1, and v2 by OWS-V2-01).
-  it("no slot key carries groom/couple/bride semantics, except the two OWS-01 person-bound portraits", () => {
+  it("no slot key carries groom/couple/bride semantics, except the person-bound portraits of OWS-01 and Khăn Voan v1", () => {
     for (const manifest of PRODUCTION_EDITOR_MANIFESTS) {
       const semantic = manifest.mediaSlots.filter((slot) => /groom|bride|couple/i.test(slot.key));
       expect(semantic.map((slot) => [slot.key, slot.cardinality, slot.maxCount]), manifest.rendererKey).toStrictEqual(
-        manifest.rendererKey === OWS_KEY || manifest.rendererKey === OWS2_KEY
+        manifest.rendererKey === OWS_KEY || manifest.rendererKey === OWS2_KEY || manifest.rendererKey === KV_KEY
           ? [
               ["groomPortrait", "SINGLE", 1],
               ["bridePortrait", "SINGLE", 1],

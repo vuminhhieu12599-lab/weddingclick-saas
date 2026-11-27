@@ -345,7 +345,7 @@ describe("E: migration 0056 is additive, atomic and service_role-only", () => {
     expect(names.at(-2)).toBe("20260911041218_0058_seed_hong_an_v2_catalog.sql");
     expect(names.at(-3)).toBe("20260911041217_0057_seed_hong_an_v1_catalog.sql");
     expect(names.at(-4)).toBe(file);
-    expect(names.at(-4)).toBe("20260911041215_0055_rsvp_invitation_source.sql");
+    expect(names.at(-5)).toBe("20260911041215_0055_rsvp_invitation_source.sql");
     expect(names.filter((name) => /_0056_/.test(name))).toStrictEqual([file]);
     expect(sql).toMatch(/AUTHORING ONLY — not applied/);
   });

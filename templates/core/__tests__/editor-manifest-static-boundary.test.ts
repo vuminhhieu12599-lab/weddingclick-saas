@@ -133,12 +133,12 @@ describe("TE-02 editor-manifest static boundary", () => {
     }
   });
 
-  it("templates/editor/** contains exactly the ten registered editor manifests", () => {
+  it("templates/editor/** contains exactly the eleven registered editor manifests", () => {
     const files = readdirSync(join(REPO_ROOT, "templates", "editor"), { recursive: true, withFileTypes: true })
       .filter((entry) => entry.isFile())
       .map((entry) => toPosix(relative(REPO_ROOT, join(entry.parentPath, entry.name))))
       .sort();
-    expect(files).toStrictEqual([EE_EDITOR, HA_EDITOR, HA2_EDITOR, OWS_EDITOR, OWS2_EDITOR, RM_EDITOR, SD_EDITOR, SD2_EDITOR, VH_EDITOR, VH2_EDITOR]);
+    expect(files).toStrictEqual([EE_EDITOR, HA_EDITOR, HA2_EDITOR, KV_EDITOR, OWS_EDITOR, OWS2_EDITOR, RM_EDITOR, SD_EDITOR, SD2_EDITOR, VH_EDITOR, VH2_EDITOR]);
   });
 
   // SD-V1: the Se Duyên editor manifest is now the seventh registered one.

@@ -700,13 +700,14 @@ describe("RF-06B template files", () => {
           HA1_CSS_FILE,
           ...HA1_TSX_FILES,
           HA2_CSS_FILE,
+          ...KV1_RENDERER_TREE.filter((file) => /\.(tsx|css)$/.test(file)),
           ...HA2_TSX_FILES,
         ],
         file,
       ).toContain(file);
     }
     expect(sources.filter((source) => source.endsWith(".css")).sort()).toStrictEqual(
-      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE, VH2_CSS_FILE, OWS2_CSS_FILE, SD1_CSS_FILE, SD2_CSS_FILE, HA1_CSS_FILE, HA2_CSS_FILE].sort(),
+      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE, VH2_CSS_FILE, OWS2_CSS_FILE, SD1_CSS_FILE, SD2_CSS_FILE, HA1_CSS_FILE, HA2_CSS_FILE, `${KV1}/khan-voan-v1.module.css`].sort(),
     );
   });
 
@@ -1436,7 +1437,7 @@ describe("RS-01 renderer-key lazy loading", () => {
 
   it("the binding module owns exactly one literal import() per production renderer root, nothing else", () => {
     const { specifiers, total } = dynamicImportsOf(readRepoFile(BINDINGS_MODULE));
-    expect(total).toBe(10);
+    expect(total).toBe(11);
     expect(specifiers.map((specifier) => resolveSpecifier(BINDINGS_MODULE, specifier))).toStrictEqual([...RS01_LAZY_ROOTS]);
     const code = codeOf(BINDINGS_MODULE);
     // No template literal, concatenation, variable or discovery in a specifier.
@@ -4265,9 +4266,11 @@ describe("Khăn Voan v1 files", () => {
     expect(/["']use (client|server)["']|\bReact\b|next\/|\.css["']/.test(codeOf(`${KV1}/manifest.ts`))).toBe(false);
   });
 
-  it("the renderer key literal appears only in its two manifests, the binding table and the person-bound slot exception", () => {
+  it("the renderer key literal appears only in its two manifests, the binding table, the person-bound slot exception and the demo couple override", () => {
     const withLiteral = productionSources().filter((file) => /["'`]wedding\.khan-voan\.v1["'`]/.test(codeOf(file)));
-    expect(withLiteral.sort()).toStrictEqual([`${KV1}/manifest.ts`, KV1_EDITOR_FILE, BINDINGS_MODULE, "templates/core/editor-manifest.ts"].sort());
+    expect(withLiteral.sort()).toStrictEqual(
+      [`${KV1}/manifest.ts`, KV1_EDITOR_FILE, BINDINGS_MODULE, "templates/core/editor-manifest.ts", "lib/showroom/demo/demo-wedding-source.ts"].sort(),
+    );
   });
 
   it("only the binding module loads the root, lazily; only fonts touch next/font; no file names an external asset", () => {

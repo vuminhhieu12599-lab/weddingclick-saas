@@ -38,8 +38,8 @@ describe("Se Duyên v2 catalog seed migration 0054", () => {
     expect(names.at(-2)).toBe("20260911041218_0058_seed_hong_an_v2_catalog.sql");
     expect(names.at(-3)).toBe("20260911041217_0057_seed_hong_an_v1_catalog.sql");
     expect(names.at(-4)).toBe("20260911041216_0056_generic_rsvp_response_key.sql");
-    expect(names.at(-5)).toBe(M0054);
-    expect(names.at(-6)).toBe("20260911041213_0053_staff_approval_on_behalf.sql");
+    expect(names.at(-6)).toBe(M0054);
+    expect(names.at(-7)).toBe("20260911041213_0053_staff_approval_on_behalf.sql");
     expect(sql).toContain("AUTHORING ONLY — not applied.");
     // One 0054 and no reuse of a retired number.
     expect(names.filter((name) => /_0054_/.test(name))).toStrictEqual([M0054]);
