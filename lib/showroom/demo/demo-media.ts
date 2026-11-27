@@ -276,6 +276,15 @@ export const DEMO_TEMPLATE_SLOT_PHOTO_SETS: Readonly<Record<string, DemoTemplate
    * here they are album positions only, never "the groom's" or "the bride's"
    * photograph.
    */
+  // Khăn Voan v1: the fictional Elegant Editorial set (ivory studio light matches the veil).
+  [registeredRendererKey("khan-voan", 1)]: Object.freeze({
+    coverPhoto: Object.freeze([EE_COVER]),
+    groomPortrait: Object.freeze([elegantEditorialPhoto("12-groom-portrait")]),
+    bridePortrait: Object.freeze([elegantEditorialPhoto("11-bride-portrait")]),
+    storyPhotos: Object.freeze([EE_GAZE, EE_INTIMATE]),
+    gallery: Object.freeze([EE_COVER, EE_SEATED, EE_JOYFUL, EE_CLOSE, EE_GAZE, EE_INTIMATE, EE_PLAYFUL, EE_BRIDE, EE_WIDE, elegantEditorialPhoto("11-bride-portrait")]),
+    thankYouPhoto: Object.freeze([EE_PLAYFUL]),
+  }),
   [registeredRendererKey("hong-an", 2)]: Object.freeze({
     // Behind the two church doors from the first frame; it becomes the
     // full-bleed hero when they open, so it carries the whole first screen.

@@ -80,6 +80,8 @@ describe("RM-01 Romantic Minimal v1 renderer manifest", () => {
       "wedding.hong-an.v1",
       // HA-CONTENT-01: Hồng Ân v2 is appended tenth; RM keeps its third position.
       "wedding.hong-an.v2",
+      // Khăn Voan v1 is appended eleventh.
+      "wedding.khan-voan.v1",
     ]);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(RM_KEY)).toStrictEqual(ROMANTIC_MINIMAL_V1_MANIFEST);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(RM_KEY)).not.toBe(ROMANTIC_MINIMAL_V1_MANIFEST);

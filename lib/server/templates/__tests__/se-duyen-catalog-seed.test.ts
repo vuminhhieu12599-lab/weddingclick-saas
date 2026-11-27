@@ -36,13 +36,14 @@ describe("Se Duyên v1 catalog seed migration 0052", () => {
     // TE-06's 0053 behind it; 0052 keeps its own place and its own content.
     // HA-INTEGRATION-01: 0057 (the Hồng Ân v1 catalog seed) is now the head.
     // HA-CONTENT-01: 0058 (the Hồng Ân v2 catalog seed) is now the head.
-    expect(names.at(-1)).toBe("20260911041218_0058_seed_hong_an_v2_catalog.sql");
-    expect(names.at(-2)).toBe("20260911041217_0057_seed_hong_an_v1_catalog.sql");
-    expect(names.at(-3)).toBe("20260911041216_0056_generic_rsvp_response_key.sql");
-    expect(names.at(-4)).toBe("20260911041215_0055_rsvp_invitation_source.sql");
-    expect(names.at(-6)).toBe("20260911041213_0053_staff_approval_on_behalf.sql");
-    expect(names.at(-7)).toBe(M0052);
-    expect(names.at(-8)).toBe(M0051);
+    expect(names.at(-1)).toBe("20260911041219_0059_seed_khan_voan_v1_catalog.sql");
+    expect(names.at(-2)).toBe("20260911041218_0058_seed_hong_an_v2_catalog.sql");
+    expect(names.at(-3)).toBe("20260911041217_0057_seed_hong_an_v1_catalog.sql");
+    expect(names.at(-4)).toBe("20260911041216_0056_generic_rsvp_response_key.sql");
+    expect(names.at(-5)).toBe("20260911041215_0055_rsvp_invitation_source.sql");
+    expect(names.at(-7)).toBe("20260911041213_0053_staff_approval_on_behalf.sql");
+    expect(names.at(-8)).toBe(M0052);
+    expect(names.at(-9)).toBe(M0051);
     expect(sql).toContain("AUTHORING ONLY — not applied.");
   });
 

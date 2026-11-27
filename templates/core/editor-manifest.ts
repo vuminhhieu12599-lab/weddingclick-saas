@@ -97,6 +97,9 @@ export const TEMPLATE_EDITOR_SLOT_KEY_FORBIDDEN_WORDS = /groom|bride|couple/i;
 export const TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   "wedding.our-wedding-story.v1": Object.freeze(["groomPortrait", "bridePortrait"]),
   "wedding.our-wedding-story.v2": Object.freeze(["groomPortrait", "bridePortrait"]),
+  // Khăn Voan v1 (2026-11-27): the two arch portraits follow their person when
+  // the BRIDE variant puts the bride first, so they are person-bound too.
+  "wedding.khan-voan.v1": Object.freeze(["groomPortrait", "bridePortrait"]),
 });
 
 function isPersonBoundSlotException(rendererKey: string, slotKey: string): boolean {

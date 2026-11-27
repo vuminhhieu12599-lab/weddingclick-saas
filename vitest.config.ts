@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 /**
  * RS-01: Next's compiler resolves `next/dynamic` to its app-router
@@ -11,6 +11,10 @@ import { defineConfig } from "vitest/config";
  * vitest defaults apply.
  */
 export default defineConfig({
+  test: {
+    // Claude Code worktrees under .claude/ hold whole copies of the repo; never run their tests.
+    exclude: [...configDefaults.exclude, ".claude/**", ".visual-review/**"],
+  },
   resolve: {
     alias: [
       {

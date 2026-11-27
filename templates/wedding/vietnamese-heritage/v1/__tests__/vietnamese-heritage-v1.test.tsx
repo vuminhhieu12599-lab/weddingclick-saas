@@ -399,6 +399,8 @@ describe("C. registry coexistence", () => {
       "wedding.hong-an.v1",
       // HA-CONTENT-01: Hồng Ân v2 is appended tenth; v1 keeps its second position.
       "wedding.hong-an.v2",
+      // Khăn Voan v1 is appended eleventh.
+      "wedding.khan-voan.v1",
     ]);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(EE_KEY)).toStrictEqual(ELEGANT_EDITORIAL_V1_MANIFEST);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(VH_KEY)).toStrictEqual(VIETNAMESE_HERITAGE_V1_MANIFEST);

@@ -61,6 +61,8 @@ const ALLOWED_IMPORTS: Readonly<Record<(typeof RF06A_FILES)[number], readonly st
     "templates/wedding/hong-an/v1/manifest",
     // HA-CONTENT-01: the tenth explicit production manifest.
     "templates/wedding/hong-an/v2/manifest",
+    // Khăn Voan v1: the eleventh explicit production manifest.
+    "templates/wedding/khan-voan/v1/manifest",
     "templates/core/renderer-manifest",
   ],
   "templates/wedding/elegant-editorial/v1/manifest.ts": ["templates/core/renderer-manifest"],
@@ -146,6 +148,8 @@ const RS01_LAZY_ROOTS = [
   "templates/wedding/hong-an/v1/hong-an-v1",
   // HA-CONTENT-01: the tenth production renderer root.
   "templates/wedding/hong-an/v2/hong-an-v2",
+  // Khăn Voan v1: the eleventh production renderer root.
+  "templates/wedding/khan-voan/v1/khan-voan-v1",
 ] as const;
 
 /** Resolves a relative specifier from `file` to a repository-relative module path. */
@@ -266,7 +270,7 @@ describe("RF-06A files", () => {
     const code = stripComments(readRepoFile("templates/core/production-renderer-manifests.ts"));
     // VH-01: still one explicit, ordered literal list, now with the second manifest; RM-02: and the third; OWS-01: and the fourth.
     expect(code).toMatch(
-      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*OUR_WEDDING_STORY_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V2_MANIFEST,\s*OUR_WEDDING_STORY_V2_MANIFEST,\s*SE_DUYEN_V1_MANIFEST,\s*SE_DUYEN_V2_MANIFEST,\s*HONG_AN_V1_MANIFEST,\s*HONG_AN_V2_MANIFEST,\s*\]\)/,
+      /validateProductionRendererManifests\(\[\s*ELEGANT_EDITORIAL_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V1_MANIFEST,\s*ROMANTIC_MINIMAL_V1_MANIFEST,\s*OUR_WEDDING_STORY_V1_MANIFEST,\s*VIETNAMESE_HERITAGE_V2_MANIFEST,\s*OUR_WEDDING_STORY_V2_MANIFEST,\s*SE_DUYEN_V1_MANIFEST,\s*SE_DUYEN_V2_MANIFEST,\s*HONG_AN_V1_MANIFEST,\s*HONG_AN_V2_MANIFEST,\s*KHAN_VOAN_V1_MANIFEST,\s*\]\)/,
     );
     expect(/["'`]wedding\.[\w-]+\.v\d+/.test(code)).toBe(false);
   });
@@ -384,6 +388,7 @@ describe("templates/** production tree (P39)", () => {
         ...SD2_FILES,
         ...HA1_FILES,
         ...HA2_FILES,
+        ...KV1_FILES,
       ].sort(),
     );
   });
@@ -695,13 +700,14 @@ describe("RF-06B template files", () => {
           HA1_CSS_FILE,
           ...HA1_TSX_FILES,
           HA2_CSS_FILE,
+          ...KV1_RENDERER_TREE.filter((file) => /\.(tsx|css)$/.test(file)),
           ...HA2_TSX_FILES,
         ],
         file,
       ).toContain(file);
     }
     expect(sources.filter((source) => source.endsWith(".css")).sort()).toStrictEqual(
-      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE, VH2_CSS_FILE, OWS2_CSS_FILE, SD1_CSS_FILE, SD2_CSS_FILE, HA1_CSS_FILE, HA2_CSS_FILE].sort(),
+      [RF06B_CSS_FILE, VH01_CSS_FILE, RM02_CSS_FILE, OWS01_CSS_FILE, VH2_CSS_FILE, OWS2_CSS_FILE, SD1_CSS_FILE, SD2_CSS_FILE, HA1_CSS_FILE, HA2_CSS_FILE, `${KV1}/khan-voan-v1.module.css`].sort(),
     );
   });
 
@@ -1431,13 +1437,13 @@ describe("RS-01 renderer-key lazy loading", () => {
 
   it("the binding module owns exactly one literal import() per production renderer root, nothing else", () => {
     const { specifiers, total } = dynamicImportsOf(readRepoFile(BINDINGS_MODULE));
-    expect(total).toBe(10);
+    expect(total).toBe(11);
     expect(specifiers.map((specifier) => resolveSpecifier(BINDINGS_MODULE, specifier))).toStrictEqual([...RS01_LAZY_ROOTS]);
     const code = codeOf(BINDINGS_MODULE);
     // No template literal, concatenation, variable or discovery in a specifier.
     expect(code).not.toMatch(/import\(\s*[^"'\s]|import\(`|import\([^)]*\+|readdir|glob|require\(/);
     // next/dynamic with no options: SSR on, no `loading` (no Suspense boundary, no placeholder content).
-    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(10);
+    expect(code.match(/\bdynamic\(\(\) =>/g)).toHaveLength(11);
     expect(code).not.toMatch(/ssr:|loading:|suspense/i);
     // Each lazy root binds its own export only.
     expect(code).toMatch(/import\("\.\.\/wedding\/elegant-editorial\/v1\/elegant-editorial-v1"\)\.then\(\(module\) => module\.ElegantEditorialV1\)/);
@@ -1450,6 +1456,7 @@ describe("RS-01 renderer-key lazy loading", () => {
     expect(code).toMatch(/import\("\.\.\/wedding\/se-duyen\/v2\/se-duyen-v2"\)\.then\(\(module\) => module\.SeDuyenV2\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/hong-an\/v1\/hong-an-v1"\)\.then\(\(module\) => module\.HongAnV1\)/);
     expect(code).toMatch(/import\("\.\.\/wedding\/hong-an\/v2\/hong-an-v2"\)\.then\(\(module\) => module\.HongAnV2\)/);
+    expect(code).toMatch(/import\("\.\.\/wedding\/khan-voan\/v1\/khan-voan-v1"\)\.then\(\(module\) => module\.KhanVoanV1\)/);
     expect(code).not.toMatch(/\bcatch\b|\.catch\(/);
   });
 
@@ -1465,6 +1472,7 @@ describe("RS-01 renderer-key lazy loading", () => {
       "templates/wedding/elegant-editorial/v1/manifest.ts",
       "templates/wedding/hong-an/v1/manifest.ts",
       "templates/wedding/hong-an/v2/manifest.ts",
+      "templates/wedding/khan-voan/v1/manifest.ts",
       "templates/wedding/our-wedding-story/v1/manifest.ts",
       "templates/wedding/our-wedding-story/v2/manifest.ts",
       "templates/wedding/romantic-minimal/v1/manifest.ts",
@@ -4205,5 +4213,77 @@ describe("HA-INTEGRATION-01 Hồng Ân v1 files", () => {
       const graph = clientGraph(root, { followLazy: true }).files;
       expect(graph.some((file) => file.startsWith(`${HA1}/`)), root).toBe(false);
     }
+  });
+});
+
+// ===========================================================================
+// Khăn Voan v1 (`wedding.khan-voan.v1`, 2026-11-27, lean process).
+// Registered eleventh. Every decoration is inline vector/CSS, so there is no
+// asset directory. The universal templates/** rules above apply to it; the
+// rules below pin its tree, its data-only manifest and its single lazy loader.
+// ===========================================================================
+
+const KV1 = "templates/wedding/khan-voan/v1";
+const KV1_RENDERER_TREE = [
+  `${KV1}/PROVENANCE.md`,
+  `${KV1}/copy.ts`,
+  `${KV1}/fonts.ts`,
+  `${KV1}/interactive/album-viewer.tsx`,
+  `${KV1}/interactive/countdown.tsx`,
+  `${KV1}/interactive/gift.tsx`,
+  `${KV1}/interactive/music-control.tsx`,
+  `${KV1}/interactive/opening-stage.tsx`,
+  `${KV1}/interactive/opening-state.ts`,
+  `${KV1}/interactive/rsvp.tsx`,
+  `${KV1}/interactive/section-reveal.tsx`,
+  `${KV1}/khan-voan-v1.module.css`,
+  `${KV1}/khan-voan-v1.tsx`,
+  `${KV1}/manifest.ts`,
+  `${KV1}/sections/album.tsx`,
+  `${KV1}/sections/ceremony.tsx`,
+  `${KV1}/sections/cover.tsx`,
+  `${KV1}/sections/decor.tsx`,
+  `${KV1}/sections/families.tsx`,
+  `${KV1}/sections/invite.tsx`,
+  `${KV1}/sections/media-image.tsx`,
+  `${KV1}/sections/names.ts`,
+  `${KV1}/sections/story.tsx`,
+  `${KV1}/sections/thanks.tsx`,
+] as const;
+const KV1_EDITOR_FILE = "templates/editor/wedding/khan-voan-v1.ts";
+const KV1_FILES = [...KV1_RENDERER_TREE, KV1_EDITOR_FILE];
+
+describe("Khăn Voan v1 files", () => {
+  const productionSources = () =>
+    [...listSources(TEMPLATES_ROOT), ...nonTestSources("app"), ...nonTestSources("lib")].filter((file) => /\.(ts|tsx)$/.test(file));
+
+  it("the tree holds exactly the listed files", () => {
+    expect(listSources(join(TEMPLATES_ROOT, "wedding", "khan-voan")).sort()).toStrictEqual([...KV1_RENDERER_TREE].sort());
+  });
+
+  it("the manifest is data only and imports its type only", () => {
+    expect(importsOf(readRepoFile(`${KV1}/manifest.ts`))).toStrictEqual([{ specifier: "../../../core/renderer-manifest", typeOnly: true }]);
+    expect(/["']use (client|server)["']|\bReact\b|next\/|\.css["']/.test(codeOf(`${KV1}/manifest.ts`))).toBe(false);
+  });
+
+  it("the renderer key literal appears only in its two manifests, the binding table, the person-bound slot exception and the demo couple override", () => {
+    const withLiteral = productionSources().filter((file) => /["'`]wedding\.khan-voan\.v1["'`]/.test(codeOf(file)));
+    expect(withLiteral.sort()).toStrictEqual(
+      [`${KV1}/manifest.ts`, KV1_EDITOR_FILE, BINDINGS_MODULE, "templates/core/editor-manifest.ts", "lib/showroom/demo/demo-wedding-source.ts"].sort(),
+    );
+  });
+
+  it("only the binding module loads the root, lazily; only fonts touch next/font; no file names an external asset", () => {
+    const lazyLoaders = productionSources().filter((file) =>
+      dynamicImportsOf(readRepoFile(file)).specifiers.some((specifier) => resolveSpecifier(file, specifier) === `${KV1}/khan-voan-v1`),
+    );
+    expect(lazyLoaders).toStrictEqual([BINDINGS_MODULE]);
+    for (const file of KV1_RENDERER_TREE.filter((name) => /\.(ts|tsx)$/.test(name))) {
+      const code = codeOf(file);
+      expect(/next\/font/.test(code), file).toBe(file === `${KV1}/fonts.ts`);
+      expect(/["']use (client|server)["']/.test(code), file).toBe(false);
+      expect(/\/renderers\/|\/showroom\/|prototypes/.test(code), file).toBe(false);
+    }
+    expect(/url\("\//.test(readRepoFile(`${KV1}/khan-voan-v1.module.css`))).toBe(false);
   });
 });

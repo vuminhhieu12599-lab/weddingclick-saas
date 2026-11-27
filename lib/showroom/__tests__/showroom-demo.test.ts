@@ -193,8 +193,9 @@ describe("LAUNCH-P0-04 showroom demos run the real pipeline", () => {
     expect([input.weddingDetails?.groomBankAccountName, input.weddingDetails?.brideBankAccountName]).toStrictEqual(["GIA HUY", "KHANH LINH"]);
   });
 
-  it("the short names are a VH-only override: every other demo keeps the shared couple", () => {
-    for (const template of PUBLIC_SHOWROOM_TEMPLATES.filter((entry) => entry.templateCode !== "vietnamese-heritage")) {
+  it("the short names override only Vietnamese Heritage and Khăn Voan: every other demo keeps the shared couple", () => {
+    expect(demoCoupleFor("wedding.khan-voan.v1")).toMatchObject({ groomName: "Gia Huy", brideName: "Khánh Linh" });
+    for (const template of PUBLIC_SHOWROOM_TEMPLATES.filter((entry) => !["vietnamese-heritage", "khan-voan"].includes(entry.templateCode))) {
       expect(demoCoupleFor(template.rendererKey)).toMatchObject(DEMO_COUPLE);
     }
     expect(demoCoupleFor("wedding.vietnamese-heritage.v1")).toMatchObject(DEMO_COUPLE);

@@ -1,6 +1,7 @@
 import { ELEGANT_EDITORIAL_V1_EDITOR_MANIFEST } from "../editor/wedding/elegant-editorial-v1";
 import { HONG_AN_V1_EDITOR_MANIFEST } from "../editor/wedding/hong-an-v1";
 import { HONG_AN_V2_EDITOR_MANIFEST } from "../editor/wedding/hong-an-v2";
+import { KHAN_VOAN_V1_EDITOR_MANIFEST } from "../editor/wedding/khan-voan-v1";
 import { OUR_WEDDING_STORY_V1_EDITOR_MANIFEST } from "../editor/wedding/our-wedding-story-v1";
 import { OUR_WEDDING_STORY_V2_EDITOR_MANIFEST } from "../editor/wedding/our-wedding-story-v2";
 import { ROMANTIC_MINIMAL_V1_EDITOR_MANIFEST } from "../editor/wedding/romantic-minimal-v1";
@@ -155,6 +156,7 @@ export const PRODUCTION_EDITOR_MANIFESTS: readonly TemplateEditorManifestV1[] = 
     SE_DUYEN_V2_EDITOR_MANIFEST,
     HONG_AN_V1_EDITOR_MANIFEST,
     HONG_AN_V2_EDITOR_MANIFEST,
+    KHAN_VOAN_V1_EDITOR_MANIFEST,
   ],
   PRODUCTION_RENDERER_MANIFESTS,
 );
