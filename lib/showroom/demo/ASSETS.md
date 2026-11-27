@@ -146,29 +146,33 @@ Se Duyên declares **no person-bound slot**: every frame is a layout position, i
 
 ## Template screenshots — `public/showroom/templates/`
 
-Real screenshots of the public demo pages (`/mau-thiep/<code>`, demo bar removed) from a local production build, headless Chrome, 390×844 CSS px at 2× (780×1688), WebP quality 78. `<code>-cover.webp` is the closed opening screen; `<code>-inside.webp` is an inner section after opening. Re-capture whenever a renderer version, the demo data or the demo images change, and for every new template.
+Real screenshots of the public demo pages (`/mau-thiep/<code>`, demo bar removed) from a local production build, headless Chrome, 390×844 CSS px at 2× (780×1688), WebP quality 78. `<code>-cover.webp` is the **first opened screen** — the hero the guest meets once the envelope, door or box is past, with the couple in frame; `<code>-inside.webp` is a further inner section. Re-capture whenever a renderer version, the demo data or the demo images change, and for every new template.
+
+SHOWROOM-CARD-HERO-01 (2026-10-26, Product Owner): the covers used to be the **closed** opening screen — an envelope, a sealed door or a lacquer box — so four of the five cards showed no couple at all. Every gated template was re-captured one tap past its gate, under `prefers-reduced-motion: reduce` so the choreography settles immediately and the frame is deterministic. `our-wedding-story-cover.webp` was already that hero (OWS v2 has no opening gate) and is kept byte-for-byte. `romantic-minimal-inside.webp` was re-framed to the invitation card and countdown, because Romantic Minimal's opened hero *is* the Save The Date panel its old inner shot already held, and the card crossfades cover→inside on hover. Romantic Minimal's cover is the only one framed below the fold — 150 CSS px into the same opened hero — because the listing card shows a capture's top 390×600 CSS px only (`.cardPhone .phoneScreen`, `object-position: top center`), and at scroll 0 that crop cut the couple off below the names.
 
 `our-wedding-story-cover.webp` was re-captured on 2026-10-15 (OWS-V2-CATALOG-01) after the ten Our Wedding Story
 demo photos were re-framed; that capture used WebP quality 80 and a reduced-motion settled state. Its `-inside`
 counterpart was re-measured against a fresh capture, differed only by WebP compression noise, and was deliberately
 kept byte-for-byte, so its hash below is unchanged.
 
-| File | Inner view | SHA-256 |
+| File | View | SHA-256 |
 |---|---|---|
-| elegant-editorial-cover.webp | — | 97ff43c98ea11a07b8b06ccbc8e7d45a98376624bedb451059acecee34351c50 |
+| elegant-editorial-cover.webp | opened hero: couple portrait, “Save the date” | 0fd0aaf4600a0aecffc063995a0226908c7f22c0631fc6aa7982bca5d6bed090 |
 | elegant-editorial-inside.webp | date, countdown, calendar | 10d3698645659ce6d3fc15043a44718520ae065961c1e4c25efc4ba94b040364 |
-| vietnamese-heritage-cover.webp | — | 21396f3280d4334f488f8d11a8b453420d73eebf736003ced5f24eb521c91d34 |
+| vietnamese-heritage-cover.webp | opened hero: couple in áo dài, Lễ Thành Hôn | d46ea2458424a33a92d47640ee1011ea99625d426ce738d88d1baf670650989c |
 | vietnamese-heritage-inside.webp | families, portrait cluster | 2a801e4d0396867f6c95232d0271c59e9ab44be55b832000ff734045fc65beac |
-| romantic-minimal-cover.webp | — | baaa1fd05977ce4ffd559fe9b4af43607dff90759f27019ee5e1d78a17dfa15c |
-| romantic-minimal-inside.webp | Save The Date photo rising from the envelope | df6b452d4b804b2782ac6446132e9628568f45c41edef00904916248d3025833 |
-| our-wedding-story-cover.webp | — | 35802259ea86ee3197fc257d7b681eb13b306ae39cd0d415f5fc3c63313677a9 |
+| romantic-minimal-cover.webp | opened hero (+150 px): names, couple rising from the envelope | e07d5050586edb35bbd82c237722c2421ad9151ab6bbf400d64f1fda1df2c255 |
+| romantic-minimal-inside.webp | invitation card, date, countdown | cb3412deed547458a2b5961308b0205a9ccd6a172c95f6d6b04259bc496b8a21 |
+| our-wedding-story-cover.webp | opened hero: couple portrait (no opening gate) | 35802259ea86ee3197fc257d7b681eb13b306ae39cd0d415f5fc3c63313677a9 |
 | our-wedding-story-inside.webp | invitation card | 724b2888147fe787dda0c44ce1d9434b9ab4c27c7b2657dc2a53aa5cbe6562a7 |
-| se-duyen-cover.webp | — | 1f6bb70aef155b737e39611fbeea2893e719d29278117963a257a4d598cf0b49 |
+| se-duyen-cover.webp | opened hero: couple in áo dài on lacquer red | 9a0abccb4f61a6efd0166f74da9fd23044fe8c035a42fc69517f506176ea028d |
 | se-duyen-inside.webp | invitation card: Lễ Thành Hôn, date, time, lunar date | 79114db672d990f098430ceb60337a1f74e159ad38bacc855947e23ea7762ffe |
 
 
-The two `se-duyen-*.webp` captures (SD-V1-SHOWROOM-01, 2026-10-23) are real captures of `/mau-thiep/se-duyen` running the production Se Duyên v1 renderer on the demo data above: the cover is the closed lacquer box (“Chạm vào hộp để nhận thiệp”), the inside shot is the opened invitation card. No placeholder art and no broken media in either.
+The two `se-duyen-*.webp` captures are real captures of `/mau-thiep/se-duyen` running the production Se Duyên v1 renderer on the demo data above: the cover (re-captured 2026-10-26, SHOWROOM-CARD-HERO-01) is the opened hero — the couple in áo dài on lacquer red under the gilt names — and the inside shot (SD-V1-SHOWROOM-01, 2026-10-23) is the invitation card. No placeholder art and no broken media in either.
 
 ## Social share image — `public/showroom/og-weddingclick.jpg`
 
 1200×630 JPEG (quality 86) rendered in headless Chrome from a one-off HTML composition of the three cover screenshots and the hero headline. SHA-256 `2082d5877156d25a82cb240beba7fd8f71ce40ab12a44bc3feef304b90c6a99b`.
+
+> **Stale since SHOWROOM-CARD-HERO-01 (2026-10-26).** It still composes the three *closed* covers. Nothing is broken — the file is valid and served — but the social thumbnail no longer matches the cards. Re-rendering it is deliberately left out of that task: the homepage Open Graph metadata is under review on `fix/showroom-og-share-image` (PR #9), and the two changes should not race.

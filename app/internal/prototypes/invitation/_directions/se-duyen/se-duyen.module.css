@@ -63,32 +63,71 @@
     linear-gradient(176deg, var(--sd-lacquer) 0%, var(--sd-lacquer-deep) 72%);
 }
 
+/* The supplied ivory silk plate (720x1279, alpha) IS the card: its own     */
+/* gold rules and lotus ornaments replace the CSS silk-weave and inset      */
+/* border mock that stood in for them.                                      */
+/*                                                                          */
+/* The plate is drawn as two half-height layers rather than one stretched   */
+/* copy. Stretching looked fine but created a feedback loop: the ornament    */
+/* bands are a PERCENTAGE of the plate, the plate's height comes from the    */
+/* text, and CSS vertical padding can only be a percentage of WIDTH — so     */
+/* longer text grew the ornaments faster than the padding that was meant to  */
+/* clear them, and the text crept onto the lotus. Anchoring the top copy to  */
+/* the top edge and the bottom copy to the bottom edge, each at the asset's  */
+/* native aspect, pins both ornament bands to ~28% of WIDTH whatever the     */
+/* text does. The two halves always tile the full plate, and they meet in    */
+/* flat ivory where the seam cannot be seen. It also stops the lotus relief  */
+/* being distorted, which the stretch did.                                   */
 .innerPaper {
   position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 26px 20px 28px;
+  /* Ornament band = 16% of the plate's native height = 16% x 1.776 = ~28%  */
+  /* of its width, so these clear it with a few px to spare at every size.  */
+  padding: 33% 15% 32%;
   text-align: center;
-  background:
-    /* Silk weave: two near-invisible hatch passes over warm ivory. */
-    repeating-linear-gradient(90deg, rgba(109, 74, 66, 0.035) 0 1px, transparent 1px 4px),
-    repeating-linear-gradient(0deg, rgba(109, 74, 66, 0.03) 0 1px, transparent 1px 5px),
-    radial-gradient(96% 62% at 50% 0%, #fdf8ec 0%, transparent 58%),
-    linear-gradient(172deg, var(--sd-ivory) 0%, var(--sd-ivory-deep) 100%);
-  box-shadow:
-    0 26px 44px -26px rgba(12, 2, 3, 0.85),
-    inset 0 0 0 1px rgba(200, 166, 100, 0.5),
-    inset 0 0 0 5px rgba(247, 240, 226, 0.6),
-    inset 0 0 0 6px rgba(200, 166, 100, 0.26);
+  /* Follows the plate's scalloped silhouette, not a rectangle. */
+  filter: drop-shadow(0 20px 26px rgba(12, 2, 3, 0.68));
 }
 
-/* The thread entering the card from the top edge. */
-.innerThread {
-  width: 20px;
-  height: 52px;
-  margin-top: -6px;
+.innerPaper::before,
+.innerPaper::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* Deliberately more than half each, so the two copies overlap. */
+  height: 62%;
+  background-image: url("/prototypes/invitation/demo/se-duyen/assets/ivory-invitation-card.webp");
+  background-size: 100% auto;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.innerPaper::before {
+  top: 0;
+  background-position: center top;
+}
+
+/* The plate's silk is not a flat tone — it darkens by about 8 luminance   */
+/* levels from top to bottom — so where the two copies met, a butt join    */
+/* left a faint but real horizontal seam across the card. The bottom copy  */
+/* is therefore faded in across the whole overlap instead, which ramps     */
+/* that step out over ~195px and leaves nothing to see.                    */
+.innerPaper::after {
+  bottom: 0;
+  background-position: center bottom;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 39%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 39%);
+}
+
+/* The plate's two layers are positioned, so the wedding content has to be */
+/* lifted above them. */
+.innerPaper > * {
+  position: relative;
+  z-index: 1;
 }
 
 .eyebrow {
@@ -266,78 +305,23 @@
   box-shadow: 0 16px 28px -10px rgba(10, 2, 3, 0.9);
 }
 
+/* The supplied sơn mài box lid (720x1279, alpha). `cover` keeps the lotus  */
+/* corners and drum bands undistorted and lets them bleed off the screen    */
+/* edge, which is the intent of a full-bleed phone cover; the gradient      */
+/* underneath matches the artwork's own deep lacquer so the crop seam and   */
+/* the alpha margin never read as a hard edge, and so a failed image        */
+/* request degrades to the old lacquer field rather than to white.          */
 .lid {
   position: absolute;
   inset: 0;
-  background:
+  background-color: var(--sd-lacquer-deep);
+  background-image:
+    url("/prototypes/invitation/demo/se-duyen/assets/lacquer-box-lid.webp"),
     radial-gradient(120% 78% at 50% -6%, rgba(255, 236, 206, 0.12), transparent 58%),
-    radial-gradient(100% 62% at 18% 104%, rgba(0, 0, 0, 0.5), transparent 70%),
     linear-gradient(163deg, #5d1a19 0%, #40100f 42%, #240709 100%);
-}
-
-/* Lacquer craquelure: two very low-contrast hatch passes. Nothing moves,  */
-/* nothing is filtered — it only breaks the flatness of the gradient.      */
-.lidGrain {
-  position: absolute;
-  inset: 0;
-  opacity: 0.55;
-  background:
-    repeating-linear-gradient(64deg, rgba(255, 228, 190, 0.016) 0 1px, transparent 1px 13px),
-    repeating-linear-gradient(-58deg, rgba(0, 0, 0, 0.035) 0 1px, transparent 1px 19px);
-  pointer-events: none;
-}
-
-/* One slow diagonal sheen — the lacquer's wet highlight. Static.         */
-.lidSheen {
-  position: absolute;
-  inset: -20% -40%;
-  background: linear-gradient(104deg, transparent 26%, rgba(255, 238, 206, 0.055) 46%, rgba(255, 238, 206, 0.02) 58%, transparent 74%);
-  pointer-events: none;
-}
-
-/* Double gold hairline, inset from the lid edge. */
-.coverFrame {
-  position: absolute;
-  inset: 13px;
-  border: 1px solid rgba(200, 166, 100, 0.62);
-  pointer-events: none;
-}
-
-.coverFrame::after {
-  content: "";
-  position: absolute;
-  inset: 5px;
-  border: 1px solid rgba(200, 166, 100, 0.22);
-}
-
-.coverCorner {
-  position: absolute;
-  width: 26px;
-  height: 26px;
-  pointer-events: none;
-}
-
-.coverCornerTl {
-  top: 17px;
-  left: 17px;
-}
-
-.coverCornerTr {
-  top: 17px;
-  right: 17px;
-  transform: scaleX(-1);
-}
-
-.coverCornerBl {
-  bottom: 17px;
-  left: 17px;
-  transform: scaleY(-1);
-}
-
-.coverCornerBr {
-  bottom: 17px;
-  right: 17px;
-  transform: scale(-1);
+  background-size: cover, auto, auto;
+  background-position: center center, center, center;
+  background-repeat: no-repeat;
 }
 
 .coverContent {
@@ -347,7 +331,19 @@
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  padding: calc(6cqh + 26px) 30px calc(4cqh + 22px);
+  /* The lid artwork's own gold reaches into the centre column from 8.1% to */
+  /* 17.5% at the top and from 80.1% to 93.8% at the bottom (measured off   */
+  /* the asset, central 56% of columns). Because the lid is drawn with      */
+  /* `cover` against a container narrower than the art, the art is          */
+  /* height-matched and those percentages map 1:1 onto container height —   */
+  /* so cqh padding parks the text exactly in the clear lacquer field, at   */
+  /* every screen height, rather than at one fixed pixel offset.            */
+  /* `env(safe-area-inset-bottom)` then lifts the CTA clear of the home     */
+  /* indicator, with a max() floor for where env() resolves to 0.           */
+  padding-top: calc(18.5cqh + 4px);
+  padding-right: 30px;
+  padding-bottom: calc(20cqh + max(env(safe-area-inset-bottom, 0px), 8px));
+  padding-left: 30px;
   text-align: center;
   color: var(--sd-ivory);
 }
@@ -366,10 +362,13 @@
   color: rgba(242, 224, 173, 0.82);
 }
 
+/* Shorter than the SD-00 run: the lid art now owns the top of the         */
+/* composition, so the thread is a link down to the medallion, not the     */
+/* main event.                                                             */
 .coverThread {
   width: 18px;
-  height: clamp(52px, 15cqh, 104px);
-  margin-top: 10px;
+  height: clamp(26px, 6cqh, 56px);
+  margin-top: 8px;
 }
 
 .coverMiddle {
@@ -378,38 +377,25 @@
   align-items: center;
 }
 
-/* The emblem: a lacquer disc with a gold rim bevel, the vector knot on   */
-/* top. Disc depth is three shadows — rim light, inner valley, cast.      */
+/* The focal point: the supplied embossed lotus / thread-of-fate medallion  */
+/* (620x620, alpha). The red tassel breaks the circle at the lower right,   */
+/* so this element is deliberately a plain square box — no border-radius,   */
+/* no overflow clip, no disc background — or the tassel would be cut off.   */
+/* `contain` keeps the relief undistorted at every width. The cast shadow   */
+/* is a drop-shadow on the alpha, not a box-shadow, so it follows the       */
+/* medallion's real silhouette including the tassel.                        */
 .emblemDisc {
-  position: relative;
-  width: clamp(116px, 34cqw, 148px);
+  width: clamp(112px, 34cqw, 152px);
   aspect-ratio: 1;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background:
-    radial-gradient(72% 60% at 38% 26%, rgba(255, 234, 198, 0.16), transparent 62%),
-    radial-gradient(100% 100% at 50% 118%, rgba(0, 0, 0, 0.5), transparent 64%),
-    linear-gradient(158deg, #5f1b1a 0%, #3a0e0e 58%, #280809 100%);
-  box-shadow:
-    0 14px 26px -14px rgba(8, 1, 2, 0.95),
-    inset 0 1px 0 rgba(255, 232, 194, 0.3),
-    inset 0 -2px 6px rgba(0, 0, 0, 0.55),
-    0 0 0 1px rgba(200, 166, 100, 0.5);
-}
-
-.emblemRings {
-  position: absolute;
-  inset: 7%;
-}
-
-.emblemKnot {
-  position: relative;
-  width: 58%;
+  background-image: url("/prototypes/invitation/demo/se-duyen/assets/lotus-fate-medallion.webp");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 14px 20px rgba(8, 1, 2, 0.6));
 }
 
 .coverCaption {
-  margin-top: 14px;
+  margin-top: 11px;
   font-size: 9.5px;
   font-weight: 500;
   letter-spacing: 0.5em;
@@ -420,7 +406,7 @@
 /* Gold-leaf lettering: the one place the gradient-clipped text is worth   */
 /* its cost. Vietnamese diacritics clip correctly with the extra padding.  */
 .coverNames {
-  margin-top: 16px;
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -447,7 +433,7 @@
 }
 
 .coverDate {
-  margin-top: 14px;
+  margin-top: 12px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -491,28 +477,29 @@
 
 .seal {
   position: relative;
-  width: 74px;
-  height: 74px;
+  width: 72px;
+  height: 72px;
   display: grid;
   place-items: center;
-  /* Pressed wax is never a perfect circle, and it is matte, not glassy:  */
-  /* a wide low highlight, a squeezed rim, and a shadow that sits under   */
-  /* the disc rather than glowing around it.                              */
+  /* Pressed wax is never a perfect circle and never glassy. Against the   */
+  /* lid artwork the SD-00 disc read as a flat maroon blob, so the wax is  */
+  /* now lit in the artwork's own vermilion/gold family: a warm rim light, */
+  /* a lacquer-dark valley, a thin gold lip picking up the lid's gilding,  */
+  /* and a cast shadow that sits under the disc rather than haloing it.    */
   border-radius: 47% 53% 52% 48% / 51% 46% 54% 49%;
   background:
-    radial-gradient(84% 70% at 34% 24%, rgba(255, 206, 196, 0.2), transparent 68%),
-    radial-gradient(120% 96% at 50% 118%, rgba(44, 4, 6, 0.55), transparent 58%),
-    linear-gradient(162deg, #9d2124 0%, #85191d 52%, #5e1010 100%);
+    radial-gradient(76% 64% at 34% 22%, rgba(255, 214, 198, 0.42), transparent 66%),
+    radial-gradient(130% 100% at 50% 122%, rgba(52, 5, 7, 0.68), transparent 60%),
+    linear-gradient(158deg, #c23138 0%, #a3222a 46%, #751417 100%);
   box-shadow:
-    0 10px 16px -9px rgba(8, 1, 2, 0.95),
-    inset 0 1px 0 rgba(255, 198, 188, 0.26),
-    inset 0 -4px 9px rgba(50, 5, 7, 0.6),
-    0 0 0 1px rgba(200, 166, 100, 0.26),
+    0 12px 20px -8px rgba(8, 1, 2, 0.95),
+    inset 0 1.5px 0 rgba(255, 224, 212, 0.42),
+    inset 0 -5px 11px rgba(56, 6, 8, 0.62),
+    0 0 0 1.5px rgba(214, 180, 112, 0.62),
     /* the squeezed outer lip of the wax */
-    0 1px 0 3px rgba(123, 22, 25, 0.42);
+    0 1px 0 3px rgba(140, 28, 31, 0.5);
   transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease;
 }
-
 
 .sealButton:active .seal {
   transform: scale(0.94) rotate(3deg);
@@ -619,63 +606,46 @@
   width: 84%;
 }
 
-/* Gilded frame: a gold-leaf mat, a dark rabbet shadow, the photo inside. */
+/* Lotus portrait frame (740x925, alpha). The artwork sits ON TOP; the     */
+/* photo shows through its transparent inner window. The window values     */
+/* below were read off the asset's alpha channel, then bled outward by     */
+/* ~1% so the photo tucks UNDER the gilding and no hairline of background  */
+/* can show between the two at any scale.                                  */
 .frame {
+  --sd-window-x: 18.6%;
+  --sd-window-y: 11.4%;
+  --sd-window-w: 62.8%;
+  --sd-window-h: 74.3%;
+
   position: relative;
   margin: 0;
-  padding: 9px;
-  background: linear-gradient(148deg, #efdcae 0%, #cfae72 30%, #a7854a 62%, #e2c892 100%);
-  box-shadow:
-    0 20px 30px -20px rgba(10, 2, 3, 0.8),
-    inset 0 1px 0 rgba(255, 248, 226, 0.75),
-    inset 0 -1px 0 rgba(58, 14, 14, 0.35);
-}
-
-.frameInner {
-  position: relative;
-  aspect-ratio: 4 / 5;
-  overflow: hidden;
-  box-shadow:
-    inset 0 0 0 1px rgba(58, 14, 14, 0.4),
-    inset 0 3px 8px rgba(36, 7, 9, 0.5);
+  aspect-ratio: 740 / 925;
+  filter: drop-shadow(0 18px 24px rgba(10, 2, 3, 0.62));
 }
 
 .framePhoto {
   position: absolute;
-  inset: 0;
+  left: var(--sd-window-x);
+  top: var(--sd-window-y);
+  width: var(--sd-window-w);
+  height: var(--sd-window-h);
   background-position: center 34%;
   background-size: cover;
   background-repeat: no-repeat;
+  /* A dark rabbet line so the photo reads as set BEHIND the gilding       */
+  /* rather than pasted flat onto it. */
+  box-shadow: inset 0 0 0 1px rgba(58, 14, 14, 0.4), inset 0 3px 10px rgba(36, 7, 9, 0.45);
 }
 
-.frameCorner {
+.frameArt {
   position: absolute;
-  width: 22px;
-  height: 22px;
+  inset: 0;
+  z-index: 1;
+  background-image: url("/prototypes/invitation/demo/se-duyen/assets/lotus-gilded-portrait-frame.webp");
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
   pointer-events: none;
-}
-
-.frameCornerTl {
-  top: 3px;
-  left: 3px;
-}
-
-.frameCornerTr {
-  top: 3px;
-  right: 3px;
-  transform: scaleX(-1);
-}
-
-.frameCornerBl {
-  bottom: 3px;
-  left: 3px;
-  transform: scaleY(-1);
-}
-
-.frameCornerBr {
-  bottom: 3px;
-  right: 3px;
-  transform: scale(-1);
 }
 
 .coupleNamesRow {
@@ -891,21 +861,36 @@
   }
 }
 
+/* Responsive tiers.                                                       */
+/*                                                                         */
+/* The thresholds are deliberately 365/400 rather than the device widths.   */
+/* These are CONTAINER queries against `.root`, and `.root` is not the      */
+/* device: in the review harness it sits inside a phone frame with 10px of  */
+/* chrome each side, so a "390px" phone renders a 370px container and a     */
+/* "430px" one a 410px container. 365 and 400 are the only thresholds that  */
+/* sort 360/390/430 into the same three tiers BOTH on a real device         */
+/* (360/390/430) and in the harness (340/370/410). With the old 374/412     */
+/* pair the 390px primary viewport silently rendered on the narrow tier.    */
+
 /* Narrow phones (360 px): tighten gutters before anything can overflow.  */
 /* The queries below target descendants of `.root` (a container cannot     */
 /* style itself), so the gutter override lands on the two consumers.       */
-@container (max-width: 374px) {
+@container (max-width: 365px) {
   .stage,
   .couple {
     --sd-gutter: 12px;
   }
 
+  /* Still percentages: the plate's ornaments scale with the plate, so a  */
+  /* px padding here would put text back on the lotus. Trimmed, not       */
+  /* replaced.                                                            */
   .innerPaper {
-    padding: 22px 14px 24px;
+    padding: 32% 12% 31%;
   }
 
   .coverContent {
-    padding: calc(5cqh + 20px) 22px calc(3cqh + 18px);
+    padding-left: 22px;
+    padding-right: 22px;
   }
 
   .coupleCard {
@@ -914,22 +899,45 @@
 
   .frameSlotFirst,
   .frameSlotSecond {
-    width: 80%;
+    width: 84%;
   }
 }
 
 /* Roomier phones (430 px): let the card breathe rather than grow type.   */
-@container (min-width: 412px) {
+@container (min-width: 400px) {
   .stage,
   .couple {
     --sd-gutter: 22px;
   }
 
   .innerPaper {
-    padding: 30px 24px 32px;
+    padding: 33% 17% 32%;
   }
 
   .coupleCard {
     padding: 32px 22px 30px;
+  }
+}
+
+/* Short screens: the cover is a size container, so this is the cover's    */
+/* own height, not the browser window's. Below ~700px the medallion and    */
+/* the thread give up room first, so the CTA keeps its clearance instead   */
+/* of being pushed onto the lid's bottom lotus band.                       */
+@container (max-height: 700px) {
+  .emblemDisc {
+    width: clamp(96px, 30cqw, 128px);
+  }
+
+  .coverThread {
+    height: clamp(18px, 4cqh, 34px);
+  }
+
+  .coverNames {
+    margin-top: 10px;
+    font-size: clamp(23px, 7cqw, 30px);
+  }
+
+  .coverDate {
+    margin-top: 10px;
   }
 }

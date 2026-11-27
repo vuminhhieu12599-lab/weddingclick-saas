@@ -1,0 +1,142 @@
+{
+  "project": "WeddingClick V2",
+  "template_code": "our-wedding-story",
+  "renderer_key": "wedding.our-wedding-story.v2",
+  "type": "FICTIONAL_AI_GENERATED_DEMO_PHOTOGRAPHY",
+  "count": 10,
+  "source": "New AI-generated fictional people. User-supplied photos were style references only, not redistributed.",
+  "expected_repo_destination": "public/showroom/demo/our-wedding-story/photos/",
+  "scope": "PUBLIC_SHOWROOM_DEMO_ONLY",
+  "suggested_slot_mapping": {
+    "coverPhoto": [
+      "01"
+    ],
+    "groomPortrait": [
+      "04"
+    ],
+    "bridePortrait": [
+      "03"
+    ],
+    "storyPhoto": [
+      "09"
+    ],
+    "gallery": [
+      "05",
+      "06",
+      "07",
+      "08",
+      "02",
+      "09",
+      "03",
+      "04",
+      "01",
+      "10"
+    ],
+    "thankYouPhoto": [
+      "10"
+    ]
+  },
+  "slot_mapping_note": "Suggestions only: Claude must verify actual editor manifest slot keys/maxCount/person-bound rules before committing.",
+  "photos": [
+    {
+      "index": 1,
+      "file": "photos/01-cover-couple-fullbody.png",
+      "webp_target_file": "01-cover-couple-fullbody.webp",
+      "width": 1086,
+      "height": 1448,
+      "orientation": "PORTRAIT",
+      "description": "Cover couple full body, bouquet",
+      "sha256": "78c6ec94ee32dd0f42f1c9cf179462563ee6add285dd36a9f642d7d5efc17591"
+    },
+    {
+      "index": 2,
+      "file": "photos/02-veil-couple.png",
+      "webp_target_file": "02-veil-couple.webp",
+      "width": 1086,
+      "height": 1448,
+      "orientation": "PORTRAIT",
+      "description": "Couple posing with veil",
+      "sha256": "18bf6e40803f61411e3510fd28c7b14a02f3d713fc137c01916696354d362839"
+    },
+    {
+      "index": 3,
+      "file": "photos/03-bride-portrait.png",
+      "webp_target_file": "03-bride-portrait.webp",
+      "width": 1086,
+      "height": 1448,
+      "orientation": "PORTRAIT",
+      "description": "Bride solo full body",
+      "sha256": "3fadb249ddecb57ffdef2f0c7a131f63c4b65980af3adca015ac8d140d8f4474"
+    },
+    {
+      "index": 4,
+      "file": "photos/04-groom-portrait.png",
+      "webp_target_file": "04-groom-portrait.webp",
+      "width": 1086,
+      "height": 1448,
+      "orientation": "PORTRAIT",
+      "description": "Groom solo full body",
+      "sha256": "ed431955e473a9380f3d58324da8aa6f5a0ecde37bdefb2213e58cf1ebe5474d"
+    },
+    {
+      "index": 5,
+      "file": "photos/05-magazine-couple.png",
+      "webp_target_file": "05-magazine-couple.webp",
+      "width": 1086,
+      "height": 1448,
+      "orientation": "PORTRAIT",
+      "description": "Couple with editorial magazine",
+      "sha256": "b45099b5a2f154f4092ef7d9152b25ff56ccb909119cb5edce890e140f6b9e64"
+    },
+    {
+      "index": 6,
+      "file": "photos/06-camera-couple.png",
+      "webp_target_file": "06-camera-couple.webp",
+      "width": 1086,
+      "height": 1448,
+      "orientation": "PORTRAIT",
+      "description": "Couple with camera",
+      "sha256": "d8f8249bac8f5da487cd0ac07c44b6ad695d4d5f2a80d2ba6ddcd1ea41f9c7bf"
+    },
+    {
+      "index": 7,
+      "file": "photos/07-fashion-couple-wide.png",
+      "webp_target_file": "07-fashion-couple-wide.webp",
+      "width": 1448,
+      "height": 1086,
+      "orientation": "LANDSCAPE",
+      "description": "Couple wide studio pose",
+      "sha256": "d02ba02eea648b80055dc4791429cbb8f8cbb5aaa0e39b144ca4c942d1dad721"
+    },
+    {
+      "index": 8,
+      "file": "photos/08-intimate-veil-couple.png",
+      "webp_target_file": "08-intimate-veil-couple.webp",
+      "width": 1086,
+      "height": 1448,
+      "orientation": "PORTRAIT",
+      "description": "Intimate couple beneath veil",
+      "sha256": "c04ad4d6fef8545f5ad10bfc725ad6a3a8ca544c723f5bd68e14f2d142a6e18c"
+    },
+    {
+      "index": 9,
+      "file": "photos/09-editorial-seated-wide.png",
+      "webp_target_file": "09-editorial-seated-wide.webp",
+      "width": 1448,
+      "height": 1086,
+      "orientation": "LANDSCAPE",
+      "description": "Seated editorial couple wide",
+      "sha256": "fec7218390e9d9575a9dd23b17f014fdfd8213241664743e81c49e6e80f13f8d"
+    },
+    {
+      "index": 10,
+      "file": "photos/10-thank-you-couple.png",
+      "webp_target_file": "10-thank-you-couple.webp",
+      "width": 1086,
+      "height": 1448,
+      "orientation": "PORTRAIT",
+      "description": "Ending couple full body",
+      "sha256": "97f019c551df23d5c74d242385e016fe664601b622da3c0df7227a52c4b3743c"
+    }
+  ]
+}

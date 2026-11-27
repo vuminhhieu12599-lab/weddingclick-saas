@@ -35,6 +35,33 @@ const WITH_FIFTH_MANIFEST = [
   },
 ] as const;
 
+/**
+ * Real pixel size of a WebP file, read from its own header (VP8 lossy, VP8L
+ * lossless or VP8X extended). No image library: the point is to measure the
+ * committed bytes rather than trust the catalog entry that describes them.
+ */
+function webpSize(bytes: Buffer): { readonly width: number; readonly height: number } {
+  if (bytes.toString("ascii", 0, 4) !== "RIFF" || bytes.toString("ascii", 8, 12) !== "WEBP") {
+    throw new Error("not a WebP file");
+  }
+  const chunk = bytes.toString("ascii", 12, 16);
+  if (chunk === "VP8 ") {
+    if (bytes.readUInt8(23) !== 0x9d || bytes.readUInt8(24) !== 0x01 || bytes.readUInt8(25) !== 0x2a) {
+      throw new Error("VP8 start code missing");
+    }
+    return { width: bytes.readUInt16LE(26) & 0x3fff, height: bytes.readUInt16LE(28) & 0x3fff };
+  }
+  if (chunk === "VP8L") {
+    if (bytes.readUInt8(20) !== 0x2f) throw new Error("VP8L signature missing");
+    const header = bytes.readUInt32LE(21);
+    return { width: (header & 0x3fff) + 1, height: ((header >>> 14) & 0x3fff) + 1 };
+  }
+  if (chunk === "VP8X") {
+    return { width: bytes.readUIntLE(24, 3) + 1, height: bytes.readUIntLE(27, 3) + 1 };
+  }
+  throw new Error(`unsupported WebP chunk ${chunk}`);
+}
+
 describe("LAUNCH-P0-04 showroom catalog", () => {
   it("publishes exactly the five released templates, in display order", () => {
     expect(PUBLIC_SHOWROOM_TEMPLATES.map((template) => template.templateCode)).toStrictEqual([
@@ -80,12 +107,20 @@ describe("LAUNCH-P0-04 showroom catalog", () => {
   });
 
   it("screenshots follow the one naming rule and real dimensions", () => {
+    const publicDir = fileURLToPath(new URL("../../../public", import.meta.url));
     for (const template of PUBLIC_SHOWROOM_TEMPLATES) {
       expect(template.cover.src).toBe(`/showroom/templates/${template.templateCode}-cover.webp`);
       expect(template.preview.src).toBe(`/showroom/templates/${template.templateCode}-inside.webp`);
-      const publicDir = fileURLToPath(new URL("../../../public", import.meta.url));
-      expect(() => readFileSync(`${publicDir}${template.cover.src}`)).not.toThrow();
-      expect(() => readFileSync(`${publicDir}${template.preview.src}`)).not.toThrow();
+      const cover = readFileSync(`${publicDir}${template.cover.src}`);
+      const preview = readFileSync(`${publicDir}${template.preview.src}`);
+      // SHOWROOM-CARD-HERO-01: the declared size is what the cards and the hero
+      // phone mockups reserve space with, so a re-capture at any other size is a
+      // layout bug the catalog cannot see. Measure the bytes, not the entry.
+      expect(webpSize(cover), template.cover.src).toStrictEqual({ width: template.cover.width, height: template.cover.height });
+      expect(webpSize(preview), template.preview.src).toStrictEqual({ width: template.preview.width, height: template.preview.height });
+      // The card crossfades cover -> inside on hover; the same frame twice makes
+      // that a no-op, which is how a re-captured cover quietly swallows the inner view.
+      expect(cover.equals(preview), template.templateCode).toBe(false);
     }
   });
 

@@ -9,7 +9,7 @@ import { resolveInvitation } from "../../_shared/resolve-variant";
 import { useReducedMotion } from "../../_shared/use-reduced-motion";
 import type { SectionVisibility } from "../../_shared/sections";
 import type { InvitationVariant, PrototypeWeddingData } from "../../_shared/types";
-import { FateEmblem, FateKnot, FrameCorner, SealRelief, ThreadCurve, ThreadDivider, ThreadVertical } from "./se-duyen-decor";
+import { FateKnot, SealRelief, ThreadCurve, ThreadDivider, ThreadVertical } from "./se-duyen-decor";
 import styles from "./se-duyen.module.css";
 
 /**
@@ -26,9 +26,16 @@ import styles from "./se-duyen.module.css";
  * gold relief, a lid lifting off) with one crimson silk thread — the tơ hồng
  * — as its through-line, and a bow-knot emblem instead of the 囍 glyph.
  *
- * Every ornament is vector/CSS mock geometry (see `se-duyen-decor.tsx`): the
- * approved pre-rendered 3D asset set does not exist yet and must never be
- * approximated by a stand-in that could be mistaken for it.
+ * SD-01 replaces the flat CSS mock geometry of the four hero surfaces with
+ * the supplied pre-rendered Vietnamese lacquer artwork (see
+ * `assets/README.md` — sơn mài lid, lotus/thread medallion, lotus portrait
+ * frame, ivory silk plate). Those four files are used byte-for-byte as
+ * delivered; nothing is redrawn or approximated. The remaining small
+ * ornaments (thread runs, knot, divider, wax relief) stay vector, since the
+ * supplied set does not cover them.
+ *
+ * Artwork carries NO wedding content: every name, date, time, weekday and
+ * label below is DOM text resolved at render time. Nothing is baked in.
  */
 
 // Distinctive display serif, tried per the SD-00 font brief. Prata is a
@@ -63,6 +70,11 @@ const DEMO_SLOT_PHOTOS = [
   "/prototypes/invitation/demo/se-duyen/portrait-01.svg",
   "/prototypes/invitation/demo/se-duyen/portrait-02.svg",
 ] as const;
+
+// The four supplied artwork files are referenced from `se-duyen.module.css`
+// (`assets/*.webp`), where their sizing and the measured frame window live.
+// They are decorative surfaces only: wedding content is laid on top of them
+// as DOM text, never baked into them.
 
 // Prototype wording. Editable copy in production (the couplet is template
 // art direction, the salutation and guest label come from the Project).
@@ -132,8 +144,10 @@ export function SeDuyenPrototype({ data, variant, personalization, guestDisplayN
     >
       <section className={styles.stage}>
         <div className={`${styles.inner} ${phase === "closed" ? "" : styles.innerRevealing}`}>
+          {/* The ivory silk plate is the artwork; everything inside it is DOM
+              text sitting in the plate's clear field, between its own lotus
+              ornaments. */}
           <div className={styles.innerPaper}>
-            <ThreadVertical className={styles.innerThread} />
             <p className={styles.eyebrow}>{data.invitationWording.salutation}</p>
             <p className={styles.guestLine}>{guestLine}</p>
             <p className={styles.ceremonyTitle}>{resolved.ceremonyTitle}</p>
@@ -175,16 +189,10 @@ export function SeDuyenPrototype({ data, variant, personalization, guestDisplayN
 
         {phase !== "done" && (
           <div className={`${styles.cover} ${phase === "opening" ? styles.coverOpening : ""}`}>
-            <div className={styles.lid} aria-hidden="true">
-              <span className={styles.lidGrain} />
-              <span className={styles.lidSheen} />
-            </div>
-
-            <div className={styles.coverFrame} aria-hidden="true" />
-            <FrameCorner className={`${styles.coverCorner} ${styles.coverCornerTl}`} />
-            <FrameCorner className={`${styles.coverCorner} ${styles.coverCornerTr}`} />
-            <FrameCorner className={`${styles.coverCorner} ${styles.coverCornerBl}`} />
-            <FrameCorner className={`${styles.coverCorner} ${styles.coverCornerBr}`} />
+            {/* The sơn mài lid artwork. Its own gold border, lotus corners and
+                drum bands replace the CSS frame/corner mock that stood in for
+                them, so nothing is drawn over the art. */}
+            <div className={styles.lid} aria-hidden="true" />
 
             <div className={styles.coverContent}>
               <div className={styles.coverTop}>
@@ -193,10 +201,7 @@ export function SeDuyenPrototype({ data, variant, personalization, guestDisplayN
               </div>
 
               <div className={styles.coverMiddle}>
-                <div className={styles.emblemDisc}>
-                  <FateEmblem className={styles.emblemRings} />
-                  <FateKnot className={styles.emblemKnot} />
-                </div>
+                <div className={styles.emblemDisc} aria-hidden="true" />
                 <p className={styles.coverCaption}>{COVER_CAPTION}</p>
                 <p className={styles.coverNames}>
                   <span className={styles.coverNameLine}>{primaryName}</span>
@@ -279,21 +284,21 @@ function CoupleName({ name, sideLabel }: { name: string; sideLabel: string }) {
 }
 
 /**
- * Gilded frame: a gold-leaf mat with a dark rabbet shadow and four corner
- * reliefs. The photo is a CSS background (the prototype's demo photos are
- * SVG, which `next/image` will not optimize) — same approach as the other
- * directions.
+ * Lotus portrait frame: the supplied gilded frame artwork laid OVER the
+ * photo, which shows through the frame's transparent inner window. The
+ * window was measured off the asset's own alpha channel (740×925; window at
+ * 19.6%/12.4%, 60.8%×72.3%) and lives in CSS custom properties, so the photo
+ * is positioned from the artwork rather than from eyeballed numbers.
+ *
+ * The photo is a CSS background: the prototype's demo portraits are SVG,
+ * which `next/image` will not optimize — same approach as the other
+ * directions. In production this slot takes the Project's resolved media.
  */
 function GildedFrame({ className, src, alt }: { className: string; src: string; alt: string }) {
   return (
     <figure className={`${styles.frame} ${className}`}>
-      <div className={styles.frameInner}>
-        <div className={styles.framePhoto} role="img" aria-label={alt} style={{ backgroundImage: `url(${src})` }} />
-      </div>
-      <FrameCorner className={`${styles.frameCorner} ${styles.frameCornerTl}`} />
-      <FrameCorner className={`${styles.frameCorner} ${styles.frameCornerTr}`} />
-      <FrameCorner className={`${styles.frameCorner} ${styles.frameCornerBl}`} />
-      <FrameCorner className={`${styles.frameCorner} ${styles.frameCornerBr}`} />
+      <div className={styles.framePhoto} role="img" aria-label={alt} style={{ backgroundImage: `url(${src})` }} />
+      <div className={styles.frameArt} aria-hidden="true" />
     </figure>
   );
 }
