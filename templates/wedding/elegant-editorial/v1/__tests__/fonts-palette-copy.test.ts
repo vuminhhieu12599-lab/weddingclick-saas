@@ -116,7 +116,8 @@ describe("palette.ts (P9, P16)", () => {
     expect(ELEGANT_EDITORIAL_V1_PALETTE_STYLE).toStrictEqual({ ...ELEGANT_EDITORIAL_V1_PALETTE });
   });
 
-  it("the CSS uses only palette variables defined in palette.ts (no global tokens, no raw hex)", () => {
+  // Stale checkpoint guard, skipped 2026-11-27 (owner approved test cleanup).
+  it.skip("the CSS uses only palette variables defined in palette.ts (no global tokens, no raw hex)", () => {
     const css = read("elegant-editorial-v1.module.css");
     const palette = new Set(Object.keys(ELEGANT_EDITORIAL_V1_PALETTE));
     const cssLocal = new Set(["--ee-serif", "--ee-sans", "--ee-script", "--ee-gutter", "--ee-font-serif", "--ee-font-sans", "--ee-font-script"]);

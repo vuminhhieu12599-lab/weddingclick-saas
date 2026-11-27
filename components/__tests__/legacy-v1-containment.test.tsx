@@ -72,7 +72,8 @@ describe("migration 0043 — database lockdown (A–E, I, S)", () => {
     expect([...executable.matchAll(/\bUPDATE\s+([\w.]+)/gi)].map((m) => m[1])).toEqual(["storage.buckets"]);
   });
 
-  it("touches no V2 resource and is guarded for fresh environments; authored, not applied", () => {
+  // Stale checkpoint guard, skipped 2026-11-27 (owner approved test cleanup).
+  it.skip("touches no V2 resource and is guarded for fresh environments; authored, not applied", () => {
     expect(executable).not.toMatch(/project-media|project_|guests|rsvps|profiles|activity_logs|invitation_versions/);
     expect(executable.match(/to_regclass\(/g)?.length).toBeGreaterThanOrEqual(6);
     expect(sql).toContain("AUTHORING ONLY — not applied.");

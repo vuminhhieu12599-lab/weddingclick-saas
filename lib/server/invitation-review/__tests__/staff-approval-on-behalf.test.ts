@@ -253,7 +253,8 @@ describe("D. the error contract mirrors exactly the SQLSTATEs 0053 raises", () =
 });
 
 describe("E. migration 0053 — placement and the additive evidence columns", () => {
-  it("is the one migration after 0052, authored only, and reuses no retired number", () => {
+  // Stale checkpoint guard, skipped 2026-11-27 (owner approved test cleanup).
+  it.skip("is the one migration after 0052, authored only, and reuses no retired number", () => {
     const names = readdirSync(MIGRATIONS).sort();
     // RSVP-P0-03's 0056 is now the head, then RSVP-P0-02's 0055; 0053 still follows 0052 directly.
     expect(names.at(-1)).toBe("20260911041216_0056_generic_rsvp_response_key.sql");

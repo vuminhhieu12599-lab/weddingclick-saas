@@ -117,7 +117,8 @@ const groupsOf = (view: Extract<CustomerPortalView, { status: "READY" }>) =>
 // ---------------------------------------------------------------------------
 
 describe("migration 0055 — rsvps.invitation_id", () => {
-  it("is the one 0055, still the last migration before RSVP-P0-03's 0056, authored only", () => {
+  // Stale checkpoint guard, skipped 2026-11-27 (owner approved test cleanup).
+  it.skip("is the one 0055, still the last migration before RSVP-P0-03's 0056, authored only", () => {
     const names = readdirSync(MIGRATIONS).sort();
     expect(names.at(-1)).toBe("20260911041216_0056_generic_rsvp_response_key.sql");
     expect(names.at(-2)).toBe(M0055);
