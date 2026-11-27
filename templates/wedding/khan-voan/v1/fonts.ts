@@ -1,12 +1,13 @@
-import { Be_Vietnam_Pro, Imperial_Script, Playfair_Display } from "next/font/google";
+import { Be_Vietnam_Pro, Imperial_Script, Lora } from "next/font/google";
 
 /**
- * Khăn Voan v1 — the `khan-voan-classic` font preset. Self-hosted by the Next
+ * Khăn Voan v1 — the `khan-voan-classic` font preset (serif: Lora, soft and
+ * calm, with lining figures; Owner 2026-11-27 replaced the sharper Playfair Display). Self-hosted by the Next
  * build (no font CDN at runtime). All three are SIL OFL families with a
  * `vietnamese` subset; `preload: false` keeps them off other renderers' routes.
  * Tests mock `./fonts`: `next/font` loaders only run under the Next compiler.
  */
-const serif = Playfair_Display({
+const serif = Lora({
   weight: ["400", "500"],
   style: ["normal", "italic"],
   subsets: ["latin", "vietnamese"],

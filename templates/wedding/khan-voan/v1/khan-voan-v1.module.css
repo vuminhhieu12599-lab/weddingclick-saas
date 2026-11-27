@@ -1,6 +1,6 @@
 /*
  * Khăn Voan v1 — ivory satin, champagne gold, a lifted tulle veil.
- * Fonts arrive as --kv-serif (Playfair Display), --kv-sans (Be Vietnam Pro)
+ * Fonts arrive as --kv-serif (Lora), --kv-sans (Be Vietnam Pro)
  * and --kv-script (Imperial Script) from ./fonts. All decoration is inline
  * vector art or CSS; no external asset is referenced.
  */
@@ -16,6 +16,7 @@
   background: #1d1915;
   color: var(--kv-ink);
   font: 400 16px/1.6 var(--kv-sans), system-ui, sans-serif;
+  font-variant-numeric: lining-nums;
   overflow-x: clip;
   -webkit-font-smoothing: antialiased;
 }

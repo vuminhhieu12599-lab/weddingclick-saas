@@ -29,7 +29,7 @@ interface OpeningStageProps {
  * The veil-lift opening. Two layers of blurred tulle lie over the cover photo;
  * one tap lifts them (pure CSS transitions) and the front veil's own
  * `transitionend` finishes the sequence. Until the guest opens it, the rest of
- * the invitation is not rendered visible, so the page cannot scroll past the veil.
+ * the invitation is not mounted, so the page cannot scroll past the veil.
  */
 export function OpeningStage({ cover, seal, music, onOpen, children }: OpeningStageProps) {
   const [phase, dispatch] = useReducer(openingReducer, INITIAL_OPENING_PHASE);
@@ -79,7 +79,9 @@ export function OpeningStage({ cover, seal, music, onOpen, children }: OpeningSt
           </div>
         )}
       </section>
-      <div className={styles.content}>{children}</div>
+      {/* The body mounts when the veil lifts, so the scroll reveals start from real
+          layout (an observer started on hidden content would mark everything as already seen). */}
+      <div className={styles.content}>{phase === "CLOSED" ? null : children}</div>
     </main>
   );
 }
