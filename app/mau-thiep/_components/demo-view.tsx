@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -9,7 +10,12 @@ import {
   isDemoVariantSegment,
   type DemoVariantSegment,
 } from "../../../lib/showroom/demo/build-demo-render-data";
-import { PUBLIC_SHOWROOM_TEMPLATES, findPublicShowroomTemplate, type PublicShowroomTemplate } from "../../../lib/showroom/showroom-catalog";
+import {
+  PUBLIC_SHOWROOM_TEMPLATES,
+  adjacentShowroomTemplates,
+  findPublicShowroomTemplate,
+  type PublicShowroomTemplate,
+} from "../../../lib/showroom/showroom-catalog";
 import { SHOWROOM_TEMPLATES_HREF, consultationHref, demoHref } from "../../../lib/showroom/showroom-routes";
 import { FloatingContact } from "../../_showroom/floating-contact";
 import { ShowroomIcons } from "../../_showroom/icons";
@@ -66,6 +72,7 @@ export function demoMetadata(template: PublicShowroomTemplate, segment: DemoVari
 export async function DemoView({ template, segment }: { readonly template: PublicShowroomTemplate; readonly segment: DemoVariantSegment | undefined }) {
   const variant = segment === undefined ? "COMMON" : DEMO_VARIANT_SEGMENTS[segment];
   const data = await buildDemoRenderData(template.rendererKey, variant);
+  const siblings = adjacentShowroomTemplates(template.templateCode);
   return (
     <>
       <div className={`${SHOWROOM_FONT_VARIABLES_CLASS_NAME} ${styles.root}`}>
@@ -78,9 +85,20 @@ export async function DemoView({ template, segment }: { readonly template: Publi
               <span className={styles.badge}>Thiệp mẫu</span>
               <span className={styles.name}>{template.nameVi}</span>
             </p>
-            <Link href={consultationHref(template.templateCode)} className={styles.choose}>
-              Chọn mẫu này
-            </Link>
+            <div className={styles.barActions}>
+              {siblings === undefined ? null : (
+                <Link
+                  href={demoHref(siblings.next.templateCode, segment)}
+                  className={styles.nextIcon}
+                  aria-label={`Mẫu tiếp theo: ${siblings.next.nameVi}`}
+                >
+                  {ShowroomIcons.arrow(styles.icon)}
+                </Link>
+              )}
+              <Link href={consultationHref(template.templateCode)} className={styles.choose}>
+                Chọn mẫu này
+              </Link>
+            </div>
           </div>
           <nav className={styles.tabs} aria-label="Xem thiệp theo bên">
             {VARIANT_TABS.map((tab) => (
@@ -108,9 +126,27 @@ export async function DemoView({ template, segment }: { readonly template: Publi
               Chọn mẫu này
             </Link>
             <Link href={SHOWROOM_TEMPLATES_HREF} className={styles.secondary}>
-              Xem mẫu khác
+              Xem tất cả mẫu
             </Link>
           </div>
+          {siblings === undefined ? null : (
+            <nav className={styles.siblings} aria-label="Xem mẫu khác">
+              {[
+                { label: "Mẫu trước", entry: siblings.previous },
+                { label: "Mẫu tiếp theo", entry: siblings.next },
+              ].map(({ label, entry }) => (
+                <Link key={label} href={demoHref(entry.templateCode, segment)} className={styles.sibling}>
+                  <span className={styles.siblingThumb}>
+                    <Image src={entry.cover.src} alt="" width={entry.cover.width} height={entry.cover.height} sizes="64px" />
+                  </span>
+                  <span className={styles.siblingText}>
+                    <span className={styles.siblingLabel}>{label}</span>
+                    <span className={styles.siblingName}>{entry.nameVi}</span>
+                  </span>
+                </Link>
+              ))}
+            </nav>
+          )}
         </aside>
       </div>
       <FloatingContact />

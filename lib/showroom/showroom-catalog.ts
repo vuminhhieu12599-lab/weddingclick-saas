@@ -62,9 +62,24 @@ export interface ShowroomTemplateEntry {
   /** Ascending display order; ties break by `templateCode`. */
   readonly sortOrder: number;
   readonly visibility: ShowroomVisibility;
-  /** Future filters (e.g. "truyen-thong", "hien-dai"); never required. */
+  /** Style filters (keys of `SHOWROOM_CATEGORY_LABELS`, e.g. "truyen-thong", "hien-dai"). */
   readonly categories: readonly string[];
+  /** Shows a "Mới" badge on the card; turn off once the template is no longer new. */
+  readonly isNew?: boolean;
 }
+
+/**
+ * Filter chips shown above the collection, in this order. A chip appears only
+ * when at least one public template carries that category; categories not
+ * listed here are kept on entries but never shown as chips.
+ */
+export const SHOWROOM_CATEGORY_LABELS: Readonly<Record<string, string>> = Object.freeze({
+  "hien-dai": "Hiện đại",
+  "truyen-thong": "Truyền thống",
+  "sang-trong": "Sang trọng",
+  "lang-man": "Lãng mạn",
+  "cong-giao": "Công giáo",
+});
 
 /** A validated PUBLIC entry plus the production renderer key resolved for it. */
 export interface PublicShowroomTemplate extends ShowroomTemplateEntry {
@@ -119,7 +134,7 @@ export const SHOWROOM_TEMPLATE_ENTRIES: readonly ShowroomTemplateEntry[] = [
     ...screenshots("elegant-editorial", "Nét Thanh Lịch"),
     sortOrder: 10,
     visibility: "PUBLIC",
-    categories: ["hien-dai"],
+    categories: ["hien-dai", "sang-trong"],
   },
   {
     templateCode: "vietnamese-heritage",
@@ -188,7 +203,7 @@ export const SHOWROOM_TEMPLATE_ENTRIES: readonly ShowroomTemplateEntry[] = [
     ...screenshots("se-duyen", "Se Duyên"),
     sortOrder: 50,
     visibility: "PUBLIC",
-    categories: ["truyen-thong"],
+    categories: ["truyen-thong", "sang-trong"],
   },
   {
     // WC-SHOWROOM-HA-01: one public card for Hồng Ân; use the approved v2 renderer.
@@ -220,7 +235,8 @@ export const SHOWROOM_TEMPLATE_ENTRIES: readonly ShowroomTemplateEntry[] = [
     ...screenshots("khan-voan", "Khăn Voan"),
     sortOrder: 70,
     visibility: "PUBLIC",
-    categories: ["hien-dai", "sang-trong"],
+    categories: ["hien-dai", "sang-trong", "lang-man"],
+    isNew: true,
   },
 
 ];
@@ -286,4 +302,25 @@ export function findPublicShowroomTemplate(
   templates: readonly PublicShowroomTemplate[] = PUBLIC_SHOWROOM_TEMPLATES,
 ): PublicShowroomTemplate | undefined {
   return templates.find((entry) => entry.templateCode === templateCode);
+}
+
+/** The chips to show for a list: labelled categories present in it, in label order. */
+export function showroomFilterCategories(
+  templates: readonly Pick<ShowroomTemplateEntry, "categories">[],
+): readonly { readonly key: string; readonly label: string }[] {
+  return Object.entries(SHOWROOM_CATEGORY_LABELS)
+    .filter(([key]) => templates.some((template) => template.categories.includes(key)))
+    .map(([key, label]) => ({ key, label }));
+}
+
+/** Previous and next PUBLIC template around one code, wrapping at both ends. */
+export function adjacentShowroomTemplates(
+  templateCode: string,
+  templates: readonly PublicShowroomTemplate[] = PUBLIC_SHOWROOM_TEMPLATES,
+): { readonly previous: PublicShowroomTemplate; readonly next: PublicShowroomTemplate } | undefined {
+  const index = templates.findIndex((entry) => entry.templateCode === templateCode);
+  if (index < 0 || templates.length < 2) return undefined;
+  const previous = templates[(index - 1 + templates.length) % templates.length];
+  const next = templates[(index + 1) % templates.length];
+  return previous === undefined || next === undefined ? undefined : { previous, next };
 }

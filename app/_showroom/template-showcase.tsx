@@ -3,12 +3,12 @@ import Link from "next/link";
 import type { ShowroomTemplateEntry } from "../../lib/showroom/showroom-catalog";
 import { SHOWROOM_SECTION_IDS, consultationHref } from "../../lib/showroom/showroom-routes";
 import styles from "./showroom.module.css";
-import { TemplateCard } from "./template-card";
+import { TemplateGrid } from "./template-grid";
 
 /**
  * The template collection. Renders whatever public entries it is given, in
- * order, through the one `TemplateCard`; the auto-fill grid adapts from one
- * to any number of templates. Zero entries → a calm empty state.
+ * order, through the filterable `TemplateGrid` (2 per row on phones, 3–4 on
+ * wider screens). Zero entries → a calm empty state.
  */
 export function TemplateShowcase({ templates }: { readonly templates: readonly ShowroomTemplateEntry[] }) {
   return (
@@ -20,9 +20,7 @@ export function TemplateShowcase({ templates }: { readonly templates: readonly S
             <h2 id="mau-thiep-title" className={styles.sectionTitle}>
               Mỗi mẫu thiệp, <em>một câu chuyện riêng</em>
             </h2>
-            <p className={styles.sectionLead}>
-              Mở từng thiệp mẫu để trải nghiệm đúng như khách mời của bạn sẽ thấy: lịch cưới, chỉ đường, album ảnh và xác nhận tham dự.
-            </p>
+            <p className={styles.sectionLead}>Chạm vào một mẫu để mở thiệp và trải nghiệm đúng như khách mời của bạn sẽ thấy.</p>
           </div>
           {templates.length > 0 ? (
             <p className={styles.showroomCount}>{templates.length} mẫu thiệp đang có</p>
@@ -30,13 +28,7 @@ export function TemplateShowcase({ templates }: { readonly templates: readonly S
         </div>
 
         {templates.length > 0 ? (
-          <ol className={styles.templateGrid}>
-            {templates.map((template, index) => (
-              <li key={template.templateCode}>
-                <TemplateCard template={template} position={index + 1} />
-              </li>
-            ))}
-          </ol>
+          <TemplateGrid templates={templates} />
         ) : (
           <div className={styles.emptyState}>
             <h3>Bộ sưu tập đang được làm mới</h3>

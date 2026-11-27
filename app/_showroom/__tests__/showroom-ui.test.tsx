@@ -29,17 +29,17 @@ describe("LAUNCH-P0-04 showroom collection is data-driven", () => {
     expect(countCards(withExtra)).toBe(released + 1);
     expect(withExtra).toContain("Mẫu Thứ Năm");
     expect(withExtra).toContain('href="/mau-thiep/fixture-five"');
-    expect(withExtra).toContain('href="/tu-van?mau=fixture-five"');
     expect(withExtra).toContain(`${released + 1} mẫu thiệp đang có`);
   });
 
-  it("each card links its own demo and its own selection", async () => {
+  it("each card links its own demo; style chips start on \"Tất cả\" with every card listed", async () => {
     const html = await renderToStaticMarkupAsync(<TemplateShowcase templates={SHOWROOM_TEMPLATE_ENTRIES} />);
     for (const template of SHOWROOM_TEMPLATE_ENTRIES) {
       expect(html).toContain(`href="/mau-thiep/${template.templateCode}"`);
-      expect(html).toContain(`href="/tu-van?mau=${template.templateCode}"`);
       expect(html).toContain(template.nameVi);
     }
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Tất cả</);
+    expect(html).not.toContain("/tu-van?mau=");
   });
 
   it("zero templates → calm empty state with a consultation link, no cards", async () => {

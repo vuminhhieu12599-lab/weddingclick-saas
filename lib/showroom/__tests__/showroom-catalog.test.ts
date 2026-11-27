@@ -164,3 +164,24 @@ describe("LAUNCH-P0-04 showroom catalog", () => {
     }
   });
 });
+
+describe("showroom filters and demo navigation", () => {
+  it("chips list only labelled categories present, in label order", async () => {
+    const { showroomFilterCategories } = await import("../showroom-catalog");
+    expect(showroomFilterCategories([{ categories: ["lang-man", "ke-chuyen"] }, { categories: ["hien-dai"] }])).toStrictEqual([
+      { key: "hien-dai", label: "Hiện đại" },
+      { key: "lang-man", label: "Lãng mạn" },
+    ]);
+  });
+
+  it("previous/next wrap around the public list", async () => {
+    const { PUBLIC_SHOWROOM_TEMPLATES, adjacentShowroomTemplates } = await import("../showroom-catalog");
+    const first = PUBLIC_SHOWROOM_TEMPLATES[0];
+    const last = PUBLIC_SHOWROOM_TEMPLATES[PUBLIC_SHOWROOM_TEMPLATES.length - 1];
+    expect(first && last).toBeTruthy();
+    const around = adjacentShowroomTemplates(first?.templateCode ?? "");
+    expect(around?.previous.templateCode).toBe(last?.templateCode);
+    expect(around?.next.templateCode).toBe(PUBLIC_SHOWROOM_TEMPLATES[1]?.templateCode);
+    expect(adjacentShowroomTemplates("khong-co")).toBeUndefined();
+  });
+});
