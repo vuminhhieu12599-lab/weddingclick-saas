@@ -450,7 +450,7 @@
 
 .hero {
   position: relative;
-  padding: 44px 0 72px;
+  padding: 32px 0 44px;
   overflow: hidden;
   background:
     radial-gradient(120% 70% at 85% 10%, rgba(232, 216, 189, 0.75) 0%, rgba(251, 247, 240, 0) 60%),
@@ -551,15 +551,17 @@
 
 .heroStage {
   position: relative;
-  display: flex;
+  display: none;
   justify-content: center;
   align-items: center;
   min-height: 420px;
   isolation: isolate;
 }
 
-@media (min-width: 560px) {
+/* Phones skip the hero mockups so the collection starts about one swipe down. */
+@media (min-width: 640px) {
   .heroStage {
+    display: flex;
     min-height: 560px;
   }
 }
@@ -670,6 +672,7 @@
 /* ------------------------------------------------------------------ */
 
 .showroomSection {
+  padding-top: 48px;
   background: var(--sr-white);
   border-top: 1px solid var(--sr-line);
   border-bottom: 1px solid var(--sr-line);
@@ -680,7 +683,28 @@
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 24px;
+  gap: 8px 24px;
+}
+
+@media (max-width: 639px) {
+  .showroomHead .sectionTitle {
+    font-size: 30px;
+  }
+
+  .showroomHead .sectionLead {
+    margin-top: 8px;
+    font-size: 15px;
+  }
+
+  .showroomCount {
+    font-size: 17px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .showroomSection {
+    padding-top: 112px;
+  }
 }
 
 .showroomCount {
@@ -691,104 +715,150 @@
   color: var(--sr-muted);
 }
 
+.filterBar {
+  position: sticky;
+  top: 64px;
+  z-index: 20;
+  margin: 28px calc(-1 * var(--sr-gutter)) 0;
+  padding: 10px 0;
+  background: rgba(255, 253, 249, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.filterScroll {
+  display: flex;
+  gap: 8px;
+  padding: 0 var(--sr-gutter);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.filterScroll::-webkit-scrollbar {
+  display: none;
+}
+
+.filterChip {
+  flex: none;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--sr-line);
+  background: var(--sr-ivory);
+  font-family: var(--sr-sans);
+  font-size: 14px;
+  color: var(--sr-ink-soft);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.filterChip:hover {
+  border-color: var(--sr-gold-line);
+  color: var(--sr-ink);
+}
+
+.filterChip[aria-pressed="true"] {
+  background: var(--sr-ink);
+  border-color: var(--sr-ink);
+  color: var(--sr-white);
+}
+
 .templateGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
-  gap: 56px 28px;
-  margin: 56px 0 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 12px;
+  margin: 16px 0 0;
   padding: 0;
   list-style: none;
 }
 
-@media (min-width: 640px) and (max-width: 1023px) {
+@media (min-width: 768px) {
   .templateGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 36px 22px;
+    margin-top: 24px;
+  }
+}
+
+@media (min-width: 1100px) {
+  .templateGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
 .card {
-  display: flex;
-  flex-direction: column;
   height: 100%;
 }
 
-.cardVisual {
+.cardLink {
   --card-accent: #a9864f;
 
-  position: relative;
-  display: block;
-  padding: 30px 28px 0;
-  border-radius: var(--sr-radius);
-  overflow: hidden;
-  background:
-    radial-gradient(120% 80% at 50% 0%, rgba(255, 253, 249, 0.85) 0%, rgba(255, 253, 249, 0) 70%),
-    color-mix(in srgb, var(--card-accent) 16%, var(--sr-paper));
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   text-decoration: none;
-  isolation: isolate;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.cardVisual::before {
-  content: "";
-  position: absolute;
-  inset: 12px;
-  z-index: -1;
-  border-radius: calc(var(--sr-radius) - 8px);
-  border: 1px solid color-mix(in srgb, var(--card-accent) 32%, transparent);
-}
-
-.cardPhone {
+.cardFrame {
   position: relative;
-  width: 78%;
-  max-width: 250px;
-  margin: 0 auto;
-  transform: translateY(18px);
-  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-.cardPhone,
-.cardPhone .phone,
-.cardPhone .phoneScreen,
-.cardScreenLayer {
   display: block;
+  overflow: hidden;
+  aspect-ratio: 3 / 5;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--card-accent) 16%, var(--sr-paper));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--card-accent) 22%, transparent),
+    var(--sr-shadow-soft);
+  isolation: isolate;
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
 }
 
-.cardPhone .phone {
-  border-radius: 30px 30px 0 0;
-  padding-bottom: 0;
-}
-
-.cardPhone .phoneScreen {
-  border-radius: 24px 24px 0 0;
-  aspect-ratio: 390 / 600;
+.cardLink:active .cardFrame {
+  transform: scale(0.98);
 }
 
 .cardScreenLayer {
   position: absolute;
   inset: 0;
+  display: block;
   transition: opacity 0.6s ease;
+}
+
+.cardScreenLayer img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
 }
 
 .cardScreenInside {
   opacity: 0;
 }
 
-.cardIndex {
+.cardNew {
   position: absolute;
-  top: 18px;
-  left: 22px;
-  font-family: var(--sr-display);
-  font-style: italic;
-  font-size: 18px;
-  color: color-mix(in srgb, var(--card-accent) 75%, var(--sr-ink));
+  z-index: 2;
+  top: 8px;
+  left: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--sr-burgundy);
+  color: var(--sr-white);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
 }
 
 .cardDemoHint {
   position: absolute;
   z-index: 3;
   left: 50%;
-  bottom: 20px;
+  bottom: 14px;
   transform: translate(-50%, 8px);
-  padding: 8px 16px;
+  padding: 7px 14px;
   border-radius: 999px;
   background: rgba(255, 253, 249, 0.94);
   box-shadow: var(--sr-shadow-soft);
@@ -801,18 +871,21 @@
 }
 
 @media (hover: hover) {
-  .cardVisual:hover .cardPhone,
-  .cardVisual:focus-visible .cardPhone {
-    transform: translateY(4px);
+  .cardLink:hover .cardFrame,
+  .cardLink:focus-visible .cardFrame {
+    transform: translateY(-3px);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--card-accent) 35%, transparent),
+      var(--sr-shadow);
   }
 
-  .cardVisual:hover .cardScreenInside,
-  .cardVisual:focus-visible .cardScreenInside {
+  .cardLink:hover .cardScreenInside,
+  .cardLink:focus-visible .cardScreenInside {
     opacity: 1;
   }
 
-  .cardVisual:hover .cardDemoHint,
-  .cardVisual:focus-visible .cardDemoHint {
+  .cardLink:hover .cardDemoHint,
+  .cardLink:focus-visible .cardDemoHint {
     opacity: 1;
     transform: translate(-50%, 0);
   }
@@ -821,58 +894,27 @@
 .cardBody {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  padding: 24px 4px 0;
-}
-
-.cardMeta {
-  margin: 0;
-  font-size: 12px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--sr-muted);
+  gap: 2px;
+  padding: 10px 2px 0;
 }
 
 .cardTitle {
-  margin: 8px 0 0;
   font-family: var(--sr-display);
-  font-weight: 500;
-  font-size: 32px;
-  line-height: 1.1;
+  font-weight: 600;
+  font-size: 19px;
+  line-height: 1.15;
   color: var(--sr-ink);
 }
 
-.cardTagline {
-  margin: 10px 0 0;
-  font-size: 15px;
-  color: var(--sr-ink-soft);
-  text-wrap: pretty;
-}
-
-.cardMood {
-  margin: 14px 0 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 0;
+.cardMoodLine {
   font-size: 13px;
   color: var(--sr-muted);
 }
 
-.cardMood li + li::before {
-  content: "·";
-  margin: 0 8px;
-  color: var(--sr-gold);
-}
-
-.cardActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 18px;
-  margin-top: auto;
-  padding-top: 20px;
+@media (min-width: 768px) {
+  .cardTitle {
+    font-size: 23px;
+  }
 }
 
 .emptyState {
