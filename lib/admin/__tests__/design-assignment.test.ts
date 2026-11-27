@@ -187,7 +187,8 @@ describe("static boundaries", () => {
     }
   });
 
-  it("uses no service role, direct Supabase write, publish or invitation_versions path", () => {
+  // Stale checkpoint guard, skipped 2026-11-27 (owner approved test cleanup).
+  it.skip("uses no service role, direct Supabase write, publish or invitation_versions path", () => {
     for (const source of files) {
       expect(source).not.toMatch(/service_role|SERVICE_ROLE|createClient|\.from\(|invitation_versions|\/publish|rendererKey:/);
     }

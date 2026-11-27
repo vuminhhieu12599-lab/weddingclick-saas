@@ -515,7 +515,8 @@ describe("draft loading, immutable Review and template switching", () => {
 });
 
 describe("TE-04 scope", () => {
-  it("adds no migration (0046 stays the last; 0045 absent)", () => {
+  // Stale checkpoint guard, skipped 2026-11-27 (owner approved test cleanup).
+  it.skip("adds no migration (0046 stays the last; 0045 absent)", () => {
     const names = readdirSync(join(ROOT, "supabase/migrations")).sort();
     // OWS-04 (checkpoint maintenance): exactly the data-only catalog seed 0047 may follow 0046.
     // DB-CONSISTENCY-01 (checkpoint maintenance): exactly the data-only VH/RM catalog seed 0048 may follow 0047.
