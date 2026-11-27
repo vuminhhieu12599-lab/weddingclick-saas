@@ -688,6 +688,10 @@
 }
 
 .storyLine {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
   margin: 2px 0 0;
   font-size: 14.5px;
   color: var(--kv-soft);
@@ -1527,6 +1531,12 @@
 }
 
 /* ---------- reveals (only after the shared controller marks an element) ---------- */
+/* Marker classes: they must carry a declaration so the CSS module exports them. */
+.reveal { --kv-reveal: 1; }
+.invite { --kv-section: invite; }
+.family { --kv-section: family; }
+.rsvpSelect { appearance: auto; }
+
 .wipe {
   position: relative;
   overflow: hidden;

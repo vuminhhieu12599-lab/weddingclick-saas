@@ -5,6 +5,18 @@ import { MediaImage } from "./media-image";
 
 const COPY = KHAN_VOAN_V1_COPY.story;
 
+/** The handwritten side line is one short sentence: the love story's first sentence, at most ~110 characters. */
+export function storyLineOf(loveStory: string | null): string | null {
+  if (loveStory === null) return null;
+  const firstParagraph = loveStory.trim().split(/\n\s*\n|\n/)[0] ?? "";
+  const firstSentence = firstParagraph.match(/^.*?[.!?…](?=\s|$)/)?.[0] ?? firstParagraph;
+  const line = firstSentence.trim();
+  if (line.length === 0) return null;
+  if (line.length <= 110) return line;
+  const cut = line.slice(0, 110);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), 60)).trim()}…`;
+}
+
 interface StoryProps {
   photos: readonly ResolvedMedia[];
   /** The love-story line shown beside the first frame; `null` when the section is off or empty. */
@@ -15,7 +27,7 @@ interface StoryProps {
 export function Story({ photos, loveStory }: StoryProps) {
   if (photos.length === 0) return null;
   const lines = [
-    { title: COPY.firstTitle, text: loveStory },
+    { title: COPY.firstTitle, text: storyLineOf(loveStory) },
     { title: COPY.secondTitle, text: COPY.secondLine },
   ];
   return (

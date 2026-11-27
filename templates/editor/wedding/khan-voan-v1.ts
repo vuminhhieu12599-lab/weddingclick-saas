@@ -19,7 +19,7 @@ export const KHAN_VOAN_V1_EDITOR_MANIFEST: TemplateEditorManifestV1 = {
     {
       key: "LOVE_STORY",
       label: "Chuyện tình yêu",
-      hint: "Một câu ngắn viết tay bên cạnh khung ảnh thứ nhất. Để trống thì chỉ hiện tiêu đề.",
+      hint: "Một câu ngắn bên cạnh khung ảnh thứ nhất; nếu viết dài, thiệp chỉ hiện câu đầu tiên. Để trống thì chỉ hiện tiêu đề.",
       requirement: "OPTIONAL",
       sectionKey: "loveStory",
     },

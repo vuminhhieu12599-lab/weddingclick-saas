@@ -71,6 +71,13 @@ export const DEMO_COUPLE_OVERRIDES: Readonly<Record<string, DemoCoupleOverride>>
     groomAccountName: "GIA HUY",
     brideAccountName: "KHANH LINH",
   }),
+  // Khăn Voan v1 (Product Owner, 2026-11-27): the same two-word names.
+  "wedding.khan-voan.v1": Object.freeze({
+    groomName: "Gia Huy",
+    brideName: "Khánh Linh",
+    groomAccountName: "GIA HUY",
+    brideAccountName: "KHANH LINH",
+  }),
 });
 
 /** The couple a demo of `rendererKey` presents (exact-key override, else `DEMO_COUPLE`). */
