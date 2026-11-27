@@ -266,11 +266,12 @@ describe("C. media slots", () => {
       }
     });
 
-    it("the exception table is frozen and holds exactly the two Our Wedding Story keys, each with the same two slot keys", () => {
+    it("the exception table is frozen and holds exactly the two Our Wedding Story keys and Khăn Voan v1, each with the same two slot keys", () => {
       expect(Object.isFrozen(TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS)).toBe(true);
       expect(Object.entries(TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS)).toStrictEqual([
         [OWS_KEY, ["groomPortrait", "bridePortrait"]],
         [OWS2_KEY, ["groomPortrait", "bridePortrait"]],
+        ["wedding.khan-voan.v1", ["groomPortrait", "bridePortrait"]],
       ]);
       expect(Object.isFrozen(TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS[OWS_KEY])).toBe(true);
       expect(Object.isFrozen(TEMPLATE_EDITOR_PERSON_BOUND_SLOT_EXCEPTIONS[OWS2_KEY])).toBe(true);

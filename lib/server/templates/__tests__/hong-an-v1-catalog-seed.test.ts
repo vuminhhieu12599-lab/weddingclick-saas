@@ -32,9 +32,10 @@ describe("Hồng Ân v1 catalog seed migration 0057", () => {
     const names = readdirSync(MIGRATIONS).sort();
     // HA-CONTENT-01: 0058 (the Hồng Ân v2 catalog seed) is now the head; 0057
     // keeps its own position directly after 0056 and is otherwise untouched.
-    expect(names.at(-1)).toBe("20260911041218_0058_seed_hong_an_v2_catalog.sql");
-    expect(names.at(-2)).toBe(M0057);
-    expect(names.at(-3)).toBe(M0056);
+    expect(names.at(-1)).toBe("20260911041219_0059_seed_khan_voan_v1_catalog.sql");
+    expect(names.at(-2)).toBe("20260911041218_0058_seed_hong_an_v2_catalog.sql");
+    expect(names.at(-3)).toBe(M0057);
+    expect(names.at(-4)).toBe(M0056);
     expect(names.filter((name) => name.includes("_0057_"))).toStrictEqual([M0057]);
     expect(sql).toContain("AUTHORING ONLY — not applied.");
   });

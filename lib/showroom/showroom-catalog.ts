@@ -206,6 +206,22 @@ export const SHOWROOM_TEMPLATE_ENTRIES: readonly ShowroomTemplateEntry[] = [
     visibility: "PUBLIC",
     categories: ["cong-giao", "trang-trong"],
   },
+  {
+    // Khăn Voan v1 (2026-11-27): the veil-lift invitation on ivory satin.
+    templateCode: "khan-voan",
+    versionNumber: 1,
+    nameVi: "Khăn Voan",
+    nameEn: "Khăn Voan",
+    taglineVi: "Chạm để vén khăn voan, ảnh cưới hiện dần trên nền lụa ngà.",
+    descriptionVi:
+      "Mở thiệp bằng khoảnh khắc vén khăn voan cô dâu, monogram nhũ vàng và cánh hoa rơi. Nền lụa satin ngà, khung ảnh nghệ thuật và album kiểu tạp chí cho bộ ảnh cưới thật nhiều khoảnh khắc.",
+    moodVi: ["Sang trọng", "Lụa ngà", "Lãng mạn"],
+    accent: "#b48c55",
+    ...screenshots("khan-voan", "Khăn Voan"),
+    sortOrder: 70,
+    visibility: "PUBLIC",
+    categories: ["hien-dai", "sang-trong"],
+  },
 
 ];
 

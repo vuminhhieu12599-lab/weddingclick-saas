@@ -65,6 +65,8 @@ describe("OWS-01 Our Wedding Story v1 renderer manifest", () => {
       "wedding.hong-an.v1",
       // HA-CONTENT-01: Hồng Ân v2 is appended tenth; OWS keeps its fourth position.
       "wedding.hong-an.v2",
+      // Khăn Voan v1 is appended eleventh.
+      "wedding.khan-voan.v1",
     ]);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(OWS_KEY)).toStrictEqual(OUR_WEDDING_STORY_V1_MANIFEST);
     expect(PRODUCTION_COMPATIBILITY_REGISTRY.lookupManifest(OWS_KEY)).not.toBe(OUR_WEDDING_STORY_V1_MANIFEST);

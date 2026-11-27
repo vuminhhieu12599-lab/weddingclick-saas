@@ -36,10 +36,12 @@ function jsonLiterals(): unknown[] {
 }
 
 describe("Hồng Ân v2 catalog seed migration 0058", () => {
-  it("is the head migration, one number after 0057, and is authored only (never applied by this task)", () => {
+  it("is followed only by 0059, one number after 0057, and is authored only (never applied by this task)", () => {
     const names = readdirSync(MIGRATIONS).sort();
-    expect(names.at(-1)).toBe(M0058);
-    expect(names.at(-2)).toBe(M0057);
+    expect(names.at(-1)).toBe("20260911041219_0059_seed_khan_voan_v1_catalog.sql");
+    // 0059 (the Khăn Voan v1 catalog seed) now follows it.
+    expect(names.at(-2)).toBe(M0058);
+    expect(names.at(-3)).toBe(M0057);
     expect(names.filter((name) => name.includes("_0058_"))).toStrictEqual([M0058]);
     expect(sql).toContain("AUTHORING ONLY — not applied.");
   });
