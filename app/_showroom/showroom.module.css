@@ -683,7 +683,22 @@
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 24px;
+  gap: 8px 24px;
+}
+
+@media (max-width: 639px) {
+  .showroomHead .sectionTitle {
+    font-size: 30px;
+  }
+
+  .showroomHead .sectionLead {
+    margin-top: 8px;
+    font-size: 15px;
+  }
+
+  .showroomCount {
+    font-size: 17px;
+  }
 }
 
 @media (min-width: 1024px) {

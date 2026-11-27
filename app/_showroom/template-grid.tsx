@@ -18,7 +18,9 @@ const PRIORITY_CARDS = 4;
 export function TemplateGrid({ templates }: { readonly templates: readonly ShowroomTemplateEntry[] }) {
   const [active, setActive] = useState(ALL);
   const chips = showroomFilterCategories(templates);
-  const visible = active === ALL ? templates : templates.filter((template) => template.categories.includes(active));
+  // New templates lead the grid; otherwise catalog order (Array.sort is stable).
+  const ordered = [...templates].sort((a, b) => Number(b.isNew === true) - Number(a.isNew === true));
+  const visible = active === ALL ? ordered : ordered.filter((template) => template.categories.includes(active));
   return (
     <>
       {chips.length > 1 ? (
